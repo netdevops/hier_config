@@ -29,7 +29,8 @@ def get_hostname(config):
     hier_hostname = config.get_child('startswith', 'hostname ')
     if hier_hostname:
         return hier_hostname.text.split()[1]
-    # There are cases where there is not a hostname defined in RC on N7ks, defined instead under VDC
+    # There are cases where there is not a hostname defined in RC on N7ks,
+    # defined instead under VDC
     else:
         return config.host.hostname
 

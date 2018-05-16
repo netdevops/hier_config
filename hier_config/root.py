@@ -114,7 +114,8 @@ class HierarchicalConfigurationRoot(HierarchicalConfiguration):
                 # Test if this line is the end of a banner
                 if end_of_banner_test(line):
                     in_banner = False
-                    most_recent_item = self.add_child("\n".join(temp_banner), True)
+                    most_recent_item = self.add_child(
+                        "\n".join(temp_banner), True)
                     most_recent_item.real_indent_level = 0
                     current_section = self
                     temp_banner = []
@@ -210,8 +211,10 @@ class HierarchicalConfigurationRoot(HierarchicalConfiguration):
                 parent = last_item
             # has a parent somewhere closer to the root but not the root
             else:
-                # last_item.lineage() = (a, b, c, d, e), new_item['depth'] = 2, parent = a
-                parent = next(islice(last_item.lineage(), item['depth'] - 2, item['depth'] - 1))
+                # last_item.lineage() = (a, b, c, d, e), new_item['depth'] = 2,
+                # parent = a
+                parent = next(islice(last_item.lineage(), item[
+                              'depth'] - 2, item['depth'] - 1))
             # also accept 'line'
             # obj = parent.add_child(item.get('text', item['line']), force_duplicate=True)
             obj = parent.add_child(item['text'], force_duplicate=True)
@@ -233,7 +236,8 @@ class HierarchicalConfigurationRoot(HierarchicalConfiguration):
         :return: list
         """
         if lineage_rules:
-            children = self.all_children_sorted_with_lineage_rules(lineage_rules)
+            children = self.all_children_sorted_with_lineage_rules(
+                lineage_rules)
         else:
             children = self.all_children_sorted()
 

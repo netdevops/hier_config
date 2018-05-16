@@ -5,6 +5,7 @@ from hier_config import helpers as H
 
 __version__ = 1.0
 
+
 class HierarchicalConfiguration():
 
     def __init__(self, parent, text):
@@ -256,7 +257,8 @@ class HierarchicalConfiguration():
         """ Rebuild self.children_dict """
         self.children_dict = {}
         for child in self.children:
-            self.children_dict[child.text] = self.children_dict.get(child.text, child)
+            self.children_dict[child.text] = self.children_dict.get(
+                child.text, child)
 
     def add_children(self, lines):
         """ Add child instances of HierarchicalConfiguration """
