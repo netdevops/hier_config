@@ -39,3 +39,8 @@ def to_list(obj):
         return obj
     else:
         return [obj]
+
+
+def read_yaml_file(filename):
+    import yaml
+    return yaml.load(open(filename))

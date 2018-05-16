@@ -3,6 +3,8 @@ from hier_config import constants as C
 from hier_config import helpers as H
 
 
+__version__ = 1.0
+
 class HierarchicalConfiguration():
 
     def __init__(self, parent, text):
