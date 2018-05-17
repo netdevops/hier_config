@@ -6,7 +6,7 @@ from setuptools import find_packages
 setup(
     name="Hierarchical Configuration",
     description="A router and switch configuration intention tool, used to build remediation configurations.",
-    version=1.0.0,
+    version='1.0.0',
     install_requires=[
         'PyYAML',
         'Sphinx',
