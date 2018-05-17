@@ -7,3 +7,6 @@ python:
 
 install:
 - "python setup.py install"
+
+script:
+- "echo PASS"
