@@ -102,5 +102,6 @@ class TestTextMatch(unittest.TestCase):
             expression=self.expression4)
         )
 
+
 if __name__ == "__main__":
     unittest.main()

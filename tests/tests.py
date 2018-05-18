@@ -2,15 +2,18 @@
 
 import unittest
 
-from test_hier_config.root import TestHierarchicalConfigurationRoot
-from test_text_match import TestTextMatch
-
 
 def all_tests():
+    from test_hier_config import TestHierarchicalConfigurationRoot
+    from test_text_match import TestTextMatch
+
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(TestHierarchicalConfigurationRoot))
     suite.addTest(unittest.makeSuite(TestTextMatch))
 
     return suite
 
-all_tests()
+
+if __name__ == "__main__":
+    runner = unittest.TextTestRunner()
+    runner.run(all_tests())
