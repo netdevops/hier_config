@@ -1,5 +1,10 @@
 #!/bin/sh
 
+# create python virtual env
+python3 -m venv sphinx-env
+source ./sphinx-env/bin/activate
+pip3 install sphinx sphinx_rtd_theme
+
 # Automatically create code documentation
 sphinx-apidoc -f -o hier_config ../../hier_config
 
@@ -29,3 +34,6 @@ make dirhtml
 
 # Sync generated documentation to viewable path
 rsync -avz --exclude .env "${PWD}/_build/dirhtml/" "../../docs"
+
+# remove python env
+rm -rf ./sphinx-env

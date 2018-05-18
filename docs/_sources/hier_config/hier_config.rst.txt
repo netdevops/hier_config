@@ -12,10 +12,10 @@ Subpackages
 Submodules
 ----------
 
-hier\_config.root module
-------------------------
+hier\_config.hc\_child module
+-----------------------------
 
-.. automodule:: hier_config.root
+.. automodule:: hier_config.hc_child
     :members:
     :undoc-members:
     :show-inheritance:
