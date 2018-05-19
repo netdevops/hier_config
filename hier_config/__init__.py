@@ -12,17 +12,34 @@ class HierarchicalConfigurationRoot(HierarchicalConfiguration):
 
     Example usage:
 
-        #Build HierarchicalConfigurationRoot object for the Running Config
+    .. code:: python
 
-        running_config_hier = HierarchicalConfigurationRoot(Host())
-        running_config_hier.load_from_file('./test/runngin_config.conf')
+        # Setup basic environment
 
-        #Build HierarchicalConfiguration object for the Compiled Config
+        import os
 
-        compiled_config_hier = HierarchicalConfigurationRoot(Host())
-        compiled_config_hier.load_from_file('./test/compiled_config.conf')
+        os.environ['HIER_CONF_DIR'] = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            'tests',
+            'conf'
+        )
 
-        #Build HierarchicalConfiguration object for the Remediation Config
+        from hier_config import HierarchicalConfigurationRoot
+
+        host = 'aggr101a.dfw1'
+        os = 'ios'
+
+        # Build HierarchicalConfigurationRoot object for the Running Config
+
+        running_config_hier = HierarchicalConfigurationRoot(host, os)
+        running_config_hier.load_from_file('./tests/running_config.conf')
+
+        # Build HierarchicalConfiguration object for the Compiled Config
+
+        compiled_config_hier = HierarchicalConfigurationRoot(host, os)
+        compiled_config_hier.load_from_file('./tests/compiled_config.conf')
+
+        # Build HierarchicalConfiguration object for the Remediation Config
 
         remediation_config_hier = compiled_config_hier.deep_diff_tree_with(running_config_hier)
         remediation_config_hier.add_sectional_exiting()
@@ -32,9 +49,9 @@ class HierarchicalConfigurationRoot(HierarchicalConfiguration):
 
     See:
 
-        ./conf/hierarchical_configuration_tags_* and ./conf/hierarchical_configuration_options_*
+        ./tests/conf/hierarchical_configuration_tags_* and ./conf/hierarchical_configuration_options_*
 
-        for production examples of options and tags.
+        for test examples of options and tags.
 
     """
 
@@ -57,8 +74,9 @@ class HierarchicalConfigurationRoot(HierarchicalConfiguration):
     def root(self):
         return self
 
+    @property
     def __repr__(self):
-        return 'HierarchicalConfigurationRoot(\'{}\')'.format(self.host)
+        return f"HierarchicalConfigurationRoot('{self.host}')"
 
     def __str__(self):
         return self.text
@@ -108,12 +126,16 @@ class HierarchicalConfigurationRoot(HierarchicalConfiguration):
         banner_end_lines = ['EOF', '%', '!']
         banner_end_contains = []
 
-        def end_of_banner_test(line):
-            if line.startswith('^'):
+        def end_of_banner_test(config_line):
+            """
+
+            :type config_line: str
+            """
+            if config_line.startswith('^'):
                 return True
-            elif line in banner_end_lines:
+            elif config_line in banner_end_lines:
                 return True
-            elif any([c in line for c in banner_end_contains]):
+            elif any([c in config_line for c in banner_end_contains]):
                 return True
             return False
 

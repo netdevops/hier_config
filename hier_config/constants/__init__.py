@@ -36,5 +36,6 @@ def _load_conf_dir():
             os.makedirs(os.path.expanduser('~/.hier_config'))
             return os.path.expanduser('~/.hier_config')
 
+
 CONF_DIR = _load_conf_dir()
 HIER_OPTIONS = _load_hier_options()

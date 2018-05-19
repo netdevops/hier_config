@@ -4,7 +4,7 @@ import hier_config.constants as C
 import hier_config.helpers as H
 
 
-class HierarchicalConfiguration():
+class HierarchicalConfiguration:
 
     def __init__(self, parent, text):
         self.parent = parent
@@ -175,8 +175,8 @@ class HierarchicalConfiguration():
 
         .. code:: python
 
-           result = hier_obj.get_child_deep([('equals', 'control-plane'),
-                                             ('equals', 'service-policy input system-cpp-policy')])
+            result = hier_obj.get_child_deep([('equals', 'control-plane'),
+                                              ('equals', 'service-policy input system-cpp-policy')])
 
         Returns:
 
