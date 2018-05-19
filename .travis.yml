@@ -8,4 +8,15 @@ install:
 - "python setup.py install"
 
 script:
-- "cd tests; python tests.py"
+- "python ./tests/tests.py"
+
+after_success:
+- "cd docs/_mkdocs; ./mkdocs.sh; cd -"
+
+deploy:
+  provider: pages
+  skip-cleanup: true
+  github-token: $GITHUB-TOKEN
+  keep-history: true
+  on:
+    branch: master
