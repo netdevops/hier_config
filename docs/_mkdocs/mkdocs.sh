@@ -3,6 +3,7 @@
 # create python virtual env
 python3 -m venv sphinx-env
 source ./sphinx-env/bin/activate
+../../setup.py install
 pip3 install sphinx sphinx_rtd_theme
 
 # Automatically create code documentation
@@ -35,7 +36,7 @@ make clean
 make dirhtml
 
 # Sync generated documentation to viewable path
-rsync -avz --exclude .env "${PWD}/_build/dirhtml/" "../../docs"
+rsync -avz --exclude sphinx-env "${PWD}/_build/dirhtml/" "../../docs"
 
 # remove python env
 deactivate

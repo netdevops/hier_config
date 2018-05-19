@@ -1,0 +1,158 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>hier_config.text_match &#8212; Hieararchical Configuration 1.0.0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex/" />
+    <link rel="search" title="Search" href="../../../search/" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <h1>Source code for hier_config.text_match</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">re</span>
+
+
+<div class="viewcode-block" id="TextMatch"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.text_match.TextMatch">[docs]</a><span class="k">class</span> <span class="nc">TextMatch</span><span class="p">(</span><span class="nb">object</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Provides a suite of text matching methods</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="TextMatch.dict_call"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.text_match.TextMatch.dict_call">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">dict_call</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">test</span><span class="p">,</span> <span class="n">text</span><span class="p">,</span> <span class="n">expression</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Allows test methods to be called easily from variables</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="p">{</span>
+            <span class="s1">&#39;equals&#39;</span><span class="p">:</span> <span class="bp">cls</span><span class="o">.</span><span class="n">equals</span><span class="p">,</span>
+            <span class="s1">&#39;startswith&#39;</span><span class="p">:</span> <span class="bp">cls</span><span class="o">.</span><span class="n">startswith</span><span class="p">,</span>
+            <span class="s1">&#39;endswith&#39;</span><span class="p">:</span> <span class="bp">cls</span><span class="o">.</span><span class="n">endswith</span><span class="p">,</span>
+            <span class="s1">&#39;contains&#39;</span><span class="p">:</span> <span class="bp">cls</span><span class="o">.</span><span class="n">contains</span><span class="p">,</span>
+            <span class="s1">&#39;re_search&#39;</span><span class="p">:</span> <span class="bp">cls</span><span class="o">.</span><span class="n">re_search</span><span class="p">,</span>
+            <span class="s1">&#39;contains_or_endswith&#39;</span><span class="p">:</span> <span class="bp">cls</span><span class="o">.</span><span class="n">contains_or_endswith</span><span class="p">,</span>
+            <span class="s1">&#39;anything&#39;</span><span class="p">:</span> <span class="bp">cls</span><span class="o">.</span><span class="n">anything</span><span class="p">,</span>
+            <span class="s1">&#39;nothing&#39;</span><span class="p">:</span> <span class="bp">cls</span><span class="o">.</span><span class="n">nothing</span>
+        <span class="p">}[</span><span class="n">test</span><span class="p">](</span><span class="n">text</span><span class="p">,</span> <span class="n">expression</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TextMatch.equals"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.text_match.TextMatch.equals">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">equals</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">expression</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Text equivalence test&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+            <span class="k">return</span> <span class="n">text</span> <span class="o">==</span> <span class="n">expression</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">text</span> <span class="ow">in</span> <span class="n">expression</span></div>
+
+<div class="viewcode-block" id="TextMatch.startswith"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.text_match.TextMatch.startswith">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">startswith</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">expression</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Text starts with test&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">text</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="n">expression</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TextMatch.endswith"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.text_match.TextMatch.endswith">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">endswith</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">expression</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Text ends with test&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">text</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="n">expression</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="TextMatch.contains"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.text_match.TextMatch.contains">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">contains</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">expression</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Text contains test&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">expression</span> <span class="ow">in</span> <span class="n">text</span></div>
+
+<div class="viewcode-block" id="TextMatch.anything"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.text_match.TextMatch.anything">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">anything</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">expression</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Always returns True&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="kc">True</span></div>
+
+<div class="viewcode-block" id="TextMatch.nothing"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.text_match.TextMatch.nothing">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">nothing</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">expression</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Always returns False&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="TextMatch.contains_or_endswith"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.text_match.TextMatch.contains_or_endswith">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">contains_or_endswith</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">expression</span><span class="p">,</span> <span class="n">with_pad</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;Text contains test&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">with_pad</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">TextMatch</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="s1">&#39; </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">expression</span><span class="p">)):</span>
+                <span class="k">return</span> <span class="kc">True</span>
+            <span class="k">elif</span> <span class="n">TextMatch</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="s1">&#39; </span><span class="si">{}</span><span class="s1"> &#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">expression</span><span class="p">)):</span>
+                <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">TextMatch</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">expression</span><span class="p">):</span>
+                <span class="k">return</span> <span class="kc">True</span>
+            <span class="k">elif</span> <span class="n">TextMatch</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">expression</span><span class="p">):</span>
+                <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="TextMatch.re_search"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.text_match.TextMatch.re_search">[docs]</a>    <span class="nd">@staticmethod</span>
+    <span class="k">def</span> <span class="nf">re_search</span><span class="p">(</span><span class="n">text</span><span class="p">,</span> <span class="n">expression</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Test regex match. This method is comparatively</span>
+<span class="sd">        very slow and should be avoided where possible.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">re</span><span class="o">.</span><span class="n">search</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span></div></div>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper"><div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../">Documentation overview</a><ul>
+  <li><a href="../../">Module code</a><ul>
+  <li><a href="../">hier_config</a><ul>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search/" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Andrew Edwards, Jan Brooks, James Williams.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.4</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
