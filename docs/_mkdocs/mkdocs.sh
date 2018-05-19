@@ -1,8 +1,8 @@
 #!/bin/sh
 
 # create python virtual env
-#python3 -m venv sphinx-env
-#source ./sphinx-env/bin/activate
+python3 -m venv sphinx-env
+source ./sphinx-env/bin/activate
 ../../setup.py install
 pip3 install sphinx sphinx_rtd_theme
 
@@ -39,5 +39,5 @@ make dirhtml
 rsync -avz --exclude sphinx-env "${PWD}/_build/dirhtml/" "../../docs"
 
 # remove python env
-#deactivate
-#rm -rf ./sphinx-env
+deactivate
+rm -rf ./sphinx-env
