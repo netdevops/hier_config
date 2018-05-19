@@ -9,7 +9,9 @@ pip3 install sphinx sphinx_rtd_theme
 sphinx-apidoc -f -o hier_config ../../hier_config
 
 # Remove exisitng code table of contents
-rm hier_config.rst
+if [ -f hier_config.rst ]; then
+    rm hier_config.rst
+fi
 
 # Create a new code table of contents
 cat > hier_config.rst << EOF
@@ -36,4 +38,5 @@ make dirhtml
 rsync -avz --exclude .env "${PWD}/_build/dirhtml/" "../../docs"
 
 # remove python env
+deactivate
 rm -rf ./sphinx-env
