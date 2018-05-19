@@ -1,35 +1,183 @@
 
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
-  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-<html xmlns="http://www.w3.org/1999/xhtml">
-  <head>
-    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    <title>hier_config package &#8212; Hieararchical Configuration 1.0.0 documentation</title>
-    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
-    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
-    <script type="text/javascript" src="../../_static/documentation_options.js"></script>
-    <script type="text/javascript" src="../../_static/jquery.js"></script>
-    <script type="text/javascript" src="../../_static/underscore.js"></script>
-    <script type="text/javascript" src="../../_static/doctools.js"></script>
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>hier_config package &mdash; Hieararchical Configuration 1.0.0 documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  
+    <link rel="stylesheet" href="../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
     <link rel="index" title="Index" href="../../genindex/" />
     <link rel="search" title="Search" href="../../search/" />
     <link rel="next" title="hier_config" href="../modules/" />
-    <link rel="prev" title="hier_config.helpers package" href="../hier_config.helpers/" />
+    <link rel="prev" title="hier_config.helpers package" href="../hier_config.helpers/" /> 
+
+  
+  <script src="../../_static/js/modernizr.min.js"></script>
+
+</head>
+
+<body class="wy-body-for-nav">
+
    
-  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
-  
-  
-  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+  <div class="wy-grid-for-nav">
 
-  </head><body>
-  
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search">
+          
 
-    <div class="document">
-      <div class="documentwrapper">
-        <div class="bodywrapper">
-          <div class="body" role="main">
+          
+            <a href="../../" class="icon icon-home"> Hieararchical Configuration
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                1.0.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search/" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="../">Hierarchical Configuration Code Documentation</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../hier_config.constants/">hier_config.constants package</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../hier_config.helpers/">hier_config.helpers package</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">hier_config package</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#subpackages">Subpackages</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="../hier_config.constants/">hier_config.constants package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="../hier_config.helpers/">hier_config.helpers package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-hier_config.hc_child">hier_config.hc_child module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-hier_config.text_match">hier_config.text_match module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-hier_config">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2 current"><a class="reference internal" href="../modules/">hier_config</a><ul class="current">
+<li class="toctree-l3 current"><a class="current reference internal" href="#">hier_config package</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#subpackages">Subpackages</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#submodules">Submodules</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#module-hier_config.hc_child">hier_config.hc_child module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#module-hier_config.text_match">hier_config.text_match module</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#module-hier_config">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../">Hieararchical Configuration</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../">Docs</a> &raquo;</li>
+        
+          <li><a href="../">Hierarchical Configuration Code Documentation</a> &raquo;</li>
+        
+      <li>hier_config package</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+            
+            <a href="../../_sources/hier_config/hier_config.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
             
   <div class="section" id="hier-config-package">
 <h1>hier_config package<a class="headerlink" href="#hier-config-package" title="Permalink to this headline">¶</a></h1>
@@ -38,11 +186,11 @@
 <div class="toctree-wrapper compound">
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../hier_config.constants/">hier_config.constants package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../hier_config.constants/#module-contents">Module contents</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../hier_config.constants/#module-hier_config.constants">Module contents</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="../hier_config.helpers/">hier_config.helpers package</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="../hier_config.helpers/#module-contents">Module contents</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../hier_config.helpers/#module-hier_config.helpers">Module contents</a></li>
 </ul>
 </li>
 </ul>
@@ -51,82 +199,580 @@
 <div class="section" id="submodules">
 <h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
 </div>
-<div class="section" id="hier-config-hc-child-module">
-<h2>hier_config.hc_child module<a class="headerlink" href="#hier-config-hc-child-module" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-hier_config.hc_child">
+<span id="hier-config-hc-child-module"></span><h2>hier_config.hc_child module<a class="headerlink" href="#module-hier_config.hc_child" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="hier_config.hc_child.HierarchicalConfiguration">
+<em class="property">class </em><code class="descclassname">hier_config.hc_child.</code><code class="descname">HierarchicalConfiguration</code><span class="sig-paren">(</span><em>parent</em>, <em>text</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.add_child">
+<code class="descname">add_child</code><span class="sig-paren">(</span><em>text</em>, <em>alert_on_duplicate=False</em>, <em>idx=None</em>, <em>force_duplicate=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.add_child"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.add_child" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a child instance of HierarchicalConfiguration</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.add_children">
+<code class="descname">add_children</code><span class="sig-paren">(</span><em>lines</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.add_children"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.add_children" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add child instances of HierarchicalConfiguration</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.add_deep_copy_of">
+<code class="descname">add_deep_copy_of</code><span class="sig-paren">(</span><em>child_to_add</em>, <em>merged=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.add_deep_copy_of"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.add_deep_copy_of" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a nested copy of a child to self</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.add_sectional_exiting">
+<code class="descname">add_sectional_exiting</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.add_sectional_exiting"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.add_sectional_exiting" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds the sectional exiting text as a child</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.add_shallow_copy_of">
+<code class="descname">add_shallow_copy_of</code><span class="sig-paren">(</span><em>child_to_add</em>, <em>merged=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.add_shallow_copy_of"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.add_shallow_copy_of" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a nested copy of a child_to_add to self.children</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.all_children">
+<code class="descname">all_children</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.all_children"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.all_children" title="Permalink to this definition">¶</a></dt>
+<dd><p>Recursively find and yield all children</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.all_children_sorted">
+<code class="descname">all_children_sorted</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.all_children_sorted"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.all_children_sorted" title="Permalink to this definition">¶</a></dt>
+<dd><p>Recursively find and yield all children sorted at each hierarchy</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.all_children_sorted_by_tags">
+<code class="descname">all_children_sorted_by_tags</code><span class="sig-paren">(</span><em>include_tags</em>, <em>exclude_tags</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.all_children_sorted_by_tags"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.all_children_sorted_by_tags" title="Permalink to this definition">¶</a></dt>
+<dd><p>Yield all children recursively that match include/exlcude tags</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.all_children_sorted_untagged">
+<code class="descname">all_children_sorted_untagged</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.all_children_sorted_untagged"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.all_children_sorted_untagged" title="Permalink to this definition">¶</a></dt>
+<dd><p>Yield all children recursively that are untagged</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.ancestor_append_tags">
+<code class="descname">ancestor_append_tags</code><span class="sig-paren">(</span><em>tags</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.ancestor_append_tags"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.ancestor_append_tags" title="Permalink to this definition">¶</a></dt>
+<dd><p>Append tags to self.tags and for all ancestors</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.ancestor_remove_tags">
+<code class="descname">ancestor_remove_tags</code><span class="sig-paren">(</span><em>tags</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.ancestor_remove_tags"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.ancestor_remove_tags" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove tags to self.tags and for all ancestors</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.append_tags">
+<code class="descname">append_tags</code><span class="sig-paren">(</span><em>tags</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.append_tags"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.append_tags" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add tags to self.tags</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.cisco_style_text">
+<code class="descname">cisco_style_text</code><span class="sig-paren">(</span><em>style='without_comments'</em>, <em>tag=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.cisco_style_text"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.cisco_style_text" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a Cisco style formated line i.e. indentation_level + text ! comments</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.config_to_get_to">
+<code class="descname">config_to_get_to</code><span class="sig-paren">(</span><em>target</em>, <em>delta=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.config_to_get_to"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.config_to_get_to" title="Permalink to this definition">¶</a></dt>
+<dd><p>Figures out what commands need to be executed to transition from self to target.
+self is the source data structure(i.e. the running_config),
+target is the destination(i.e. compiled_config)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.deep_append_tags">
+<code class="descname">deep_append_tags</code><span class="sig-paren">(</span><em>tags</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.deep_append_tags"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.deep_append_tags" title="Permalink to this definition">¶</a></dt>
+<dd><p>Append tags to self.tags and recursively for all children</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.deep_remove_tags">
+<code class="descname">deep_remove_tags</code><span class="sig-paren">(</span><em>tags</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.deep_remove_tags"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.deep_remove_tags" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove tags from self.tags and recursively for all children</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.del_child">
+<code class="descname">del_child</code><span class="sig-paren">(</span><em>child</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.del_child"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.del_child" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete a child from self.children and self.children_dict</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.del_child_by_text">
+<code class="descname">del_child_by_text</code><span class="sig-paren">(</span><em>text</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.del_child_by_text"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.del_child_by_text" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete all children with the provided text</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.delete">
+<code class="descname">delete</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.delete"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.delete" title="Permalink to this definition">¶</a></dt>
+<dd><p>Delete the current object from its parent</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.depth">
+<code class="descname">depth</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.depth"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.depth" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.get_child">
+<code class="descname">get_child</code><span class="sig-paren">(</span><em>test</em>, <em>expression</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.get_child"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.get_child" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find a child by TextMatch rule. If it is not found, return None</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.get_child_deep">
+<code class="descname">get_child_deep</code><span class="sig-paren">(</span><em>test_expression_pairs</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.get_child_deep"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.get_child_deep" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find a child recursively with a list of test/expression pairs</p>
+<p>e.g.</p>
+<div class="code python highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">hier_obj</span><span class="o">.</span><span class="n">get_child_deep</span><span class="p">([(</span><span class="s1">&#39;equals&#39;</span><span class="p">,</span> <span class="s1">&#39;control-plane&#39;</span><span class="p">),</span>
+                                  <span class="p">(</span><span class="s1">&#39;equals&#39;</span><span class="p">,</span> <span class="s1">&#39;service-policy input system-cpp-policy&#39;</span><span class="p">)])</span>
+</pre></div>
 </div>
-<div class="section" id="hier-config-text-match-module">
-<h2>hier_config.text_match module<a class="headerlink" href="#hier-config-text-match-module" title="Permalink to this headline">¶</a></h2>
+<p>Returns:</p>
+<blockquote>
+<div>HierarchicalConfiguration or None</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.get_children">
+<code class="descname">get_children</code><span class="sig-paren">(</span><em>test</em>, <em>expression</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.get_children"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.get_children" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find all children matching a TextMatch rule and return them.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.has_children">
+<code class="descname">has_children</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.has_children"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.has_children" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.host">
+<code class="descname">host</code><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.host" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.is_idempotent_command">
+<code class="descname">is_idempotent_command</code><span class="sig-paren">(</span><em>other_children</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.is_idempotent_command"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.is_idempotent_command" title="Permalink to this definition">¶</a></dt>
+<dd><p>Determine if self.text is an idempotent change.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.line_inclusion_test">
+<code class="descname">line_inclusion_test</code><span class="sig-paren">(</span><em>include_tags</em>, <em>exclude_tags</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.line_inclusion_test"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.line_inclusion_test" title="Permalink to this definition">¶</a></dt>
+<dd><p>Given the line_tags, include_tags, and exclude_tags,
+determine if the line should be included</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.lineage">
+<code class="descname">lineage</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.lineage"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.lineage" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the lineage of parent objects, up to but excluding the root</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.lineage_test">
+<code class="descname">lineage_test</code><span class="sig-paren">(</span><em>rule</em>, <em>strip_negation=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.lineage_test"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.lineage_test" title="Permalink to this definition">¶</a></dt>
+<dd><p>A generic test against a lineage of HierarchicalConfiguration objects</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.logs">
+<code class="descname">logs</code><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.logs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.move">
+<code class="descname">move</code><span class="sig-paren">(</span><em>new_parent</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.move"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.move" title="Permalink to this definition">¶</a></dt>
+<dd><p>move an instance to a new parent instance</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.negate">
+<code class="descname">negate</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.negate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.negate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Negate self.text</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.overwrite_with">
+<code class="descname">overwrite_with</code><span class="sig-paren">(</span><em>other</em>, <em>delta</em>, <em>negate=True</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.overwrite_with"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.overwrite_with" title="Permalink to this definition">¶</a></dt>
+<dd><p>Deletes delta.child[self.text], adds a deep copy of self to delta</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.path">
+<code class="descname">path</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.path"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.path" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a list of the text instance variables from self.lineage</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.rebuild_children_dict">
+<code class="descname">rebuild_children_dict</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.rebuild_children_dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.rebuild_children_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rebuild self.children_dict</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.remove_tags">
+<code class="descname">remove_tags</code><span class="sig-paren">(</span><em>tags</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.remove_tags"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.remove_tags" title="Permalink to this definition">¶</a></dt>
+<dd><p>Remove tags from self.tags</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.root">
+<code class="descname">root</code><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.root" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns the HierarchicalConfigurationRoot object at the base of the tree</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.sectional_overwrite_check">
+<code class="descname">sectional_overwrite_check</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.sectional_overwrite_check"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.sectional_overwrite_check" title="Permalink to this definition">¶</a></dt>
+<dd><p>Determines if self.text matches a sectional overwrite rule</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.sectional_overwrite_no_negate_check">
+<code class="descname">sectional_overwrite_no_negate_check</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.sectional_overwrite_no_negate_check"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.sectional_overwrite_no_negate_check" title="Permalink to this definition">¶</a></dt>
+<dd><p>Check self’s text to see if negation should be handled by
+overwriting the section without first negating it</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.set_order_weight">
+<code class="descname">set_order_weight</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.set_order_weight"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.set_order_weight" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sets self.order integer on all children</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.text">
+<code class="descname">text</code><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.text" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.to_tag_spec">
+<code class="descname">to_tag_spec</code><span class="sig-paren">(</span><em>tags</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.to_tag_spec"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.to_tag_spec" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the configuration as a tag spec definition</p>
+<p>This is handy when you have a segment of config and need to
+generate a tag spec to tag configuration in another instance</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.hc_child.HierarchicalConfiguration.with_tags">
+<code class="descname">with_tags</code><span class="sig-paren">(</span><em>tags</em>, <em>new_instance=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/hc_child/#HierarchicalConfiguration.with_tags"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.hc_child.HierarchicalConfiguration.with_tags" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a new instance containing only sub-objects
+with one of the tags in tags</p>
+</dd></dl>
+
+</dd></dl>
+
 </div>
-<div class="section" id="module-contents">
-<h2>Module contents<a class="headerlink" href="#module-contents" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="module-hier_config.text_match">
+<span id="hier-config-text-match-module"></span><h2>hier_config.text_match module<a class="headerlink" href="#module-hier_config.text_match" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="hier_config.text_match.TextMatch">
+<em class="property">class </em><code class="descclassname">hier_config.text_match.</code><code class="descname">TextMatch</code><a class="reference internal" href="../../_modules/hier_config/text_match/#TextMatch"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.text_match.TextMatch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Provides a suite of text matching methods</p>
+<dl class="staticmethod">
+<dt id="hier_config.text_match.TextMatch.anything">
+<em class="property">static </em><code class="descname">anything</code><span class="sig-paren">(</span><em>text</em>, <em>expression</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/text_match/#TextMatch.anything"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.text_match.TextMatch.anything" title="Permalink to this definition">¶</a></dt>
+<dd><p>Always returns True</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="hier_config.text_match.TextMatch.contains">
+<em class="property">static </em><code class="descname">contains</code><span class="sig-paren">(</span><em>text</em>, <em>expression</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/text_match/#TextMatch.contains"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.text_match.TextMatch.contains" title="Permalink to this definition">¶</a></dt>
+<dd><p>Text contains test</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="hier_config.text_match.TextMatch.contains_or_endswith">
+<em class="property">static </em><code class="descname">contains_or_endswith</code><span class="sig-paren">(</span><em>text</em>, <em>expression</em>, <em>with_pad=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/text_match/#TextMatch.contains_or_endswith"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.text_match.TextMatch.contains_or_endswith" title="Permalink to this definition">¶</a></dt>
+<dd><p>Text contains test</p>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="hier_config.text_match.TextMatch.dict_call">
+<em class="property">classmethod </em><code class="descname">dict_call</code><span class="sig-paren">(</span><em>test</em>, <em>text</em>, <em>expression</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/text_match/#TextMatch.dict_call"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.text_match.TextMatch.dict_call" title="Permalink to this definition">¶</a></dt>
+<dd><p>Allows test methods to be called easily from variables</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="hier_config.text_match.TextMatch.endswith">
+<em class="property">static </em><code class="descname">endswith</code><span class="sig-paren">(</span><em>text</em>, <em>expression</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/text_match/#TextMatch.endswith"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.text_match.TextMatch.endswith" title="Permalink to this definition">¶</a></dt>
+<dd><p>Text ends with test</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="hier_config.text_match.TextMatch.equals">
+<em class="property">static </em><code class="descname">equals</code><span class="sig-paren">(</span><em>text</em>, <em>expression</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/text_match/#TextMatch.equals"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.text_match.TextMatch.equals" title="Permalink to this definition">¶</a></dt>
+<dd><p>Text equivalence test</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="hier_config.text_match.TextMatch.nothing">
+<em class="property">static </em><code class="descname">nothing</code><span class="sig-paren">(</span><em>text</em>, <em>expression</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/text_match/#TextMatch.nothing"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.text_match.TextMatch.nothing" title="Permalink to this definition">¶</a></dt>
+<dd><p>Always returns False</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="hier_config.text_match.TextMatch.re_search">
+<em class="property">static </em><code class="descname">re_search</code><span class="sig-paren">(</span><em>text</em>, <em>expression</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/text_match/#TextMatch.re_search"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.text_match.TextMatch.re_search" title="Permalink to this definition">¶</a></dt>
+<dd><p>Test regex match. This method is comparatively
+very slow and should be avoided where possible.</p>
+</dd></dl>
+
+<dl class="staticmethod">
+<dt id="hier_config.text_match.TextMatch.startswith">
+<em class="property">static </em><code class="descname">startswith</code><span class="sig-paren">(</span><em>text</em>, <em>expression</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/text_match/#TextMatch.startswith"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.text_match.TextMatch.startswith" title="Permalink to this definition">¶</a></dt>
+<dd><p>Text starts with test</p>
+</dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-hier_config">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-hier_config" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="hier_config.HierarchicalConfigurationRoot">
+<em class="property">class </em><code class="descclassname">hier_config.</code><code class="descname">HierarchicalConfigurationRoot</code><span class="sig-paren">(</span><em>host</em>, <em>os</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/#HierarchicalConfigurationRoot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.HierarchicalConfigurationRoot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#hier_config.hc_child.HierarchicalConfiguration" title="hier_config.hc_child.HierarchicalConfiguration"><code class="xref py py-class docutils literal notranslate"><span class="pre">hier_config.hc_child.HierarchicalConfiguration</span></code></a></p>
+<p>A class for representing and comparing Cisco configurations in a
+hierarchical tree data structure.</p>
+<p>Example usage:</p>
+<div class="code python highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># Setup basic environment</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;HIER_CONF_DIR&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)),</span>
+    <span class="s1">&#39;tests&#39;</span><span class="p">,</span>
+    <span class="s1">&#39;conf&#39;</span>
+<span class="p">)</span>
+
+<span class="kn">from</span> <span class="nn">hier_config</span> <span class="k">import</span> <span class="n">HierarchicalConfigurationRoot</span>
+
+<span class="n">host</span> <span class="o">=</span> <span class="s1">&#39;aggr101a.dfw1&#39;</span>
+<span class="n">os</span> <span class="o">=</span> <span class="s1">&#39;ios&#39;</span>
+
+<span class="c1"># Build HierarchicalConfigurationRoot object for the Running Config</span>
+
+<span class="n">running_config_hier</span> <span class="o">=</span> <span class="n">HierarchicalConfigurationRoot</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">os</span><span class="p">)</span>
+<span class="n">running_config_hier</span><span class="o">.</span><span class="n">load_from_file</span><span class="p">(</span><span class="s1">&#39;./tests/running_config.conf&#39;</span><span class="p">)</span>
+
+<span class="c1"># Build HierarchicalConfiguration object for the Compiled Config</span>
+
+<span class="n">compiled_config_hier</span> <span class="o">=</span> <span class="n">HierarchicalConfigurationRoot</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">os</span><span class="p">)</span>
+<span class="n">compiled_config_hier</span><span class="o">.</span><span class="n">load_from_file</span><span class="p">(</span><span class="s1">&#39;./tests/compiled_config.conf&#39;</span><span class="p">)</span>
+
+<span class="c1"># Build HierarchicalConfiguration object for the Remediation Config</span>
+
+<span class="n">remediation_config_hier</span> <span class="o">=</span> <span class="n">compiled_config_hier</span><span class="o">.</span><span class="n">deep_diff_tree_with</span><span class="p">(</span><span class="n">running_config_hier</span><span class="p">)</span>
+<span class="n">remediation_config_hier</span><span class="o">.</span><span class="n">add_sectional_exiting</span><span class="p">()</span>
+<span class="n">remediation_config_hier</span><span class="o">.</span><span class="n">add_tags</span><span class="p">(</span><span class="n">hier_tags</span><span class="p">)</span>
+<span class="n">remediation_config</span> <span class="o">=</span> <span class="n">remediation_config_hier</span><span class="o">.</span><span class="n">to_detailed_output</span><span class="p">()</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">remediation_config_hier</span><span class="o">.</span><span class="n">logs</span><span class="o">.</span><span class="n">getvalue</span><span class="p">())</span>
+</pre></div>
+</div>
+<p>See:</p>
+<blockquote>
+<div><p>./tests/conf/hierarchical_configuration_tags_* and ./conf/hierarchical_configuration_options_*</p>
+<p>for test examples of options and tags.</p>
+</div></blockquote>
+<dl class="method">
+<dt id="hier_config.HierarchicalConfigurationRoot.add_ancestor_copy_of">
+<code class="descname">add_ancestor_copy_of</code><span class="sig-paren">(</span><em>parent_to_add</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/#HierarchicalConfigurationRoot.add_ancestor_copy_of"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.HierarchicalConfigurationRoot.add_ancestor_copy_of" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a copy of the ancestry of parent_to_add to self
+and return the deepest child which is equivalent to parent_to_add</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.HierarchicalConfigurationRoot.add_tags">
+<code class="descname">add_tags</code><span class="sig-paren">(</span><em>tag_rules</em>, <em>strip_negation=False</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/#HierarchicalConfigurationRoot.add_tags"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.HierarchicalConfigurationRoot.add_tags" title="Permalink to this definition">¶</a></dt>
+<dd><p>Handler for tagging sections of HierarchicalConfiguration data structure
+for inclusion and exclusion.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.HierarchicalConfigurationRoot.all_children_sorted_with_lineage_rules">
+<code class="descname">all_children_sorted_with_lineage_rules</code><span class="sig-paren">(</span><em>rules</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/#HierarchicalConfigurationRoot.all_children_sorted_with_lineage_rules"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.HierarchicalConfigurationRoot.all_children_sorted_with_lineage_rules" title="Permalink to this definition">¶</a></dt>
+<dd><p>Args:</p>
+<blockquote>
+<div>rules: list of lineage rules</div></blockquote>
+<p>Yields:</p>
+<blockquote>
+<div>instances of HierarchicalConfiguration that match one of the lineage rules</div></blockquote>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.HierarchicalConfigurationRoot.depth">
+<code class="descname">depth</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/#HierarchicalConfigurationRoot.depth"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.HierarchicalConfigurationRoot.depth" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="hier_config.HierarchicalConfigurationRoot.dump">
+<code class="descname">dump</code><span class="sig-paren">(</span><em>lineage_rules=None</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/#HierarchicalConfigurationRoot.dump"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.HierarchicalConfigurationRoot.dump" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>dump = [{</dt>
+<dd>‘depth’: child.depth(),
+‘text’: child.text,
+‘tags’: list(child.tags),
+‘comments’: list(child.comments),
+‘new_in_config’: child.new_in_config</dd>
+</dl>
+<p>}, …]</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>lineage_rules</strong> – list of lineage rules</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">list</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="hier_config.HierarchicalConfigurationRoot.host">
+<code class="descname">host</code><a class="headerlink" href="#hier_config.HierarchicalConfigurationRoot.host" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="hier_config.HierarchicalConfigurationRoot.load_from_dump">
+<code class="descname">load_from_dump</code><span class="sig-paren">(</span><em>dump</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/#HierarchicalConfigurationRoot.load_from_dump"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.HierarchicalConfigurationRoot.load_from_dump" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load a HierarchicalConfigurationRoot dump</p>
+<dl class="docutils">
+<dt>dump = [{</dt>
+<dd>‘depth’: child.depth(),
+‘text’: child.text,
+‘tags’: list(child.tags),
+‘comments’: list(child.comments),
+‘new_in_config’: child.new_in_config</dd>
+</dl>
+<p>}, …]</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dump</strong> – list</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">None</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.HierarchicalConfigurationRoot.load_from_file">
+<code class="descname">load_from_file</code><span class="sig-paren">(</span><em>file_path</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/#HierarchicalConfigurationRoot.load_from_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.HierarchicalConfigurationRoot.load_from_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load configuration text from a file</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="hier_config.HierarchicalConfigurationRoot.load_from_string">
+<code class="descname">load_from_string</code><span class="sig-paren">(</span><em>config_text</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/#HierarchicalConfigurationRoot.load_from_string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.HierarchicalConfigurationRoot.load_from_string" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create HierarchicalConfiguration nested objects from text</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="hier_config.HierarchicalConfigurationRoot.logs">
+<code class="descname">logs</code><a class="headerlink" href="#hier_config.HierarchicalConfigurationRoot.logs" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="hier_config.HierarchicalConfigurationRoot.merge">
+<code class="descname">merge</code><span class="sig-paren">(</span><em>other</em><span class="sig-paren">)</span><a class="reference internal" href="../../_modules/hier_config/#HierarchicalConfigurationRoot.merge"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#hier_config.HierarchicalConfigurationRoot.merge" title="Permalink to this definition">¶</a></dt>
+<dd><p>Merges two HierarchicalConfigurationRoot objects</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="hier_config.HierarchicalConfigurationRoot.root">
+<code class="descname">root</code><a class="headerlink" href="#hier_config.HierarchicalConfigurationRoot.root" title="Permalink to this definition">¶</a></dt>
+<dd><p>returns the HierarchicalConfigurationRoot object at the base of the tree</p>
+</dd></dl>
+
+</dd></dl>
+
 </div>
 </div>
 
 
+           </div>
+           
           </div>
+          <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="../modules/" class="btn btn-neutral float-right" title="hier_config" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right"></span></a>
+      
+      
+        <a href="../hier_config.helpers/" class="btn btn-neutral" title="hier_config.helpers package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left"></span> Previous</a>
+      
+    </div>
+  
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2018, Andrew Edwards, Jan Brooks, James Williams.
+
+    </p>
+  </div>
+  Built with <a href="http://sphinx-doc.org/">Sphinx</a> using a <a href="https://github.com/rtfd/sphinx_rtd_theme">theme</a> provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+
         </div>
       </div>
-      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
-        <div class="sphinxsidebarwrapper">
-  <h3><a href="../../">Table Of Contents</a></h3>
-  <ul>
-<li><a class="reference internal" href="#">hier_config package</a><ul>
-<li><a class="reference internal" href="#subpackages">Subpackages</a></li>
-<li><a class="reference internal" href="#submodules">Submodules</a></li>
-<li><a class="reference internal" href="#hier-config-hc-child-module">hier_config.hc_child module</a></li>
-<li><a class="reference internal" href="#hier-config-text-match-module">hier_config.text_match module</a></li>
-<li><a class="reference internal" href="#module-contents">Module contents</a></li>
-</ul>
-</li>
-</ul>
-<div class="relations">
-<h3>Related Topics</h3>
-<ul>
-  <li><a href="../../">Documentation overview</a><ul>
-  <li><a href="../">Hierarchical Configuration Code Documentation</a><ul>
-      <li>Previous: <a href="../hier_config.helpers/" title="previous chapter">hier_config.helpers package</a></li>
-      <li>Next: <a href="../modules/" title="next chapter">hier_config</a></li>
-  </ul></li>
-  </ul></li>
-</ul>
-</div>
-  <div role="note" aria-label="source link">
-    <h3>This Page</h3>
-    <ul class="this-page-menu">
-      <li><a href="../../_sources/hier_config/hier_config.rst.txt"
-            rel="nofollow">Show Source</a></li>
-    </ul>
-   </div>
-<div id="searchbox" style="display: none" role="search">
-  <h3>Quick search</h3>
-    <div class="searchformwrapper">
-    <form class="search" action="../../search/" method="get">
-      <input type="text" name="q" />
-      <input type="submit" value="Go" />
-      <input type="hidden" name="check_keywords" value="yes" />
-      <input type="hidden" name="area" value="default" />
-    </form>
-    </div>
-</div>
-<script type="text/javascript">$('#searchbox').show(0);</script>
-        </div>
-      </div>
-      <div class="clearer"></div>
-    </div>
-    <div class="footer">
-      &copy;2018, Andrew Edwards, Jan Brooks, James Williams.
-      
-      |
-      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.7.4</a>
-      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.10</a>
-      
-      |
-      <a href="../../_sources/hier_config/hier_config.rst.txt"
-          rel="nofollow">Page source</a>
-    </div>
 
-    
+    </section>
 
-    
-  </body>
+  </div>
+  
+
+
+  
+
+    <script type="text/javascript">
+        var DOCUMENTATION_OPTIONS = {
+            URL_ROOT:'../../',
+            VERSION:'1.0.0',
+            LANGUAGE:'None',
+            COLLAPSE_INDEX:false,
+            FILE_SUFFIX:'',
+            HAS_SOURCE:  true,
+            SOURCELINK_SUFFIX: '.txt'
+        };
+    </script>
+      <script type="text/javascript" src="../../_static/jquery.js"></script>
+      <script type="text/javascript" src="../../_static/underscore.js"></script>
+      <script type="text/javascript" src="../../_static/doctools.js"></script>
+
+  
+
+  
+  
+    <script type="text/javascript" src="../../_static/js/theme.js"></script>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
 </html>
