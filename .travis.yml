@@ -14,7 +14,7 @@ after_success:
 - "cd docs/_mkdocs; ./mkdocs.sh; cd -"
 
 deploy:
-  provider: pages
+- provider: pages
   skip-cleanup: true
   github-token: $GITHUBTOKEN
   keep-history: true
