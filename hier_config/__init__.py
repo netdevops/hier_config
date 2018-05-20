@@ -2,7 +2,7 @@ from hier_config.hc_child import HierarchicalConfiguration
 
 import re
 
-__version__ = '1.0.2'
+__version__ = '1.0.3'
 
 
 class HierarchicalConfigurationRoot(HierarchicalConfiguration):
