@@ -20,7 +20,7 @@ deploy:
   github-token: $GITHUBTOKEN
   skip-cleanup: true
   keep-history: true
-  target-branch: docs-update
+  target-branch: gh-pages 
   local-dir: "docs"
   on:
     branch: master
