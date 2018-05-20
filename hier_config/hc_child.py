@@ -1,6 +1,5 @@
 from hier_config.text_match import TextMatch
 
-import hier_config.constants as C
 import hier_config.helpers as H
 
 
@@ -10,6 +9,7 @@ class HierarchicalConfiguration:
         self.parent = parent
         self._text = text.strip()
         self.os = self.root.os
+        self.hier_options = self.root.hier_options
         self.real_indent_level = None
         self.children = []
         self.children_dict = {}
@@ -375,7 +375,7 @@ class HierarchicalConfiguration:
         """
 
         for child in self.all_children():
-            for rule in C.HIER_OPTIONS[self.os]['ordering']:
+            for rule in self.hier_options['ordering']:
                 if child.lineage_test(rule):
                     child.order_weight = rule['order']
 
@@ -388,8 +388,7 @@ class HierarchicalConfiguration:
         # TODO why do we need to delete the delete the sub_child and then
         # recreate it?
         for child in self.all_children():
-            for rule in C.HIER_OPTIONS[
-                    self.os]['sectional_exiting']:
+            for rule in self.hier_options['sectional_exiting']:
                 if child.lineage_test(rule):
                     if rule['exit_text'] in child:
                         child.del_child_by_text(rule['exit_text'])
@@ -480,7 +479,8 @@ class HierarchicalConfiguration:
 
         from hier_config import HierarchicalConfigurationRoot
         if new_instance is None:
-            new_instance = HierarchicalConfigurationRoot(self.host, self.os)
+            new_instance = HierarchicalConfigurationRoot(
+                self.host, self.os, self.hier_options)
 
         for child in self.children:
             if tags.intersection(self.tags):
@@ -492,14 +492,12 @@ class HierarchicalConfiguration:
     def negate(self):
         """ Negate self.text """
 
-        for rule in C.HIER_OPTIONS[
-                self.os]['negation_negate_with']:
+        for rule in self.hier_options['negation_negate_with']:
             if self.lineage_test(rule):
                 self.text = rule['use']
                 return self
 
-        for rule in C.HIER_OPTIONS[
-                self.os]['negation_default_when']:
+        for rule in self.hier_options['negation_default_when']:
             if self.lineage_test(rule):
                 return self._default()
 
@@ -515,7 +513,8 @@ class HierarchicalConfiguration:
 
         from hier_config import HierarchicalConfigurationRoot
         if delta is None:
-            delta = HierarchicalConfigurationRoot(self.host, self.os)
+            delta = HierarchicalConfigurationRoot(
+                self.host, self.os, self.hier_options)
 
         self._config_to_get_to_left(target, delta)
         self._config_to_get_to_right(target, delta)
@@ -537,7 +536,8 @@ class HierarchicalConfiguration:
                 deleted = delta.add_child(self_child.text)
                 deleted.negate()
                 if self_child.children:
-                    deleted.comments.add(f"removes {len(self_child.children_dict) + 1} lines")
+                    deleted.comments.add(
+                        f"removes {len(self_child.children_dict) + 1} lines")
 
     def _config_to_get_to_right(self, target, delta):
         # find what would need to be added to source_config to get to self
@@ -604,7 +604,7 @@ class HierarchicalConfiguration:
         """
 
         # Blacklist commands from matching as idempotent
-        for rule in C.HIER_OPTIONS[self.os][
+        for rule in self.hier_options[
                 'idempotent_commands_blacklist']:
             if self.lineage_test(rule, True):
                 return False
@@ -619,8 +619,7 @@ class HierarchicalConfiguration:
                         return True
 
         # Idempotent command identification
-        for rule in C.HIER_OPTIONS[
-                self.os]['idempotent_commands']:
+        for rule in self.hier_options['idempotent_commands']:
             if self.lineage_test(rule, True):
                 for other_child in other_children:
                     if other_child.lineage_test(rule, True):
@@ -635,7 +634,7 @@ class HierarchicalConfiguration:
 
         """
 
-        for rule in C.HIER_OPTIONS[self.os][
+        for rule in self.hier_options[
                 'sectional_overwrite_no_negate']:
             if self.lineage_test(rule):
                 return True
@@ -644,8 +643,7 @@ class HierarchicalConfiguration:
     def sectional_overwrite_check(self):
         """ Determines if self.text matches a sectional overwrite rule """
 
-        for rule in C.HIER_OPTIONS[
-                self.os]['sectional_overwrite']:
+        for rule in self.hier_options['sectional_overwrite']:
             if self.lineage_test(rule):
                 return True
         return False
@@ -667,7 +665,7 @@ class HierarchicalConfiguration:
     def _duplicate_child_allowed_check(self):
         """ Determine if duplicate(identical text) children are allowed under the parent """
 
-        for rule in C.HIER_OPTIONS[self.os][
+        for rule in self.hier_options[
                 'parent_allows_duplicate_child']:
             if self.lineage_test(rule):
                 return True
