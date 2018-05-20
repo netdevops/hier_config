@@ -19,9 +19,7 @@ setup(
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
-        'Intended Audience :: Network Engineers',
         'Topic :: Software Development :: Libraries :: Python Modules',
-        'Topic :: Software Development :: Network Automation Tools',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3.6',
     ]
