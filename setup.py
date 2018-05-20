@@ -17,7 +17,7 @@ setup(
     keywords = "hieararchical configuration",
     python_requires='~=3.6',
     classifiers=[
-        'Development :: Status :: 4 - Beta',
+        'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'Intended Audience :: Network Engineers',
         'Topic :: Software Development :: Libraries :: Python Modules',
