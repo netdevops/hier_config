@@ -41,3 +41,5 @@ rsync -avz --exclude sphinx-env "${PWD}/_build/dirhtml/" "../../docs"
 # remove python env
 deactivate
 rm -rf ./sphinx-env
+
+exit 0

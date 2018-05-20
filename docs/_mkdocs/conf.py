@@ -12,6 +12,9 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
+
+from hier_config import __version__
+
 import os
 import sys
 sys.path.insert(0, os.path.abspath('../..'))
@@ -24,9 +27,9 @@ copyright = '2018, Andrew Edwards, Jan Brooks, James Williams'
 author = 'Andrew Edwards, Jan Brooks, James Williams'
 
 # The short X.Y version
-version = '1.0.0'
+version = __version__
 # The full version, including alpha/beta/rc tags
-release = '1.0.0'
+release = __version__
 
 
 # -- General configuration ---------------------------------------------------
