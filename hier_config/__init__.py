@@ -17,20 +17,20 @@ class HierarchicalConfigurationRoot(HierarchicalConfiguration):
 
         # Setup basic environment
 
-        import yaml
         from hier_config import HierarchicalConfigurationRoot
 
         host = 'aggr101a.dfw1'
+        os = 'ios'
         hier_options = yaml.load(open('/path/to/hier_options.yml'))
 
         # Build HierarchicalConfigurationRoot object for the Running Config
 
-        running_config_hier = HierarchicalConfigurationRoot(host, hier_options)
+        running_config_hier = HierarchicalConfigurationRoot(host, os, hier_options)
         running_config_hier.load_from_file('./tests/files/running_config.conf')
 
         # Build HierarchicalConfiguration object for the Compiled Config
 
-        compiled_config_hier = HierarchicalConfigurationRoot(host, hier_options)
+        compiled_config_hier = HierarchicalConfigurationRoot(host, os, hier_options)
         compiled_config_hier.load_from_file('./tests/files/compiled_config.conf')
 
         # Build HierarchicalConfiguration object for the Remediation Config
