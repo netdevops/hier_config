@@ -3,13 +3,14 @@ from hier_config.text_match import TextMatch
 import hier_config.helpers as H
 
 
-class HierarchicalConfiguration:
+class HConfigChild:
 
     def __init__(self, parent, text):
         self.parent = parent
         self._text = text.strip()
+        self.hostname = self.root.hostname
         self.os = self.root.os
-        self.hier_options = self.root.hier_options
+        self.options = self.root.options
         self.real_indent_level = None
         self.children = []
         self.children_dict = {}
@@ -37,7 +38,7 @@ class HierarchicalConfiguration:
         self.parent.rebuild_children_dict()
 
     def __repr__(self):
-        return 'HierarchicalConfiguration(\'{}\')'.format(self.text)
+        return f"HConfigChild('{self.parent}, {self.text}')"
 
     def __str__(self):
         return self.text
@@ -88,7 +89,7 @@ class HierarchicalConfiguration:
 
     @property
     def root(self):
-        """ returns the HierarchicalConfigurationRoot object at the base of the tree """
+        """ returns the HConfig object at the base of the tree """
 
         return self.parent.root
 
@@ -98,7 +99,7 @@ class HierarchicalConfiguration:
 
     @property
     def host(self):
-        return self.parent.host
+        return self.parent.hostname
 
     @staticmethod
     def _lineage_eval_object_rules(rules, section):
@@ -180,7 +181,7 @@ class HierarchicalConfiguration:
 
         Returns:
 
-            HierarchicalConfiguration or None
+            HConfigChild or None
 
         """
 
@@ -241,25 +242,25 @@ class HierarchicalConfiguration:
                 child.text, child)
 
     def add_children(self, lines):
-        """ Add child instances of HierarchicalConfiguration """
+        """ Add child instances of HConfigChild """
 
         for line in lines:
             self.add_child(line)
 
     def add_child(self, text, alert_on_duplicate=False, idx=None, force_duplicate=False):
-        """ Add a child instance of HierarchicalConfiguration """
+        """ Add a child instance of HConfigChild """
 
         if idx is None:
             idx = len(self.children)
         # if child does not exist
         if text not in self:
-            new_item = HierarchicalConfiguration(self, text)
+            new_item = HConfigChild(self, text)
             self.children.insert(idx, new_item)
             self.children_dict[text] = new_item
             return new_item
         # if child does exist and is allowed to be installed as a duplicate
         elif self._duplicate_child_allowed_check() or force_duplicate:
-            new_item = HierarchicalConfiguration(self, text)
+            new_item = HConfigChild(self, text)
             self.children.insert(idx, new_item)
             self.rebuild_children_dict()
             return new_item
@@ -375,7 +376,7 @@ class HierarchicalConfiguration:
         """
 
         for child in self.all_children():
-            for rule in self.hier_options['ordering']:
+            for rule in self.options['ordering']:
                 if child.lineage_test(rule):
                     child.order_weight = rule['order']
 
@@ -388,7 +389,7 @@ class HierarchicalConfiguration:
         # TODO why do we need to delete the delete the sub_child and then
         # recreate it?
         for child in self.all_children():
-            for rule in self.hier_options['sectional_exiting']:
+            for rule in self.options['sectional_exiting']:
                 if child.lineage_test(rule):
                     if rule['exit_text'] in child:
                         child.del_child_by_text(rule['exit_text'])
@@ -477,10 +478,10 @@ class HierarchicalConfiguration:
 
         """
 
-        from hier_config import HierarchicalConfigurationRoot
+        from hier_config import HConfig
         if new_instance is None:
-            new_instance = HierarchicalConfigurationRoot(
-                self.host, self.os, self.hier_options)
+            new_instance = HConfig(
+                self.hostname, self.os, self.options)
 
         for child in self.children:
             if tags.intersection(self.tags):
@@ -492,12 +493,12 @@ class HierarchicalConfiguration:
     def negate(self):
         """ Negate self.text """
 
-        for rule in self.hier_options['negation_negate_with']:
+        for rule in self.options['negation_negate_with']:
             if self.lineage_test(rule):
                 self.text = rule['use']
                 return self
 
-        for rule in self.hier_options['negation_default_when']:
+        for rule in self.options['negation_default_when']:
             if self.lineage_test(rule):
                 return self._default()
 
@@ -511,10 +512,10 @@ class HierarchicalConfiguration:
 
         """
 
-        from hier_config import HierarchicalConfigurationRoot
+        from hier_config import HConfig
         if delta is None:
-            delta = HierarchicalConfigurationRoot(
-                self.host, self.os, self.hier_options)
+            delta = HConfig(
+                self.hostname, self.os, self.options)
 
         self._config_to_get_to_left(target, delta)
         self._config_to_get_to_right(target, delta)
@@ -545,7 +546,7 @@ class HierarchicalConfiguration:
             # if the child exist, recurse into its children
             self_child = self.get_child('equals', target_child.text)
             if self_child:
-                # This creates a new HierarchicalConfiguration object just in case there are some delta children
+                # This creates a new HConfigChild object just in case there are some delta children
                 # Not very efficient, think of a way to not do this
                 subtree = delta.add_child(target_child.text)
                 self_child.config_to_get_to(target_child, subtree)
@@ -604,7 +605,7 @@ class HierarchicalConfiguration:
         """
 
         # Blacklist commands from matching as idempotent
-        for rule in self.hier_options[
+        for rule in self.options[
                 'idempotent_commands_blacklist']:
             if self.lineage_test(rule, True):
                 return False
@@ -619,7 +620,7 @@ class HierarchicalConfiguration:
                         return True
 
         # Idempotent command identification
-        for rule in self.hier_options['idempotent_commands']:
+        for rule in self.options['idempotent_commands']:
             if self.lineage_test(rule, True):
                 for other_child in other_children:
                     if other_child.lineage_test(rule, True):
@@ -634,7 +635,7 @@ class HierarchicalConfiguration:
 
         """
 
-        for rule in self.hier_options[
+        for rule in self.options[
                 'sectional_overwrite_no_negate']:
             if self.lineage_test(rule):
                 return True
@@ -643,7 +644,7 @@ class HierarchicalConfiguration:
     def sectional_overwrite_check(self):
         """ Determines if self.text matches a sectional overwrite rule """
 
-        for rule in self.hier_options['sectional_overwrite']:
+        for rule in self.options['sectional_overwrite']:
             if self.lineage_test(rule):
                 return True
         return False
@@ -665,7 +666,7 @@ class HierarchicalConfiguration:
     def _duplicate_child_allowed_check(self):
         """ Determine if duplicate(identical text) children are allowed under the parent """
 
-        for rule in self.hier_options[
+        for rule in self.options[
                 'parent_allows_duplicate_child']:
             if self.lineage_test(rule):
                 return True
@@ -677,7 +678,7 @@ class HierarchicalConfiguration:
         new_child = self.add_child(child_to_add.text)
         if merged:
             new_child.instances.append({
-                'hostname': child_to_add.host.hostname,
+                'hostname': child_to_add.hostname,
                 'comments': child_to_add.comments,
                 'tags': child_to_add.tags})
         new_child.comments.update(child_to_add.comments)
@@ -708,7 +709,7 @@ class HierarchicalConfiguration:
             return False
 
     def lineage_test(self, rule, strip_negation=False):
-        """ A generic test against a lineage of HierarchicalConfiguration objects """
+        """ A generic test against a lineage of HConfigChild objects """
 
         if 'match_leaf' in rule and rule['match_leaf']:
             # stupid trick to make a generator with one item
@@ -724,10 +725,10 @@ class HierarchicalConfiguration:
         matches = 0
 
         for lineage_rule, section in zip(rule['lineage'], lineage_obj):
-            object_rules, text_match_rules = HierarchicalConfiguration._explode_lineage_rule(
+            object_rules, text_match_rules = HConfigChild._explode_lineage_rule(
                 lineage_rule)
 
-            if not HierarchicalConfiguration._lineage_eval_object_rules(
+            if not HConfigChild._lineage_eval_object_rules(
                     object_rules, section):
                 return False
 
@@ -743,7 +744,7 @@ class HierarchicalConfiguration:
             else:
                 text = section.text
 
-            if HierarchicalConfiguration._lineage_eval_text_match_rules(
+            if HConfigChild._lineage_eval_text_match_rules(
                     text_match_rules, text):
                 matches += 1
                 continue

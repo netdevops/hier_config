@@ -18,16 +18,16 @@ fi
 cat > hier_config.rst << EOF
 .. _hier_config:
 
-=============================================
-Hierarchical Configuration Code Documentation
-=============================================
+==================
+Code Documentation
+==================
 
 .. toctree::
    :maxdepth: 1
 
 EOF
 
-for i in `ls hier_config`; do
+for i in `ls hier_config | egrep -v "modules"`; do
   echo "   hier_config/$i" >> hier_config.rst
 done
 

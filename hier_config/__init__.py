@@ -1,11 +1,11 @@
-from hier_config.hc_child import HierarchicalConfiguration
+from hier_config.hc_child import HConfigChild
 
 import re
 
-__version__ = '1.0.5'
+__version__ = '1.1.0'
 
 
-class HierarchicalConfigurationRoot(HierarchicalConfiguration):
+class HConfig(HConfigChild):
 
     """
     A class for representing and comparing Cisco configurations in a
@@ -17,23 +17,23 @@ class HierarchicalConfigurationRoot(HierarchicalConfiguration):
 
         # Setup basic environment
 
-        from hier_config import HierarchicalConfigurationRoot
+        from hier_config import HConfig
 
-        host = 'aggr101a.dfw1'
+        hostname = 'aggr101a.dfw1'
         os = 'ios'
-        hier_options = yaml.load(open('/path/to/hier_options.yml'))
+        options = yaml.load(open('/path/to/options.yml'))
 
-        # Build HierarchicalConfigurationRoot object for the Running Config
+        # Build HConfig object for the Running Config
 
-        running_config_hier = HierarchicalConfigurationRoot(host, os, hier_options)
+        running_config_hier = HConfig(hostname, os, options)
         running_config_hier.load_from_file('./tests/files/running_config.conf')
 
-        # Build HierarchicalConfiguration object for the Compiled Config
+        # Build Hierarchical Configuration object for the Compiled Config
 
-        compiled_config_hier = HierarchicalConfigurationRoot(host, os, hier_options)
+        compiled_config_hier = HConfig(hostname, os, options)
         compiled_config_hier.load_from_file('./tests/files/compiled_config.conf')
 
-        # Build HierarchicalConfiguration object for the Remediation Config
+        # Build Hierarchical Configuration object for the Remediation Config
 
         remediation_config_hier = compiled_config_hier.deep_diff_tree_with(running_config_hier)
         remediation_config_hier.add_sectional_exiting()
@@ -49,17 +49,17 @@ class HierarchicalConfigurationRoot(HierarchicalConfiguration):
 
     """
 
-    def __init__(self, host, os, hier_options):
-        self._host = host
+    def __init__(self, hostname, os, options):
+        self._hostname = hostname
         self.os = os
-        self.hier_options = dict(hier_options)
+        self.options = dict(options)
         self._logs = list()
         self.children = []
         self.children_dict = {}
 
     @property
-    def host(self):
-        return self._host
+    def hostname(self):
+        return self._hostname
 
     @property
     def logs(self):
@@ -71,7 +71,7 @@ class HierarchicalConfigurationRoot(HierarchicalConfiguration):
 
     @property
     def __repr__(self):
-        return f"HierarchicalConfigurationRoot('{self.host}')"
+        return f"HConfig('{self.hostname}, {self.os}, {self.options}')"
 
     def __str__(self):
         return self.text
@@ -90,7 +90,7 @@ class HierarchicalConfigurationRoot(HierarchicalConfiguration):
         return True
 
     def merge(self, other):
-        """ Merges two HierarchicalConfigurationRoot objects """
+        """ Merges two HConfig objects """
 
         for child in other.children:
             self.add_deep_copy_of(child, merged=True)
@@ -103,9 +103,9 @@ class HierarchicalConfigurationRoot(HierarchicalConfiguration):
         self.load_from_string(config_text)
 
     def load_from_string(self, config_text):
-        """ Create HierarchicalConfiguration nested objects from text """
+        """ Create Hierarchical Configuration nested objects from text """
 
-        for sub in self.hier_options['full_text_sub']:
+        for sub in self.options['full_text_sub']:
             config_text = re.sub(
                 sub['search'],
                 sub['replace'],
@@ -165,7 +165,7 @@ class HierarchicalConfigurationRoot(HierarchicalConfiguration):
 
             actual_indent = len(line) - len(line.lstrip())
             line = ' ' * actual_indent + ' '.join(line.split())
-            for sub in self.hier_options['per_line_sub']:
+            for sub in self.options['per_line_sub']:
                 line = re.sub(
                     sub['search'],
                     sub['replace'],
@@ -192,7 +192,7 @@ class HierarchicalConfigurationRoot(HierarchicalConfiguration):
             most_recent_item = current_section.add_child(line, True)
             most_recent_item.real_indent_level = this_indent
 
-            for expression in self.hier_options['indent_adjust']:
+            for expression in self.options['indent_adjust']:
                 if re.search(expression['start_expression'], line):
                     indent_adjust += 1
                     end_indent_adjust.append(expression['end_expression'])
@@ -213,7 +213,7 @@ class HierarchicalConfigurationRoot(HierarchicalConfiguration):
 
     def load_from_dump(self, dump):
         """
-        Load a HierarchicalConfigurationRoot dump
+        Load a HConfig dump
 
         dump = [{
             'depth': child.depth(),
@@ -289,7 +289,7 @@ class HierarchicalConfigurationRoot(HierarchicalConfiguration):
 
     def add_tags(self, tag_rules, strip_negation=False):
         """
-        Handler for tagging sections of HierarchicalConfiguration data structure
+        Handler for tagging sections of Hierarchical Configuration data structure
         for inclusion and exclusion.
 
         """
@@ -367,7 +367,7 @@ class HierarchicalConfigurationRoot(HierarchicalConfiguration):
 
         Yields:
 
-            instances of HierarchicalConfiguration that match one of the lineage rules
+            instances of Hierarchical Configuration that match one of the lineage rules
 
         """
 
