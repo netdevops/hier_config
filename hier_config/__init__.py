@@ -5,7 +5,7 @@ import re
 __version__ = '1.1.0'
 
 
-class HConfigRoot(HConfigChild):
+class HConfig(HConfigChild):
 
     """
     A class for representing and comparing Cisco configurations in a
@@ -17,20 +17,20 @@ class HConfigRoot(HConfigChild):
 
         # Setup basic environment
 
-        from hier_config import HConfigRoot
+        from hier_config import HConfig
 
         hostname = 'aggr101a.dfw1'
         os = 'ios'
         options = yaml.load(open('/path/to/options.yml'))
 
-        # Build HConfigRoot object for the Running Config
+        # Build HConfig object for the Running Config
 
-        running_config_hier = HConfigRoot(hostname, os, options)
+        running_config_hier = HConfig(hostname, os, options)
         running_config_hier.load_from_file('./tests/files/running_config.conf')
 
         # Build Hierarchical Configuration object for the Compiled Config
 
-        compiled_config_hier = HConfigRoot(hostname, os, options)
+        compiled_config_hier = HConfig(hostname, os, options)
         compiled_config_hier.load_from_file('./tests/files/compiled_config.conf')
 
         # Build Hierarchical Configuration object for the Remediation Config
@@ -71,7 +71,7 @@ class HConfigRoot(HConfigChild):
 
     @property
     def __repr__(self):
-        return f"HConfigRoot('{self.hostname}, {self.os}, {self.options}')"
+        return f"HConfig('{self.hostname}, {self.os}, {self.options}')"
 
     def __str__(self):
         return self.text
@@ -90,7 +90,7 @@ class HConfigRoot(HConfigChild):
         return True
 
     def merge(self, other):
-        """ Merges two HConfigRoot objects """
+        """ Merges two HConfig objects """
 
         for child in other.children:
             self.add_deep_copy_of(child, merged=True)
@@ -213,7 +213,7 @@ class HConfigRoot(HConfigChild):
 
     def load_from_dump(self, dump):
         """
-        Load a HConfigRoot dump
+        Load a HConfig dump
 
         dump = [{
             'depth': child.depth(),

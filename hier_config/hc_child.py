@@ -89,7 +89,7 @@ class HConfigChild:
 
     @property
     def root(self):
-        """ returns the HConfigRoot object at the base of the tree """
+        """ returns the HConfig object at the base of the tree """
 
         return self.parent.root
 
@@ -478,9 +478,9 @@ class HConfigChild:
 
         """
 
-        from hier_config import HConfigRoot
+        from hier_config import HConfig
         if new_instance is None:
-            new_instance = HConfigRoot(
+            new_instance = HConfig(
                 self.hostname, self.os, self.options)
 
         for child in self.children:
@@ -512,9 +512,9 @@ class HConfigChild:
 
         """
 
-        from hier_config import HConfigRoot
+        from hier_config import HConfig
         if delta is None:
-            delta = HConfigRoot(
+            delta = HConfig(
                 self.hostname, self.os, self.options)
 
         self._config_to_get_to_left(target, delta)
