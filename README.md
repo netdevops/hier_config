@@ -13,4 +13,19 @@ Hierarchical Configuraiton has been used extensively on:
 
 However, any NOS that utilizes a CLI syntax that is structured in a similar fasion to IOS should work mostly out of the box.
 
-The documentation can be found at: https://netdevops.io/hier_config/
+The code documentation can be found at: https://netdevops.io/hier_config/
+
+Installation
+============
+
+Hierarchical Configuration can be installed directly from github or with pip:
+
+- Github
+```
+git clone git@github.com:netdevops/hier_config.git
+cd hier_config; ./setup.py
+```
+- Pip
+```
+pip install hier-config
+```
