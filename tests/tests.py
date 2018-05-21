@@ -4,11 +4,11 @@ import unittest
 
 
 def all_tests():
-    from test_hier_config import TestHierarchicalConfigurationRoot
+    from test_hier_config import TestHConfigRoot
     from test_text_match import TestTextMatch
 
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(TestHierarchicalConfigurationRoot))
+    suite.addTest(unittest.makeSuite(TestHConfigRoot))
     suite.addTest(unittest.makeSuite(TestTextMatch))
 
     return suite
