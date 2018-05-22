@@ -72,7 +72,7 @@ class HConfig(HConfigChild):
 
     @property
     def __repr__(self):
-        return 'HConfig({},{}, \{\})'.format(self.hostname, self.os)
+        return r'HConfig({},{}, \{\})'.format(self.hostname, self.os)
 
     def __str__(self):
         return self.text
@@ -142,7 +142,7 @@ class HConfig(HConfigChild):
                     temp_banner.append(line)
 
                 # Test if this line is the end of a banner
-                if end_of_banner_test(line):
+                if end_of_banner_test(str(line)):
                     in_banner = False
                     most_recent_item = self.add_child(
                         "\n".join(temp_banner), True)
@@ -216,13 +216,15 @@ class HConfig(HConfigChild):
         """
         Load a HConfig dump
 
-        dump = [{
-            'depth': child.depth(),
-            'text': child.text,
-            'tags': list(child.tags),
-            'comments': list(child.comments),
-            'new_in_config': child.new_in_config
-        }, ...]
+        .. code:: python
+
+            dump = [{
+                'depth': child.depth(),
+                'text': child.text,
+                'tags': list(child.tags),
+                'comments': list(child.comments),
+                'new_in_config': child.new_in_config
+            },]
 
         :param dump: list
         :return: None
@@ -256,17 +258,20 @@ class HConfig(HConfigChild):
 
     def dump(self, lineage_rules=None):
         """
+        Dump a list of loaded HConfig data
 
-        dump = [{
-            'depth': child.depth(),
-            'text': child.text,
-            'tags': list(child.tags),
-            'comments': list(child.comments),
-            'new_in_config': child.new_in_config
-        }, ...]
+        .. code:: python
 
-        :param lineage_rules: list of lineage rules
-        :return: list
+            dump = [{
+                'depth': child.depth(),
+                'text': child.text,
+                'tags': list(child.tags),
+                'comments': list(child.comments),
+                'new_in_config': child.new_in_config
+            },]
+
+        :param lineage_rules: list
+        :returns: list
 
         """
 
