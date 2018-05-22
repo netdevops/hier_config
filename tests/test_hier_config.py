@@ -10,14 +10,19 @@ class TestHConfig(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.host_a = 'aggr101a.dfw1'
-        cls.host_b = 'aggr101b.dfw1'
+        cls.host_a = 'example.rtr'
         cls.os = 'ios'
         cls.options_file = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
             'files',
             'test_options_ios.yml',
         )
+        cls.tags_file = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            'files',
+            'test_tags_ios.yml',
+        )
+        cls.tags = yaml.load(open(cls.tags_file))
         cls.options = yaml.load(open(cls.options_file))
 
     def test_cisco_style_text(self):
@@ -32,13 +37,11 @@ class TestHConfig(unittest.TestCase):
     def test_dump_and_load_from_dump_and_compare(self):
         hier_pre_dump = HConfig(self.host_a, self.os, self.options)
         a1 = hier_pre_dump.add_child('a1')
-        b1 = a1.add_child('b1')
         b2 = a1.add_child('b2')
         b2.order_weight = 400
         b2.tags.add('test')
         b2.comments.add('test comment')
         b2.new_in_config = True
-        c1 = b2.add_child('c1')
         dump = hier_pre_dump.dump()
 
         hier_post_dump = HConfig(self.host_a, self.os, self.options)

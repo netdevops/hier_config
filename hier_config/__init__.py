@@ -53,6 +53,7 @@ class HConfig(HConfigChild):
         self._hostname = hostname
         self.os = os
         self.options = dict(options)
+        self._text = str()
         self._logs = list()
         self.children = []
         self.children_dict = {}
@@ -71,7 +72,7 @@ class HConfig(HConfigChild):
 
     @property
     def __repr__(self):
-        return f"HConfig('{self.hostname}, {self.os}, {self.options}')"
+        return HConfig('{},{},{}'.format(self.hostname, self.os, self.options))
 
     def __str__(self):
         return self.text
