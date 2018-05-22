@@ -132,16 +132,16 @@ class TestHConfig(unittest.TestCase):
 
     def test_get_child(self):
         hier = HConfig(self.host_a, self.os, self.options)
-        hier.add_child('interface vlan2')
+        hier.add_child('interface Vlan2')
         child = hier.get_child('equals', 'interface Vlan2')
-        self.assertEqual('interface vlan2', child.text)
+        self.assertEqual('interface Vlan2', child.text)
 
     def test_get_child_deep(self):
         hier = HConfig(self.host_a, self.os, self.options)
         interface = hier.add_child('interface Vlan2')
         interface.add_child('ip address 192.168.1.1 255.255.255.0')
         child = hier.get_child_deep([
-            ('equals', 'interface vlan2'),
+            ('equals', 'interface Vlan2'),
             ('equals', 'ip address 192.168.1.1 255.255.255.0')])
         self.assertIsNotNone(child)
 
