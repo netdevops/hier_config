@@ -2,7 +2,7 @@ from hier_config.hc_child import HConfigChild
 
 import re
 
-__version__ = '1.1.0'
+__version__ = '1.1.1'
 
 
 class HConfig(HConfigChild):
@@ -18,10 +18,12 @@ class HConfig(HConfigChild):
         # Setup basic environment
 
         from hier_config import HConfig
+        import yaml
 
-        hostname = 'aggr101a.dfw1'
+        hostname = 'example.rtr'
         os = 'ios'
-        options = yaml.load(open('/path/to/options.yml'))
+        options = yaml.load(open('./tests/files/test_options_ios.yml'))
+        tags = yaml.load(open('./tests/files/test_tags_ios.yml'))
 
         # Build HConfig object for the Running Config
 
@@ -35,11 +37,12 @@ class HConfig(HConfigChild):
 
         # Build Hierarchical Configuration object for the Remediation Config
 
-        remediation_config_hier = compiled_config_hier.deep_diff_tree_with(running_config_hier)
+        remediation_config_hier = running_config_hier.config_to_get_to(compiled_config_hier)
         remediation_config_hier.add_sectional_exiting()
-        remediation_config_hier.add_tags(hier_tags)
-        remediation_config = remediation_config_hier.to_detailed_output()
-        print(remediation_config_hier.logs.getvalue())
+        remediation_config_hier.add_tags(tags)
+
+        for line in remediation_config_hier.all_children():
+            print(line.cisco_style_text())
 
     See:
 
@@ -53,6 +56,7 @@ class HConfig(HConfigChild):
         self._hostname = hostname
         self.os = os
         self.options = dict(options)
+        self._text = str()
         self._logs = list()
         self.children = []
         self.children_dict = {}
@@ -71,7 +75,7 @@ class HConfig(HConfigChild):
 
     @property
     def __repr__(self):
-        return f"HConfig('{self.hostname}, {self.os}, {self.options}')"
+        return r'HConfig({},{}, \{\})'.format(self.hostname, self.os)
 
     def __str__(self):
         return self.text
@@ -141,7 +145,7 @@ class HConfig(HConfigChild):
                     temp_banner.append(line)
 
                 # Test if this line is the end of a banner
-                if end_of_banner_test(line):
+                if end_of_banner_test(str(line)):
                     in_banner = False
                     most_recent_item = self.add_child(
                         "\n".join(temp_banner), True)
@@ -215,13 +219,15 @@ class HConfig(HConfigChild):
         """
         Load a HConfig dump
 
-        dump = [{
-            'depth': child.depth(),
-            'text': child.text,
-            'tags': list(child.tags),
-            'comments': list(child.comments),
-            'new_in_config': child.new_in_config
-        }, ...]
+        .. code:: python
+
+            dump = [{
+                'depth': child.depth(),
+                'text': child.text,
+                'tags': list(child.tags),
+                'comments': list(child.comments),
+                'new_in_config': child.new_in_config
+            },]
 
         :param dump: list
         :return: None
@@ -255,17 +261,20 @@ class HConfig(HConfigChild):
 
     def dump(self, lineage_rules=None):
         """
+        Dump a list of loaded HConfig data
 
-        dump = [{
-            'depth': child.depth(),
-            'text': child.text,
-            'tags': list(child.tags),
-            'comments': list(child.comments),
-            'new_in_config': child.new_in_config
-        }, ...]
+        .. code:: python
 
-        :param lineage_rules: list of lineage rules
-        :return: list
+            dump = [{
+                'depth': child.depth(),
+                'text': child.text,
+                'tags': list(child.tags),
+                'comments': list(child.comments),
+                'new_in_config': child.new_in_config
+            },]
+
+        :param lineage_rules: list
+        :returns: list
 
         """
 

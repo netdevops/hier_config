@@ -38,7 +38,10 @@ class HConfigChild:
         self.parent.rebuild_children_dict()
 
     def __repr__(self):
-        return f"HConfigChild('{self.parent}, {self.text}')"
+        if self.parent is self.root:
+            return 'HConfigChild(HConfig, {})'.format(self.text)
+        else:
+            return 'HConfigChild(HConfigChild, {})'.format(self.text)
 
     def __str__(self):
         return self.text
@@ -210,7 +213,23 @@ class HConfigChild:
                 yield child
 
     def move(self, new_parent):
-        """ move an instance to a new parent instance """
+        """
+        move one HConfigChild object to different HConfig parent object
+
+        .. code:: python
+
+            hier1 = HConfig(hostname1, os, options)
+            interface1 = hier1.add_child('interface Vlan2')
+            interface1.add_child('ip address 10.0.0.1 255.255.255.252')
+
+            hier2 = Hconfig(hostname2, os, options)
+
+            interface1.move(hier2)
+
+        :param HConfigChild: list
+        :return: None
+
+        """
 
         new_parent.children.append(self)
         new_parent.rebuild_children_dict()
@@ -224,7 +243,19 @@ class HConfigChild:
             self.rebuild_children_dict()
 
     def del_child(self, child):
-        """ Delete a child from self.children and self.children_dict """
+        """
+        Delete a child from self.children and self.children_dict
+
+        .. code:: python
+            hier = HConfig(hostname, os, options)
+            hier.add_child('interface Vlan2')
+
+            hier.del_child(hier.get_child('startswith', 'interface'))
+
+        :param HConfigChild
+        :return: None
+
+        """
 
         try:
             self.children.remove(child)
