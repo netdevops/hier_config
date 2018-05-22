@@ -2,7 +2,7 @@ from hier_config.hc_child import HConfigChild
 
 import re
 
-__version__ = '1.1.0'
+__version__ = '1.1.1'
 
 
 class HConfig(HConfigChild):
