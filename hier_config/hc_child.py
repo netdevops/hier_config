@@ -5,7 +5,7 @@ import hier_config.helpers as H
 
 class HConfigChild:
 
-    def __init__(self, parent, text=str()):
+    def __init__(self, parent, text):
         self.parent = parent
         self._text = text.strip()
         self.hostname = self.root.hostname
@@ -38,7 +38,10 @@ class HConfigChild:
         self.parent.rebuild_children_dict()
 
     def __repr__(self):
-        return HConfigChild('{}, {}'.format(self.parent, self.text))
+        if self.parent is self.root:
+            return 'HConfigChild(HConfig, {})'.format(self.text)
+        else:
+            return 'HConfigChild(HConfigChild, {})'.format(self.text)
 
     def __str__(self):
         return self.text

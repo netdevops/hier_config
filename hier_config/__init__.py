@@ -72,7 +72,7 @@ class HConfig(HConfigChild):
 
     @property
     def __repr__(self):
-        return HConfig('{},{},{}'.format(self.hostname, self.os, self.options))
+        return 'HConfig({},{}, \{\})'.format(self.hostname, self.os)
 
     def __str__(self):
         return self.text
