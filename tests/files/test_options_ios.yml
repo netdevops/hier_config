@@ -20,6 +20,10 @@ ordering:
 - lineage:
   - startswith: no vlan filter
   order: 700
+- lineage:
+  - startswith: interface
+  - startswith: no shutdown
+  order: 700
 
 # adds +1 indent to lines following start_expression and removes the +1 indent for lines following end_expression
 indent_adjust: []
@@ -92,7 +96,15 @@ idempotent_commands_blacklist: []
 # - lineage:
 #   - startswith: interface
 #   - startswith: description
-idempotent_commands: []
+idempotent_commands:
+- lineage:
+  - startswith: vlan
+  - startswith: name
+- lineage:
+  - startswith: interface
+  - startswith:
+    - description
+    - ip address
 
 # Default when expression: list of expressions
 negation_default_when: []
