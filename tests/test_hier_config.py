@@ -2,6 +2,7 @@ import unittest
 import tempfile
 import os
 import yaml
+import types
 
 from hier_config import HConfig
 
@@ -10,7 +11,8 @@ class TestHConfig(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.host_a = 'example.rtr'
+        cls.host_a = 'example1.rtr'
+        cls.host_b = 'example2.rtr'
         cls.os = 'ios'
         cls.options_file = os.path.join(
             os.path.dirname(os.path.realpath(__file__)),
@@ -22,24 +24,51 @@ class TestHConfig(unittest.TestCase):
             'files',
             'test_tags_ios.yml',
         )
-        cls.tags = yaml.load(open(cls.tags_file))
-        cls.options = yaml.load(open(cls.options_file))
+        cls.running_cfg = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            'files',
+            'running_config.conf',
+        )
+        cls.compiled_cfg = os.path.join(
+            os.path.dirname(os.path.realpath(__file__)),
+            'files',
+            'compiled_config.conf',
+        )
+
+        with open(cls.tags_file) as f:
+            cls.tags = yaml.load(f.read())
+
+        with open(cls.options_file) as f:
+            cls.options = yaml.load(f.read())
 
     def test_merge(self):
-        pass
+        hier1 = HConfig(self.host_a, self.os, self.options)
+        hier1.add_child('interface Vlan2')
+        hier2 = HConfig(self.host_b, self.os, self.options)
+        hier2.add_child('interface Vlan3')
+
+        self.assertEqual(1, len(list(hier1.all_children())))
+        self.assertEqual(1, len(list(hier2.all_children())))
+
+        hier1.merge(hier2)
+
+        self.assertEqual(2, len(list(hier1.all_children())))
 
     def test_load_from_file(self):
         hier = HConfig(self.host_a, self.os, self.options)
-        config = 'interface vlan2\n ip address 1.1.1.1 255.255.255.0'
+        config = 'interface Vlan2\n ip address 1.1.1.1 255.255.255.0'
+
         with tempfile.NamedTemporaryFile(mode='r+') as myfile:
             myfile.file.write(config)
             myfile.file.flush()
             hier.load_from_file(myfile.name)
+
         self.assertEqual(2, len(list(hier.all_children())))
 
     def test_load_from_config_text(self):
         hier = HConfig(self.host_a, self.os, self.options)
-        config = 'interface vlan2\n ip address 1.1.1.1 255.255.255.0'
+        config = 'interface Vlan2\n ip address 1.1.1.1 255.255.255.0'
+
         hier.load_from_string(config)
         self.assertEqual(2, len(list(hier.all_children())))
 
@@ -47,10 +76,12 @@ class TestHConfig(unittest.TestCase):
         hier_pre_dump = HConfig(self.host_a, self.os, self.options)
         a1 = hier_pre_dump.add_child('a1')
         b2 = a1.add_child('b2')
+
         b2.order_weight = 400
         b2.tags.add('test')
         b2.comments.add('test comment')
         b2.new_in_config = True
+
         dump = hier_pre_dump.dump()
 
         hier_post_dump = HConfig(self.host_a, self.os, self.options)
@@ -61,24 +92,40 @@ class TestHConfig(unittest.TestCase):
     def test_add_tags(self):
         hier = HConfig(self.host_a, self.os, self.options)
         tag_rules = [{
-            'lineage': [{'equals': 'interface vlan2'}],
+            'lineage': [{'equals': 'interface Vlan2'}],
             'add_tags': 'test'}]
-        child = hier.add_child('interface vlan2')
+        child = hier.add_child('interface Vlan2')
+
         hier.add_tags(tag_rules)
+
         self.assertEqual({'test'}, child.tags)
 
     def test_all_children_sorted_by_lineage_rules(self):
-        pass
+        hier = HConfig(self.host_a, self.os, self.options)
+        svi = hier.add_child('interface Vlan2')
+        svi.add_child('description switch-mgmt-10.0.2.0/24')
+
+        mgmt = hier.add_child('interface FastEthernet0')
+        mgmt.add_child('description mgmt-192.168.0.0/24')
+
+        self.assertEqual(4, len(list(hier.all_children())))
+        self.assertTrue(isinstance(hier.all_children(), types.GeneratorType))
+
+        self.assertEqual(2, len(list(hier.all_children_sorted_with_lineage_rules(self.tags))))
+        self.assertTrue(isinstance(hier.all_children_sorted_with_lineage_rules(self.tags), types.GeneratorType))
 
     def test_add_ancestor_copy_of(self):
         pass
 
     def test_has_children(self):
-        pass
+        hier = HConfig(self.host_a, self.os, self.options)
+        self.assertFalse(hier.has_children())
+        hier.add_child('interface Vlan2')
+        self.assertTrue(hier.has_children())
 
     def test_depth(self):
         hier = HConfig(self.host_a, self.os, self.options)
-        interface = hier.add_child('interface vlan2')
+        interface = hier.add_child('interface Vlan2')
         ip_address = interface.add_child(
             'ip address 192.168.1.1 255.255.255.0')
         self.assertEqual(2, ip_address.depth())
@@ -86,12 +133,12 @@ class TestHConfig(unittest.TestCase):
     def test_get_child(self):
         hier = HConfig(self.host_a, self.os, self.options)
         hier.add_child('interface vlan2')
-        child = hier.get_child('equals', 'interface vlan2')
+        child = hier.get_child('equals', 'interface Vlan2')
         self.assertEqual('interface vlan2', child.text)
 
     def test_get_child_deep(self):
         hier = HConfig(self.host_a, self.os, self.options)
-        interface = hier.add_child('interface vlan2')
+        interface = hier.add_child('interface Vlan2')
         interface.add_child('ip address 192.168.1.1 255.255.255.0')
         child = hier.get_child_deep([
             ('equals', 'interface vlan2'),
@@ -100,22 +147,43 @@ class TestHConfig(unittest.TestCase):
 
     def test_get_children(self):
         hier = HConfig(self.host_a, self.os, self.options)
-        hier.add_child('interface vlan2')
-        hier.add_child('interface vlan3')
+        hier.add_child('interface Vlan2')
+        hier.add_child('interface Vlan3')
         children = hier.get_children('startswith', 'interface')
         self.assertEqual(2, len(list(children)))
 
     def test_move(self):
-        pass
+        hier1 = HConfig(self.host_a, self.os, self.options)
+        interface1 = hier1.add_child('interface Vlan2')
+        interface1.add_child('192.168.0.1/30')
+
+        self.assertEqual(2, len(list(hier1.all_children())))
+
+        hier2 = HConfig(self.host_b, self.os, self.options)
+
+        self.assertEqual(0, len(list(hier2.all_children())))
+
+        interface1.move(hier2)
+
+        self.assertEqual(0, len(list(hier1.all_children())))
+        self.assertEqual(2, len(list(hier2.all_children())))
 
     def test_del_child_by_text(self):
         hier = HConfig(self.host_a, self.os, self.options)
-        hier.add_child('interface vlan2')
-        hier.del_child_by_text('interface vlan2')
+        hier.add_child('interface Vlan2')
+        hier.del_child_by_text('interface Vlan2')
+
         self.assertEqual(0, len(list(hier.all_children())))
 
-    def test_def_child(self):
-        pass
+    def test_del_child(self):
+        hier1 = HConfig(self.host_a, self.os, self.options)
+        hier1.add_child('interface Vlan2')
+
+        self.assertEqual(1, len(list(hier1.all_children())))
+
+        hier1.del_child(hier1.get_child('startswith', 'interface'))
+
+        self.assertEqual(0, len(list(hier1.all_children())))
 
     def test_rebuild_children_dict(self):
         pass
@@ -125,9 +193,9 @@ class TestHConfig(unittest.TestCase):
 
     def test_add_child(self):
         hier = HConfig(self.host_a, self.os, self.options)
-        interface = hier.add_child('interface vlan2')
+        interface = hier.add_child('interface Vlan2')
         self.assertEqual(1, interface.depth())
-        self.assertEqual('interface vlan2', interface.text)
+        self.assertEqual('interface Vlan2', interface.text)
         self.assertFalse(isinstance(interface, list))
 
     def test_add_deep_copy_of(self):
@@ -141,7 +209,7 @@ class TestHConfig(unittest.TestCase):
 
     def test_cisco_style_text(self):
         hier = HConfig(self.host_a, self.os, self.options)
-        interface = hier.add_child('interface vlan2')
+        interface = hier.add_child('interface Vlan2')
         ip_address = interface.add_child(
             'ip address 192.168.1.1 255.255.255.0')
         self.assertEqual(
@@ -161,13 +229,13 @@ class TestHConfig(unittest.TestCase):
 
     def test_all_children_sorted(self):
         hier = HConfig(self.host_a, self.os, self.options)
-        interface = hier.add_child('interface vlan2')
+        interface = hier.add_child('interface Vlan2')
         interface.add_child('standby 1 ip 10.15.11.1')
         self.assertEqual(2, len(list(hier.all_children_sorted())))
 
     def test_all_children(self):
         hier = HConfig(self.host_a, self.os, self.options)
-        interface = hier.add_child('interface vlan2')
+        interface = hier.add_child('interface Vlan2')
         interface.add_child('standby 1 ip 10.15.11.1')
         self.assertEqual(2, len(list(hier.all_children())))
 
@@ -182,7 +250,7 @@ class TestHConfig(unittest.TestCase):
 
     def test_add_sectional_exiting(self):
         hier = HConfig(self.host_a, self.os, self.options)
-        bgp = hier.add_child('router bgp 12200')
+        bgp = hier.add_child('router bgp 64500')
         template = bgp.add_child('template peer-policy')
         hier.add_sectional_exiting()
         sectional_exit = template.get_child('equals', 'exit-peer-policy')
@@ -214,15 +282,15 @@ class TestHConfig(unittest.TestCase):
 
     def test_negate(self):
         hier = HConfig(self.host_a, self.os, self.options)
-        interface = hier.add_child('interface vlan2')
+        interface = hier.add_child('interface Vlan2')
         interface.negate()
-        self.assertEqual('no interface vlan2', interface.text)
+        self.assertEqual('no interface Vlan2', interface.text)
 
     def test_config_to_get_to(self):
         running_config_hier = HConfig(self.host_a, self.os, self.options)
-        running_config_hier.add_child('interface vlan2')
+        running_config_hier.add_child('interface Vlan2')
         compiled_config_hier = HConfig(self.host_a, self.os, self.options)
-        compiled_config_hier.add_child('interface vlan3')
+        compiled_config_hier.add_child('interface Vlan3')
         remediation_config_hier = running_config_hier.config_to_get_to(
             compiled_config_hier)
         self.assertEqual(2, len(list(remediation_config_hier.all_children())))
