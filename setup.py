@@ -15,7 +15,7 @@ setup(
     author="Andrew Edwards, Jan Brooks, James Williams",
     author_email="andrew.edwards@rackspace.com, jan.brooks@rackspace.com, james.williams@rackspace.com",
     keywords = "hier_config",
-    python_requires='~=3.6',
+    python_requires='~=2.7',
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
@@ -24,6 +24,7 @@ setup(
         'Intended Audience :: Telecommunications Industry',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 2.7',
         'Natural Language :: English',
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: System :: Networking',
