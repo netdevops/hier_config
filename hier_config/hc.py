@@ -1,6 +1,6 @@
 import yaml
 import os as pyos
-import hier_config
+from hier_config import HConfig
 
 
 class HConfigRunner:
@@ -27,12 +27,12 @@ class HConfigRunner:
 
         # Build HConfig object for the Running Config
 
-        running_config_hier = hier_config.HConfig(self.hostname, self.os, self.options)
+        running_config_hier = HConfig(self.hostname, self.os, self.options)
         running_config_hier.load_from_file(run_config)
 
         # Build Hierarchical Configuration object for the Compiled Config
 
-        expected_config_hier = hier_config.HConfig(self.hostname, self.os, self.options)
+        expected_config_hier = HConfig(self.hostname, self.os, self.options)
         expected_config_hier.load_from_file(expected_config)
         return self._hc_load_and_return(running_config_hier, expected_config_hier, return_type)
 
@@ -40,12 +40,12 @@ class HConfigRunner:
 
         # Build HConfig object for the Running Config
 
-        running_config_hier = hier_config.HConfig(self.hostname, self.os, self.options)
+        running_config_hier = HConfig(self.hostname, self.os, self.options)
         running_config_hier.load_from_str(run_config)
 
         # Build Hierarchical Configuration object for the Compiled Config
 
-        expected_config_hier = hier_config.HConfig(self.hostname, self.os, self.options)
+        expected_config_hier = HConfig(self.hostname, self.os, self.options)
         expected_config_hier.load_from_file(expected_config)
         return self._hc_load_and_return(running_config_hier, expected_config_hier, return_type)
 
