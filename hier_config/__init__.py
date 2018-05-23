@@ -1,4 +1,5 @@
 from hier_config.hc_child import HConfigChild
+from hier_config.hc import HConfigRunner
 
 import re
 
