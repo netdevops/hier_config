@@ -572,7 +572,7 @@ class HConfigChild:
                 deleted.negate()
                 if self_child.children:
                     deleted.comments.add(
-                        "removes {} lines".format(len(self_child.children_dict)))
+                        "removes {} lines".format(len(self_child.children_dict + 1)))
 
     def _config_to_get_to_right(self, target, delta):
         # find what would need to be added to source_config to get to self
