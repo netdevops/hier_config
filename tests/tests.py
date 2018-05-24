@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import unittest
+import sys
 
 
 def all_tests():
@@ -18,4 +19,9 @@ def all_tests():
 
 if __name__ == "__main__":
     runner = unittest.TextTestRunner()
-    runner.run(all_tests())
+    status = runner.run(all_tests())
+
+    if len(status.failures) > 0:
+        sys.exit(1)
+    else:
+        sys.exit(0)
