@@ -7,7 +7,7 @@ class TestPep8(unittest.TestCase):
 
     def test_pep8(self):
         style = pep8.StyleGuide()
-        #style.options.ignore += ('E501',)
+        style.options.ignore += ('E501',)
         errors = 0
         python_files = set()
 
