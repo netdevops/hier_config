@@ -384,18 +384,18 @@ class HConfigChild:
     def all_children_sorted(self):
         """ Recursively find and yield all children sorted at each hierarchy """
 
-        for children in sorted(self.children):
-            yield children
-            for child in children.all_children_sorted():
-                yield child
+        for child in sorted(self.children):
+            yield child
+            for sub_child in child.all_children_sorted():
+                yield sub_child
 
     def all_children(self):
         """ Recursively find and yield all children """
 
-        for children in self.children:
-            yield children
-            for child in children.all_children():
-                yield child
+        for child in self.children:
+            yield child
+            for sub_child in child.all_children():
+                yield sub_child
 
     def delete(self):
         """ Delete the current object from its parent """
