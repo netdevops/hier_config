@@ -9,8 +9,7 @@ install:
 - "python setup.py install"
 
 script:
-- "./tests/pep8.sh"
-- "python ./tests/tests.py"
+- "./tests/tests.sh"
 
 after_success:
 - "cd docs/_mkdocs; ./mkdocs.sh; cd -"

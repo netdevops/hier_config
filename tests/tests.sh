@@ -10,4 +10,12 @@ if [[ $RC != 0 ]]; then
     EXIT=$RC
 fi
 
+./tests/tests.py
+
+RC=$?
+if [[ $RC != 0 ]]; then
+    echo -e "\n$(info) one or more unit tests failures detected, failing build."
+    EXIT=$RC
+fi
+
 exit $EXIT
