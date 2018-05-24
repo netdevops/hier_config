@@ -111,8 +111,10 @@ class TestHConfig(unittest.TestCase):
         self.assertEqual(4, len(list(hier.all_children())))
         self.assertTrue(isinstance(hier.all_children(), types.GeneratorType))
 
-        self.assertEqual(2, len(list(hier.all_children_sorted_with_lineage_rules(self.tags))))
-        self.assertTrue(isinstance(hier.all_children_sorted_with_lineage_rules(self.tags), types.GeneratorType))
+        self.assertEqual(
+            2, len(list(hier.all_children_sorted_with_lineage_rules(self.tags))))
+        self.assertTrue(isinstance(
+            hier.all_children_sorted_with_lineage_rules(self.tags), types.GeneratorType))
 
     def test_add_ancestor_copy_of(self):
         pass
@@ -318,4 +320,4 @@ class TestHConfig(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    unittest.main(failfast=True)
