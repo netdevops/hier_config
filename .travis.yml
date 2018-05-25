@@ -12,13 +12,13 @@ install:
 - "python setup.py install"
 
 env:
-- PYTHON_VERSION=$(python --version | awk '{print $2}' | cut -d . -f 1 -f 2)
+- PYENV=$(python --version | awk '{print $2}' | awk -F \. '{print $1 "." $2}')
 
 script:
 - "./tests/tests.py"
 
 after_success:
-- "echo $PYTHON_VERSION"
+- "echo $PYENV"
 - "cd docs/_mkdocs; ./mkdocs.sh; cd -"
 
 deploy:
