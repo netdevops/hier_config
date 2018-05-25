@@ -1,8 +1,6 @@
 #!/bin/sh
 
-PYTHON_VERSION=$(python --version | awk '{print $2}' | cut -d . -f 1 -f 2)
-
-if [[ $PYTHON_VERSION == 3.6 ]]; then
+if [[ $PYENV == 3.6 ]]; then
    #make_docs()
    echo TRUE
 fi
