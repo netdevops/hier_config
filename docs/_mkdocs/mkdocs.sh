@@ -1,6 +1,6 @@
-#!/bin/sh
+#!/bin/bash
 
-if [[ $PYENV == 3.6 ]]; then
+if [[ $TRAVIS_PYTHON_VERSION == "3.6" ]]; then
    #make_docs()
    echo TRUE
 fi
