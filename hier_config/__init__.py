@@ -93,6 +93,7 @@ class HConfig(HConfigChild):
         return True
 
     def __ne__(self, other):
+        """overide the not equal method"""
         return not self.__eq__(other)
 
     def merge(self, other):
