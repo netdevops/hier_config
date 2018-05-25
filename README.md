@@ -33,7 +33,7 @@ pip install hier-config
 Basic Usage Example
 ===================
 
-In the below example, we create two hierarchical configuraiton objects, load one with a running configuratoin from a
+In the below example, we create two hierarchical configuration objects, load one with a running configuration from a
 device, and the other with the intended configuration of the device, then we compare the two objects to derive the
 commands necessary to bring the device into spec.
 
