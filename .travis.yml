@@ -15,7 +15,6 @@ script:
 - "./tests/tests.py"
 
 after_success:
-- "echo $TRAVIS_PYTHON_VERSION"
 - "cd docs/_mkdocs; ./mkdocs.sh; cd -"
 
 deploy:
