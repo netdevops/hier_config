@@ -14,12 +14,8 @@ install:
 script:
 - "./tests/tests.py"
 
-env:
-  global:
-  - PYENV=$(python --version | awk '{print $2}' | awk -F \. '{print $1 "." $2}')
-
 after_success:
-- "echo $PYENV"
+- "echo $TRAVIS_PYTHON_VERSION"
 - "cd docs/_mkdocs; ./mkdocs.sh; cd -"
 
 deploy:
