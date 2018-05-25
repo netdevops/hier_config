@@ -11,8 +11,10 @@ install:
 - "pip install pycodestyle pyyaml"
 - "python setup.py install"
 
+env:
+- PYTHON_VERSION=$(python --version | awk '{print $2}' | cut -d . -f 1 -f 2)
+
 script:
-- "export PYTHON_VERSION=$(python --version | awk '{print $2}' | cut -d . -f 1 -f 2)"
 - "./tests/tests.py"
 
 after_success:
