@@ -2,7 +2,7 @@ from hier_config.hc_child import HConfigChild
 
 import re
 
-__version__ = '1.1.2'
+__version__ = '1.2.0'
 
 
 class HConfig(HConfigChild):
@@ -91,10 +91,6 @@ class HConfig(HConfigChild):
             if self_child != other_child:
                 return False
         return True
-
-    def __ne__(self, other):
-        """overide the not equal method"""
-        return not self.__eq__(other)
 
     def merge(self, other):
         """ Merges two HConfig objects """
