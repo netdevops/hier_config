@@ -1,10 +1,15 @@
 #!/bin/sh
 
+PYTHON_VERSION=$(python --version | awk '{print $2}' | cut -d . -f 1 -f 2)
+
+if [[ $PYTHON_VERSION == 3.6 ]]; then
+   #make_docs()
+   echo TRUE
+fi
+
+make_docs() {
 # create python virtual env
-#python3 -m venv sphinx-env
-#source ./sphinx-env/bin/activate
-#../../setup.py install
-pip3 install sphinx sphinx_rtd_theme
+pip install sphinx sphinx_rtd_theme
 
 # Automatically create code documentation
 sphinx-apidoc -f -o hier_config ../../hier_config
@@ -25,11 +30,9 @@ Code Documentation
 .. toctree::
    :maxdepth: 1
 
-EOF
+   hier_config/modules.rst
 
-for i in `ls hier_config | egrep -v "modules"`; do
-  echo "   hier_config/$i" >> hier_config.rst
-done
+EOF
 
 # Create the html files
 make clean
@@ -38,8 +41,5 @@ make dirhtml
 # Sync generated documentation to viewable path
 rsync -avz --exclude sphinx-env "${PWD}/_build/dirhtml/" "../../docs"
 
-# remove python env
-#deactivate
-#rm -rf ./sphinx-env
-
 exit 0
+}

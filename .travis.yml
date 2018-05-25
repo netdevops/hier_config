@@ -12,9 +12,11 @@ install:
 - "python setup.py install"
 
 script:
+- "export PYTHON_VERSION=$(python --version | awk '{print $2}' | cut -d . -f 1 -f 2)"
 - "./tests/tests.py"
 
 after_success:
+- "echo $PYTHON_VERSION"
 - "cd docs/_mkdocs; ./mkdocs.sh; cd -"
 
 deploy:
@@ -26,9 +28,11 @@ deploy:
   local-dir: "docs"
   on:
     branch: master
+    condition: $PYTHON_VERSION == "3.6"
 - provider: pypi
   user: "jtdub"
   password:
     secure: "PyQUPBdfN6El1hp7y5FhRNQDLjXQRSs1VZ2jqkj/7ZdpF9TPf3v0L3uomKw6hL0xTt6di6WLOu5scAZ2uTcpLiFIpOiNQkXLJiKdRYg3jMQuqeJvelZqNN1ij1Vqc94lOZm2xo6xq/GX5uwR/cQp6K4aztEgcVqakb1nOraNPleONGc5/BpAz6EKAIB+AzRBC0sMs+dRQnjhmGvdBVSmjl4kg2yx86wbayMT6lwfsW0Tenx8p+3GGHLdn5JE8LsWkT5y8yaT+yyZ0tvqSx+08Wejay29pxFzTfRAgnDu0vXyBMPN7+4+iSey69bbkwix2O5KJxf7SSuamWHz40zavdeXNTzchMkWi0IpakusgjGzLVzazeEY/roqmlxlHaj8J6ydplcp3j9xfRz2FomyOF7lXawXQ4hxCvhPy5BrVPoJGgFpytV/OVW60Bj9sned/j9ibjyjqmGZo+fPV5vWi7u+aYP/yXccHzQ0SC4aLNWY7VsE1QWkTkVk5n+wcboOfHIBDpoOfnzYB0Unb9V0WEO0WBF7lkvysCkbjL5fLtxPAjClszXqzUYkDC1yOQ7NVqkaQp7S9VyB5h4NGwTBGsCAjn+0Efdl1G8dLXDJlM++ASqpLSHQHOAh+HMrg5klcv6rGQNbC1LSi5drBkeuvbKjddFQK37I9bo2Jjsa5JE="
   on:
     tags: true
+    condition: $PYTHON_VERSION == "3.6"
