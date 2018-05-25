@@ -90,6 +90,9 @@ class HConfigChild:
 
         return True
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     @property
     def root(self):
         """ returns the HConfig object at the base of the tree """
@@ -324,7 +327,8 @@ class HConfigChild:
         if self.root is self.parent:
             yield self
         else:
-            yield from self.parent.lineage()
+            for parent in self.parent.lineage():
+                yield parent
             yield self
 
     def path(self):
@@ -385,14 +389,16 @@ class HConfigChild:
 
         for child in sorted(self.children):
             yield child
-            yield from child.all_children_sorted()
+            for sub_child in child.all_children_sorted():
+                yield sub_child
 
     def all_children(self):
         """ Recursively find and yield all children """
 
         for child in self.children:
             yield child
-            yield from child.all_children()
+            for sub_child in child.all_children():
+                yield sub_child
 
     def delete(self):
         """ Delete the current object from its parent """
@@ -569,7 +575,7 @@ class HConfigChild:
                 deleted.negate()
                 if self_child.children:
                     deleted.comments.add(
-                        f"removes {len(self_child.children_dict) + 1} lines")
+                        "removes {} lines".format(len(self_child.children_dict + 1)))
 
     def _config_to_get_to_right(self, target, delta):
         # find what would need to be added to source_config to get to self

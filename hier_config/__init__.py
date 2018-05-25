@@ -2,7 +2,7 @@ from hier_config.hc_child import HConfigChild
 
 import re
 
-__version__ = '1.1.2'
+__version__ = '1.2.0'
 
 
 class HConfig(HConfigChild):
@@ -75,7 +75,7 @@ class HConfig(HConfigChild):
 
     @property
     def __repr__(self):
-        return r'HConfig({},{}, \{\})'.format(self.hostname, self.os)
+        return 'HConfig({},{})'.format(self.hostname, self.os)
 
     def __str__(self):
         return self.text
@@ -90,7 +90,6 @@ class HConfig(HConfigChild):
         for self_child, other_child in zip(sorted(self.children), sorted(other.children)):
             if self_child != other_child:
                 return False
-
         return True
 
     def merge(self, other):
