@@ -12,7 +12,8 @@ install:
 - "python setup.py install"
 
 env:
-- PYENV=$(python --version | awk '{print $2}' | awk -F \. '{print $1 "." $2}')
+  global:
+  - PYENV=$(python --version | awk '{print $2}' | awk -F \. '{print $1 "." $2}')
 
 script:
 - "./tests/tests.py"
