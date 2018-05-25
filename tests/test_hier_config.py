@@ -86,16 +86,8 @@ class TestHConfig(unittest.TestCase):
 
         hier_post_dump = HConfig(self.host_a, self.os, self.options)
         hier_post_dump.load_from_dump(dump)
-        # py2.7 does not eval an object the same way
-        pre_chidren = hier_pre_dump.__dict__.pop('children')
-        pre_chidren_dict = hier_pre_dump.__dict__.pop('children_dict')
 
-        post_chidren = hier_post_dump.__dict__.pop('children')
-        post_chidren_dict = hier_post_dump.__dict__.pop('children_dict')
-
-        self.assertEqual(pre_chidren[0].text, post_chidren[0].text)
-        self.assertEqual(pre_chidren_dict['a1'].text, post_chidren_dict['a1'].text)
-        self.assertEqual(hier_pre_dump.__dict__, hier_post_dump.__dict__)
+        self.assertEqual(hier_pre_dump, hier_post_dump)
 
     def test_add_tags(self):
         hier = HConfig(self.host_a, self.os, self.options)

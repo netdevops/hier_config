@@ -90,6 +90,9 @@ class HConfigChild:
 
         return True
 
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
     @property
     def root(self):
         """ returns the HConfig object at the base of the tree """

@@ -90,8 +90,10 @@ class HConfig(HConfigChild):
         for self_child, other_child in zip(sorted(self.children), sorted(other.children)):
             if self_child != other_child:
                 return False
-
         return True
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
 
     def merge(self, other):
         """ Merges two HConfig objects """
