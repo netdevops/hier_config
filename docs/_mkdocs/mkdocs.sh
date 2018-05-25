@@ -1,11 +1,6 @@
 #!/bin/bash
 
-if [[ $TRAVIS_PYTHON_VERSION == "3.6" ]]; then
-   #make_docs()
-   echo TRUE
-fi
-
-make_docs() {
+function make_docs {
 # create python virtual env
 pip install sphinx sphinx_rtd_theme
 
@@ -41,3 +36,8 @@ rsync -avz --exclude sphinx-env "${PWD}/_build/dirhtml/" "../../docs"
 
 exit 0
 }
+
+if [[ $TRAVIS_PYTHON_VERSION == "3.6" ]]; then
+   make_docs
+fi
+
