@@ -191,7 +191,19 @@ class TestHConfig(unittest.TestCase):
         pass
 
     def test_add_children(self):
-        pass
+        interface_items1 = ['description switch-mgmt 192.168.1.0/24', 'ip address 192.168.1.1/24']
+        hier1 = HConfig(self.host_a, self.os, self.options)
+        interface1 = hier1.add_child('interface Vlan2')
+        interface1.add_children(interface_items1)
+
+        self.assertEqual(3, len(list(hier1.all_children())))
+
+        interface_items2 = "description switch-mgmt 192.168.1.0/24"
+        hier2 = HConfig(self.host_a, self.os, self.options)
+        interface2 = hier2.add_child('interface Vlan2')
+        interface2.add_children(interface_items2)
+
+        self.assertEqual(2, len(list(hier2.all_children())))
 
     def test_add_child(self):
         hier = HConfig(self.host_a, self.os, self.options)

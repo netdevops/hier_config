@@ -229,7 +229,7 @@ class HConfigChild:
 
             interface1.move(hier2)
 
-        :param HConfigChild: list
+        :param new_parent: HConfigChild object -> type list
         :return: None
 
         """
@@ -255,7 +255,7 @@ class HConfigChild:
 
             hier.del_child(hier.get_child('startswith', 'interface'))
 
-        :param HConfigChild
+        :param child: HConfigChild object
         :return: None
 
         """
@@ -276,7 +276,16 @@ class HConfigChild:
                 child.text, child)
 
     def add_children(self, lines):
-        """ Add child instances of HConfigChild """
+        """
+        Add child instances of HConfigChild
+
+        :param lines: HConfigChild object -> type list
+        :return: None
+
+        """
+
+        if isinstance(lines, str):
+            lines = [lines]
 
         for line in lines:
             self.add_child(line)
