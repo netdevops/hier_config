@@ -635,6 +635,8 @@ class HConfigChild:
         """
         Handle conditional testing to determine if idempotent acl handling for iosxr should be used
 
+        :return: boolean
+
         """
 
         if self.os in {'iosxr'}:
@@ -647,6 +649,9 @@ class HConfigChild:
     def is_idempotent_command(self, other_children):
         """
         Determine if self.text is an idempotent change.
+
+        :param other_children: HConfigChild object -> type list
+        :return: boolean
 
         """
 
