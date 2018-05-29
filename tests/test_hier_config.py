@@ -117,7 +117,13 @@ class TestHConfig(unittest.TestCase):
             hier.all_children_sorted_with_lineage_rules(self.tags), types.GeneratorType))
 
     def test_add_ancestor_copy_of(self):
-        pass
+        hier1 = HConfig(self.host_a, self.os, self.options)
+        interface = hier1.add_child('interface Vlan2')
+        interface.add_children(['description switch-mgmt-192.168.1.0/24', 'ip address 192.168.1.0/24'])
+        hier1.add_ancestor_copy_of(interface)
+
+        self.assertEqual(3, len(list(hier1.all_children())))
+        self.assertTrue(isinstance(hier1.all_children(), types.GeneratorType))
 
     def test_has_children(self):
         hier = HConfig(self.host_a, self.os, self.options)
@@ -188,7 +194,14 @@ class TestHConfig(unittest.TestCase):
         self.assertEqual(0, len(list(hier1.all_children())))
 
     def test_rebuild_children_dict(self):
-        pass
+        hier1 = HConfig(self.host_a, self.os, self.options)
+        interface = hier1.add_child('interface Vlan2')
+        interface.add_children(['description switch-mgmt-192.168.1.0/24', 'ip address 192.168.1.0/24'])
+        delta_a = hier1
+        hier1.rebuild_children_dict()
+        delta_b = hier1
+
+        self.assertEqual(list(delta_a.all_children()), list(delta_b.all_children()))
 
     def test_add_children(self):
         interface_items1 = ['description switch-mgmt 192.168.1.0/24', 'ip address 192.168.1.1/24']
@@ -213,7 +226,15 @@ class TestHConfig(unittest.TestCase):
         self.assertFalse(isinstance(interface, list))
 
     def test_add_deep_copy_of(self):
-        hier = HConfig(self.host_a, self.os, self.options)
+        hier1 = HConfig(self.host_a, self.os, self.options)
+        interface1 = hier1.add_child('interface Vlan2')
+        interface1.add_children(['description switch-mgmt-192.168.1.0/24', 'ip address 192.168.1.0/24'])
+
+        hier2 = HConfig(self.host_b, self.os, self.options)
+        hier2.add_deep_copy_of(interface1)
+
+        self.assertEqual(3, len(list(hier2.all_children())))
+        self.assertTrue(isinstance(hier2.all_children(), types.GeneratorType))
 
     def test_lineage(self):
         pass

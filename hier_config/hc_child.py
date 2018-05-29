@@ -323,7 +323,7 @@ class HConfigChild:
         """
         Add a nested copy of a child to self
 
-        :param child_to_add: HConfigCHild object
+        :param child_to_add: type HConfigCHild
         :param merged: type boolean, default False
 
         :return: new_child
@@ -333,6 +333,7 @@ class HConfigChild:
         new_child = self.add_shallow_copy_of(child_to_add, merged=merged)
         for child in child_to_add.children:
             new_child.add_deep_copy_of(child, merged=merged)
+
         return new_child
 
     def lineage(self):

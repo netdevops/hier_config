@@ -403,6 +403,9 @@ class HConfig(HConfigChild):
         Add a copy of the ancestry of parent_to_add to self
         and return the deepest child which is equivalent to parent_to_add
 
+        :param parent_to_add: type HConfig
+        :return: base
+
         """
 
         base = self
