@@ -213,7 +213,7 @@ class TestHConfig(unittest.TestCase):
         self.assertFalse(isinstance(interface, list))
 
     def test_add_deep_copy_of(self):
-        pass
+        hier = HConfig(self.host_a, self.os, self.options)
 
     def test_lineage(self):
         pass

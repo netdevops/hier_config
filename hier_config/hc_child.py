@@ -320,7 +320,15 @@ class HConfigChild:
             return self.get_child('equals', text)
 
     def add_deep_copy_of(self, child_to_add, merged=False):
-        """ Add a nested copy of a child to self"""
+        """
+        Add a nested copy of a child to self
+
+        :param child_to_add: HConfigCHild object
+        :param merged: type boolean, default False
+
+        :return: new_child
+
+        """
 
         new_child = self.add_shallow_copy_of(child_to_add, merged=merged)
         for child in child_to_add.children:
