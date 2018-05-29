@@ -290,7 +290,8 @@ class TestHConfig(unittest.TestCase):
 
     def test_config_to_get_to(self):
         running_config_hier = HConfig(self.host_a, self.os, self.options)
-        running_config_hier.add_child('interface Vlan2')
+        interface = running_config_hier.add_child('interface Vlan2')
+        interface.add_child('ip address 192.168.1.1/24')
         compiled_config_hier = HConfig(self.host_a, self.os, self.options)
         compiled_config_hier.add_child('interface Vlan3')
         remediation_config_hier = running_config_hier.config_to_get_to(
