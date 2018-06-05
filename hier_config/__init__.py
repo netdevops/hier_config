@@ -52,29 +52,28 @@ class HConfig(HConfigChild):
 
     """
 
-    def __init__(self, hostname, os, options):
-        self._hostname = hostname
+    def __init__(self, hostname=None, os=None, options=None, host=None):
+        self.hostname = hostname
         self.os = os
         self.options = dict(options)
-        self._text = str()
-        self._logs = list()
+        self.text = str()
+        self.logs = list()
         self.children = []
         self.children_dict = {}
 
-    @property
-    def hostname(self):
-        return self._hostname
+        if self.hostname and self.os and self.options:
+            from hier_config.host import Host
 
-    @property
-    def logs(self):
-        return self._logs
+            self.host = Host(self.hostname, self.os, self.options)
+        else:
+            self.host = host
 
     @property
     def root(self):
         return self
 
     def __repr__(self):
-        return 'HConfig({},{})'.format(self.hostname, self.os)
+        return 'HConfig({})'.format(self.host)
 
     def __str__(self):
         return self.text
