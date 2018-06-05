@@ -29,3 +29,4 @@ class Host:
         self.hostname = hostname
         self.os = os
         self.options = options
+        self.facts = dict()
