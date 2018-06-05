@@ -7,11 +7,13 @@ import sys
 def all_tests():
     from test_pep8 import TestPep8
     from test_hier_config import TestHConfig
+    from test_hier_config_forward import TestHierConfig
     from test_text_match import TestTextMatch
 
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(TestPep8))
     suite.addTest(unittest.makeSuite(TestHConfig))
+    suite.addTest(unittest.makeSuite(TestHierConfig))
     suite.addTest(unittest.makeSuite(TestTextMatch))
 
     return suite

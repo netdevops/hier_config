@@ -62,12 +62,6 @@ class HConfig(HConfigChild):
         self.children_dict = {}
 
     @property
-    def host(self):
-        from hier_config.host import Host
-
-        return Host(self._hostname, self.os)
-
-    @property
     def hostname(self):
         return self._hostname
 
