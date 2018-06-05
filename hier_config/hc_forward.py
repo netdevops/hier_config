@@ -9,17 +9,23 @@ class HierConfig(HConfig):
     object into HConfig, rather than individual hostname,
     os, and options variables.
 
+    ..code:: python
+
+        from hier_config.host import Host
+        from hier_config.hc_forward import HierConfig
+
+        import yaml
+
+        options = yaml.load(open('./tests/files/test_options_ios.yml'))
+        host = Host('example.rtr', 'ios', options)
+        hier = HierConfig(host)
+
     """
 
     def __init__(self, host):
-        self._host = host
+        self.host = host
 
         super().__init__(self.host.hostname, self.host.os, self.host.options)
 
-    @property
     def __repr__(self):
         return 'HierConfig({})'.format(self.host)
-
-    @property
-    def host(self):
-        return self._host

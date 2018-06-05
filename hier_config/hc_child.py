@@ -103,7 +103,6 @@ class HConfigChild:
     def logs(self):
         return self.parent.logs
 
-    @property
     def host(self):
         return self.parent.hostname
 

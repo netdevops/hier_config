@@ -41,11 +41,6 @@ class TestHConfig(unittest.TestCase):
         with open(cls.options_file) as f:
             cls.options = yaml.load(f.read())
 
-    def test_host(self):
-        hier1 = HConfig(self.host_a, self.os, self.options)
-        self.assertEqual(hier1.host.hostname, self.host_a)
-        self.assertEqual(hier1.host.os, self.os)
-
     def test_merge(self):
         hier1 = HConfig(self.host_a, self.os, self.options)
         hier1.add_child('interface Vlan2')

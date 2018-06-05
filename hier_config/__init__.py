@@ -73,7 +73,6 @@ class HConfig(HConfigChild):
     def root(self):
         return self
 
-    @property
     def __repr__(self):
         return 'HConfig({},{})'.format(self.hostname, self.os)
 
