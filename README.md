@@ -39,21 +39,21 @@ commands necessary to bring the device into spec.
 
 ```
 >>> from hier_config import HConfig
+>>> from hier_config import Host
 >>> import yaml
 >>>
->>> hostname = 'example.rtr'
->>> os = 'ios'
 >>> options = yaml.load(open('./tests/files/test_options_ios.yml'))
+>>> host = Host('example.rtr', 'ios', options)
 >>> tags = yaml.load(open('./tests/files/test_tags_ios.yml'))
 >>>
 >>> # Build HConfig object for the Running Config
 ...
->>> running_config_hier = HConfig(hostname, os, options)
+>>> running_config_hier = HConfig(host=host)
 >>> running_config_hier.load_from_file('./tests/files/running_config.conf')
 >>>
 >>> # Build Hierarchical Configuration object for the Compiled Config
 ...
->>> compiled_config_hier = HConfig(hostname, os, options)
+>>> compiled_config_hier = HConfig(host=host)
 >>> compiled_config_hier.load_from_file('./tests/files/compiled_config.conf')
 >>>
 >>> # Build Hierarchical Configuration object for the Remediation Config
