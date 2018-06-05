@@ -103,9 +103,8 @@ class HConfigChild:
     def logs(self):
         return self.parent.logs
 
-    @property
     def host(self):
-        return self.parent.hostname
+        return self.parent.host
 
     @staticmethod
     def _lineage_eval_object_rules(rules, section):
@@ -229,7 +228,7 @@ class HConfigChild:
 
             interface1.move(hier2)
 
-        :param HConfigChild: list
+        :param new_parent: HConfigChild -> type list
         :return: None
 
         """
@@ -255,7 +254,7 @@ class HConfigChild:
 
             hier.del_child(hier.get_child('startswith', 'interface'))
 
-        :param HConfigChild
+        :param child: HConfigChild
         :return: None
 
         """
