@@ -16,6 +16,10 @@ class HierConfig(HConfig):
 
         super().__init__(self.host.hostname, self.host.os, self.host.options)
 
-    # @property
-    # def host(self):
-    #     return self._host
+    @property
+    def __repr__(self):
+        return 'HierConfig({})'.format(self.host)
+
+    @property
+    def host(self):
+        return self._host
