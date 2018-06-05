@@ -2,7 +2,7 @@ from hier_config.hc_child import HConfigChild
 
 import re
 
-__version__ = '1.2.2'
+__version__ = '1.3.0'
 
 
 class HConfig(HConfigChild):
@@ -60,6 +60,12 @@ class HConfig(HConfigChild):
         self._logs = list()
         self.children = []
         self.children_dict = {}
+
+    @property
+    def host(self):
+        from hier_config.host import Host
+
+        return Host(self._hostname, self.os)
 
     @property
     def hostname(self):
