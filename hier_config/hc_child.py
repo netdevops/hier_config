@@ -229,7 +229,7 @@ class HConfigChild:
 
             interface1.move(hier2)
 
-        :param HConfigChild: list
+        :param new_parent: HConfigChild object -> type list
         :return: None
 
         """
@@ -255,7 +255,7 @@ class HConfigChild:
 
             hier.del_child(hier.get_child('startswith', 'interface'))
 
-        :param HConfigChild
+        :param child: HConfigChild object
         :return: None
 
         """
@@ -276,7 +276,16 @@ class HConfigChild:
                 child.text, child)
 
     def add_children(self, lines):
-        """ Add child instances of HConfigChild """
+        """
+        Add child instances of HConfigChild
+
+        :param lines: HConfigChild object -> type list
+        :return: None
+
+        """
+
+        if isinstance(lines, str):
+            lines = [lines]
 
         for line in lines:
             self.add_child(line)
@@ -311,11 +320,20 @@ class HConfigChild:
             return self.get_child('equals', text)
 
     def add_deep_copy_of(self, child_to_add, merged=False):
-        """ Add a nested copy of a child to self"""
+        """
+        Add a nested copy of a child to self
+
+        :param child_to_add: type HConfigCHild
+        :param merged: type boolean, default False
+
+        :return: new_child
+
+        """
 
         new_child = self.add_shallow_copy_of(child_to_add, merged=merged)
         for child in child_to_add.children:
             new_child.add_deep_copy_of(child, merged=merged)
+
         return new_child
 
     def lineage(self):
@@ -626,6 +644,8 @@ class HConfigChild:
         """
         Handle conditional testing to determine if idempotent acl handling for iosxr should be used
 
+        :return: boolean
+
         """
 
         if self.os in {'iosxr'}:
@@ -638,6 +658,9 @@ class HConfigChild:
     def is_idempotent_command(self, other_children):
         """
         Determine if self.text is an idempotent change.
+
+        :param other_children: HConfigChild object -> type list
+        :return: boolean
 
         """
 

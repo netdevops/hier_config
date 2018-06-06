@@ -2,7 +2,7 @@ from hier_config.hc_child import HConfigChild
 
 import re
 
-__version__ = '1.2.2'
+__version__ = '1.2.3'
 
 
 class HConfig(HConfigChild):
@@ -402,6 +402,9 @@ class HConfig(HConfigChild):
         """
         Add a copy of the ancestry of parent_to_add to self
         and return the deepest child which is equivalent to parent_to_add
+
+        :param parent_to_add: type HConfig
+        :return: base
 
         """
 
