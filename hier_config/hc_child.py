@@ -8,9 +8,6 @@ class HConfigChild:
     def __init__(self, parent, text):
         self.parent = parent
         self._text = text.strip()
-        self.hostname = self.root.hostname
-        self.os = self.root.os
-        self.options = self.root.options
         self.real_indent_level = None
         self.children = []
         self.children_dict = {}
@@ -101,11 +98,14 @@ class HConfigChild:
 
     @property
     def logs(self):
-        return self.parent.logs
+        return self.root.logs
+
+    def host(self):
+        return self.root.host
 
     @property
-    def host(self):
-        return self.parent.hostname
+    def options(self):
+        return self.root.options
 
     @staticmethod
     def _lineage_eval_object_rules(rules, section):
@@ -221,11 +221,11 @@ class HConfigChild:
 
         .. code:: python
 
-            hier1 = HConfig(hostname1, os, options)
+            hier1 = HConfig(host=host)
             interface1 = hier1.add_child('interface Vlan2')
             interface1.add_child('ip address 10.0.0.1 255.255.255.252')
 
-            hier2 = Hconfig(hostname2, os, options)
+            hier2 = Hconfig(host)
 
             interface1.move(hier2)
 
@@ -250,7 +250,7 @@ class HConfigChild:
         Delete a child from self.children and self.children_dict
 
         .. code:: python
-            hier = HConfig(hostname, os, options)
+            hier = HConfig(host=host)
             hier.add_child('interface Vlan2')
 
             hier.del_child(hier.get_child('startswith', 'interface'))
@@ -535,8 +535,7 @@ class HConfigChild:
 
         from hier_config import HConfig
         if new_instance is None:
-            new_instance = HConfig(
-                self.hostname, self.os, self.options)
+            new_instance = HConfig(host=self.host)
 
         for child in self.children:
             if tags.intersection(self.tags):
@@ -569,8 +568,7 @@ class HConfigChild:
 
         from hier_config import HConfig
         if delta is None:
-            delta = HConfig(
-                self.hostname, self.os, self.options)
+            delta = HConfig(host=self.host)
 
         self._config_to_get_to_left(target, delta)
         self._config_to_get_to_right(target, delta)
@@ -648,7 +646,7 @@ class HConfigChild:
 
         """
 
-        if self.os in {'iosxr'}:
+        if self.root.host.os in {'iosxr'}:
             if self.parent is not self.root:
                 acl = ('ipv4 access-list ', 'ipv6 access-list ')
                 if self.parent.text.startswith(acl):
@@ -672,7 +670,7 @@ class HConfigChild:
 
         # Handles idempotent acl entry identification
         if self._idempotent_acl_check():
-            if self.os in {'iosxr'}:
+            if self.host.os in {'iosxr'}:
                 self_sn = self.text.split(' ', 1)[0]
                 for other_child in other_children:
                     other_sn = other_child.text.split(' ', 1)[0]
@@ -736,9 +734,10 @@ class HConfigChild:
         """ Add a nested copy of a child_to_add to self.children """
 
         new_child = self.add_child(child_to_add.text)
+
         if merged:
             new_child.instances.append({
-                'hostname': child_to_add.hostname,
+                'hostname': child_to_add.root.host.hostname,
                 'comments': child_to_add.comments,
                 'tags': child_to_add.tags})
         new_child.comments.update(child_to_add.comments)

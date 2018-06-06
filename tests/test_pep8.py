@@ -16,7 +16,8 @@ class TestPep8(unittest.TestCase):
                 if os.path.isfile(os.path.join(root, f)):
                     if f.endswith('.py'):
                         python_files.add(os.path.join(root, f))
-            errors += style.check_files(python_files).total_errors
+
+        errors += style.check_files(python_files).total_errors
 
         self.assertEqual(errors, 0, 'PEP8 style errors: {}'.format(errors))
 

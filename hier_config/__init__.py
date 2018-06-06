@@ -2,7 +2,7 @@ from hier_config.hc_child import HConfigChild
 
 import re
 
-__version__ = '1.2.3'
+__version__ = '1.3.0'
 
 
 class HConfig(HConfigChild):
@@ -18,21 +18,21 @@ class HConfig(HConfigChild):
         # Setup basic environment
 
         from hier_config import HConfig
+        from hier_config import Host
         import yaml
 
-        hostname = 'example.rtr'
-        os = 'ios'
         options = yaml.load(open('./tests/files/test_options_ios.yml'))
         tags = yaml.load(open('./tests/files/test_tags_ios.yml'))
+        host = Host('example.rtr', 'ios', options)
 
         # Build HConfig object for the Running Config
 
-        running_config_hier = HConfig(hostname, os, options)
+        running_config_hier = HConfig(host=host)
         running_config_hier.load_from_file('./tests/files/running_config.conf')
 
         # Build Hierarchical Configuration object for the Compiled Config
 
-        compiled_config_hier = HConfig(hostname, os, options)
+        compiled_config_hier = HConfig(host=host)
         compiled_config_hier.load_from_file('./tests/files/compiled_config.conf')
 
         # Build Hierarchical Configuration object for the Remediation Config
@@ -52,18 +52,42 @@ class HConfig(HConfigChild):
 
     """
 
-    def __init__(self, hostname, os, options):
-        self._hostname = hostname
-        self.os = os
-        self.options = dict(options)
+    def __init__(self, hostname=None, os=None, options=None, host=None):
+        if all([i is not None for i in (hostname, os, options)]):
+            from hier_config.host import Host
+            from warnings import warn
+            self._host = Host(hostname, os, options)
+            warning_message = """
+            hostname, os, and options variables are being deprecated in version 1.4.0.
+            Use the Host object going forward.
+            Example:
+                from hier_config.host import Host
+                import yaml
+                options = yaml.load(open('./tests/files/test_options_ios.yml'))
+                host = Host({}, {}, options)
+                hier = HConfig(host=host)""".format(hostname, os)
+            warn(warning_message, SyntaxWarning)
+        elif host is not None:
+            assert hasattr(host, 'hostname')
+            assert hasattr(host, 'os')
+            assert hasattr(host, 'hconfig_options')
+            self._host = host
+        else:
+            raise AttributeError('Error determining host object')
+
+        self._options = self.host.hconfig_options
         self._text = str()
         self._logs = list()
         self.children = []
         self.children_dict = {}
 
     @property
-    def hostname(self):
-        return self._hostname
+    def host(self):
+        return self._host
+
+    @property
+    def options(self):
+        return self._options
 
     @property
     def logs(self):
@@ -73,9 +97,8 @@ class HConfig(HConfigChild):
     def root(self):
         return self
 
-    @property
     def __repr__(self):
-        return 'HConfig({},{})'.format(self.hostname, self.os)
+        return 'HConfig(host={})'.format(self.host)
 
     def __str__(self):
         return self.text
@@ -126,8 +149,8 @@ class HConfig(HConfigChild):
 
         def end_of_banner_test(config_line):
             """
-
-            :type config_line: str
+            :param config_line: type str
+            :return: boolean
             """
             if config_line.startswith('^'):
                 return True
@@ -207,7 +230,7 @@ class HConfig(HConfigChild):
         # Assert that we are not in a banner still for some reason
         assert not in_banner
 
-        if self.os in ['ios']:
+        if self.host.os in ['ios']:
             self._remove_acl_remarks()
             self._add_acl_sequence_numbers()
             self._rm_ipv6_acl_sequence_numbers()
@@ -333,7 +356,7 @@ class HConfig(HConfigChild):
 
         ipv4_acl_sw = 'ip access-list'
         # ipv6_acl_sw = ('ipv6 access-list')
-        if self.os in ['ios']:
+        if self.host.os in ['ios']:
             acl_line_sw = ('permit', 'deny')
         else:
             acl_line_sw = ('permit', 'deny', 'remark')
