@@ -100,6 +100,7 @@ class HConfigChild:
     def logs(self):
         return self.root.logs
 
+    @property
     def host(self):
         return self.root.host
 
@@ -646,7 +647,7 @@ class HConfigChild:
 
         """
 
-        if self.root.host.os in {'iosxr'}:
+        if self.host.os in {'iosxr'}:
             if self.parent is not self.root:
                 acl = ('ipv4 access-list ', 'ipv6 access-list ')
                 if self.parent.text.startswith(acl):
@@ -737,7 +738,7 @@ class HConfigChild:
 
         if merged:
             new_child.instances.append({
-                'hostname': child_to_add.root.host.hostname,
+                'hostname': child_to_add.host.hostname,
                 'comments': child_to_add.comments,
                 'tags': child_to_add.tags})
         new_child.comments.update(child_to_add.comments)
