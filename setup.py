@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 from setuptools import setup
 from setuptools import find_packages
@@ -16,6 +16,9 @@ setup(
     author_email="andrew.edwards@rackspace.com, jan.brooks@rackspace.com, james.williams@rackspace.com",
     keywords = "hier_config",
     python_requires='>=2.7',
+    install_requires=[
+        "PyYAML>=3.12",
+    ],
     classifiers=[
         'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',

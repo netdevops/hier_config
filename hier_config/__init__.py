@@ -2,7 +2,7 @@ from hier_config.hc_child import HConfigChild
 
 import re
 
-__version__ = '1.3.1'
+__version__ = '1.4.0'
 
 
 class HConfig(HConfigChild):
@@ -58,7 +58,7 @@ class HConfig(HConfigChild):
             from warnings import warn
             self._host = Host(hostname, os, options)
             warning_message = """
-            hostname, os, and options variables are being deprecated in version 1.4.0.
+            hostname, os, and options variables are being deprecated in version 2.0.0.
             Use the Host object going forward.
             Example:
                 from hier_config.host import Host
