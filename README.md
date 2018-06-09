@@ -39,7 +39,7 @@ commands necessary to bring the device into spec.
 
 ```
 >>> from hier_config import HConfig
->>> from hier_config import Host
+>>> from hier_config.host import Host
 >>> import yaml
 >>>
 >>> options = yaml.load(open('./tests/files/test_options_ios.yml'))

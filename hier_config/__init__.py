@@ -1,9 +1,8 @@
 from hier_config.hc_child import HConfigChild
-from hier_config.host import Host
 
 import re
 
-__version__ = '1.3.2'
+__version__ = '1.3.1'
 
 
 class HConfig(HConfigChild):
