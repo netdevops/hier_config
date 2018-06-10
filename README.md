@@ -44,7 +44,6 @@ commands necessary to bring the device into spec.
 >>>
 >>> options = yaml.load(open('./tests/files/test_options_ios.yml'))
 >>> host = Host('example.rtr', 'ios', options)
->>> tags = yaml.load(open('./tests/files/test_tags_ios.yml'))
 >>>
 >>> # Build HConfig object for the Running Config
 ...
@@ -59,9 +58,6 @@ commands necessary to bring the device into spec.
 >>> # Build Hierarchical Configuration object for the Remediation Config
 ...
 >>> remediation_config_hier = running_config_hier.config_to_get_to(compiled_config_hier)
->>> remediation_config_hier.add_tags(tags)
-<HConfig object at 0x103aa1358>
->>> remediation_config_hier.add_sectional_exiting()
 >>>
 >>> for line in remediation_config_hier.all_children():
 ...     print(line.cisco_style_text())
