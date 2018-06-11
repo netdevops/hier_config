@@ -10,13 +10,8 @@ class Host:
     The default is to load "hostname", "os", and "options" to the host object,
     however, it can easily be extended for developer needs.
 
-    :param hostname: type str
-    :param os: type str
-    :param hconfig_options: type dict
-
-    :return: Host Object
-
     .. code:: python
+
         import yaml
         from hier_config.host import Host
 
@@ -37,7 +32,13 @@ class Host:
         host.load_remediation()
 
         # Example of creating a remediation config with a tag ('safe') targeting a specific config.
-        host.load_remediation(include_tags=['safe'])
+        host.filter_remediation(include_tags=['safe'])
+
+    :param hostname: type str
+    :param os: type str
+    :param hconfig_options: type dict
+
+    :return: Host Object
 
     """
 
@@ -58,6 +59,7 @@ class Host:
     def running_config(self):
         """
         running configuration property
+
         :return: self._running_config -> type HConfig Object or None
         """
         if self._running_config is None:
@@ -68,6 +70,7 @@ class Host:
     def compiled_config(self):
         """
         compiled configuration property
+
         :return: self._compiled_config -> type HConfig Object or None
         """
         if self._compiled_config is None:
@@ -78,6 +81,7 @@ class Host:
     def remediation_config(self):
         """
         remediation configuration property
+
         :return: self._remediation_config -> type HConfig Object or None
         """
         if self._remediation_config is None:
@@ -88,6 +92,7 @@ class Host:
     def hconfig_tags(self):
         """
         hier-config tags property
+
         :return: self._hconfig_tags -> type list of dicts
         """
         return self._hconfig_tags
@@ -131,7 +136,7 @@ class Host:
         Once self.running_config and self.compled_config have been created,
         create self.remediation_config
 
-        :return: self.remediation_config -> type HConfig Object
+        :return: self.remediation_config
         """
         if self.running_config and self.compiled_config:
             self._remediation_config = self.running_config.config_to_get_to(
@@ -181,12 +186,14 @@ class Host:
             Specify to load lineage rules from a file.
 
         .. code:: python
+
             host.load_tags('tags_ios.yml')
 
         Example:
             Specify to load lineage rules from a dictionary.
 
         .. code:: python
+
             tags = [{"lineage": [{"startswith": "interface"}], "add_tags": "interfaces"}]
             host.load_tags(tags, file=False)
 
