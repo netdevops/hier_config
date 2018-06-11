@@ -45,7 +45,7 @@ class Host:
         self.hostname = str(hostname)
         self.os = str(os)
         self.hconfig_options = dict(hconfig_options)
-        self._hconfig_tags = None
+        self._hconfig_tags = list()
         self._running_config = None
         self._compiled_config = None
         self._remediation_config = None
@@ -80,13 +80,15 @@ class Host:
         remediation configuration property
         :return: self._remediation_config -> type HConfig Object or None
         """
+        if self._remediation_config is None:
+            self._remediation_config = self._get_compiled_config()
         return self._remediation_config
 
     @property
     def hconfig_tags(self):
         """
         hier-config tags property
-        :return: self._hconfig_tags -> type dict or None
+        :return: self._hconfig_tags -> type list of dicts
         """
         return self._hconfig_tags
 
@@ -124,13 +126,11 @@ class Host:
         else:
             raise SyntaxError("Unknown config_type. Expected 'running' or 'compiled'")
 
-    def load_remediation(self, include_tags=None, exclude_tags=None):
+    def load_remediation(self):
         """
-        Once self.facts["running_config"] and self.facts["compled_config"] have been created,
-        create self.facts["remediation_config"]
+        Once self.running_config and self.compled_config have been created,
+        create self.remediation_config
 
-        :param include_tags: type list
-        :param exclude_tags: type list
         :return: self.remediation_config
         """
         if self.running_config and self.compiled_config:
@@ -140,12 +140,22 @@ class Host:
         else:
             raise AttributeError("Missing host.running_config or host.compiled_config")
 
-        remediation_text = str()
         self.remediation_config.add_sectional_exiting()
         self.remediation_config.set_order_weight()
+        self.remediation_config.add_tags(self.hconfig_tags)
+        self.filter_remediation()
 
-        if self.hconfig_tags:
-            self.remediation_config.add_tags(self.hconfig_tags)
+        return self.remediation_config
+
+    def filter_remediation(self, include_tags=None, exclude_tags=None):
+        """
+        Run filter jobs, based on tags on self.remediation_config
+
+        :param include_tags: type list
+        :param exclude_tags: type list
+        :return: self.facts['remediation_conig_raw'] -> type str
+        """
+        remediation_text = str()
 
         if include_tags or exclude_tags is not None:
             include_tags = H.to_list(include_tags)
@@ -161,7 +171,7 @@ class Host:
 
         self.facts["remediation_config_raw"] = remediation_text
 
-        return self.remediation_config
+        return self.facts["remediation_config_raw"]
 
     def load_tags(self, name, file=True):
         """
@@ -213,4 +223,7 @@ class Host:
         return NotImplemented
 
     def _get_compiled_config(self):
+        return NotImplemented
+
+    def _get_remediation_config(self):
         return NotImplemented
