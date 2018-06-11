@@ -81,7 +81,7 @@ class Host:
         :return: self._remediation_config -> type HConfig Object or None
         """
         if self._remediation_config is None:
-            self._remediation_config = self._get_compiled_config()
+            self._remediation_config = self._get_remediation_config()
         return self._remediation_config
 
     @property
