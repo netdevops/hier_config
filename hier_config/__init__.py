@@ -2,7 +2,7 @@ from hier_config.hc_child import HConfigChild
 
 import re
 
-__version__ = '1.3.1'
+__version__ = '1.4.0'
 
 
 class HConfig(HConfigChild):
@@ -18,11 +18,10 @@ class HConfig(HConfigChild):
         # Setup basic environment
 
         from hier_config import HConfig
-        from hier_config import Host
+        from hier_config.host import Host
         import yaml
 
         options = yaml.load(open('./tests/files/test_options_ios.yml'))
-        tags = yaml.load(open('./tests/files/test_tags_ios.yml'))
         host = Host('example.rtr', 'ios', options)
 
         # Build HConfig object for the Running Config
@@ -38,8 +37,6 @@ class HConfig(HConfigChild):
         # Build Hierarchical Configuration object for the Remediation Config
 
         remediation_config_hier = running_config_hier.config_to_get_to(compiled_config_hier)
-        remediation_config_hier.add_sectional_exiting()
-        remediation_config_hier.add_tags(tags)
 
         for line in remediation_config_hier.all_children():
             print(line.cisco_style_text())
@@ -58,7 +55,7 @@ class HConfig(HConfigChild):
             from warnings import warn
             self._host = Host(hostname, os, options)
             warning_message = """
-            hostname, os, and options variables are being deprecated in version 1.4.0.
+            hostname, os, and options variables are being deprecated in version 2.0.0.
             Use the Host object going forward.
             Example:
                 from hier_config.host import Host
