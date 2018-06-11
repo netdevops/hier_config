@@ -131,7 +131,7 @@ class Host:
         Once self.running_config and self.compled_config have been created,
         create self.remediation_config
 
-        :return: self.remediation_config
+        :return: self.remediation_config -> type HConfig Object
         """
         if self.running_config and self.compiled_config:
             self._remediation_config = self.running_config.config_to_get_to(
