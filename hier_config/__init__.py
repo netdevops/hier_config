@@ -18,11 +18,10 @@ class HConfig(HConfigChild):
         # Setup basic environment
 
         from hier_config import HConfig
-        from hier_config import Host
+        from hier_config.host import Host
         import yaml
 
         options = yaml.load(open('./tests/files/test_options_ios.yml'))
-        tags = yaml.load(open('./tests/files/test_tags_ios.yml'))
         host = Host('example.rtr', 'ios', options)
 
         # Build HConfig object for the Running Config
@@ -38,8 +37,6 @@ class HConfig(HConfigChild):
         # Build Hierarchical Configuration object for the Remediation Config
 
         remediation_config_hier = running_config_hier.config_to_get_to(compiled_config_hier)
-        remediation_config_hier.add_sectional_exiting()
-        remediation_config_hier.add_tags(tags)
 
         for line in remediation_config_hier.all_children():
             print(line.cisco_style_text())
