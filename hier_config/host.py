@@ -36,16 +36,16 @@ class Host:
 
     :param hostname: type str
     :param os: type str
-    :param hconfig_options: type dict
+    :param hconfig_options: type dict or None
 
     :return: Host Object
 
     """
 
-    def __init__(self, hostname, os, hconfig_options):
+    def __init__(self, hostname, os, hconfig_options=None):
         self.hostname = str(hostname)
         self.os = str(os)
-        self.hconfig_options = dict(hconfig_options)
+        self._hconfig_options = dict(hconfig_options)
         self._hconfig_tags = list()
         self._running_config = None
         self._compiled_config = None
@@ -87,6 +87,18 @@ class Host:
         if self._remediation_config is None:
             self._remediation_config = self._get_remediation_config()
         return self._remediation_config
+
+    @property
+    def hconfig_options(self):
+        """
+        hier-config options property
+
+        :return: self._hconfig_tags -> type dict
+        """
+        if self._hconfig_options is not None:
+            self._hconfig_options = H.extend_builtin(self._hconfig_options, self.os)
+
+        return self._hconfig_options
 
     @property
     def hconfig_tags(self):
