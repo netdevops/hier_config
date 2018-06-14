@@ -22,7 +22,7 @@ deploy:
   github-token: $GITHUBTOKEN
   skip-cleanup: true
   keep-history: true
-  target-branch: gh-pages 
+  target-branch: gh-pages
   local-dir: "docs"
   on:
     branch: master

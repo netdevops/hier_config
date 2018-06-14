@@ -97,7 +97,7 @@ class Host:
         """
         return self._hconfig_tags
 
-    def load_config_from(self, config_type, name, file=True):
+    def load_config_from(self, config_type, name, load_file=True):
         """
         1. Loads a running config or a compiled config into a Host object
         2. Sets host.facts['running_config_raw'] or host.facts['compiled_config_raw']
@@ -106,12 +106,12 @@ class Host:
 
         :param config_type: 'running' or 'compiled' -> type str
         :param name: file name or config text string to load -> type str
-        :param file: default, True -> type boolean
+        :param load_file: default, True -> type bool
         :return: self.running_config or self.compiled_config
         """
         hier = HConfig(host=self)
 
-        if file:
+        if load_file:
             config_text = self._load_from_file(name)
         else:
             config_text = name
@@ -178,7 +178,7 @@ class Host:
 
         return self.facts["remediation_config_raw"]
 
-    def load_tags(self, name, file=True):
+    def load_tags(self, name, load_file=True):
         """
         Loads lineage rules into host.facts["hconfig_tags"]
 
@@ -198,10 +198,10 @@ class Host:
             host.load_tags(tags, file=False)
 
         :param name: tags from a file or dictionary
-        :param file: default, True -> type boolean
+        :param load_file: default, True -> type bool
         :return: self.hconfig_tags
         """
-        if file:
+        if load_file:
             self._hconfig_tags = self._load_from_file(name, parse_yaml=True)
         else:
             self._hconfig_tags = name
@@ -222,7 +222,7 @@ class Host:
 
         if parse_yaml:
             import yaml
-            content = yaml.load(content)
+            content = yaml.safe_load(content)
 
         return content
 

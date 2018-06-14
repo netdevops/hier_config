@@ -37,17 +37,13 @@ class HConfigChild:
     def __repr__(self):
         if self.parent is self.root:
             return 'HConfigChild(HConfig, {})'.format(self.text)
-        else:
-            return 'HConfigChild(HConfigChild, {})'.format(self.text)
+        return 'HConfigChild(HConfigChild, {})'.format(self.text)
 
     def __str__(self):
         return self.text
 
     def __lt__(self, other):
-        if self.order_weight < other.order_weight:
-            return True
-        else:
-            return False
+        return self.order_weight < other.order_weight
 
     def __len__(self):
         length = 0
@@ -126,10 +122,7 @@ class HConfigChild:
                 rule['expression'] = H.to_list(rule['expression'])
                 if not set(rule['expression']).intersection(section.tags):
                     matches += 1
-        if matches == len(rules):
-            return True
-        else:
-            return False
+        return matches == len(rules)
 
     @staticmethod
     def _lineage_eval_text_match_rules(rules, text):
@@ -197,15 +190,13 @@ class HConfigChild:
             result = self.children_dict.get(expression, None)
             if result and test_expression_pairs:
                 return result.get_child_deep(test_expression_pairs)
-            else:
-                return result
+            return result
         else:
             try:
                 result = next(self.get_children(test, expression))
                 if result and test_expression_pairs:
                     return result.get_child_deep(test_expression_pairs)
-                else:
-                    return result
+                return result
             except StopIteration:
                 return None
 
@@ -761,12 +752,7 @@ class HConfigChild:
 
         if include_line:
             set_exclude_tags = set(exclude_tags)
-            if self.tags.intersection(set_exclude_tags):
-                return False
-            else:
-                return True
-        else:
-            return False
+            return not bool(self.tags.intersection(set_exclude_tags))
 
     def lineage_test(self, rule, strip_negation=False):
         """ A generic test against a lineage of HConfigChild objects """
@@ -811,7 +797,4 @@ class HConfigChild:
             else:
                 return False
 
-        if matches == len(rule['lineage']):
-            return True
-        else:
-            return False
+        return matches == len(rule['lineage'])
