@@ -38,7 +38,7 @@ class TestHost(unittest.TestCase):
 
     def test_load_config_from(self):
         self.host.load_config_from(config_type="running", name=self.running_file)
-        self.host.load_config_from(config_type="compiled", name=self.compiled_string, file=False)
+        self.host.load_config_from(config_type="compiled", name=self.compiled_string, load_file=False)
 
         self.assertTrue(len(self.host.compiled_config) > 0)
         self.assertTrue(len(self.host.running_config) > 0)
@@ -54,13 +54,13 @@ class TestHost(unittest.TestCase):
         self.host.load_tags(self.tags_file)
         self.assertTrue(len(self.host.hconfig_tags) > 0)
 
-        self.host.load_tags(self.hconfig_tags, file=False)
+        self.host.load_tags(self.hconfig_tags, load_file=False)
         self.assertTrue(len(self.host.hconfig_tags) > 0)
 
     def test_filter_remediation(self):
         self.host.load_config_from(config_type="running", name=self.running_file)
         self.host.load_config_from(config_type="compiled", name=self.compiled_file)
-        self.host.load_tags(self.hconfig_tags, file=False)
+        self.host.load_tags(self.hconfig_tags, load_file=False)
         self.host.load_remediation()
 
         rem1 = self.host.facts['remediation_config_raw']

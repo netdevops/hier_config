@@ -35,10 +35,10 @@ class TestHConfig(unittest.TestCase):
         )
 
         with open(cls.tags_file) as f:
-            cls.tags = yaml.load(f.read())
+            cls.tags = yaml.safe_load(f.read())
 
         with open(cls.options_file) as f:
-            cls.options = yaml.load(f.read())
+            cls.options = yaml.safe_load(f.read())
 
         cls.host_a = Host('example1.rtr', cls.os, cls.options)
         cls.host_b = Host('example2.rtr', cls.os, cls.options)
