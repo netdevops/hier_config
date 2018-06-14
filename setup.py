@@ -14,7 +14,7 @@ setup(
     packages=find_packages(exclude=['docs', 'tests']),
     author="Andrew Edwards, Jan Brooks, James Williams",
     author_email="andrew.edwards@rackspace.com, jan.brooks@rackspace.com, james.williams@rackspace.com",
-    keywords = "hier_config",
+    keywords="hier_config",
     python_requires='>=2.7',
     install_requires=[
         "PyYAML>=3.12",
