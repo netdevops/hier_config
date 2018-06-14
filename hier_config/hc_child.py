@@ -752,9 +752,7 @@ class HConfigChild:
 
         if include_line:
             set_exclude_tags = set(exclude_tags)
-            if not self.tags.intersection(set_exclude_tags):
-                return True
-            return False
+            return not bool(self.tags.intersection(set_exclude_tags))
 
     def lineage_test(self, rule, strip_negation=False):
         """ A generic test against a lineage of HConfigChild objects """
