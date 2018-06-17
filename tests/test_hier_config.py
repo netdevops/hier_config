@@ -43,6 +43,9 @@ class TestHConfig(unittest.TestCase):
         cls.host_a = Host('example1.rtr', cls.os, cls.options)
         cls.host_b = Host('example2.rtr', cls.os, cls.options)
 
+    def test_bool(self):
+        self.assertTrue(HConfig(host=self.host_a))
+
     def test_merge(self):
         hier1 = HConfig(host=self.host_a)
         hier1.add_child('interface Vlan2')
