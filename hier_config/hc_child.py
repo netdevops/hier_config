@@ -54,6 +54,9 @@ class HConfigChild:
     def __bool__(self):
         return True
 
+    def __nonzero__(self):
+        return self.__bool__()
+
     def __contains__(self, item):
         return str(item) in self.children_dict
 
