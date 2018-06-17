@@ -335,6 +335,17 @@ class TestHConfig(unittest.TestCase):
         remediation_config_hier = running_config_hier.config_to_get_to(compiled_config_hier)
         self.assertEqual(2, len(list(remediation_config_hier.all_children())))
 
+    def test_config_to_get_to_right(self):
+        running_config_hier = HConfig(host=self.host_a)
+        running_config_hier.add_child('do not add me')
+        compiled_config_hier = HConfig(host=self.host_a)
+        compiled_config_hier.add_child('do not add me')
+        compiled_config_hier.add_child('add me')
+        delta = HConfig(host=self.host_a)
+        running_config_hier._config_to_get_to_right(compiled_config_hier, delta)
+        self.assertNotIn('do not add me', delta)
+        self.assertIn('add me', delta)
+
     def test_is_idempotent_command(self):
         pass
 
