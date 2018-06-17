@@ -593,7 +593,7 @@ class HConfigChild:
         for target_child in target.children:
             # if the child exist, recurse into its children
             self_child = self.get_child('equals', target_child.text)
-            if self_child:
+            if self_child is not None:
                 # This creates a new HConfigChild object just in case there are some delta children
                 # Not very efficient, think of a way to not do this
                 subtree = delta.add_child(target_child.text)
