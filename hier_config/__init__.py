@@ -1,11 +1,11 @@
-from hier_config.hc_child import HConfigChild
+from hier_config.base import HConfigBase
 
 import re
 
 __version__ = '1.4.2'
 
 
-class HConfig(HConfigChild):
+class HConfig(HConfigBase):
 
     """
     A class for representing and comparing Cisco configurations in a
@@ -50,6 +50,7 @@ class HConfig(HConfigChild):
     """
 
     def __init__(self, hostname=None, os=None, options=None, host=None):
+        super(HConfig, self).__init__()
         if all([i is not None for i in (hostname, os, options)]):
             from hier_config.host import Host
             from warnings import warn
@@ -73,10 +74,7 @@ class HConfig(HConfigChild):
             raise AttributeError('Error determining host object')
 
         self._options = self.host.hconfig_options
-        self._text = str()
         self._logs = list()
-        self.children = []
-        self.children_dict = {}
 
     @property
     def host(self):
@@ -98,7 +96,7 @@ class HConfig(HConfigChild):
         return 'HConfig(host={})'.format(self.host)
 
     def __str__(self):
-        return self.text
+        return repr(self)
 
     def __hash__(self):
         return id(self)
