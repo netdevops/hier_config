@@ -1,7 +1,7 @@
 from hier_config.text_match import TextMatch
 
 
-class HConfigBase:
+class HConfigBase(object):
 
     def __init__(self):
         self.children = []
