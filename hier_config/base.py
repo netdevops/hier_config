@@ -7,6 +7,21 @@ class HConfigBase:
         self.children = []
         self.children_dict = {}
 
+    def __len__(self):
+        length = 0
+        for _ in self.all_children():
+            length += 1
+        return length
+
+    def __bool__(self):
+        return True
+
+    def __nonzero__(self):
+        return self.__bool__()
+
+    def __contains__(self, item):
+        return str(item) in self.children_dict
+
     def add_children(self, lines):
         """
         Add child instances of HConfigChild
@@ -218,6 +233,68 @@ class HConfigBase:
                 return False
 
         return matches == len(rule['lineage'])
+
+    def config_to_get_to(self, target, delta=None):
+        """
+        Figures out what commands need to be executed to transition from self to target.
+        self is the source data structure(i.e. the running_config),
+        target is the destination(i.e. compiled_config)
+
+        """
+
+        from hier_config import HConfig
+        if delta is None:
+            delta = HConfig(host=self.host)
+
+        self._config_to_get_to_left(target, delta)
+        self._config_to_get_to_right(target, delta)
+
+        return delta
+
+    def _config_to_get_to_left(self, target, delta):
+        # find self.children that are not in target.children - i.e. what needs to be negated or defaulted
+        # Also, find out if another command in self.children will overwrite -
+        # i.e. be idempotent
+        for self_child in self.children:
+            if self_child in target:
+                continue
+            elif self_child.is_idempotent_command(target.children):
+                continue
+            else:
+                # in other but not self
+                # add this node but not any children
+                deleted = delta.add_child(self_child.text)
+                deleted.negate()
+                if self_child.children:
+                    deleted.comments.add(
+                        "removes {} lines".format(len(self_child.children_dict) + 1))
+
+    def _config_to_get_to_right(self, target, delta):
+        # find what would need to be added to source_config to get to self
+        for target_child in target.children:
+            # if the child exist, recurse into its children
+            self_child = self.get_child('equals', target_child.text)
+            if self_child is not None:
+                # This creates a new HConfigChild object just in case there are some delta children
+                # Not very efficient, think of a way to not do this
+                subtree = delta.add_child(target_child.text)
+                self_child.config_to_get_to(target_child, subtree)
+                if not subtree.children:
+                    subtree.delete()
+                # Do we need to rewrite the child and its children as well?
+                elif self_child.sectional_overwrite_check():
+                    target_child.overwrite_with(self_child, delta, True)
+                elif self_child.sectional_overwrite_no_negate_check():
+                    target_child.overwrite_with(self_child, delta, False)
+            # else the child is absent, add it
+            else:
+                new_item = delta.add_deep_copy_of(target_child)
+                # mark the new item and all of its children as new_in_config
+                new_item.new_in_config = True
+                for child in new_item.all_children():
+                    child.new_in_config = True
+                if new_item.children:
+                    new_item.comments.add("new section")
 
     def _duplicate_child_allowed_check(self):
         """ Determine if duplicate(identical text) children are allowed under the parent """

@@ -432,3 +432,31 @@ class HConfig(HConfigBase):
                 base = base.add_shallow_copy_of(parent)
 
         return base
+
+    def set_order_weight(self):
+        """
+        Sets self.order integer on all children
+
+        """
+
+        for child in self.all_children():
+            for rule in self.options['ordering']:
+                if child.lineage_test(rule):
+                    child.order_weight = rule['order']
+
+    def add_sectional_exiting(self):
+        """
+        Adds the sectional exiting text as a child
+
+        """
+
+        # TODO why do we need to delete the delete the sub_child and then
+        # recreate it?
+        for child in self.all_children():
+            for rule in self.options['sectional_exiting']:
+                if child.lineage_test(rule):
+                    if rule['exit_text'] in child:
+                        child.del_child_by_text(rule['exit_text'])
+
+                    new_child = child.add_child(rule['exit_text'])
+                    new_child.order_weight = 999
