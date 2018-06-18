@@ -2,7 +2,7 @@ from hier_config.base import HConfigBase
 
 import re
 
-__version__ = '1.4.2'
+__version__ = '1.5.0'
 
 
 class HConfig(HConfigBase):
@@ -331,14 +331,6 @@ class HConfig(HConfigBase):
                         child.deep_remove_tags(rule['remove_tags'])
 
         return self
-
-    def _idempotent_acl_check(self):
-        """
-        Handle conditional testing to determine if idempotent acl handling for iosxr should be used
-
-        """
-
-        return False
 
     def depth(self):
         return 0

@@ -85,6 +85,80 @@ class HConfigBase:
 
         return new_child
 
+    def to_tag_spec(self, tags):
+        """
+        Returns the configuration as a tag spec definition
+
+        This is handy when you have a segment of config and need to
+        generate a tag spec to tag configuration in another instance
+
+        """
+
+        tag_spec = []
+        for child in self.all_children():
+            if not child.children:
+                child_spec = [{'equals': t} for t in child.path()]
+                tag_spec.append({'section': child_spec, 'add_tags': tags})
+        return tag_spec
+
+    def deep_append_tags(self, tags):
+        """
+        Append tags to self.tags and recursively for all children
+
+        """
+
+        self.append_tags(tags)
+        for child in self.all_children():
+            child.append_tags(tags)
+
+    def deep_remove_tags(self, tags):
+        """
+        Remove tags from self.tags and recursively for all children
+
+        """
+
+        self.remove_tags(tags)
+        for child in self.all_children():
+            child.remove_tags(tags)
+
+    def append_tags(self, tags):
+        """
+        Add tags to self.tags
+
+        """
+
+        tags = H.to_list(tags)
+        # self._tags.update(tags)
+        self.tags.update(tags)
+
+    def remove_tags(self, tags):
+        """
+        Remove tags from self.tags
+
+        """
+
+        tags = H.to_list(tags)
+        # self._tags.difference_update(tags)
+        self.tags.difference_update(tags)
+
+    def with_tags(self, tags, new_instance=None):
+        """
+        Returns a new instance containing only sub-objects
+        with one of the tags in tags
+
+        """
+
+        from hier_config import HConfig
+        if new_instance is None:
+            new_instance = HConfig(host=self.host)
+
+        for child in self.children:
+            if tags.intersection(self.tags):
+                new_child = new_instance.add_shallow_copy_of(child)
+                child.with_tags(tags, new_instance=new_child)
+
+        return new_instance
+
     def all_children_sorted_untagged(self):
         """ Yield all children recursively that are untagged """
 
@@ -331,3 +405,23 @@ class HConfigBase:
             else:
                 text_match_rules += [{'test': k, 'expression': v}]
         return object_rules, text_match_rules
+
+    @staticmethod
+    def _lineage_eval_object_rules(rules, section):
+        """
+        Evaluate a list of lineage object rules.
+
+        All object rules must match in order to return True
+
+        """
+
+        matches = 0
+        for rule in rules:
+            if rule['test'] == 'new_in_config':
+                if rule['expression'] == section.new_in_config:
+                    matches += 1
+            elif rule['test'] == 'negative_intersection_tags':
+                rule['expression'] = H.to_list(rule['expression'])
+                if not set(rule['expression']).intersection(section.tags):
+                    matches += 1
+        return matches == len(rules)
