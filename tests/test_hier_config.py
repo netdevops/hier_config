@@ -43,6 +43,9 @@ class TestHConfig(unittest.TestCase):
         cls.host_a = Host('example1.rtr', cls.os, cls.options)
         cls.host_b = Host('example2.rtr', cls.os, cls.options)
 
+    def test_bool(self):
+        self.assertTrue(HConfig(host=self.host_a))
+
     def test_merge(self):
         hier1 = HConfig(host=self.host_a)
         hier1.add_child('interface Vlan2')
@@ -331,6 +334,17 @@ class TestHConfig(unittest.TestCase):
         compiled_config_hier.add_child('interface Vlan3')
         remediation_config_hier = running_config_hier.config_to_get_to(compiled_config_hier)
         self.assertEqual(2, len(list(remediation_config_hier.all_children())))
+
+    def test_config_to_get_to_right(self):
+        running_config_hier = HConfig(host=self.host_a)
+        running_config_hier.add_child('do not add me')
+        compiled_config_hier = HConfig(host=self.host_a)
+        compiled_config_hier.add_child('do not add me')
+        compiled_config_hier.add_child('add me')
+        delta = HConfig(host=self.host_a)
+        running_config_hier._config_to_get_to_right(compiled_config_hier, delta)
+        self.assertNotIn('do not add me', delta)
+        self.assertIn('add me', delta)
 
     def test_is_idempotent_command(self):
         pass
