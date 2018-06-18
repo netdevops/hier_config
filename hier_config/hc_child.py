@@ -1,4 +1,3 @@
-from hier_config.text_match import TextMatch
 from hier_config.base import HConfigBase
 
 import hier_config.helpers as H
