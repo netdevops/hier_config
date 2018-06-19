@@ -1,4 +1,5 @@
 from hier_config.text_match import TextMatch
+import hier_config.helpers as H
 
 
 class HConfigBase(object):
@@ -101,63 +102,34 @@ class HConfigBase(object):
                 tag_spec.append({'section': child_spec, 'add_tags': tags})
         return tag_spec
 
-    def deep_append_tags(self, tags):
+    def del_child_by_text(self, text):
+        """ Delete all children with the provided text """
+
+        if text in self.children_dict:
+            self.children[:] = [c for c in self.children if c.text != text]
+            self.rebuild_children_dict()
+
+    def del_child(self, child):
         """
-        Append tags to self.tags and recursively for all children
+        Delete a child from self.children and self.children_dict
 
-        """
+        .. code:: python
+            hier = HConfig(host=host)
+            hier.add_child('interface Vlan2')
 
-        self.append_tags(tags)
-        for child in self.all_children():
-            child.append_tags(tags)
+            hier.del_child(hier.get_child('startswith', 'interface'))
 
-    def deep_remove_tags(self, tags):
-        """
-        Remove tags from self.tags and recursively for all children
-
-        """
-
-        self.remove_tags(tags)
-        for child in self.all_children():
-            child.remove_tags(tags)
-
-    def append_tags(self, tags):
-        """
-        Add tags to self.tags
+        :param child: HConfigChild object
+        :return: None
 
         """
 
-        tags = H.to_list(tags)
-        # self._tags.update(tags)
-        self.tags.update(tags)
-
-    def remove_tags(self, tags):
-        """
-        Remove tags from self.tags
-
-        """
-
-        tags = H.to_list(tags)
-        # self._tags.difference_update(tags)
-        self.tags.difference_update(tags)
-
-    def with_tags(self, tags, new_instance=None):
-        """
-        Returns a new instance containing only sub-objects
-        with one of the tags in tags
-
-        """
-
-        from hier_config import HConfig
-        if new_instance is None:
-            new_instance = HConfig(host=self.host)
-
-        for child in self.children:
-            if tags.intersection(self.tags):
-                new_child = new_instance.add_shallow_copy_of(child)
-                child.with_tags(tags, new_instance=new_child)
-
-        return new_instance
+        try:
+            self.children.remove(child)
+        except ValueError:
+            pass
+        else:
+            self.rebuild_children_dict()
 
     def all_children_sorted_untagged(self):
         """ Yield all children recursively that are untagged """
@@ -307,6 +279,24 @@ class HConfigBase(object):
                 return False
 
         return matches == len(rule['lineage'])
+
+    def with_tags(self, tags, new_instance=None):
+        """
+        Returns a new instance containing only sub-objects
+        with one of the tags in tags
+
+        """
+
+        from hier_config import HConfig
+        if new_instance is None:
+            new_instance = HConfig(host=self.host)
+
+        for child in self.children:
+            if tags.intersection(child.tags):
+                new_child = new_instance.add_shallow_copy_of(child)
+                child.with_tags(tags, new_instance=new_child)
+
+        return new_instance
 
     def config_to_get_to(self, target, delta=None):
         """

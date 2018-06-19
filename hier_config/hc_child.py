@@ -120,35 +120,6 @@ class HConfigChild(HConfigBase):
         new_parent.rebuild_children_dict()
         self.delete()
 
-    def del_child_by_text(self, text):
-        """ Delete all children with the provided text """
-
-        if text in self.children_dict:
-            self.children[:] = [c for c in self.children if c.text != text]
-            self.rebuild_children_dict()
-
-    def del_child(self, child):
-        """
-        Delete a child from self.children and self.children_dict
-
-        .. code:: python
-            hier = HConfig(host=host)
-            hier.add_child('interface Vlan2')
-
-            hier.del_child(hier.get_child('startswith', 'interface'))
-
-        :param child: HConfigChild object
-        :return: None
-
-        """
-
-        try:
-            self.children.remove(child)
-        except ValueError:
-            pass
-        else:
-            self.rebuild_children_dict()
-
     def lineage(self):
         """
         Return the lineage of parent objects, up to but excluding the root
@@ -224,6 +195,46 @@ class HConfigChild(HConfigBase):
 
         for ancestor in self.lineage():
             ancestor.remove_tags(tags)
+
+    def deep_append_tags(self, tags):
+        """
+        Append tags to self.tags and recursively for all children
+
+        """
+
+        self.append_tags(tags)
+        for child in self.all_children():
+            child.append_tags(tags)
+
+    def deep_remove_tags(self, tags):
+        """
+        Remove tags from self.tags and recursively for all children
+
+        """
+
+        self.remove_tags(tags)
+        for child in self.all_children():
+            child.remove_tags(tags)
+
+    def append_tags(self, tags):
+        """
+        Add tags to self.tags
+
+        """
+
+        tags = H.to_list(tags)
+        # self._tags.update(tags)
+        self.tags.update(tags)
+
+    def remove_tags(self, tags):
+        """
+        Remove tags from self.tags
+
+        """
+
+        tags = H.to_list(tags)
+        # self._tags.difference_update(tags)
+        self.tags.difference_update(tags)
 
     def negate(self):
         """ Negate self.text """
