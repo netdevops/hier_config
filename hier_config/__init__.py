@@ -1,11 +1,11 @@
-from hier_config.hc_child import HConfigChild
+from hier_config.base import HConfigBase
 
 import re
 
-__version__ = '1.4.2'
+__version__ = '1.5.0'
 
 
-class HConfig(HConfigChild):
+class HConfig(HConfigBase):
 
     """
     A class for representing and comparing Cisco configurations in a
@@ -50,6 +50,7 @@ class HConfig(HConfigChild):
     """
 
     def __init__(self, hostname=None, os=None, options=None, host=None):
+        super(HConfig, self).__init__()
         if all([i is not None for i in (hostname, os, options)]):
             from hier_config.host import Host
             from warnings import warn
@@ -73,10 +74,7 @@ class HConfig(HConfigChild):
             raise AttributeError('Error determining host object')
 
         self._options = self.host.hconfig_options
-        self._text = str()
         self._logs = list()
-        self.children = []
-        self.children_dict = {}
 
     @property
     def host(self):
@@ -98,7 +96,7 @@ class HConfig(HConfigChild):
         return 'HConfig(host={})'.format(self.host)
 
     def __str__(self):
-        return self.text
+        return repr(self)
 
     def __hash__(self):
         return id(self)
@@ -334,14 +332,6 @@ class HConfig(HConfigChild):
 
         return self
 
-    def _idempotent_acl_check(self):
-        """
-        Handle conditional testing to determine if idempotent acl handling for iosxr should be used
-
-        """
-
-        return False
-
     def depth(self):
         return 0
 
@@ -434,3 +424,31 @@ class HConfig(HConfigChild):
                 base = base.add_shallow_copy_of(parent)
 
         return base
+
+    def set_order_weight(self):
+        """
+        Sets self.order integer on all children
+
+        """
+
+        for child in self.all_children():
+            for rule in self.options['ordering']:
+                if child.lineage_test(rule):
+                    child.order_weight = rule['order']
+
+    def add_sectional_exiting(self):
+        """
+        Adds the sectional exiting text as a child
+
+        """
+
+        # TODO why do we need to delete the delete the sub_child and then
+        # recreate it?
+        for child in self.all_children():
+            for rule in self.options['sectional_exiting']:
+                if child.lineage_test(rule):
+                    if rule['exit_text'] in child:
+                        child.del_child_by_text(rule['exit_text'])
+
+                    new_child = child.add_child(rule['exit_text'])
+                    new_child.order_weight = 999
