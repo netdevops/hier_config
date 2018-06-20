@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/netdevops/hier_config.svg?branch=master)](https://travis-ci.org/netdevops/hier_config)
+[![CodeFactor](https://www.codefactor.io/repository/github/netdevops/hier_config/badge)](https://www.codefactor.io/repository/github/netdevops/hier_config)
 
 # Hierarchical Configuration
 
