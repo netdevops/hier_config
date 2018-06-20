@@ -23,6 +23,9 @@ class HConfigBase(object):
     def __contains__(self, item):
         return str(item) in self.children_dict
 
+    def has_children(self):
+        return bool(self.children)
+
     def add_children(self, lines):
         """
         Add child instances of HConfigChild

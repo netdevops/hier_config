@@ -91,9 +91,6 @@ class HConfigChild(HConfigBase):
     def options(self):
         return self.root.options
 
-    def has_children(self):
-        return bool(self.children)
-
     def depth(self):
         return self.parent.depth() + 1
 
