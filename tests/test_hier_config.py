@@ -299,23 +299,27 @@ class TestHConfig(unittest.TestCase):
     def test_to_tag_spec(self):
         pass
 
-    def test_ancestor_append_tags(self):
-        pass
-
-    def test_ancestor_remove_tags(self):
-        pass
-
-    def test_deep_append_tags(self):
-        pass
-
-    def test_deep_remove_tags(self):
-        pass
-
     def test_append_tags(self):
-        pass
+        config = HConfig(host=self.host_a)
+        interface = config.add_child('interface Vlan2')
+        ip_address = interface.add_child('ip address 192.168.1.1/24')
+        ip_address.append_tags('test_tag')
+        self.assertIn('test_tag', config.tags)
+        self.assertIn('test_tag', interface.tags)
+        self.assertIn('test_tag', ip_address.tags)
 
     def test_remove_tags(self):
-        pass
+        config = HConfig(host=self.host_a)
+        interface = config.add_child('interface Vlan2')
+        ip_address = interface.add_child('ip address 192.168.1.1/24')
+        ip_address.append_tags('test_tag')
+        self.assertIn('test_tag', config.tags)
+        self.assertIn('test_tag', interface.tags)
+        self.assertIn('test_tag', ip_address.tags)
+        ip_address.remove_tags('test_tag')
+        self.assertNotIn('test_tag', config.tags)
+        self.assertNotIn('test_tag', interface.tags)
+        self.assertNotIn('test_tag', ip_address.tags)
 
     def test_with_tags(self):
         pass
@@ -366,6 +370,23 @@ class TestHConfig(unittest.TestCase):
 
     def test_lineage_test(self):
         pass
+
+    def test_difference(self):
+        rc = ['a', ' a1', ' a2', ' a3', 'b']
+        step = ['a', ' a1', ' a2', ' a3', ' a4', ' a5', 'b', 'c', 'd', ' d1']
+        rc_hier = HConfig(host=self.host_a)
+        rc_hier.load_from_string("\n".join(rc))
+        step_hier = HConfig(host=self.host_a)
+        step_hier.load_from_string("\n".join(step))
+
+        difference = step_hier.difference(rc_hier)
+        difference_children = list(c.cisco_style_text() for c in difference.all_children_sorted())
+        self.assertEqual(len(difference_children), 6)
+        self.assertIn('c', difference)
+        self.assertIn('d', difference)
+        self.assertIn('a4', difference.get_child('equals', 'a'))
+        self.assertIn('a5', difference.get_child('equals', 'a'))
+        self.assertIn('d1', difference.get_child('equals', 'd'))
 
 
 if __name__ == "__main__":
