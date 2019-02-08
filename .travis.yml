@@ -8,7 +8,7 @@ python:
 - "3.6"
 
 install:
-- "pip install pycodestyle pep8"
+- "pip install -r requirements-dev.txt"
 - "python setup.py install"
 
 script:
