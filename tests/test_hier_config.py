@@ -286,12 +286,6 @@ class TestHConfig(unittest.TestCase):
         self.assertEqual(0, len(list(config.all_children_sorted_by_tags('', 'a'))))
         self.assertEqual(3, len(list(config.all_children_sorted_by_tags('', ''))))
 
-        """
-        interface Vlan2 ! a,b
-          ip address 192.168.1.1/24 ! a
-          ip address 192.168.2.1/24 ! a,b
-        """
-
     def test_all_children_sorted(self):
         hier = HConfig(host=self.host_a)
         interface = hier.add_child('interface Vlan2')
