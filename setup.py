@@ -18,7 +18,6 @@ setup(
     python_requires='>=2.7',
     install_requires=[
         "PyYAML>=3.12",
-        "pep8",
     ],
     classifiers=[
         'Development Status :: 4 - Beta',

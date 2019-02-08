@@ -152,7 +152,7 @@ class Host:
 
         return self.remediation_config
 
-    def filter_remediation(self, include_tags=None, exclude_tags=None):
+    def filter_remediation(self, include_tags='', exclude_tags=''):
         """
         Run filter jobs, based on tags on self.remediation_config
 
