@@ -281,6 +281,7 @@ class TestHConfig(unittest.TestCase):
         ip_address_ab.append_tags(['a', 'b'])
 
         self.assertEqual(2, len(list(config.all_children_sorted_by_tags('a', 'b'))))
+        self.assertIs(interface, list(config.all_children_sorted_by_tags('a', 'b'))[0])
         self.assertIs(ip_address_a, list(config.all_children_sorted_by_tags('a', 'b'))[1])
         self.assertEqual(3, len(list(config.all_children_sorted_by_tags('a', ''))))
         self.assertEqual(0, len(list(config.all_children_sorted_by_tags('', 'a'))))
