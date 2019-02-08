@@ -138,7 +138,7 @@ class HConfigBase(object):
         """ Yield all children recursively that are untagged """
 
         for child in self.all_children_sorted():
-            if not child.tags:
+            if None in child.tags:
                 yield child
 
     def all_children_sorted_by_tags(self, include_tags, exclude_tags):

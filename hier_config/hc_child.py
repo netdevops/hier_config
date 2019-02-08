@@ -229,7 +229,7 @@ class HConfigChild(HConfigBase):
                 t.update(child.tags)
             return t
 
-        return self._tags
+        return self._tags or {None}
 
     @tags.setter
     def tags(self, value):
@@ -346,13 +346,11 @@ class HConfigChild(HConfigBase):
         Given the line_tags, include_tags, and exclude_tags,
         determine if the line should be included
         """
-        include_line = False
-
-        if include_tags:
-            set_include_tags = set(include_tags)
-            include_line = bool(self.tags.intersection(set_include_tags))
-        elif exclude_tags and (include_line or not include_tags):
-            set_exclude_tags = set(exclude_tags)
-            include_line = not bool(self.tags.intersection(set_exclude_tags))
-
-        return include_line
+        from hier_config.helpers import to_list
+        include_tags_set = set(to_list(include_tags))
+        if self.tags.intersection(include_tags_set):
+            if self.is_leaf and exclude_tags:
+                exclude_tags_set = set(to_list(exclude_tags))
+                return not bool(self.tags.intersection(exclude_tags_set))
+            return True
+        return False
