@@ -284,7 +284,13 @@ class TestHConfig(unittest.TestCase):
         self.assertIs(ip_address_a, list(config.all_children_sorted_by_tags('a', 'b'))[1])
         self.assertEqual(3, len(list(config.all_children_sorted_by_tags('a', ''))))
         self.assertEqual(0, len(list(config.all_children_sorted_by_tags('', 'a'))))
-        self.assertEqual(0, len(list(config.all_children_sorted_by_tags('', ''))))
+        self.assertEqual(3, len(list(config.all_children_sorted_by_tags('', ''))))
+
+        """
+        interface Vlan2 ! a,b
+          ip address 192.168.1.1/24 ! a
+          ip address 192.168.2.1/24 ! a,b
+        """
 
     def test_all_children_sorted(self):
         hier = HConfig(host=self.host_a)
@@ -399,13 +405,28 @@ class TestHConfig(unittest.TestCase):
     def test_line_inclusion_test(self):
         config = HConfig(host=self.host_a)
         interface = config.add_child('interface Vlan2')
-        ip_address_ab = interface.add_child('ip address 192.168.2.1/24')
+        ip_address = interface.add_child('ip address 192.168.1.1/24')
+        ip_address_a = interface.add_child('ip address 192.168.2.1/24')
+        ip_address_a.append_tags('a')
+        ip_address_ab = interface.add_child('ip address 192.168.3.1/24')
         ip_address_ab.append_tags(['a', 'b'])
+
+        self.assertTrue(ip_address.line_inclusion_test('', ''))
+        self.assertTrue(ip_address.line_inclusion_test(None, ''))
+        self.assertFalse(ip_address.line_inclusion_test('', None))
+
+        self.assertFalse(ip_address_a.line_inclusion_test('', 'a'))
+        self.assertTrue(ip_address_a.line_inclusion_test('a', ''))
+        self.assertTrue(ip_address_a.line_inclusion_test('', ''))
+        self.assertFalse(ip_address_a.line_inclusion_test(None, ''))
+        self.assertTrue(ip_address_a.line_inclusion_test('', None))
 
         self.assertFalse(ip_address_ab.line_inclusion_test('a', 'b'))
         self.assertFalse(ip_address_ab.line_inclusion_test('', 'a'))
         self.assertTrue(ip_address_ab.line_inclusion_test('a', ''))
-        self.assertFalse(ip_address_ab.line_inclusion_test('', ''))
+        self.assertTrue(ip_address_ab.line_inclusion_test('', ''))
+        self.assertFalse(ip_address_ab.line_inclusion_test(None, ''))
+        self.assertTrue(ip_address_ab.line_inclusion_test('', None))
 
     def test_lineage_test(self):
         pass

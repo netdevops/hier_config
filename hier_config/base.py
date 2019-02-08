@@ -141,13 +141,6 @@ class HConfigBase(object):
             if None in child.tags:
                 yield child
 
-    def all_children_sorted_by_tags(self, include_tags, exclude_tags):
-        """ Yield all children recursively that match include/exlcude tags """
-
-        for child in self.all_children_sorted():
-            if child.line_inclusion_test(include_tags, exclude_tags):
-                yield child
-
     def all_children_sorted(self):
         """ Recursively find and yield all children sorted at each hierarchy """
 

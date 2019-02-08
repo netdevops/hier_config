@@ -162,17 +162,9 @@ class Host:
         """
         remediation_text = str()
 
-        if include_tags or exclude_tags is not None:
-            include_tags = H.to_list(include_tags)
-            exclude_tags = H.to_list(exclude_tags)
-
-            for line in self.remediation_config.all_children_sorted_by_tags(include_tags, exclude_tags):
-                remediation_text += line.cisco_style_text()
-                remediation_text += '\n'
-        else:
-            for line in self.remediation_config.all_children():
-                remediation_text += line.cisco_style_text()
-                remediation_text += '\n'
+        for line in self.remediation_config.all_children_sorted_by_tags(include_tags, exclude_tags):
+            remediation_text += line.cisco_style_text()
+            remediation_text += '\n'
 
         self.facts["remediation_config_raw"] = remediation_text
 

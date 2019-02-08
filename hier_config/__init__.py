@@ -393,6 +393,14 @@ class HConfig(HConfigBase):
                     acl.children.remove(entry)
         return self
 
+    def all_children_sorted_by_tags(self, include_tags, exclude_tags):
+        """ Yield all children recursively that match include/exclude tags """
+
+        for child in sorted(self.children):
+            matches = child.all_children_sorted_by_tags(include_tags, exclude_tags)
+            for match in matches:
+                yield match
+
     def all_children_sorted_with_lineage_rules(self, rules):
         """
 

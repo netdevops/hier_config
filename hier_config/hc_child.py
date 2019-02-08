@@ -348,9 +348,28 @@ class HConfigChild(HConfigBase):
         """
         from hier_config.helpers import to_list
         include_tags_set = set(to_list(include_tags))
-        if self.tags.intersection(include_tags_set):
-            if self.is_leaf and exclude_tags:
-                exclude_tags_set = set(to_list(exclude_tags))
-                return not bool(self.tags.intersection(exclude_tags_set))
+        exclude_tags_set = set(to_list(exclude_tags))
+        if not include_tags_set or self.tags.intersection(include_tags_set):
+            if exclude_tags_set:
+                if self.is_leaf:
+                    return not bool(self.tags.intersection(exclude_tags_set))
+
             return True
         return False
+
+    def all_children_sorted_by_tags(self, include_tags, exclude_tags):
+        """ Yield all children recursively that match include/exclude tags """
+
+        if self.is_leaf:
+            if self.line_inclusion_test(include_tags, exclude_tags):
+                yield self
+        else:
+            self_yielded = False
+            for child in sorted(self.children):
+                matches = tuple(child.all_children_sorted_by_tags(include_tags, exclude_tags))
+                if matches:
+                    if not self_yielded:
+                        yield self
+                        self_yielded = True
+                    for match in matches:
+                        yield match
