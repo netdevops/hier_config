@@ -13,7 +13,7 @@ class HConfigChild(HConfigBase):
         # The intent is for self.order_weight values to range from 1 to 999
         # with the default weight being 500
         self.order_weight = 500
-        self.tags = set()
+        self._tags = set()
         self.comments = set()
         self.new_in_config = False
         self.instances = []
@@ -175,63 +175,29 @@ class HConfigChild(HConfigBase):
         # TODO find a way to remove this when sub-classing in HCRoot
         self.parent.del_child(self)
 
-    def ancestor_append_tags(self, tags):
-        """
-        Append tags to self.tags and for all ancestors
-
-        """
-
-        for ancestor in self.lineage():
-            ancestor.append_tags(tags)
-
-    def ancestor_remove_tags(self, tags):
-        """
-        Remove tags to self.tags and for all ancestors
-
-        """
-
-        for ancestor in self.lineage():
-            ancestor.remove_tags(tags)
-
-    def deep_append_tags(self, tags):
-        """
-        Append tags to self.tags and recursively for all children
-
-        """
-
-        self.append_tags(tags)
-        for child in self.all_children():
-            child.append_tags(tags)
-
-    def deep_remove_tags(self, tags):
-        """
-        Remove tags from self.tags and recursively for all children
-
-        """
-
-        self.remove_tags(tags)
-        for child in self.all_children():
-            child.remove_tags(tags)
-
     def append_tags(self, tags):
         """
         Add tags to self.tags
-
         """
-
-        tags = H.to_list(tags)
-        # self._tags.update(tags)
-        self.tags.update(tags)
+        from hier_config.helpers import to_list
+        tags = to_list(tags)
+        if self.is_branch:
+            for child in self.children:
+                child.append_tags(tags)
+        else:
+            self._tags.update(tags)
 
     def remove_tags(self, tags):
         """
         Remove tags from self.tags
-
         """
-
-        tags = H.to_list(tags)
-        # self._tags.difference_update(tags)
-        self.tags.difference_update(tags)
+        from hier_config.helpers import to_list
+        tags = to_list(tags)
+        if self.is_branch:
+            for child in self.children:
+                child.remove_tags(tags)
+        else:
+            self._tags.difference_update(tags)
 
     def negate(self):
         """ Negate self.text """
@@ -246,6 +212,33 @@ class HConfigChild(HConfigBase):
                 return self._default()
 
         return self._swap_negation()
+
+    @property
+    def is_leaf(self):
+        return not self.is_branch
+
+    @property
+    def is_branch(self):
+        return bool(self.children)
+
+    @property
+    def tags(self):
+        if self.is_branch:
+            t = set()
+            for child in self.children:
+                t.update(child.tags)
+            return t
+
+        return self._tags or {None}
+
+    @tags.setter
+    def tags(self, value):
+        if self.is_branch:
+            for child in self.children:
+                child.tags = value
+        else:
+            assert isinstance(value, set)
+            self._tags = value
 
     def _swap_negation(self):
         """ Swap negation of a self.text """
@@ -352,14 +345,12 @@ class HConfigChild(HConfigBase):
         """
         Given the line_tags, include_tags, and exclude_tags,
         determine if the line should be included
-
         """
-
-        include_line = False
-        if include_tags:
-            set_include_tags = set(include_tags)
-            include_line = bool(self.tags.intersection(set_include_tags))
-
-        if include_line:
-            set_exclude_tags = set(exclude_tags)
-            return not bool(self.tags.intersection(set_exclude_tags))
+        from hier_config.helpers import to_list
+        include_tags_set = set(to_list(include_tags))
+        if self.tags.intersection(include_tags_set):
+            if self.is_leaf and exclude_tags:
+                exclude_tags_set = set(to_list(exclude_tags))
+                return not bool(self.tags.intersection(exclude_tags_set))
+            return True
+        return False

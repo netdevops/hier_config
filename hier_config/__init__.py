@@ -2,7 +2,7 @@ from hier_config.base import HConfigBase
 
 import re
 
-__version__ = '1.5.1'
+__version__ = '1.6.0'
 
 
 class HConfig(HConfigBase):
@@ -91,6 +91,26 @@ class HConfig(HConfigBase):
     @property
     def root(self):
         return self
+
+    @property
+    def is_leaf(self):
+        return False
+
+    @property
+    def is_branch(self):
+        return True
+
+    @property
+    def tags(self):
+        t = set()
+        for child in self.children:
+            t.update(child.tags)
+        return t
+
+    @tags.setter
+    def tags(self, value):
+        for child in self.children:
+            child.tags = value
 
     def __repr__(self):
         return 'HConfig(host={})'.format(self.host)
@@ -317,22 +337,19 @@ class HConfig(HConfigBase):
         """
         Handler for tagging sections of Hierarchical Configuration data structure
         for inclusion and exclusion.
-
         """
-
         for rule in tag_rules:
             for child in self.all_children():
                 if child.lineage_test(rule, strip_negation):
                     if 'add_tags' in rule:
-                        child.deep_append_tags(rule['add_tags'])
-                        for ancestor in child.lineage():
-                            ancestor.append_tags(rule['add_tags'])
+                        child.append_tags(rule['add_tags'])
                     if 'remove_tags' in rule:
-                        child.deep_remove_tags(rule['remove_tags'])
+                        child.remove_tags(rule['remove_tags'])
 
         return self
 
-    def depth(self):
+    @staticmethod
+    def depth():
         return 0
 
     def _add_acl_sequence_numbers(self):

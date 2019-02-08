@@ -262,10 +262,29 @@ class TestHConfig(unittest.TestCase):
         self.assertFalse(isinstance(ip_address.cisco_style_text(), list))
 
     def test_all_children_sorted_untagged(self):
-        pass
+        config = HConfig(host=self.host_a)
+        interface = config.add_child('interface Vlan2')
+        ip_address_a = interface.add_child('ip address 192.168.1.1/24')
+        ip_address_a.append_tags('a')
+        ip_address_none = interface.add_child('ip address 192.168.2.1/24')
+
+        self.assertIs(ip_address_none, list(config.all_children_sorted_untagged())[1])
+        self.assertEqual(2, len(list(config.all_children_sorted_untagged())))
+        self.assertIs(ip_address_none, list(config.all_children_sorted_untagged())[1])
 
     def test_all_children_sorted_by_tags(self):
-        pass
+        config = HConfig(host=self.host_a)
+        interface = config.add_child('interface Vlan2')
+        ip_address_a = interface.add_child('ip address 192.168.1.1/24')
+        ip_address_a.append_tags('a')
+        ip_address_ab = interface.add_child('ip address 192.168.2.1/24')
+        ip_address_ab.append_tags(['a', 'b'])
+
+        self.assertEqual(2, len(list(config.all_children_sorted_by_tags('a', 'b'))))
+        self.assertIs(ip_address_a, list(config.all_children_sorted_by_tags('a', 'b'))[1])
+        self.assertEqual(3, len(list(config.all_children_sorted_by_tags('a', ''))))
+        self.assertEqual(0, len(list(config.all_children_sorted_by_tags('', 'a'))))
+        self.assertEqual(0, len(list(config.all_children_sorted_by_tags('', ''))))
 
     def test_all_children_sorted(self):
         hier = HConfig(host=self.host_a)
@@ -299,23 +318,39 @@ class TestHConfig(unittest.TestCase):
     def test_to_tag_spec(self):
         pass
 
-    def test_ancestor_append_tags(self):
-        pass
-
-    def test_ancestor_remove_tags(self):
-        pass
-
-    def test_deep_append_tags(self):
-        pass
-
-    def test_deep_remove_tags(self):
-        pass
+    def test_tags(self):
+        config = HConfig(host=self.host_a)
+        interface = config.add_child('interface Vlan2')
+        ip_address = interface.add_child('ip address 192.168.1.1/24')
+        self.assertTrue(None in interface.tags)
+        self.assertTrue(None in ip_address.tags)
+        ip_address.append_tags('a')
+        self.assertTrue('a' in interface.tags)
+        self.assertTrue('a' in ip_address.tags)
+        self.assertFalse('b' in interface.tags)
+        self.assertFalse('b' in ip_address.tags)
 
     def test_append_tags(self):
-        pass
+        config = HConfig(host=self.host_a)
+        interface = config.add_child('interface Vlan2')
+        ip_address = interface.add_child('ip address 192.168.1.1/24')
+        ip_address.append_tags('test_tag')
+        self.assertIn('test_tag', config.tags)
+        self.assertIn('test_tag', interface.tags)
+        self.assertIn('test_tag', ip_address.tags)
 
     def test_remove_tags(self):
-        pass
+        config = HConfig(host=self.host_a)
+        interface = config.add_child('interface Vlan2')
+        ip_address = interface.add_child('ip address 192.168.1.1/24')
+        ip_address.append_tags('test_tag')
+        self.assertIn('test_tag', config.tags)
+        self.assertIn('test_tag', interface.tags)
+        self.assertIn('test_tag', ip_address.tags)
+        ip_address.remove_tags('test_tag')
+        self.assertNotIn('test_tag', config.tags)
+        self.assertNotIn('test_tag', interface.tags)
+        self.assertNotIn('test_tag', ip_address.tags)
 
     def test_with_tags(self):
         pass
@@ -362,10 +397,35 @@ class TestHConfig(unittest.TestCase):
         pass
 
     def test_line_inclusion_test(self):
-        pass
+        config = HConfig(host=self.host_a)
+        interface = config.add_child('interface Vlan2')
+        ip_address_ab = interface.add_child('ip address 192.168.2.1/24')
+        ip_address_ab.append_tags(['a', 'b'])
+
+        self.assertFalse(ip_address_ab.line_inclusion_test('a', 'b'))
+        self.assertFalse(ip_address_ab.line_inclusion_test('', 'a'))
+        self.assertTrue(ip_address_ab.line_inclusion_test('a', ''))
+        self.assertFalse(ip_address_ab.line_inclusion_test('', ''))
 
     def test_lineage_test(self):
         pass
+
+    def test_difference(self):
+        rc = ['a', ' a1', ' a2', ' a3', 'b']
+        step = ['a', ' a1', ' a2', ' a3', ' a4', ' a5', 'b', 'c', 'd', ' d1']
+        rc_hier = HConfig(host=self.host_a)
+        rc_hier.load_from_string("\n".join(rc))
+        step_hier = HConfig(host=self.host_a)
+        step_hier.load_from_string("\n".join(step))
+
+        difference = step_hier.difference(rc_hier)
+        difference_children = list(c.cisco_style_text() for c in difference.all_children_sorted())
+        self.assertEqual(len(difference_children), 6)
+        self.assertIn('c', difference)
+        self.assertIn('d', difference)
+        self.assertIn('a4', difference.get_child('equals', 'a'))
+        self.assertIn('a5', difference.get_child('equals', 'a'))
+        self.assertIn('d1', difference.get_child('equals', 'd'))
 
 
 if __name__ == "__main__":

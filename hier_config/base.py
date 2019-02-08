@@ -138,7 +138,7 @@ class HConfigBase(object):
         """ Yield all children recursively that are untagged """
 
         for child in self.all_children_sorted():
-            if not child.tags:
+            if None in child.tags:
                 yield child
 
     def all_children_sorted_by_tags(self, include_tags, exclude_tags):
@@ -315,6 +315,39 @@ class HConfigBase(object):
 
         self._config_to_get_to_left(target, delta)
         self._config_to_get_to_right(target, delta)
+
+        return delta
+
+    def difference(self, target, delta=None):
+        """
+        Creates a new HConfig object with the config from self that is not in target
+
+        Example usage:
+        whats in the config.lines v.s. in running config
+        i.e. did all my configuration changes get written to the running config
+
+        :param target: HConfig - The configuration to check against
+        :param delta: HConfig - The elements from self that are not in target
+        :return: HConfig - missing config additions
+        """
+        if delta is None:
+            from hier_config import HConfig
+            delta = HConfig(host=self.host)
+
+        for self_child in self.children:
+            # Not dealing with negations and defaults for now
+            if self_child.text.startswith(('no ', 'default ')):
+                continue
+
+            target_child = target.get_child('equals', self_child.text)
+
+            if target_child:
+                delta_child = delta.add_child(self_child.text)
+                self_child.difference(target_child, delta_child)
+                if not delta_child.children:
+                    delta_child.delete()
+            else:
+                delta.add_deep_copy_of(self_child)
 
         return delta
 
