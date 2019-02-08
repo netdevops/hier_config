@@ -2,7 +2,7 @@ from hier_config.base import HConfigBase
 
 import re
 
-__version__ = '1.6.0'
+__version__ = '1.6.1'
 
 
 class HConfig(HConfigBase):
