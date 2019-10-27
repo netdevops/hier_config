@@ -265,8 +265,8 @@ class HConfigBase(object):
             # This removes negations for each section but honestly,
             # we really only need to do this on the last one
             if strip_negation:
-                if section.text.startswith('no '):
-                    text = section.text[3:]
+                if section.text.startswith(self.options['negation'] + ' '):
+                    text = section.text[len(self.options['negation'] + ' '):]
                 elif section.text.startswith('default '):
                     text = section.text[8:]
                 else:
@@ -336,7 +336,7 @@ class HConfigBase(object):
 
         for self_child in self.children:
             # Not dealing with negations and defaults for now
-            if self_child.text.startswith(('no ', 'default ')):
+            if self_child.text.startswith((self.options['negation'] + ' ', 'default ')):
                 continue
 
             target_child = target.get_child('equals', self_child.text)

@@ -243,17 +243,17 @@ class HConfigChild(HConfigBase):
     def _swap_negation(self):
         """ Swap negation of a self.text """
 
-        if self.text.startswith('no '):
-            self.text = self.text[3:]
+        if self.text.startswith(self.options['negation'] + ' '):
+            self.text = self.text[len(self.options['negation'] + ' '):]
         else:
-            self.text = 'no ' + self.text
+            self.text = self.options['negation'] + ' ' + self.text
         return self
 
     def _default(self):
         """ Default self.text """
 
-        if self.text.startswith('no '):
-            self.text = 'default ' + self.text[3:]
+        if self.text.startswith(self.options['negation'] + ' '):
+            self.text = 'default ' + self.text[len(self.options['negation'] + ' '):]
         else:
             self.text = 'default ' + self.text
         return self

@@ -74,6 +74,8 @@ class HConfig(HConfigBase):
             raise AttributeError('Error determining host object')
 
         self._options = self.host.hconfig_options
+        if 'negation' not in self._options:
+            self._options['negation'] = 'no'
         self._logs = list()
 
     @property
