@@ -4,4 +4,4 @@ from hier_config.hc_child import HConfigChild
 from hier_config.host import Host
 
 
-__version__ = '1.6.0'
+__version__ = '1.6.1'
