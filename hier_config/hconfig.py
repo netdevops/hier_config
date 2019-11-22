@@ -1,3 +1,5 @@
+from hier_config.base import HConfigBase
+
 import re
 
 
