@@ -9,12 +9,14 @@ def all_tests():
     from test_host import TestHost
     from test_hier_config import TestHConfig
     from test_text_match import TestTextMatch
+    from test_negate_with_undo import TestNegateWithUndo
 
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(TestPep8))
     suite.addTest(unittest.makeSuite(TestHost))
     suite.addTest(unittest.makeSuite(TestHConfig))
     suite.addTest(unittest.makeSuite(TestTextMatch))
+    suite.addTest(unittest.makeSuite(TestNegateWithUndo))
 
     return suite
 

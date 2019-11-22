@@ -74,6 +74,7 @@ class HConfig(HConfigBase):
             raise AttributeError('Error determining host object')
 
         self._options = self.host.hconfig_options
+        self._options.setdefault("negation", "no")
         self._logs = list()
 
     @property
