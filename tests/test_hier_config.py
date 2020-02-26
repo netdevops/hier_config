@@ -63,10 +63,12 @@ class TestHConfig(unittest.TestCase):
         hier = HConfig(host=self.host_a)
         config = 'interface Vlan2\n ip address 1.1.1.1 255.255.255.0'
 
-        with tempfile.NamedTemporaryFile(mode='r+') as myfile:
+        with tempfile.NamedTemporaryFile(mode='r+', delete=False) as myfile:
             myfile.file.write(config)
             myfile.file.flush()
+            myfile.close()
             hier.load_from_file(myfile.name)
+            os.remove(myfile.name)
 
         self.assertEqual(2, len(list(hier.all_children())))
 
