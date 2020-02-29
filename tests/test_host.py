@@ -29,8 +29,10 @@ class TestHost(unittest.TestCase):
             'files',
             'test_tags_ios.yml'
         )
-        cls.hconfig_tags = yaml.load(open(cls.tags_file))
-        cls.hconfig_options = yaml.load(open(cls.options_file))
+        with open(cls.tags_file, "r") as f:
+            cls.hconfig_tags = yaml.load(f, Loader=yaml.SafeLoader)
+        with open(cls.options_file, "r") as f:
+            cls.hconfig_options = yaml.load(f, Loader=yaml.SafeLoader)
         cls.host = Host('example.rtr', 'ios', cls.hconfig_options)
 
         with open(cls.compiled_file) as f:
