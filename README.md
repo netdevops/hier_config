@@ -34,33 +34,28 @@ pip install hier-config
 Basic Usage Example
 ===================
 
-In the below example, we create two hierarchical configuration objects, load one with a running configuration from a
-device, and the other with the intended configuration of the device, then we compare the two objects to derive the
-commands necessary to bring the device into spec.
+In the below example, we create a hier_config host object, load a running config and a compiled config into the host object, load the remediation, and print out the remediation lines to bring a device into spec.
 
 ```
->>> from hier_config import HConfig
 >>> from hier_config.host import Host
 >>> import yaml
 >>>
->>> options = yaml.load(open('./tests/files/test_options_ios.yml'))
+>>> options = yaml.load(open('./tests/files/test_options_ios.yml'), Loader=yaml.SafeLoader)
 >>> host = Host('example.rtr', 'ios', options)
 >>>
 >>> # Build HConfig object for the Running Config
-...
->>> running_config_hier = HConfig(host=host)
->>> running_config_hier.load_from_file('./tests/files/running_config.conf')
+>>> host.load_config_from("running", './tests/files/running_config.conf')
+HConfig(host=Host(hostname=example.rtr))
 >>>
 >>> # Build Hierarchical Configuration object for the Compiled Config
-...
->>> compiled_config_hier = HConfig(host=host)
->>> compiled_config_hier.load_from_file('./tests/files/compiled_config.conf')
+>>> host.load_config_from("compiled", './tests/files/compiled_config.conf')
+HConfig(host=Host(hostname=example.rtr))
+>>> host.load_remediation()
+HConfig(host=Host(hostname=example.rtr))
 >>>
 >>> # Build Hierarchical Configuration object for the Remediation Config
-...
->>> remediation_config_hier = running_config_hier.config_to_get_to(compiled_config_hier)
 >>>
->>> for line in remediation_config_hier.all_children():
+>>> for line in host.remediation_config.all_children():
 ...     print(line.cisco_style_text())
 ...
 vlan 3
