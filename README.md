@@ -34,10 +34,11 @@ pip install hier-config
 Basic Usage Example
 ===================
 
-In the below example, we create a hier_config host object, load a running config and a compiled config into the host object, load the remediation, and print out the remediation lines to bring a device into spec.
+In the below example, we create a hier_config host object, load a running config and a generated config into the host object, load the remediation, and print out the remediation lines to bring a device into spec.
 
 ```
->>> from hier_config.host import Host
+```
+>>> from hier_config import Host
 >>> import yaml
 >>>
 >>> options = yaml.load(open('./tests/files/test_options_ios.yml'), Loader=yaml.SafeLoader)
@@ -47,8 +48,8 @@ In the below example, we create a hier_config host object, load a running config
 >>> host.load_config_from("running", './tests/files/running_config.conf')
 HConfig(host=Host(hostname=example.rtr))
 >>>
->>> # Build Hierarchical Configuration object for the Compiled Config
->>> host.load_config_from("compiled", './tests/files/compiled_config.conf')
+>>> # Build Hierarchical Configuration object for the Generated Config
+>>> host.load_config_from("generated", './tests/files/generated_config.conf')
 HConfig(host=Host(hostname=example.rtr))
 >>> host.load_remediation()
 HConfig(host=Host(hostname=example.rtr))

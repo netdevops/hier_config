@@ -1,7 +1,5 @@
-from hier_config.base import HConfigBase
-from hier_config.hconfig import HConfig
-from hier_config.hc_child import HConfigChild
-from hier_config.host import Host
-
-
-__version__ = '1.6.1'
+from .base import HConfigBase
+from .root import HConfig
+from .child import HConfigChild
+from .host import Host
+from . import text_match
