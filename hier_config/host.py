@@ -125,7 +125,9 @@ class Host:
         return self.remediation_config
 
     def filter_remediation(
-        self, include_tags: Set[str], exclude_tags: Set[str],
+        self,
+        include_tags: Set[str],
+        exclude_tags: Set[str],
     ) -> str:
         """ Run filter jobs, based on tags on self.remediation_config """
         remediation_text = str()

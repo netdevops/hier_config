@@ -255,7 +255,7 @@ class HConfigChild(HConfigBase):
     def _swap_negation(self) -> HConfigChild:
         """ Swap negation of a self.text """
         if self.text.startswith(self._negation_prefix):
-            self.text = self.text[len(self._negation_prefix):]
+            self.text = self.text[len(self._negation_prefix) :]
         else:
             self.text = self._negation_prefix + self.text
 
