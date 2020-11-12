@@ -14,7 +14,7 @@ setup(
     license="MIT",
     packages=find_packages(exclude=["docs", "tests"]),
     author="Andrew Edwards, Jan Brooks, James Williams",
-    author_email="andrew.edwards@rackspace.com, jan.brooks@rackspace.com, james.williams@rackspace.com",
+    author_email="andrew.edwards@rackspace.com, jan.brooks@rackspace.com, james.williams@networktocode.com",
     keywords="hier_config",
     python_requires=">=3.7",
     install_requires=["pyyaml", "pytest-runner"],
