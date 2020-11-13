@@ -29,18 +29,18 @@ class HConfig(HConfigBase):
         from hier_config import HConfig, Host
         import yaml
 
-        options = yaml.safe_load(open('./tests/files/test_options_ios.yml'))
+        options = yaml.safe_load(open('./tests/fixtures/options_ios.yml'))
         host = Host('example.rtr', 'ios', options)
 
         # Build HConfig object for the Running Config
 
         running_config_hier = HConfig(host=host)
-        running_config_hier.load_from_file('./tests/files/running_config.conf')
+        running_config_hier.load_from_file('./tests/fixtures/running_config.conf')
 
         # Build Hierarchical Configuration object for the Generated Config
 
         generated_config_hier = HConfig(host=host)
-        generated_config_hier.load_from_file('./tests/files/generated_config.conf')
+        generated_config_hier.load_from_file('./tests/fixtures/generated_config.conf')
 
         # Build Hierarchical Configuration object for the Remediation Config
 
@@ -51,7 +51,7 @@ class HConfig(HConfigBase):
 
     See:
 
-        ./tests/files/test_tags_ios.yml and ./tests/files/test_options_ios.yml
+        ./tests/fixtures/tags_ios.yml and ./tests/fixtures/options_ios.yml
 
         for test examples of options and tags.
     """
