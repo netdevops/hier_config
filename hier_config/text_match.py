@@ -2,11 +2,6 @@ import re
 from typing import Tuple, Union, Set
 
 
-"""
-Provides a suite of text matching methods
-"""
-
-
 def equals(text: str, expression: Union[str, Set[str]]) -> bool:
     """Text equivalence test"""
     if isinstance(expression, str):

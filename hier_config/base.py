@@ -1,5 +1,15 @@
 from __future__ import annotations
-from typing import Optional, List, Iterator, Dict, Tuple, Union, Set, TYPE_CHECKING
+from typing import (
+    Optional,
+    List,
+    Iterator,
+    Dict,
+    Tuple,
+    Union,
+    Set,
+    TYPE_CHECKING,
+    Type,
+)
 from logging import getLogger
 from abc import ABC, abstractmethod
 
@@ -8,26 +18,33 @@ from . import text_match
 if TYPE_CHECKING:
     from .child import HConfigChild
     from .root import HConfig
+    from .host import Host
 
 logger = getLogger(__name__)
 
 
 class HConfigBase(ABC):
-    def __init__(self):
+    def __init__(self) -> None:
         self.children: List[HConfigChild] = []
         self.children_dict: Dict[str, HConfigChild] = {}
-        self.host = None
+        self.host: Host
 
-    def __len__(self):
+    def __str__(self) -> str:
+        return "\n".join(c.cisco_style_text() for c in self.all_children())
+
+    def __len__(self) -> int:
         return len(list(self.all_children()))
 
-    def __bool__(self):
+    def __bool__(self) -> bool:
         return bool(self.children)
 
-    def __contains__(self, item: str):
+    def __contains__(self, item: str) -> bool:
         return item in self.children_dict
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, HConfigBase):
+            return NotImplemented
+
         if len(self.children) != len(other.children):
             return False
 
@@ -40,35 +57,35 @@ class HConfigBase(ABC):
         return True
 
     @abstractmethod
-    def _duplicate_child_allowed_check(self):
+    def _duplicate_child_allowed_check(self) -> bool:
         pass
 
     @property
     @abstractmethod
-    def options(self):
+    def options(self) -> dict:
         pass
 
     @property
     @abstractmethod
-    def root(self):
+    def root(self) -> HConfig:
         pass
 
     @abstractmethod
-    def lineage(self):
+    def lineage(self) -> Iterator[HConfigChild]:
         pass
 
     @abstractmethod
-    def depth(self):
-        pass
-
-    @property
-    @abstractmethod
-    def logs(self):
+    def depth(self) -> int:
         pass
 
     @property
     @abstractmethod
-    def _child_class(self):
+    def logs(self) -> List[str]:
+        pass
+
+    @property
+    @abstractmethod
+    def _child_class(self) -> Type[HConfigChild]:
         pass
 
     def has_children(self) -> bool:
@@ -97,13 +114,13 @@ class HConfigBase(ABC):
             idx = len(self.children)
         # if child does not exist
         if text not in self:
-            new_item = self._child_class(self, text)
+            new_item = self._child_class(self, text)  # type: ignore
             self.children.insert(idx, new_item)
             self.children_dict[text] = new_item
             return new_item
         # if child does exist and is allowed to be installed as a duplicate
         if self._duplicate_child_allowed_check() or force_duplicate:
-            new_item = self._child_class(self, text)
+            new_item = self._child_class(self, text)  # type: ignore
             self.children.insert(idx, new_item)
             self.rebuild_children_dict()
             return new_item
@@ -112,18 +129,14 @@ class HConfigBase(ABC):
         # duplicate children, return the existing child
         # Ignore duplicate remarks in ACLs
         if alert_on_duplicate and not text.startswith("remark "):
-            self.logs.append(
-                "Found a duplicate section: {}".format(list(self.path()) + [text])
-            )
-        # return self.get_child("equals", text)
+            self.logs.append(f"Found a duplicate section: {list(self.path()) + [text]}")
         return self.children_dict[text]
 
-    @staticmethod
-    def path() -> Iterator[str]:
+    def path(self) -> Iterator[str]:
         yield from ()
 
     def add_deep_copy_of(
-        self, child_to_add: HConfigChild, merged=False
+        self, child_to_add: HConfigChild, merged: bool = False
     ) -> HConfigChild:
         """Add a nested copy of a child to self"""
         new_child = self.add_shallow_copy_of(child_to_add, merged=merged)
@@ -178,6 +191,29 @@ class HConfigBase(ABC):
         for child in sorted(self.children):
             yield child
             yield from child.all_children_sorted()
+
+    def all_children_sorted_with_lineage_rules(
+        self, rules: List[dict]
+    ) -> Iterator[HConfigChild]:
+        """ Recursively find and yield all children sorted at each hierarchy given lineage rules """
+        yielded = set()
+        matched: Set[HConfigChild] = set()
+        for child in self.all_children_sorted():
+            for ancestor in child.lineage():
+                if ancestor in matched:
+                    yield child
+                    yielded.add(child)
+                    break
+            else:
+                for rule in rules:
+                    if child.lineage_test(rule, False):
+                        matched.add(child)
+                        for ancestor in child.lineage():
+                            if ancestor in yielded:
+                                continue
+                            yield ancestor
+                            yielded.add(ancestor)
+                        break
 
     def all_children(self) -> Iterator[HConfigChild]:
         """ Recursively find and yield all children at each hierarchy """
@@ -257,64 +293,21 @@ class HConfigBase(ABC):
         for child in self.children:
             self.children_dict.setdefault(child.text, child)
 
-    # TODO Refactor this
-    def lineage_test(self, rule: dict, strip_negation: bool = False) -> bool:
-        """ A generic test against a lineage of HConfigChild objects """
-        if rule.get("match_leaf", False):
-            lineage_obj: Iterator[Union[HConfig, HConfigChild]] = (o for o in (self,))
-            lineage_depth = 1
-        else:
-            lineage_obj = self.lineage()
-            lineage_depth = self.depth()
-
-        rule_lineage_len = len(rule["lineage"])
-        if rule_lineage_len != lineage_depth:
-            return False
-
-        matches = 0
-        for lineage_rule, section in zip(rule["lineage"], lineage_obj):
-            object_rules, text_match_rules = self._explode_lineage_rule(lineage_rule)
-
-            if not self._lineage_eval_object_rules(object_rules, section):
-                return False
-
-            # This removes negations for each section but honestly,
-            # we really only need to do this on the last one
-            if strip_negation:
-                if section.text.startswith(self.options["negation"] + " "):
-                    text = section.text[len(self.options["negation"] + " ") :]
-                elif section.text.startswith("default "):
-                    text = section.text[8:]
-                else:
-                    text = section.text
-            else:
-                text = section.text
-
-            if self._lineage_eval_text_match_rules(text_match_rules, text):
-                matches += 1
-                continue
-            return False
-
-        return matches == rule_lineage_len
-
-    def with_tags(
-        self, tags: Set[str], new_instance: Optional[HConfigChild] = None
-    ) -> HConfigChild:
+    def _with_tags(
+        self, tags: Set[str], new_instance: Union[HConfig, HConfigChild]
+    ) -> Union[HConfig, HConfigChild]:
         """
         Returns a new instance containing only sub-objects
         with one of the tags in tags
         """
-        if new_instance is None:
-            new_instance = self._child_class(host=self.host)
-
         for child in self.children:
             if tags.intersection(child.tags):
                 new_child = new_instance.add_shallow_copy_of(child)
-                child.with_tags(tags, new_instance=new_child)
+                child._with_tags(tags, new_instance=new_child)
 
         return new_instance
 
-    def config_to_get_to(
+    def _config_to_get_to(
         self, target: Union[HConfig, HConfigChild], delta: Union[HConfig, HConfigChild]
     ) -> Union[HConfig, HConfigChild]:
         """
@@ -335,7 +328,7 @@ class HConfigBase(ABC):
 
     def _difference(
         self, target: Union[HConfig, HConfigChild], delta: Union[HConfig, HConfigChild],
-    ):
+    ) -> Union[HConfig, HConfigChild]:
         for self_child in self.children:
             # Not dealing with negations and defaults for now
             if self_child.text.startswith((self._negation_prefix, "default ")):
@@ -371,9 +364,7 @@ class HConfigBase(ABC):
             deleted = delta.add_child(self_child.text)
             deleted.negate()
             if self_child.children:
-                deleted.comments.add(
-                    "removes {} lines".format(len(self_child.children) + 1)
-                )
+                deleted.comments.add(f"removes {len(self_child.children) + 1} lines")
 
     def _config_to_get_to_right(
         self, target: Union[HConfig, HConfigChild], delta: Union[HConfig, HConfigChild]
@@ -395,7 +386,7 @@ class HConfigBase(ABC):
                 # This creates a new HConfigChild object just in case there are some delta children
                 # Not very efficient, think of a way to not do this
                 subtree = delta.add_child(target_child.text)
-                self_child.config_to_get_to(target_child, subtree)
+                self_child._config_to_get_to(target_child, subtree)
                 if not subtree.children:
                     subtree.delete()
                 # Do we need to rewrite the child and its children as well?
@@ -468,9 +459,9 @@ class HConfigBase(ABC):
         return matches == len(rules)
 
     @staticmethod
-    def _to_list(obj) -> list:
+    def _to_list(obj: Union[list, object]) -> list:
         return obj if isinstance(obj, list) else [obj]
 
     @property
     def _negation_prefix(self) -> str:
-        return self.options["negation"] + " "
+        return str(self.options["negation"]) + " "

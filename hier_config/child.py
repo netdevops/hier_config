@@ -6,7 +6,6 @@ from .base import HConfigBase
 
 if TYPE_CHECKING:
     from .root import HConfig
-    from .host import Host
 
 
 logger = getLogger(__name__)
@@ -18,7 +17,7 @@ class HConfigChild(HConfigBase):
         self.parent = parent
         self.host = self.root.host
         self._text: str = text.strip()
-        self.real_indent_level: Optional[int] = None
+        self.real_indent_level: int
         # The intent is for self.order_weight values to range from 1 to 999
         # with the default weight being 500
         self.order_weight: int = 500
@@ -26,7 +25,7 @@ class HConfigChild(HConfigBase):
         self.comments: Set[str] = set()
         self.new_in_config: bool = False
         self.instances: List[dict] = []
-        self.facts = {}  # To store externally inserted facts
+        self.facts: dict = {}  # To store externally inserted facts
 
     @property
     def text(self) -> str:
@@ -41,21 +40,19 @@ class HConfigChild(HConfigBase):
         self._text = value.strip()
         self.parent.rebuild_children_dict()
 
-    def __repr__(self):
-        if self.parent is self.root:
-            return "HConfigChild(HConfig, {})".format(self.text)
-        return "HConfigChild(HConfigChild, {})".format(self.text)
+    def __repr__(self) -> str:
+        return f"HConfigChild(HConfig{'' if self.parent is self.root else 'Child'}, {self.text})"
 
-    def __str__(self):
-        return self.text
-
-    def __lt__(self, other):
+    def __lt__(self, other: HConfigChild) -> bool:
         return self.order_weight < other.order_weight
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return id(self)
 
-    def __eq__(self, other):
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, HConfigChild):
+            return NotImplemented
+
         if (
             self.text != other.text
             or self.tags != other.tags
@@ -65,7 +62,7 @@ class HConfigChild(HConfigBase):
             return False
         return super().__eq__(other)
 
-    def __ne__(self, other):
+    def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
 
     @property
@@ -118,7 +115,8 @@ class HConfigChild(HConfigBase):
 
     def path(self) -> Iterator[str]:
         """ Return a list of the text instance variables from self.lineage """
-        yield from (o.text for o in self.lineage())
+        for parent in self.lineage():
+            yield parent.text
 
     def cisco_style_text(
         self, style: str = "without_comments", tag: Optional[str] = None
@@ -140,7 +138,7 @@ class HConfigChild(HConfigBase):
             # should the word 'instance' be plural?
             word = "instance" if instance_count == 1 else "instances"
 
-            comments.append("{} {}".format(instance_count, word))
+            comments.append(f"{instance_count} {word}")
             comments.extend(instance_comments)
         elif style == "with_comments":
             comments.extend(self.comments)
@@ -153,8 +151,6 @@ class HConfigChild(HConfigBase):
 
     def delete(self) -> None:
         """ Delete the current object from its parent """
-
-        # TODO find a way to remove this when sub-classing in HCRoot
         self.parent.del_child(self)
 
     def append_tag(self, tag: str) -> None:
@@ -241,27 +237,31 @@ class HConfigChild(HConfigBase):
                 found_tags.update(child.tags)
             return found_tags
 
-        return self._tags or {None}
+        # The getter can return a set containing None
+        # while the setter only accepts a set containing strs.
+        # mypy doesn't like this
+        return self._tags or {None}  # type: ignore
 
     @tags.setter
     def tags(self, value: Set[str]) -> None:
         """ Recursive access to tags on all leaf nodes """
         if self.is_branch:
             for child in self.children:
-                child.tags = value
+                # see comment in getter
+                child.tags = value  # type: ignore
         else:
             self._tags = value
 
     def _swap_negation(self) -> HConfigChild:
         """ Swap negation of a self.text """
         if self.text.startswith(self._negation_prefix):
-            self.text = self.text[len(self._negation_prefix):]
+            self.text = self.text[len(self._negation_prefix) :]
         else:
             self.text = self._negation_prefix + self.text
 
         return self
 
-    def _default(self):
+    def _default(self) -> HConfigChild:
         """ Default self.text """
         if self.text.startswith(self._negation_prefix):
             self.text = "default " + self.text[len(self._negation_prefix) :]
@@ -327,7 +327,7 @@ class HConfigChild(HConfigBase):
         other: HConfigChild,
         delta: Union[HConfig, HConfigChild],
         negate: bool = True,
-    ) -> HConfigChild:
+    ) -> None:
         """ Deletes delta.child[self.text], adds a deep copy of self to delta """
         if other.children != self.children:
             if negate:
@@ -338,7 +338,6 @@ class HConfigChild(HConfigBase):
                 delta.del_child_by_text(self.text)
                 new_item = delta.add_deep_copy_of(self)
                 new_item.comments.add("re-create section")
-        return delta
 
     def line_inclusion_test(
         self, include_tags: Set[str], exclude_tags: Set[str]
@@ -355,6 +354,46 @@ class HConfigChild(HConfigBase):
             include_line = not bool(self.tags.intersection(exclude_tags))
 
         return include_line
+
+    # TODO Refactor this
+    def lineage_test(self, rule: dict, strip_negation: bool = False) -> bool:
+        """ A generic test against a lineage of HConfigChild objects """
+        if rule.get("match_leaf", False):
+            lineage_obj: Iterator[HConfigChild] = (o for o in (self,))
+            lineage_depth = 1
+        else:
+            lineage_obj = self.lineage()
+            lineage_depth = self.depth()
+
+        rule_lineage_len = len(rule["lineage"])
+        if rule_lineage_len != lineage_depth:
+            return False
+
+        matches = 0
+        for lineage_rule, section in zip(rule["lineage"], lineage_obj):
+            object_rules, text_match_rules = self._explode_lineage_rule(lineage_rule)
+
+            if not self._lineage_eval_object_rules(object_rules, section):
+                return False
+
+            # This removes negations for each section but honestly,
+            # we really only need to do this on the last one
+            if strip_negation:
+                if section.text.startswith(self.options["negation"] + " "):
+                    text = section.text[len(self.options["negation"] + " ") :]
+                elif section.text.startswith("default "):
+                    text = section.text[8:]
+                else:
+                    text = section.text
+            else:
+                text = section.text
+
+            if self._lineage_eval_text_match_rules(text_match_rules, text):
+                matches += 1
+                continue
+            return False
+
+        return matches == rule_lineage_len
 
     def _duplicate_child_allowed_check(self) -> bool:
         """ Determine if duplicate(identical text) children are allowed under the parent """
