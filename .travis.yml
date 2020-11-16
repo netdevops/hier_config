@@ -5,15 +5,23 @@ python:
 - "3.7"
 - "3.8"
 - "3.9"
+<<<<<<< HEAD
+=======
+# - "3.10"
+>>>>>>> f1e645480e3e1a90d8b22e858b85c0fa5e523f71
 
 install:
 # - "pip install pycodestyle pyyaml"
 - "python setup.py install"
 
 script:
+<<<<<<< HEAD
 - "pytest"
 - "black --check hier_config tests"
 # - "pylint hier_config"
+=======
+- "python setup.py test"
+>>>>>>> f1e645480e3e1a90d8b22e858b85c0fa5e523f71
 
 after_success:
 - "cd docs/_mkdocs; ./mkdocs.sh; cd -"

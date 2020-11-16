@@ -41,20 +41,23 @@ In the below example, we create a hier_config host object, load a running config
 >>> from hier_config import Host
 >>> import yaml
 >>>
->>> options = yaml.load(open('./tests/files/test_options_ios.yml'), Loader=yaml.SafeLoader)
+>>> options = yaml.load(open('./tests/fixtures/options_ios.yml'), Loader=yaml.SafeLoader)
 >>> host = Host('example.rtr', 'ios', options)
 >>>
->>> # Build HConfig object for the Running Config
->>> host.load_config_from("running", './tests/files/running_config.conf')
+>>> # Build Hierarchical Configuration object for the Running Config
+>>> host.load_config_from("running", './tests/fixtures/running_config.conf')
 HConfig(host=Host(hostname=example.rtr))
 >>>
 >>> # Build Hierarchical Configuration object for the Generated Config
->>> host.load_config_from("generated", './tests/files/generated_config.conf')
-HConfig(host=Host(hostname=example.rtr))
->>> host.load_remediation()
+>>> host.load_config_from("generated", './tests/fixtures/generated_config.conf')
 HConfig(host=Host(hostname=example.rtr))
 >>>
 >>> # Build Hierarchical Configuration object for the Remediation Config
+>>>
+>>> host.load_remediation()
+HConfig(host=Host(hostname=example.rtr))
+>>>
+>>> # Print the all lines of the remediation config
 >>>
 >>> for line in host.remediation_config.all_children():
 ...     print(line.cisco_style_text())
@@ -78,4 +81,4 @@ interface Vlan4
   no shutdown
 ```
 
-The files in the example can be seen in the `tests/files` folder.
+The files in the example can be seen in the `tests/fixtures` folder.

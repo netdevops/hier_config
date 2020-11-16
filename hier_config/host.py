@@ -18,7 +18,7 @@ class Host:
         import yaml
         from hier_config.host import Host
 
-        options = yaml.load(open('./tests/files/test_options_ios.yml'))
+        options = yaml.load(open('./tests/fixtures/options_ios.yml'), loader=yaml.SafeLoader())
         host = Host('example.rtr', 'ios', options)
 
         # Example of loading running config and generated configs into a host object
@@ -26,7 +26,7 @@ class Host:
         host.load_generated_config_from_file("./tests/files/generated_config.conf)
 
         # Example of loading hier-config tags into a host object
-        host.load_tags("./tests/files/test_tags_ios.yml")
+        host.load_tags("./tests/fixtures/tags_ios.yml")
 
         # Example of creating a remediation config without a tag targeting specific config
         host.remediation_config()
