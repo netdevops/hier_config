@@ -327,7 +327,9 @@ class HConfigBase(ABC):
         self.rebuild_children_dict()
 
     def _difference(
-        self, target: Union[HConfig, HConfigChild], delta: Union[HConfig, HConfigChild],
+        self,
+        target: Union[HConfig, HConfigChild],
+        delta: Union[HConfig, HConfigChild],
     ) -> Union[HConfig, HConfigChild]:
         for self_child in self.children:
             # Not dealing with negations and defaults for now
