@@ -1,8 +1,9 @@
 #!/usr/bin/env python
+import os
 
 from setuptools import setup, find_packages
 
-import os
+
 os.environ["MPLCONFIGDIR"] = "."
 
 setup(
@@ -18,7 +19,7 @@ setup(
     keywords="hier_config",
     python_requires=">=3.7",
     install_requires=["pyyaml", "pytest-runner"],
-    tests_require=["pytest", "pep8", "pytest-cov", "pytest-black"],
+    extras_require={"testing": ["pytest", "pep8", "pytest-cov", "pytest-black"]},
     classifiers=[
         "Development Status :: 5 - Production/Stable",
         "Intended Audience :: Developers",
