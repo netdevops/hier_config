@@ -93,8 +93,7 @@ class TestHConfig:
         assert 2 == len(list(hier.all_children_sorted_with_lineage_rules(tags_ios)))
 
         assert isinstance(
-            hier.all_children_sorted_with_lineage_rules(tags_ios),
-            types.GeneratorType,
+            hier.all_children_sorted_with_lineage_rules(tags_ios), types.GeneratorType,
         )
 
     def test_add_ancestor_copy_of(self):
