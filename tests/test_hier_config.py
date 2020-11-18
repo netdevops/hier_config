@@ -7,6 +7,7 @@ import pytest
 from hier_config import HConfig, Host
 
 
+# pylint: ignore=too-many-public-methods
 class TestHConfig:
     @pytest.fixture(autouse=True)
     def setup(self, options_ios):
@@ -26,12 +27,12 @@ class TestHConfig:
         hier2 = HConfig(host=self.host_b)
         hier2.add_child("interface Vlan3")
 
-        assert 1 == len(list(hier1.all_children()))
-        assert 1 == len(list(hier2.all_children()))
+        assert len(list(hier1.all_children())) == 1
+        assert len(list(hier2.all_children())) == 1
 
         hier1.merge(hier2)
 
-        assert 2 == len(list(hier1.all_children()))
+        assert len(list(hier1.all_children())) == 2
 
     def test_load_from_file(self):
         hier = HConfig(host=self.host_a)
@@ -44,14 +45,14 @@ class TestHConfig:
             hier.load_from_file(myfile.name)
             os.remove(myfile.name)
 
-        assert 2 == len(list(hier.all_children()))
+        assert len(list(hier.all_children())) == 2
 
     def test_load_from_config_text(self):
         hier = HConfig(host=self.host_a)
         config = "interface Vlan2\n ip address 1.1.1.1 255.255.255.0"
 
         hier.load_from_string(config)
-        assert 2 == len(list(hier.all_children()))
+        assert len(list(hier.all_children())) == 2
 
     def test_dump_and_load_from_dump_and_compare(self):
         hier_pre_dump = HConfig(host=self.host_a)
@@ -87,10 +88,10 @@ class TestHConfig:
         mgmt = hier.add_child("interface FastEthernet0")
         mgmt.add_child("description mgmt-192.168.0.0/24")
 
-        assert 4 == len(list(hier.all_children()))
+        assert len(list(hier.all_children())) == 4
         assert isinstance(hier.all_children(), types.GeneratorType)
 
-        assert 2 == len(list(hier.all_children_sorted_with_lineage_rules(tags_ios)))
+        assert len(list(hier.all_children_sorted_with_lineage_rules(tags_ios))) == 2
 
         assert isinstance(
             hier.all_children_sorted_with_lineage_rules(tags_ios),
@@ -105,7 +106,7 @@ class TestHConfig:
         )
         hier1.add_ancestor_copy_of(interface)
 
-        assert 3 == len(list(hier1.all_children()))
+        assert len(list(hier1.all_children())) == 3
         assert isinstance(hier1.all_children(), types.GeneratorType)
 
     def test_has_children(self):
@@ -118,13 +119,13 @@ class TestHConfig:
         hier = HConfig(host=self.host_a)
         interface = hier.add_child("interface Vlan2")
         ip_address = interface.add_child("ip address 192.168.1.1 255.255.255.0")
-        assert 2 == ip_address.depth()
+        assert ip_address.depth() == 2
 
     def test_get_child(self):
         hier = HConfig(host=self.host_a)
         hier.add_child("interface Vlan2")
         child = hier.get_child("equals", "interface Vlan2")
-        assert "interface Vlan2" == child.text
+        assert child.text == "interface Vlan2"
 
     def test_get_child_deep(self):
         hier = HConfig(host=self.host_a)
@@ -143,40 +144,40 @@ class TestHConfig:
         hier.add_child("interface Vlan2")
         hier.add_child("interface Vlan3")
         children = hier.get_children("startswith", "interface")
-        assert 2 == len(list(children))
+        assert len(list(children)) == 2
 
     def test_move(self):
         hier1 = HConfig(host=self.host_a)
         interface1 = hier1.add_child("interface Vlan2")
         interface1.add_child("192.168.0.1/30")
 
-        assert 2 == len(list(hier1.all_children()))
+        assert len(list(hier1.all_children())) == 2
 
         hier2 = HConfig(host=self.host_b)
 
-        assert 0 == len(list(hier2.all_children()))
+        assert len(list(hier2.all_children())) == 0
 
         interface1.move(hier2)
 
-        assert 0 == len(list(hier1.all_children()))
-        assert 2 == len(list(hier2.all_children()))
+        assert len(list(hier1.all_children())) == 0
+        assert len(list(hier2.all_children())) == 2
 
     def test_del_child_by_text(self):
         hier = HConfig(host=self.host_a)
         hier.add_child("interface Vlan2")
         hier.del_child_by_text("interface Vlan2")
 
-        assert 0 == len(list(hier.all_children()))
+        assert len(list(hier.all_children())) == 0
 
     def test_del_child(self):
         hier1 = HConfig(host=self.host_a)
         hier1.add_child("interface Vlan2")
 
-        assert 1 == len(list(hier1.all_children()))
+        assert len(list(hier1.all_children())) == 1
 
         hier1.del_child(hier1.get_child("startswith", "interface"))
 
-        assert 0 == len(list(hier1.all_children()))
+        assert len(list(hier1.all_children())) == 0
 
     def test_rebuild_children_dict(self):
         hier1 = HConfig(host=self.host_a)
@@ -199,20 +200,20 @@ class TestHConfig:
         interface1 = hier1.add_child("interface Vlan2")
         interface1.add_children(interface_items1)
 
-        assert 3 == len(list(hier1.all_children()))
+        assert len(list(hier1.all_children())) == 3
 
         interface_items2 = ["description switch-mgmt 192.168.1.0/24"]
         hier2 = HConfig(host=self.host_a)
         interface2 = hier2.add_child("interface Vlan2")
         interface2.add_children(interface_items2)
 
-        assert 2 == len(list(hier2.all_children()))
+        assert len(list(hier2.all_children())) == 2
 
     def test_add_child(self):
         hier = HConfig(host=self.host_a)
         interface = hier.add_child("interface Vlan2")
-        assert 1 == interface.depth()
-        assert "interface Vlan2" == interface.text
+        assert interface.depth() == 1
+        assert interface.text == "interface Vlan2"
         assert not isinstance(interface, list)
 
     def test_add_deep_copy_of(self):
@@ -225,7 +226,7 @@ class TestHConfig:
         hier2 = HConfig(host=self.host_b)
         hier2.add_deep_copy_of(interface1)
 
-        assert 3 == len(list(hier2.all_children()))
+        assert len(list(hier2.all_children())) == 3
         assert isinstance(hier2.all_children(), types.GeneratorType)
 
     def test_lineage(self):
@@ -238,7 +239,7 @@ class TestHConfig:
         hier = HConfig(host=self.host_a)
         interface = hier.add_child("interface Vlan2")
         ip_address = interface.add_child("ip address 192.168.1.1 255.255.255.0")
-        assert "  ip address 192.168.1.1 255.255.255.0" == ip_address.cisco_style_text()
+        assert ip_address.cisco_style_text() == "  ip address 192.168.1.1 255.255.255.0"
         assert isinstance(ip_address.cisco_style_text(), str)
         assert not isinstance(ip_address.cisco_style_text(), list)
 
@@ -250,7 +251,7 @@ class TestHConfig:
         ip_address_none = interface.add_child("ip address 192.168.2.1/24")
 
         assert ip_address_none is list(config.all_children_sorted_untagged())[1]
-        assert 2 == len(list(config.all_children_sorted_untagged()))
+        assert len(list(config.all_children_sorted_untagged())) == 2
         assert ip_address_none is list(config.all_children_sorted_untagged())[1]
 
     def test_all_children_sorted_by_tags(self):
@@ -261,23 +262,23 @@ class TestHConfig:
         ip_address_ab = interface.add_child("ip address 192.168.2.1/24")
         ip_address_ab.append_tags(["a", "b"])
 
-        assert 1 == len(list(config.all_children_sorted_by_tags({"a"}, {"b"})))
+        assert len(list(config.all_children_sorted_by_tags({"a"}, {"b"}))) == 1
         assert ip_address_a is list(config.all_children_sorted_by_tags({"a"}, {"b"}))[0]
-        assert 3 == len(list(config.all_children_sorted_by_tags({"a"}, set())))
-        assert 0 == len(list(config.all_children_sorted_by_tags(set(), {"a"})))
-        assert 0 == len(list(config.all_children_sorted_by_tags(set(), set())))
+        assert len(list(config.all_children_sorted_by_tags({"a"}, set()))) == 3
+        assert len(list(config.all_children_sorted_by_tags(set(), {"a"}))) == 0
+        assert len(list(config.all_children_sorted_by_tags(set(), set()))) == 0
 
     def test_all_children_sorted(self):
         hier = HConfig(host=self.host_a)
         interface = hier.add_child("interface Vlan2")
         interface.add_child("standby 1 ip 10.15.11.1")
-        assert 2 == len(list(hier.all_children_sorted()))
+        assert len(list(hier.all_children_sorted())) == 2
 
     def test_all_children(self):
         hier = HConfig(host=self.host_a)
         interface = hier.add_child("interface Vlan2")
         interface.add_child("standby 1 ip 10.15.11.1")
-        assert 2 == len(list(hier.all_children()))
+        assert len(list(hier.all_children())) == 2
 
     def test_delete(self):
         pass
@@ -340,7 +341,7 @@ class TestHConfig:
         hier = HConfig(host=self.host_a)
         interface = hier.add_child("interface Vlan2")
         interface.negate()
-        assert "no interface Vlan2" == interface.text
+        assert interface.text == "no interface Vlan2"
 
     def test_config_to_get_to(self):
         running_config_hier = HConfig(host=self.host_a)
@@ -351,7 +352,7 @@ class TestHConfig:
         remediation_config_hier = running_config_hier.config_to_get_to(
             generated_config_hier
         )
-        assert 2 == len(list(remediation_config_hier.all_children()))
+        assert len(list(remediation_config_hier.all_children())) == 2
 
     def test_config_to_get_to_right(self):
         running_config_hier = HConfig(host=self.host_a)
@@ -411,7 +412,8 @@ class TestHConfig:
         assert "a5" in difference.get_child("equals", "a")
         assert "d1" in difference.get_child("equals", "d")
 
-    def test_difference2(self, options_ios):
+    @staticmethod
+    def test_difference2(options_ios):
         host = Host(hostname="test_host", os="ios", hconfig_options=options_ios)
         rc = ["a", " a1", " a2", " a3", "b"]
         step = ["a", " a1", " a2", " a3", " a4", " a5", "b", "c", "d", " d1"]

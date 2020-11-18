@@ -8,7 +8,7 @@ def test_pep8():
     errors = 0
     python_files = set()
 
-    for root, dirs, files in os.walk("hier_config"):
+    for root, _, files in os.walk("hier_config"):
         for f in files:
             if os.path.isfile(os.path.join(root, f)):
                 if f.endswith(".py"):

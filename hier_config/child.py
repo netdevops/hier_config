@@ -1,8 +1,19 @@
 from __future__ import annotations
-from typing import Optional, Set, Union, Iterator, List, TYPE_CHECKING, Type, Iterable
+from typing import (
+    Optional,
+    Set,
+    Union,
+    Iterator,
+    List,
+    TYPE_CHECKING,
+    Type,
+    Iterable,
+    Tuple,
+)
 from logging import getLogger
 
 from .base import HConfigBase
+from . import text_match
 
 if TYPE_CHECKING:
     from .root import HConfig
@@ -11,6 +22,7 @@ if TYPE_CHECKING:
 logger = getLogger(__name__)
 
 
+# pylint: disable=too-many-instance-attributes,too-many-public-methods
 class HConfigChild(HConfigBase):
     def __init__(self, parent: Union[HConfig, HConfigChild], text: str):
         super().__init__()
@@ -26,19 +38,6 @@ class HConfigChild(HConfigBase):
         self.new_in_config: bool = False
         self.instances: List[dict] = []
         self.facts: dict = {}  # To store externally inserted facts
-
-    @property
-    def text(self) -> str:
-        return self._text
-
-    @text.setter
-    def text(self, value: str) -> None:
-        """
-        Used for when self.text is changed after the object
-        is instantiated to rebuild the children dictionary
-        """
-        self._text = value.strip()
-        self.parent.rebuild_children_dict()
 
     def __repr__(self) -> str:
         return f"HConfigChild(HConfig{'' if self.parent is self.root else 'Child'}, {self.text})"
@@ -64,6 +63,19 @@ class HConfigChild(HConfigBase):
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
+
+    @property
+    def text(self) -> str:
+        return self._text
+
+    @text.setter
+    def text(self, value: str) -> None:
+        """
+        Used for when self.text is changed after the object
+        is instantiated to rebuild the children dictionary
+        """
+        self._text = value.strip()
+        self.parent.rebuild_children_dict()
 
     @property
     def root(self) -> HConfig:
@@ -355,7 +367,6 @@ class HConfigChild(HConfigBase):
 
         return include_line
 
-    # TODO Refactor this
     def lineage_test(self, rule: dict, strip_negation: bool = False) -> bool:
         """ A generic test against a lineage of HConfigChild objects """
         if rule.get("match_leaf", False):
@@ -379,8 +390,8 @@ class HConfigChild(HConfigBase):
             # This removes negations for each section but honestly,
             # we really only need to do this on the last one
             if strip_negation:
-                if section.text.startswith(self.options["negation"] + " "):
-                    text = section.text[len(self.options["negation"] + " ") :]
+                if section.text.startswith(self._negation_prefix):
+                    text = section.text[len(self._negation_prefix) :]
                 elif section.text.startswith("default "):
                     text = section.text[8:]
                 else:
@@ -394,6 +405,73 @@ class HConfigChild(HConfigBase):
             return False
 
         return matches == rule_lineage_len
+
+    @staticmethod
+    def _explode_lineage_rule(rule: dict) -> Tuple[list, list]:
+        text_match_rules: List[dict] = list()
+        object_rules = list()
+        for test, expression in rule.items():
+            if test in {"new_in_config", "negative_intersection_tags"}:
+                object_rules.append({"test": test, "expression": expression})
+            elif test == "equals":
+                if isinstance(expression, list):
+                    text_match_rules.append(
+                        {"test": test, "expression": set(expression)}
+                    )
+                else:
+                    text_match_rules.append({"test": test, "expression": {expression}})
+            elif test in {"startswith", "endswith"}:
+                if isinstance(expression, list):
+                    text_match_rules.append(
+                        {"test": test, "expression": tuple(expression)}
+                    )
+                else:
+                    text_match_rules.append({"test": test, "expression": (expression,)})
+            elif isinstance(expression, list):
+                text_match_rules += [
+                    {"test": test, "expression": e} for e in expression
+                ]
+            else:
+                text_match_rules += [{"test": test, "expression": expression}]
+        return object_rules, text_match_rules
+
+    def _lineage_eval_object_rules(self, rules: list, section: HConfigChild) -> bool:
+        """
+        Evaluate a list of lineage object rules.
+
+        All object rules must match in order to return True
+
+        """
+        matches = 0
+        for rule in rules:
+            if rule["test"] == "new_in_config":
+                if rule["expression"] == section.new_in_config:
+                    matches += 1
+                    continue
+                return False
+            if rule["test"] == "negative_intersection_tags":
+                rule["expression"] = self._to_list(rule["expression"])
+                if not set(rule["expression"]).intersection(section.tags):
+                    matches += 1
+                    continue
+                return False
+        return matches == len(rules)
+
+    @staticmethod
+    def _lineage_eval_text_match_rules(rules: list, text: str) -> bool:
+        """
+        Evaluate a list of lineage text_match rules.
+
+        Only one text_match rule must match in order to return True
+        """
+        for rule in rules:
+            if text_match.dict_call(rule["test"], text, rule["expression"]):
+                return True
+        return False
+
+    @staticmethod
+    def _to_list(obj: Union[list, object]) -> list:
+        return obj if isinstance(obj, list) else [obj]
 
     def _duplicate_child_allowed_check(self) -> bool:
         """ Determine if duplicate(identical text) children are allowed under the parent """

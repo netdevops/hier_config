@@ -144,6 +144,7 @@ class HConfig(HConfigBase):
             return True
         return False
 
+    # pylint: disable=too-many-locals,too-many-branches,too-many-statements
     def _load_from_string_lines(self, config_text: str) -> None:
         current_section: Union[HConfig, HConfigChild] = self
         most_recent_item: Union[HConfig, HConfigChild] = current_section

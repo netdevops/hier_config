@@ -1,3 +1,5 @@
+from os import path
+
 import pytest
 import yaml
 
@@ -28,6 +30,4 @@ def options_negate_with_undo():
 
 
 def _fixture_dir():
-    from os import path
-
     return path.join(path.dirname(path.realpath(__file__)), "fixtures")

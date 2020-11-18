@@ -45,23 +45,16 @@ In the below example, we create a hier_config host object, load a running config
 >>> host = Host('example.rtr', 'ios', options)
 >>>
 >>> # Build Hierarchical Configuration object for the Running Config
->>> host.load_config_from("running", './tests/fixtures/running_config.conf')
+>>> host.load_running_config_from_file("./tests/fixtures/running_config.conf")
 HConfig(host=Host(hostname=example.rtr))
 >>>
 >>> # Build Hierarchical Configuration object for the Generated Config
->>> host.load_config_from("generated", './tests/fixtures/generated_config.conf')
+>>> host.load_generated_config_from_file("./tests/fixtures/generated_config.conf")
 HConfig(host=Host(hostname=example.rtr))
 >>>
->>> # Build Hierarchical Configuration object for the Remediation Config
+>>> # Build and Print the all lines of the remediation config
 >>>
->>> host.load_remediation()
-HConfig(host=Host(hostname=example.rtr))
->>>
->>> # Print the all lines of the remediation config
->>>
->>> for line in host.remediation_config.all_children():
-...     print(line.cisco_style_text())
-...
+>>> print(host.remediation_config_filtered_text()):
 vlan 3
   name switch_mgmt_10.0.3.0/24
 vlan 4

@@ -12,6 +12,7 @@ from typing import (
 )
 from logging import getLogger
 from abc import ABC, abstractmethod
+from functools import cached_property
 
 from . import text_match
 
@@ -23,7 +24,7 @@ if TYPE_CHECKING:
 logger = getLogger(__name__)
 
 
-class HConfigBase(ABC):
+class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
     def __init__(self) -> None:
         self.children: List[HConfigChild] = []
         self.children_dict: Dict[str, HConfigChild] = {}
@@ -132,7 +133,7 @@ class HConfigBase(ABC):
             self.logs.append(f"Found a duplicate section: {list(self.path()) + [text]}")
         return self.children_dict[text]
 
-    def path(self) -> Iterator[str]:
+    def path(self) -> Iterator[str]:  # pylint: disable=no-self-use
         yield from ()
 
     def add_deep_copy_of(
@@ -198,6 +199,7 @@ class HConfigBase(ABC):
         """ Recursively find and yield all children sorted at each hierarchy given lineage rules """
         yielded = set()
         matched: Set[HConfigChild] = set()
+        # pylint: disable=too-many-nested-blocks
         for child in self.all_children_sorted():
             for ancestor in child.lineage():
                 if ancestor in matched:
@@ -303,6 +305,7 @@ class HConfigBase(ABC):
         for child in self.children:
             if tags.intersection(child.tags):
                 new_child = new_instance.add_shallow_copy_of(child)
+                # pylint: disable=protected-access
                 child._with_tags(tags, new_instance=new_child)
 
         return new_instance
@@ -342,6 +345,7 @@ class HConfigBase(ABC):
                 delta.add_deep_copy_of(self_child)
             else:
                 delta_child = delta.add_child(self_child.text)
+                # pylint: disable=protected-access
                 self_child._difference(target_child, delta_child)
                 if not delta_child.children:
                     delta_child.delete()
@@ -388,6 +392,7 @@ class HConfigBase(ABC):
                 # This creates a new HConfigChild object just in case there are some delta children
                 # Not very efficient, think of a way to not do this
                 subtree = delta.add_child(target_child.text)
+                # pylint: disable=protected-access
                 self_child._config_to_get_to(target_child, subtree)
                 if not subtree.children:
                     subtree.delete()
@@ -397,73 +402,6 @@ class HConfigBase(ABC):
                 elif self_child.sectional_overwrite_no_negate_check():
                     target_child.overwrite_with(self_child, delta, False)
 
-    @staticmethod
-    def _lineage_eval_text_match_rules(rules: list, text: str) -> bool:
-        """
-        Evaluate a list of lineage text_match rules.
-
-        Only one text_match rule must match in order to return True
-        """
-        for rule in rules:
-            if text_match.dict_call(rule["test"], text, rule["expression"]):
-                return True
-        return False
-
-    @staticmethod
-    def _explode_lineage_rule(rule: dict) -> Tuple[list, list]:
-        text_match_rules: List[dict] = list()
-        object_rules = list()
-        for test, expression in rule.items():
-            if test in {"new_in_config", "negative_intersection_tags"}:
-                object_rules.append({"test": test, "expression": expression})
-            elif test == "equals":
-                if isinstance(expression, list):
-                    text_match_rules.append(
-                        {"test": test, "expression": set(expression)}
-                    )
-                else:
-                    text_match_rules.append({"test": test, "expression": {expression}})
-            elif test in {"startswith", "endswith"}:
-                if isinstance(expression, list):
-                    text_match_rules.append(
-                        {"test": test, "expression": tuple(expression)}
-                    )
-                else:
-                    text_match_rules.append({"test": test, "expression": (expression,)})
-            elif isinstance(expression, list):
-                text_match_rules += [
-                    {"test": test, "expression": e} for e in expression
-                ]
-            else:
-                text_match_rules += [{"test": test, "expression": expression}]
-        return object_rules, text_match_rules
-
-    def _lineage_eval_object_rules(self, rules: list, section: HConfigChild) -> bool:
-        """
-        Evaluate a list of lineage object rules.
-
-        All object rules must match in order to return True
-
-        """
-        matches = 0
-        for rule in rules:
-            if rule["test"] == "new_in_config":
-                if rule["expression"] == section.new_in_config:
-                    matches += 1
-                    continue
-                return False
-            if rule["test"] == "negative_intersection_tags":
-                rule["expression"] = self._to_list(rule["expression"])
-                if not set(rule["expression"]).intersection(section.tags):
-                    matches += 1
-                    continue
-                return False
-        return matches == len(rules)
-
-    @staticmethod
-    def _to_list(obj: Union[list, object]) -> list:
-        return obj if isinstance(obj, list) else [obj]
-
-    @property
+    @cached_property
     def _negation_prefix(self) -> str:
         return str(self.options["negation"]) + " "

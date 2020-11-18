@@ -2,7 +2,7 @@ from typing import List, Set, Union, Optional
 
 import yaml
 
-from . import HConfig
+from .root import HConfig
 
 
 class Host:
@@ -153,11 +153,11 @@ class Host:
 
         return content
 
-    def _get_running_config(self) -> HConfig:
+    def _get_running_config(self) -> HConfig:  # pylint: disable=no-self-use
         return NotImplemented
 
-    def _get_generated_config(self) -> HConfig:
+    def _get_generated_config(self) -> HConfig:  # pylint: disable=no-self-use
         return NotImplemented
 
-    def _get_remediation_config(self) -> HConfig:
+    def _get_remediation_config(self) -> HConfig:  # pylint: disable=no-self-use
         return NotImplemented

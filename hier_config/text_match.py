@@ -24,12 +24,12 @@ def contains(text: str, expression: str) -> bool:
     return expression in text
 
 
-def anything(text: str, expression: str) -> bool:
+def anything(text: str, expression: str) -> bool:  # pylint: disable=unused-argument
     """Always returns True"""
     return True
 
 
-def nothing(text: str, expression: str) -> bool:
+def nothing(text: str, expression: str) -> bool:  # pylint: disable=unused-argument
     """Always returns False"""
     return False
 
