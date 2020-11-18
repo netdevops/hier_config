@@ -29,7 +29,7 @@ setup(
         ]
     ),
     keywords="hier_config",
-    python_requires=">=3.7",
+    python_requires=">=3.8",
     install_requires=["pyyaml"],
     extras_require={
         "testing": [

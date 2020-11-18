@@ -7,7 +7,7 @@ python:
 # - "3.10"
 
 install:
-- "pip3 install .[testing]"
+- pip3 install ".[testing]"
 
 script:
 - "pytest"
