@@ -10,8 +10,8 @@ install:
 - pip3 install ".[testing]"
 
 script:
-- "pylint hier_config"
-- "pytest"
+- pylint --rcfile=.pylintrc hier_config
+- pytest
 
 after_success:
 - "cd docs/_mkdocs; ./mkdocs.sh; cd -"
