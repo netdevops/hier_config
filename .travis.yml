@@ -10,6 +10,7 @@ install:
 - pip3 install ".[testing]"
 
 script:
+- "pylint hier_config"
 - "pytest"
 
 after_success:
