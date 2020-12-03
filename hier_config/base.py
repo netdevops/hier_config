@@ -295,6 +295,11 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
         for child in self.children:
             self.children_dict.setdefault(child.text, child)
 
+    def delete_all_children(self) -> None:
+        """ Delete all children """
+        self.children.clear()
+        self.rebuild_children_dict()
+
     def _with_tags(
         self, tags: Set[str], new_instance: Union[HConfig, HConfigChild]
     ) -> Union[HConfig, HConfigChild]:
@@ -323,11 +328,6 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
         self._config_to_get_to_right(target, delta)
 
         return delta
-
-    def delete_all_children(self) -> None:
-        """ Delete all children """
-        self.children.clear()
-        self.rebuild_children_dict()
 
     def _difference(
         self,

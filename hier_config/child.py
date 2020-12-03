@@ -207,16 +207,6 @@ class HConfigChild(HConfigBase):
         else:
             self._tags.difference_update(tags)
 
-    @staticmethod
-    def _to_set(items: Union[str, List[str], Set[str]]) -> Set[str]:
-        # There's code out in the wild that passes List[str] or str, need to normalize for now
-        if isinstance(items, list):
-            return set(items)
-        if isinstance(items, str):
-            return {items}
-        # Assume it's a set of str
-        return items
-
     def negate(self) -> HConfigChild:
         """ Negate self.text """
         for rule in self.options["negation_negate_with"]:
@@ -263,34 +253,6 @@ class HConfigChild(HConfigBase):
                 child.tags = value  # type: ignore
         else:
             self._tags = value
-
-    def _swap_negation(self) -> HConfigChild:
-        """ Swap negation of a self.text """
-        if self.text.startswith(self._negation_prefix):
-            self.text = self.text[len(self._negation_prefix) :]
-        else:
-            self.text = self._negation_prefix + self.text
-
-        return self
-
-    def _default(self) -> HConfigChild:
-        """ Default self.text """
-        if self.text.startswith(self._negation_prefix):
-            self.text = "default " + self.text[len(self._negation_prefix) :]
-        else:
-            self.text = "default " + self.text
-        return self
-
-    def _idempotent_acl_check(self) -> bool:
-        """
-        Handle conditional testing to determine if idempotent acl handling for iosxr should be used
-        """
-        if self.host.os in {"iosxr"}:
-            if isinstance(self.parent, HConfigChild):
-                acl = ("ipv4 access-list ", "ipv6 access-list ")
-                if self.parent.text.startswith(acl):
-                    return True
-        return False
 
     def is_idempotent_command(self, other_children: Iterable[HConfigChild]) -> bool:
         """ Determine if self.text is an idempotent change. """
@@ -405,6 +367,44 @@ class HConfigChild(HConfigBase):
             return False
 
         return matches == rule_lineage_len
+
+    @staticmethod
+    def _to_set(items: Union[str, List[str], Set[str]]) -> Set[str]:
+        # There's code out in the wild that passes List[str] or str, need to normalize for now
+        if isinstance(items, list):
+            return set(items)
+        if isinstance(items, str):
+            return {items}
+        # Assume it's a set of str
+        return items
+
+    def _swap_negation(self) -> HConfigChild:
+        """ Swap negation of a self.text """
+        if self.text.startswith(self._negation_prefix):
+            self.text = self.text[len(self._negation_prefix) :]
+        else:
+            self.text = self._negation_prefix + self.text
+
+        return self
+
+    def _default(self) -> HConfigChild:
+        """ Default self.text """
+        if self.text.startswith(self._negation_prefix):
+            self.text = "default " + self.text[len(self._negation_prefix) :]
+        else:
+            self.text = "default " + self.text
+        return self
+
+    def _idempotent_acl_check(self) -> bool:
+        """
+        Handle conditional testing to determine if idempotent acl handling for iosxr should be used
+        """
+        if self.host.os in {"iosxr"}:
+            if isinstance(self.parent, HConfigChild):
+                acl = ("ipv4 access-list ", "ipv6 access-list ")
+                if self.parent.text.startswith(acl):
+                    return True
+        return False
 
     @staticmethod
     def _explode_lineage_rule(rule: dict) -> Tuple[list, list]:

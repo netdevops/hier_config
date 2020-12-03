@@ -104,11 +104,6 @@ class Host:
     def load_generated_config(self, config_text: str) -> None:
         self._generated_config = self._load_config(config_text)
 
-    def _load_config(self, config_text: str) -> HConfig:
-        hier = HConfig(host=self)
-        hier.load_from_string(config_text)
-        return hier
-
     def remediation_config_filtered_text(
         self, include_tags: Set[str], exclude_tags: Set[str]
     ) -> str:
@@ -141,6 +136,11 @@ class Host:
         if not isinstance(tags_from_file, list):
             raise TypeError
         self.load_tags(tags_from_file)
+
+    def _load_config(self, config_text: str) -> HConfig:
+        hier = HConfig(host=self)
+        hier.load_from_string(config_text)
+        return hier
 
     @staticmethod
     def _load_from_file(name: str, parse_yaml: bool = False) -> Union[list, dict, str]:

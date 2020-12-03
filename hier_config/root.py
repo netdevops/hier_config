@@ -132,95 +132,6 @@ class HConfig(HConfigBase):
             config_text = file.read()
         self.load_from_string(config_text)
 
-    @staticmethod
-    def _load_from_string_lines_end_of_banner_test(
-        config_line: str, banner_end_lines: Set[str], banner_end_contains: List[str]
-    ) -> bool:
-        if config_line.startswith("^"):
-            return True
-        if config_line in banner_end_lines:
-            return True
-        if any([c in config_line for c in banner_end_contains]):
-            return True
-        return False
-
-    # pylint: disable=too-many-locals,too-many-branches,too-many-statements
-    def _load_from_string_lines(self, config_text: str) -> None:
-        current_section: Union[HConfig, HConfigChild] = self
-        most_recent_item: Union[HConfig, HConfigChild] = current_section
-        indent_adjust = 0
-        end_indent_adjust = []
-        temp_banner = []
-        banner_end_lines = {"EOF", "%", "!"}
-        banner_end_contains: List[str] = []
-        in_banner = False
-
-        for line in config_text.splitlines():
-            # Process banners in configuration into one line
-            if in_banner:
-                if line != "!":
-                    temp_banner.append(line)
-
-                # Test if this line is the end of a banner
-                if self._load_from_string_lines_end_of_banner_test(
-                    str(line), banner_end_lines, banner_end_contains
-                ):
-                    in_banner = False
-                    most_recent_item = self.add_child("\n".join(temp_banner), True)
-                    most_recent_item.real_indent_level = 0
-                    current_section = self
-                    temp_banner = []
-                continue
-
-            # Test if this line is the start of a banner
-            if line.startswith("banner "):
-                in_banner = True
-                temp_banner.append(line)
-                banner_words = line.split()
-                try:
-                    banner_end_contains.append(banner_words[2])
-                    banner_end_lines.add(banner_words[2][:1])
-                    banner_end_lines.add(banner_words[2][:2])
-                except IndexError:
-                    pass
-                continue
-
-            actual_indent = len(line) - len(line.lstrip())
-            line = " " * actual_indent + " ".join(line.split())
-            for sub in self.options["per_line_sub"]:
-                line = re.sub(sub["search"], sub["replace"], line)
-            line = line.rstrip()
-
-            # If line is now empty, move to the next
-            if not line:
-                continue
-
-            # Determine indentation level
-            this_indent = len(line) - len(line.lstrip()) + indent_adjust
-
-            line = line.lstrip()
-
-            # Walks back up the tree
-            while this_indent <= current_section.real_indent_level:
-                current_section = current_section.parent
-
-            # Walks down the tree by one step
-            if this_indent > most_recent_item.real_indent_level:
-                current_section = most_recent_item
-
-            most_recent_item = current_section.add_child(line, True)
-            most_recent_item.real_indent_level = this_indent
-
-            for expression in self.options["indent_adjust"]:
-                if re.search(expression["start_expression"], line):
-                    indent_adjust += 1
-                    end_indent_adjust.append(expression["end_expression"])
-                    break
-            if end_indent_adjust and re.search(end_indent_adjust[0], line):
-                indent_adjust -= 1
-                del end_indent_adjust[0]
-        assert not in_banner, "we are still in a banner for some reason"
-
     def load_from_string(self, config_text: str) -> None:
         """ Create Hierarchical Configuration nested objects from text """
         for sub in self.options["full_text_sub"]:
@@ -335,37 +246,6 @@ class HConfig(HConfigBase):
 
         return root_config
 
-    def _add_acl_sequence_numbers(self) -> None:
-        """
-        Add ACL sequence numbers for use on configurations with a style of 'ios'
-        """
-        ipv4_acl_sw = "ip access-list"
-        # ipv6_acl_sw = ('ipv6 access-list')
-        if self.host.os in ["ios"]:
-            acl_line_sw: Tuple[str, ...] = ("permit", "deny")
-        else:
-            acl_line_sw = ("permit", "deny", "remark")
-        for child in self.children:
-            if child.text.startswith(ipv4_acl_sw):
-                sequence_number = 10
-                for sub_child in child.children:
-                    if sub_child.text.startswith(acl_line_sw):
-                        sub_child.text = f"{sequence_number} {sub_child.text}"
-                        sequence_number += 10
-
-    def _rm_ipv6_acl_sequence_numbers(self) -> None:
-        """If there are sequence numbers in the IPv6 ACL, remove them"""
-        for acl in self.get_children("startswith", "ipv6 access-list "):
-            for entry in acl.children:
-                if entry.text.startswith("sequence"):
-                    entry.text = " ".join(entry.text.split()[2:])
-
-    def _remove_acl_remarks(self) -> None:
-        for acl in self.get_children("startswith", "ip access-list "):
-            for entry in acl.children:
-                if entry.text.startswith("remark"):
-                    acl.children.remove(entry)
-
     def add_ancestor_copy_of(
         self, parent_to_add: HConfigChild
     ) -> Union[HConfig, HConfigChild]:
@@ -411,6 +291,126 @@ class HConfig(HConfigBase):
         if not isinstance(result, HConfig):
             raise ValueError
         return new_instance
+
+    @staticmethod
+    def _load_from_string_lines_end_of_banner_test(
+        config_line: str, banner_end_lines: Set[str], banner_end_contains: List[str]
+    ) -> bool:
+        if config_line.startswith("^"):
+            return True
+        if config_line in banner_end_lines:
+            return True
+        if any([c in config_line for c in banner_end_contains]):
+            return True
+        return False
+
+    # pylint: disable=too-many-locals,too-many-branches,too-many-statements
+    def _load_from_string_lines(self, config_text: str) -> None:
+        current_section: Union[HConfig, HConfigChild] = self
+        most_recent_item: Union[HConfig, HConfigChild] = current_section
+        indent_adjust = 0
+        end_indent_adjust = []
+        temp_banner = []
+        banner_end_lines = {"EOF", "%", "!"}
+        banner_end_contains: List[str] = []
+        in_banner = False
+
+        for line in config_text.splitlines():
+            # Process banners in configuration into one line
+            if in_banner:
+                if line != "!":
+                    temp_banner.append(line)
+
+                # Test if this line is the end of a banner
+                if self._load_from_string_lines_end_of_banner_test(
+                    str(line), banner_end_lines, banner_end_contains
+                ):
+                    in_banner = False
+                    most_recent_item = self.add_child("\n".join(temp_banner), True)
+                    most_recent_item.real_indent_level = 0
+                    current_section = self
+                    temp_banner = []
+                continue
+
+            # Test if this line is the start of a banner
+            if line.startswith("banner "):
+                in_banner = True
+                temp_banner.append(line)
+                banner_words = line.split()
+                try:
+                    banner_end_contains.append(banner_words[2])
+                    banner_end_lines.add(banner_words[2][:1])
+                    banner_end_lines.add(banner_words[2][:2])
+                except IndexError:
+                    pass
+                continue
+
+            actual_indent = len(line) - len(line.lstrip())
+            line = " " * actual_indent + " ".join(line.split())
+            for sub in self.options["per_line_sub"]:
+                line = re.sub(sub["search"], sub["replace"], line)
+            line = line.rstrip()
+
+            # If line is now empty, move to the next
+            if not line:
+                continue
+
+            # Determine indentation level
+            this_indent = len(line) - len(line.lstrip()) + indent_adjust
+
+            line = line.lstrip()
+
+            # Walks back up the tree
+            while this_indent <= current_section.real_indent_level:
+                current_section = current_section.parent
+
+            # Walks down the tree by one step
+            if this_indent > most_recent_item.real_indent_level:
+                current_section = most_recent_item
+
+            most_recent_item = current_section.add_child(line, True)
+            most_recent_item.real_indent_level = this_indent
+
+            for expression in self.options["indent_adjust"]:
+                if re.search(expression["start_expression"], line):
+                    indent_adjust += 1
+                    end_indent_adjust.append(expression["end_expression"])
+                    break
+            if end_indent_adjust and re.search(end_indent_adjust[0], line):
+                indent_adjust -= 1
+                del end_indent_adjust[0]
+        assert not in_banner, "we are still in a banner for some reason"
+
+    def _add_acl_sequence_numbers(self) -> None:
+        """
+        Add ACL sequence numbers for use on configurations with a style of 'ios'
+        """
+        ipv4_acl_sw = "ip access-list"
+        # ipv6_acl_sw = ('ipv6 access-list')
+        if self.host.os in ["ios"]:
+            acl_line_sw: Tuple[str, ...] = ("permit", "deny")
+        else:
+            acl_line_sw = ("permit", "deny", "remark")
+        for child in self.children:
+            if child.text.startswith(ipv4_acl_sw):
+                sequence_number = 10
+                for sub_child in child.children:
+                    if sub_child.text.startswith(acl_line_sw):
+                        sub_child.text = f"{sequence_number} {sub_child.text}"
+                        sequence_number += 10
+
+    def _rm_ipv6_acl_sequence_numbers(self) -> None:
+        """If there are sequence numbers in the IPv6 ACL, remove them"""
+        for acl in self.get_children("startswith", "ipv6 access-list "):
+            for entry in acl.children:
+                if entry.text.startswith("sequence"):
+                    entry.text = " ".join(entry.text.split()[2:])
+
+    def _remove_acl_remarks(self) -> None:
+        for acl in self.get_children("startswith", "ip access-list "):
+            for entry in acl.children:
+                if entry.text.startswith("remark"):
+                    acl.children.remove(entry)
 
     def _duplicate_child_allowed_check(self) -> bool:
         """ Determine if duplicate(identical text) children are allowed under the parent """
