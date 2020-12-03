@@ -7,10 +7,11 @@ python:
 # - "3.10"
 
 install:
-- "pip3 install .[testing]"
+- pip3 install ".[testing]"
 
 script:
-- "pytest"
+- pylint --rcfile=.pylintrc hier_config
+- pytest
 
 after_success:
 - "cd docs/_mkdocs; ./mkdocs.sh; cd -"

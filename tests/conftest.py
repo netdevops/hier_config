@@ -1,7 +1,7 @@
 from os import path
 
-import pytest
 import yaml
+import pytest
 
 
 @pytest.fixture(scope="module")

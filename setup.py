@@ -34,6 +34,7 @@ setup(
     extras_require={
         "testing": [
             "pytest",
+            "pylint",
             "pep8",
             "pytest-cov",
             "pytest-black",
