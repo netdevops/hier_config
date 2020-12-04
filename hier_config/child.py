@@ -368,16 +368,6 @@ class HConfigChild(HConfigBase):
 
         return matches == rule_lineage_len
 
-    @staticmethod
-    def _to_set(items: Union[str, List[str], Set[str]]) -> Set[str]:
-        # There's code out in the wild that passes List[str] or str, need to normalize for now
-        if isinstance(items, list):
-            return set(items)
-        if isinstance(items, str):
-            return {items}
-        # Assume it's a set of str
-        return items
-
     def _swap_negation(self) -> HConfigChild:
         """ Swap negation of a self.text """
         if self.text.startswith(self._negation_prefix):
@@ -472,6 +462,16 @@ class HConfigChild(HConfigBase):
     @staticmethod
     def _to_list(obj: Union[list, object]) -> list:
         return obj if isinstance(obj, list) else [obj]
+
+    @staticmethod
+    def _to_set(items: Union[str, List[str], Set[str]]) -> Set[str]:
+        # There's code out in the wild that passes List[str] or str, need to normalize for now
+        if isinstance(items, list):
+            return set(items)
+        if isinstance(items, str):
+            return {items}
+        # Assume it's a set of str
+        return items
 
     def _duplicate_child_allowed_check(self) -> bool:
         """ Determine if duplicate(identical text) children are allowed under the parent """
