@@ -35,10 +35,23 @@ class Host:
         host.remediation_config_filtered_text({"safe"}, set()})
     """
 
-    def __init__(self, hostname: str, os: str, hconfig_options: dict):
+    def __init__(
+        self,
+        hostname: str,
+        os: str,
+        hconfig_options: Optional[dict] = None,
+        hconfig_options_file: Optional[str] = None,
+    ):
+        if hconfig_options_file:
+            self.hconfig_options = self._load_from_file(hconfig_options_file)
+        elif hconfig_options:
+            self.hconfig_options = hconfig_options
+        else:
+            raise ValueError(
+                "Neither hconfig_options or hconfig_options_file were specified"
+            )
         self.hostname = hostname
         self.os = os
-        self.hconfig_options = hconfig_options
         self._hconfig_tags: List[dict] = list()
         self._running_config: Optional[HConfig] = None
         self._generated_config: Optional[HConfig] = None
