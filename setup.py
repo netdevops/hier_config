@@ -34,13 +34,13 @@ setup(
     extras_require={
         "testing": [
             "pytest",
-            "pylint",
-            "pep8",
+            "mypy",
             "pytest-cov",
             "pytest-black",
             "pytest-runner",
             "pytest-flake8",
             "pytest-pylint",
+            # "pytest-mypy",
         ]
     },
     classifiers=[
