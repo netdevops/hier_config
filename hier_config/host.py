@@ -39,17 +39,9 @@ class Host:
         self,
         hostname: str,
         os: str,
-        hconfig_options: Optional[dict] = None,
-        hconfig_options_file: Optional[str] = None,
+        hconfig_options: dict,
     ):
-        if hconfig_options_file:
-            self.hconfig_options = self._load_from_file(hconfig_options_file)
-        elif hconfig_options:
-            self.hconfig_options = hconfig_options
-        else:
-            raise ValueError(
-                "Neither hconfig_options or hconfig_options_file were specified"
-            )
+        self.hconfig_options = hconfig_options
         self.hostname = hostname
         self.os = os
         self._hconfig_tags: List[dict] = list()
