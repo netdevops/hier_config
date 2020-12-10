@@ -1,5 +1,8 @@
-from hier_config import HConfig
-import hier_config.helpers as H
+from typing import List, Set, Union, Optional
+
+import yaml
+
+from .root import HConfig
 
 
 class Host:
@@ -15,179 +18,111 @@ class Host:
         import yaml
         from hier_config.host import Host
 
-        options = yaml.load(open('./tests/files/test_options_ios.yml'))
+        options = yaml.load(open('./tests/fixtures/options_ios.yml'), loader=yaml.SafeLoader())
         host = Host('example.rtr', 'ios', options)
 
-        # Example of easily extending the host object
-        host.facts['chassis_model'] = 'WS-C4948E'
-
-        # Example of loading running config and compiled configs into a host object
-        host.load_config_from(config_type="running", name="./tests/files/running_config.conf")
-        host.load_config_from(config_type="compiled", name="./tests/files/compiled_config.conf")
+        # Example of loading running config and generated configs into a host object
+        host.load_running_config_from_file("./tests/files/running_config.conf)
+        host.load_generated_config_from_file("./tests/files/generated_config.conf)
 
         # Example of loading hier-config tags into a host object
-        host.load_tags("./tests/files/test_tags_ios.yml")
+        host.load_tags("./tests/fixtures/tags_ios.yml")
 
         # Example of creating a remediation config without a tag targeting specific config
-        host.load_remediation()
+        host.remediation_config()
 
         # Example of creating a remediation config with a tag ('safe') targeting a specific config.
-        host.filter_remediation(include_tags=['safe'])
-
-    :param hostname: type str
-    :param os: type str
-    :param hconfig_options: type dict
-
-    :return: Host Object
-
+        host.remediation_config_filtered_text({"safe"}, set()})
     """
 
-    def __init__(self, hostname, os, hconfig_options):
-        self.hostname = str(hostname)
-        self.os = str(os)
-        self.hconfig_options = dict(hconfig_options)
-        self._hconfig_tags = list()
-        self._running_config = None
-        self._compiled_config = None
-        self._remediation_config = None
-        self.facts = dict()
+    def __init__(
+        self,
+        hostname: str,
+        os: str,
+        hconfig_options: dict,
+    ):
+        self.hconfig_options = hconfig_options
+        self.hostname = hostname
+        self.os = os
+        self._hconfig_tags: List[dict] = list()
+        self._running_config: Optional[HConfig] = None
+        self._generated_config: Optional[HConfig] = None
+        self._remediation_config: Optional[HConfig] = None
 
-    def __repr__(self):
-        return 'Host(hostname={})'.format(self.hostname)
+    def __repr__(self) -> str:
+        return f"Host(hostname={self.hostname})"
 
     @property
-    def running_config(self):
-        """
-        running configuration property
-
-        :return: self._running_config -> type HConfig Object or None
-        """
+    def running_config(self) -> Optional[HConfig]:
+        """running configuration property"""
         if self._running_config is None:
             self._running_config = self._get_running_config()
         return self._running_config
 
     @property
-    def compiled_config(self):
-        """
-        compiled configuration property
+    def generated_config(self) -> Optional[HConfig]:
+        """generated configuration property"""
+        if self._generated_config is None:
+            self._generated_config = self._get_generated_config()
+        return self._generated_config
 
-        :return: self._compiled_config -> type HConfig Object or None
+    def remediation_config(self) -> HConfig:
         """
-        if self._compiled_config is None:
-            self._compiled_config = self._get_compiled_config()
-        return self._compiled_config
+        Once self.running_config and self.generated_config have been created,
+        create self.remediation_config
+        """
+        if isinstance(self._remediation_config, HConfig):
+            return self._remediation_config
+
+        if self.running_config and self.generated_config:
+            remediation = self.running_config.config_to_get_to(self.generated_config)
+        else:
+            raise AttributeError("Missing host.running_config or host.generated_config")
+
+        remediation.add_sectional_exiting()
+        remediation.set_order_weight()
+        remediation.add_tags(self.hconfig_tags)
+        self._remediation_config = remediation
+
+        return remediation
 
     @property
-    def remediation_config(self):
-        """
-        remediation configuration property
-
-        :return: self._remediation_config -> type HConfig Object or None
-        """
-        if self._remediation_config is None:
-            self._remediation_config = self._get_remediation_config()
-        return self._remediation_config
-
-    @property
-    def hconfig_tags(self):
-        """
-        hier-config tags property
-
-        :return: self._hconfig_tags -> type list of dicts
-        """
+    def hconfig_tags(self) -> List[dict]:
+        """hier-config tags property"""
         return self._hconfig_tags
 
-    def load_config_from(self, config_type, name, load_file=True):
-        """
-        1. Loads a running config or a compiled config into a Host object
-        2. Sets host.facts['running_config_raw'] or host.facts['compiled_config_raw']
-        3. Loads the config into HConfig
-        4. Sets the loaded hier-config in host.facts['running_config'] or host.facts['compiled_config']
+    def load_running_config_from_file(self, file: str) -> None:
+        config = self._load_from_file(file)
+        if not isinstance(config, str):
+            raise TypeError
+        self.load_running_config(config)
 
-        :param config_type: 'running' or 'compiled' -> type str
-        :param name: file name or config text string to load -> type str
-        :param load_file: default, True -> type bool
-        :return: self.running_config or self.compiled_config
-        """
-        hier = HConfig(host=self)
+    def load_running_config(self, config_text: str) -> None:
+        self._running_config = self._load_config(config_text)
 
-        if load_file:
-            config_text = self._load_from_file(name)
+    def load_generated_config_from_file(self, file: str) -> None:
+        config = self._load_from_file(file)
+        if not isinstance(config, str):
+            raise TypeError
+        self.load_generated_config(config)
+
+    def load_generated_config(self, config_text: str) -> None:
+        self._generated_config = self._load_config(config_text)
+
+    def remediation_config_filtered_text(
+        self, include_tags: Set[str], exclude_tags: Set[str]
+    ) -> str:
+        config = self.remediation_config()
+        if include_tags or exclude_tags:
+            children = config.all_children_sorted_by_tags(include_tags, exclude_tags)
         else:
-            config_text = name
+            children = config.all_children()
 
-        hier.load_from_string(config_text)
+        return "\n".join(c.cisco_style_text() for c in children)
 
-        if config_type == "running":
-            self.facts["running_config_raw"] = config_text
-            self._running_config = hier
-
-            return self.running_config
-        elif config_type == "compiled":
-            self.facts["compiled_config_raw"] = config_text
-            self._compiled_config = hier
-
-            return self.compiled_config
-        else:
-            raise SyntaxError("Unknown config_type. Expected 'running' or 'compiled'")
-
-    def load_remediation(self):
+    def load_tags(self, tags: list) -> None:
         """
-        Once self.running_config and self.compled_config have been created,
-        create self.remediation_config
-
-        :return: self.remediation_config
-        """
-        if self.running_config and self.compiled_config:
-            self._remediation_config = self.running_config.config_to_get_to(
-                self.compiled_config
-            )
-        else:
-            raise AttributeError("Missing host.running_config or host.compiled_config")
-
-        self.remediation_config.add_sectional_exiting()
-        self.remediation_config.set_order_weight()
-        self.remediation_config.add_tags(self.hconfig_tags)
-        self.filter_remediation()
-
-        return self.remediation_config
-
-    def filter_remediation(self, include_tags=None, exclude_tags=None):
-        """
-        Run filter jobs, based on tags on self.remediation_config
-
-        :param include_tags: type list
-        :param exclude_tags: type list
-        :return: self.facts['remediation_conig_raw'] -> type str
-        """
-        remediation_text = str()
-
-        if include_tags or exclude_tags is not None:
-            include_tags = H.to_list(include_tags)
-            exclude_tags = H.to_list(exclude_tags)
-
-            for line in self.remediation_config.all_children_sorted_by_tags(include_tags, exclude_tags):
-                remediation_text += line.cisco_style_text()
-                remediation_text += '\n'
-        else:
-            for line in self.remediation_config.all_children():
-                remediation_text += line.cisco_style_text()
-                remediation_text += '\n'
-
-        self.facts["remediation_config_raw"] = remediation_text
-
-        return self.facts["remediation_config_raw"]
-
-    def load_tags(self, name, load_file=True):
-        """
-        Loads lineage rules into host.facts["hconfig_tags"]
-
-        Example:
-            Specify to load lineage rules from a file.
-
-        .. code:: python
-
-            host.load_tags('tags_ios.yml')
+        Loads lineage rules that set tags
 
         Example:
             Specify to load lineage rules from a dictionary.
@@ -195,42 +130,39 @@ class Host:
         .. code:: python
 
             tags = [{"lineage": [{"startswith": "interface"}], "add_tags": "interfaces"}]
-            host.load_tags(tags, file=False)
+            host.load_tags(tags)
 
-        :param name: tags from a file or dictionary
-        :param load_file: default, True -> type bool
-        :return: self.hconfig_tags
+        :param tags: tags
         """
-        if load_file:
-            self._hconfig_tags = self._load_from_file(name, parse_yaml=True)
-        else:
-            self._hconfig_tags = name
+        self._hconfig_tags = tags
 
-        return self.hconfig_tags
+    def load_tags_from_file(self, file: str) -> None:
+        tags_from_file = self._load_from_file(file, True)
+        if not isinstance(tags_from_file, list):
+            raise TypeError
+        self.load_tags(tags_from_file)
+
+    def _load_config(self, config_text: str) -> HConfig:
+        hier = HConfig(host=self)
+        hier.load_from_string(config_text)
+        return hier
 
     @staticmethod
-    def _load_from_file(name, parse_yaml=False):
-        """
-        Opens a config file and loads it as a string.
-
-        :param name: type str
-        :param parse_yaml: type boolean
-        :return: content -> type str or type dict
-        """
-        with open(name) as f:
-            content = f.read()
+    def _load_from_file(name: str, parse_yaml: bool = False) -> Union[list, dict, str]:
+        """Opens a config file and loads it as a string."""
+        with open(name) as file:
+            content = file.read()
 
         if parse_yaml:
-            import yaml
             content = yaml.safe_load(content)
 
         return content
 
-    def _get_running_config(self):
+    def _get_running_config(self) -> HConfig:  # pylint: disable=no-self-use
         return NotImplemented
 
-    def _get_compiled_config(self):
+    def _get_generated_config(self) -> HConfig:  # pylint: disable=no-self-use
         return NotImplemented
 
-    def _get_remediation_config(self):
+    def _get_remediation_config(self) -> HConfig:  # pylint: disable=no-self-use
         return NotImplemented

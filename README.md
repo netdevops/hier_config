@@ -1,5 +1,4 @@
 [![Build Status](https://travis-ci.org/netdevops/hier_config.svg?branch=master)](https://travis-ci.org/netdevops/hier_config)
-[![CodeFactor](https://www.codefactor.io/repository/github/netdevops/hier_config/badge)](https://www.codefactor.io/repository/github/netdevops/hier_config)
 
 # Hierarchical Configuration
 
@@ -34,30 +33,27 @@ pip install hier-config
 Basic Usage Example
 ===================
 
-In the below example, we create a hier_config host object, load a running config and a compiled config into the host object, load the remediation, and print out the remediation lines to bring a device into spec.
+In the below example, we create a hier_config host object, load a running config and a generated config into the host object, load the remediation, and print out the remediation lines to bring a device into spec.
 
 ```
->>> from hier_config.host import Host
+```
+>>> from hier_config import Host
 >>> import yaml
 >>>
->>> options = yaml.load(open('./tests/files/test_options_ios.yml'), Loader=yaml.SafeLoader)
+>>> options = yaml.load(open('./tests/fixtures/options_ios.yml'), Loader=yaml.SafeLoader)
 >>> host = Host('example.rtr', 'ios', options)
 >>>
->>> # Build HConfig object for the Running Config
->>> host.load_config_from("running", './tests/files/running_config.conf')
+>>> # Build Hierarchical Configuration object for the Running Config
+>>> host.load_running_config_from_file("./tests/fixtures/running_config.conf")
 HConfig(host=Host(hostname=example.rtr))
 >>>
->>> # Build Hierarchical Configuration object for the Compiled Config
->>> host.load_config_from("compiled", './tests/files/compiled_config.conf')
-HConfig(host=Host(hostname=example.rtr))
->>> host.load_remediation()
+>>> # Build Hierarchical Configuration object for the Generated Config
+>>> host.load_generated_config_from_file("./tests/fixtures/generated_config.conf")
 HConfig(host=Host(hostname=example.rtr))
 >>>
->>> # Build Hierarchical Configuration object for the Remediation Config
+>>> # Build and Print the all lines of the remediation config
 >>>
->>> for line in host.remediation_config.all_children():
-...     print(line.cisco_style_text())
-...
+>>> print(host.remediation_config_filtered_text()):
 vlan 3
   name switch_mgmt_10.0.3.0/24
 vlan 4
@@ -77,4 +73,4 @@ interface Vlan4
   no shutdown
 ```
 
-The files in the example can be seen in the `tests/files` folder.
+The files in the example can be seen in the `tests/fixtures` folder.

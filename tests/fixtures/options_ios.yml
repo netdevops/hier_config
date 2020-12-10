@@ -2,7 +2,7 @@
 # Indicates the style of the configuration
 style: ios
 
-# if there is a delta, negate the parents and re-write the parents with children 
+# if there is a delta, negate the parents and re-write the parents with children
 sectional_overwrite: []
 
 # if there is a delta, overwrite these parents instead of one of their children
@@ -10,7 +10,7 @@ sectional_overwrite_no_negate: []
 
 # The default order value is 500, with a range between 1 - 999.
 # Commands with smaller order values float to the top in the order of execution.
-# Commands with larger order values float to the bottom in the order of execution. 
+# Commands with larger order values float to the bottom in the order of execution.
 # Syntax Example:
 # - lineage:
 #   - startswith:
