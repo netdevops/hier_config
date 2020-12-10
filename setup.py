@@ -35,11 +35,15 @@ setup(
         "testing": [
             "pytest",
             "mypy",
+            "pylint",
             "pytest-cov",
             "pytest-black",
             "pytest-runner",
             "pytest-flake8",
-            "pytest-pylint",
+            # There were issues encountered when trying to use the below modules
+            # ERROR: pytest-pylint 0.18.0 has requirement pytest>=5.4, but you'll have pytest 5.2.1 which is incompatible.
+            # "pytest-pylint",
+            # I need to figure out how to ignore all other directories except for hier_config
             # "pytest-mypy",
         ]
     },
