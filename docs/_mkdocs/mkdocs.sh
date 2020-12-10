@@ -37,7 +37,5 @@ rsync -avz --exclude sphinx-env "${PWD}/_build/dirhtml/" "../../docs"
 exit 0
 }
 
-if [[ $TRAVIS_PYTHON_VERSION == "3.6" ]]; then
-   make_docs
-fi
+make_docs
 
