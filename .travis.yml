@@ -10,6 +10,7 @@ install:
 - pip3 install ".[testing]"
 
 script:
+- mypy hier_config
 - pylint --rcfile=pylintrc hier_config
 - pytest
 
