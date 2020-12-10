@@ -11,7 +11,7 @@ install:
 
 script:
 - mypy hier_config
-- pylint --rcfile=.pylintrc hier_config
+- pylint --rcfile=pylintrc hier_config
 - pytest
 
 after_success:
