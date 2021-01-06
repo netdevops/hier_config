@@ -1,8 +1,8 @@
 name: deploy to pypi and github pages
 
-on:
-  release:
-    types: [created]
+# on:
+#   release:
+#    types: [created]
 
 jobs:
   deploy:
@@ -26,12 +26,15 @@ jobs:
       run: |
         python setup.py sdist bdist_wheel
         twine upload dist/*
-    - name: Build and publish docs to github
+    - name: Build docs
       run: |
         git checkout -b gh-pages
         cd docs/_mkdocs
         sphinx-apidoc -f -o hier_config ../../hier_config
         make github
-        git add .
-        git commit -m "release documentation"
-        git push origin gh-pages
+        cd -
+    - name: Deploy docs
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.HIER_TOKEN }}
+        publish_dir: ./docs
