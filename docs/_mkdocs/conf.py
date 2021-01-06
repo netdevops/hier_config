@@ -16,8 +16,6 @@
 import os
 import sys
 
-from setup import __version__
-
 sys.path.insert(0, os.path.abspath("../.."))
 
 
@@ -26,6 +24,8 @@ sys.path.insert(0, os.path.abspath("../.."))
 project = "Hieararchical Configuration"
 copyright = "2020, Andrew Edwards, Jan Brooks, James Williams"  # pylint: disable=redefined-builtin
 author = "Andrew Edwards, Jan Brooks, James Williams"
+
+__version__ = "2.0.0"
 
 # The short X.Y version
 version = __version__

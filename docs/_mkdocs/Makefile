@@ -18,3 +18,10 @@ help:
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
 %: Makefile
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+
+# make github
+github:
+	@sphinx-apidoc -f -o hier_config ../../hier_config
+	@make clean
+	@make dirhtml
+	@cp -a _build/dirhtml/. ../
