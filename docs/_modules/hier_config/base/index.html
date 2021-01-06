@@ -1,0 +1,610 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>hier_config.base &mdash; Hieararchical Configuration 2.0.0 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../../_static/css/theme.css" type="text/css" />
+  <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+        <script src="../../../_static/jquery.js"></script>
+        <script src="../../../_static/underscore.js"></script>
+        <script src="../../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../../genindex/" />
+    <link rel="search" title="Search" href="../../../search/" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+
+          
+            <a href="../../../" class="icon icon-home"> Hieararchical Configuration
+          
+
+          
+          </a>
+
+          
+            
+            
+              <div class="version">
+                2.0.0
+              </div>
+            
+          
+
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../search/" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+          
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../hier_config/">Code Documentation</a></li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../">Hieararchical Configuration</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../../">Module code</a> &raquo;</li>
+        
+      <li>hier_config.base</li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <h1>Source code for hier_config.base</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="p">(</span>
+    <span class="n">Optional</span><span class="p">,</span>
+    <span class="n">List</span><span class="p">,</span>
+    <span class="n">Iterator</span><span class="p">,</span>
+    <span class="n">Dict</span><span class="p">,</span>
+    <span class="n">Tuple</span><span class="p">,</span>
+    <span class="n">Union</span><span class="p">,</span>
+    <span class="n">Set</span><span class="p">,</span>
+    <span class="n">TYPE_CHECKING</span><span class="p">,</span>
+    <span class="n">Type</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="kn">from</span> <span class="nn">logging</span> <span class="kn">import</span> <span class="n">getLogger</span>
+<span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">ABC</span><span class="p">,</span> <span class="n">abstractmethod</span>
+<span class="kn">from</span> <span class="nn">functools</span> <span class="kn">import</span> <span class="n">cached_property</span>
+
+<span class="kn">from</span> <span class="nn">.</span> <span class="kn">import</span> <span class="n">text_match</span>
+
+<span class="k">if</span> <span class="n">TYPE_CHECKING</span><span class="p">:</span>
+    <span class="kn">from</span> <span class="nn">.child</span> <span class="kn">import</span> <span class="n">HConfigChild</span>
+    <span class="kn">from</span> <span class="nn">.root</span> <span class="kn">import</span> <span class="n">HConfig</span>
+    <span class="kn">from</span> <span class="nn">.host</span> <span class="kn">import</span> <span class="n">Host</span>
+
+<span class="n">logger</span> <span class="o">=</span> <span class="n">getLogger</span><span class="p">(</span><span class="vm">__name__</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="HConfigBase"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.base.HConfigBase">[docs]</a><span class="k">class</span> <span class="nc">HConfigBase</span><span class="p">(</span><span class="n">ABC</span><span class="p">):</span>  <span class="c1"># pylint: disable=too-many-public-methods</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">HConfigChild</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">children_dict</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">HConfigChild</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">host</span><span class="p">:</span> <span class="n">Host</span>
+
+    <span class="k">def</span> <span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">c</span><span class="o">.</span><span class="n">cisco_style_text</span><span class="p">()</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">all_children</span><span class="p">())</span>
+
+    <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">all_children</span><span class="p">()))</span>
+
+    <span class="k">def</span> <span class="fm">__bool__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__contains__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">item</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">children_dict</span>
+
+    <span class="k">def</span> <span class="fm">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">other</span><span class="p">,</span> <span class="n">HConfigBase</span><span class="p">):</span>
+            <span class="k">return</span> <span class="bp">NotImplemented</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="p">)</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">children</span><span class="p">):</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="k">for</span> <span class="n">self_child</span><span class="p">,</span> <span class="n">other_child</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
+            <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="p">),</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">other</span><span class="o">.</span><span class="n">children</span><span class="p">)</span>
+        <span class="p">):</span>
+            <span class="k">if</span> <span class="n">self_child</span> <span class="o">!=</span> <span class="n">other_child</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+
+        <span class="k">return</span> <span class="kc">True</span>
+
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_duplicate_child_allowed_check</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@property</span>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">options</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@property</span>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">root</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">HConfig</span><span class="p">:</span>
+        <span class="k">pass</span>
+
+<div class="viewcode-block" id="HConfigBase.lineage"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.base.HConfigBase.lineage">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">lineage</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">HConfigChild</span><span class="p">]:</span>
+        <span class="k">pass</span></div>
+
+<div class="viewcode-block" id="HConfigBase.depth"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.base.HConfigBase.depth">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">depth</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="k">pass</span></div>
+
+    <span class="nd">@property</span>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">logs</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+        <span class="k">pass</span>
+
+    <span class="nd">@property</span>
+    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">_child_class</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Type</span><span class="p">[</span><span class="n">HConfigChild</span><span class="p">]:</span>
+        <span class="k">pass</span>
+
+<div class="viewcode-block" id="HConfigBase.has_children"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.base.HConfigBase.has_children">[docs]</a>    <span class="k">def</span> <span class="nf">has_children</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">bool</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="HConfigBase.add_children"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.base.HConfigBase.add_children">[docs]</a>    <span class="k">def</span> <span class="nf">add_children</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lines</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Add child instances of HConfigChild</span>
+
+<span class="sd">        :param lines: HConfigChild object -&gt; type list</span>
+<span class="sd">        :return: None</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">add_child</span><span class="p">(</span><span class="n">line</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="HConfigBase.add_child"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.base.HConfigBase.add_child">[docs]</a>    <span class="k">def</span> <span class="nf">add_child</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">alert_on_duplicate</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+        <span class="n">idx</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+        <span class="n">force_duplicate</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">HConfigChild</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot; Add a child instance of HConfigChild &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="n">idx</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">idx</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="p">)</span>
+        <span class="c1"># if child does not exist</span>
+        <span class="k">if</span> <span class="n">text</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="p">:</span>
+            <span class="n">new_item</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_child_class</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">new_item</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">children_dict</span><span class="p">[</span><span class="n">text</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_item</span>
+            <span class="k">return</span> <span class="n">new_item</span>
+        <span class="c1"># if child does exist and is allowed to be installed as a duplicate</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_duplicate_child_allowed_check</span><span class="p">()</span> <span class="ow">or</span> <span class="n">force_duplicate</span><span class="p">:</span>
+            <span class="n">new_item</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_child_class</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">)</span>  <span class="c1"># type: ignore</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="n">idx</span><span class="p">,</span> <span class="n">new_item</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rebuild_children_dict</span><span class="p">()</span>
+            <span class="k">return</span> <span class="n">new_item</span>
+
+        <span class="c1"># If the child is already present and the parent does not allow</span>
+        <span class="c1"># duplicate children, return the existing child</span>
+        <span class="c1"># Ignore duplicate remarks in ACLs</span>
+        <span class="k">if</span> <span class="n">alert_on_duplicate</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">text</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;remark &quot;</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Found a duplicate section: </span><span class="si">{</span><span class="nb">list</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span><span class="p">())</span> <span class="o">+</span> <span class="p">[</span><span class="n">text</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">children_dict</span><span class="p">[</span><span class="n">text</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="HConfigBase.path"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.base.HConfigBase.path">[docs]</a>    <span class="k">def</span> <span class="nf">path</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>  <span class="c1"># pylint: disable=no-self-use</span>
+        <span class="k">yield from</span> <span class="p">()</span></div>
+
+<div class="viewcode-block" id="HConfigBase.add_deep_copy_of"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.base.HConfigBase.add_deep_copy_of">[docs]</a>    <span class="k">def</span> <span class="nf">add_deep_copy_of</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">child_to_add</span><span class="p">:</span> <span class="n">HConfigChild</span><span class="p">,</span> <span class="n">merged</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">HConfigChild</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Add a nested copy of a child to self&quot;&quot;&quot;</span>
+        <span class="n">new_child</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_shallow_copy_of</span><span class="p">(</span><span class="n">child_to_add</span><span class="p">,</span> <span class="n">merged</span><span class="o">=</span><span class="n">merged</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">child_to_add</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+            <span class="n">new_child</span><span class="o">.</span><span class="n">add_deep_copy_of</span><span class="p">(</span><span class="n">child</span><span class="p">,</span> <span class="n">merged</span><span class="o">=</span><span class="n">merged</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">new_child</span></div>
+
+<div class="viewcode-block" id="HConfigBase.to_tag_spec"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.base.HConfigBase.to_tag_spec">[docs]</a>    <span class="k">def</span> <span class="nf">to_tag_spec</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">tags</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">dict</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns the configuration as a tag spec definition</span>
+
+<span class="sd">        This is handy when you have a segment of config and need to</span>
+<span class="sd">        generate a tag spec to tag configuration in another instance</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">tag_spec</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">all_children</span><span class="p">():</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">child</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+                <span class="n">child_spec</span> <span class="o">=</span> <span class="p">[{</span><span class="s2">&quot;equals&quot;</span><span class="p">:</span> <span class="n">t</span><span class="p">}</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">child</span><span class="o">.</span><span class="n">path</span><span class="p">()]</span>
+                <span class="n">tag_spec</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;section&quot;</span><span class="p">:</span> <span class="n">child_spec</span><span class="p">,</span> <span class="s2">&quot;add_tags&quot;</span><span class="p">:</span> <span class="n">tags</span><span class="p">})</span>
+        <span class="k">return</span> <span class="n">tag_spec</span></div>
+
+<div class="viewcode-block" id="HConfigBase.del_child_by_text"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.base.HConfigBase.del_child_by_text">[docs]</a>    <span class="k">def</span> <span class="nf">del_child_by_text</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot; Delete all children with the provided text &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">text</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">children_dict</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="p">[:]</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">children</span> <span class="k">if</span> <span class="n">c</span><span class="o">.</span><span class="n">text</span> <span class="o">!=</span> <span class="n">text</span><span class="p">]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rebuild_children_dict</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="HConfigBase.del_child"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.base.HConfigBase.del_child">[docs]</a>    <span class="k">def</span> <span class="nf">del_child</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">child</span><span class="p">:</span> <span class="n">HConfigChild</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;Delete a child from self.children and self.children_dict&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="k">pass</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rebuild_children_dict</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="HConfigBase.all_children_sorted_untagged"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.base.HConfigBase.all_children_sorted_untagged">[docs]</a>    <span class="k">def</span> <span class="nf">all_children_sorted_untagged</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">HConfigChild</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot; Yield all children recursively that are untagged &quot;&quot;&quot;</span>
+        <span class="k">yield from</span> <span class="p">(</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">all_children_sorted</span><span class="p">()</span> <span class="k">if</span> <span class="kc">None</span> <span class="ow">in</span> <span class="n">c</span><span class="o">.</span><span class="n">tags</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="HConfigBase.all_children_sorted_by_tags"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.base.HConfigBase.all_children_sorted_by_tags">[docs]</a>    <span class="k">def</span> <span class="nf">all_children_sorted_by_tags</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">include_tags</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">exclude_tags</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">HConfigChild</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot; Yield all children recursively that match include/exlcude tags &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">all_children_sorted</span><span class="p">():</span>
+            <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">line_inclusion_test</span><span class="p">(</span><span class="n">include_tags</span><span class="p">,</span> <span class="n">exclude_tags</span><span class="p">):</span>
+                <span class="k">yield</span> <span class="n">child</span></div>
+
+<div class="viewcode-block" id="HConfigBase.all_children_sorted"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.base.HConfigBase.all_children_sorted">[docs]</a>    <span class="k">def</span> <span class="nf">all_children_sorted</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">HConfigChild</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot; Recursively find and yield all children sorted at each hierarchy &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="nb">sorted</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="p">):</span>
+            <span class="k">yield</span> <span class="n">child</span>
+            <span class="k">yield from</span> <span class="n">child</span><span class="o">.</span><span class="n">all_children_sorted</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="HConfigBase.all_children_sorted_with_lineage_rules"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.base.HConfigBase.all_children_sorted_with_lineage_rules">[docs]</a>    <span class="k">def</span> <span class="nf">all_children_sorted_with_lineage_rules</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">rules</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">dict</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">HConfigChild</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot; Recursively find and yield all children sorted at each hierarchy given lineage rules &quot;&quot;&quot;</span>
+        <span class="n">yielded</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="n">matched</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="n">HConfigChild</span><span class="p">]</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="c1"># pylint: disable=too-many-nested-blocks</span>
+        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">all_children_sorted</span><span class="p">():</span>
+            <span class="k">for</span> <span class="n">ancestor</span> <span class="ow">in</span> <span class="n">child</span><span class="o">.</span><span class="n">lineage</span><span class="p">():</span>
+                <span class="k">if</span> <span class="n">ancestor</span> <span class="ow">in</span> <span class="n">matched</span><span class="p">:</span>
+                    <span class="k">yield</span> <span class="n">child</span>
+                    <span class="n">yielded</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+                    <span class="k">break</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">rule</span> <span class="ow">in</span> <span class="n">rules</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="n">child</span><span class="o">.</span><span class="n">lineage_test</span><span class="p">(</span><span class="n">rule</span><span class="p">,</span> <span class="kc">False</span><span class="p">):</span>
+                        <span class="n">matched</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+                        <span class="k">for</span> <span class="n">ancestor</span> <span class="ow">in</span> <span class="n">child</span><span class="o">.</span><span class="n">lineage</span><span class="p">():</span>
+                            <span class="k">if</span> <span class="n">ancestor</span> <span class="ow">in</span> <span class="n">yielded</span><span class="p">:</span>
+                                <span class="k">continue</span>
+                            <span class="k">yield</span> <span class="n">ancestor</span>
+                            <span class="n">yielded</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">ancestor</span><span class="p">)</span>
+                        <span class="k">break</span></div>
+
+<div class="viewcode-block" id="HConfigBase.all_children"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.base.HConfigBase.all_children">[docs]</a>    <span class="k">def</span> <span class="nf">all_children</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">HConfigChild</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot; Recursively find and yield all children at each hierarchy &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+            <span class="k">yield</span> <span class="n">child</span>
+            <span class="k">yield from</span> <span class="n">child</span><span class="o">.</span><span class="n">all_children</span><span class="p">()</span></div>
+
+<div class="viewcode-block" id="HConfigBase.get_child"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.base.HConfigBase.get_child">[docs]</a>    <span class="k">def</span> <span class="nf">get_child</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">expression</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">HConfigChild</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot; Find a child by text_match rule. If it is not found, return None &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">test</span> <span class="o">==</span> <span class="s2">&quot;equals&quot;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">children_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">return</span> <span class="nb">next</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_children</span><span class="p">(</span><span class="n">test</span><span class="p">,</span> <span class="n">expression</span><span class="p">))</span>
+        <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span></div>
+
+<div class="viewcode-block" id="HConfigBase.get_child_deep"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.base.HConfigBase.get_child_deep">[docs]</a>    <span class="k">def</span> <span class="nf">get_child_deep</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">test_expression_pairs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">HConfigChild</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Find a child recursively with a list of test/expression pairs</span>
+
+<span class="sd">        e.g.</span>
+
+<span class="sd">        .. code:: python</span>
+
+<span class="sd">            result = hier_obj.get_child_deep([(&#39;equals&#39;, &#39;control-plane&#39;),</span>
+<span class="sd">                                              (&#39;equals&#39;, &#39;service-policy input system-cpp-policy&#39;)])</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">test</span><span class="p">,</span> <span class="n">expression</span> <span class="o">=</span> <span class="n">test_expression_pairs</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">test</span> <span class="o">==</span> <span class="s2">&quot;equals&quot;</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">children_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">expression</span><span class="p">,</span> <span class="kc">None</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">result</span> <span class="ow">and</span> <span class="n">test_expression_pairs</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">get_child_deep</span><span class="p">(</span><span class="n">test_expression_pairs</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">result</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">result</span> <span class="o">=</span> <span class="nb">next</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_children</span><span class="p">(</span><span class="n">test</span><span class="p">,</span> <span class="n">expression</span><span class="p">))</span>
+        <span class="k">except</span> <span class="ne">StopIteration</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">result</span> <span class="ow">and</span> <span class="n">test_expression_pairs</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">result</span><span class="o">.</span><span class="n">get_child_deep</span><span class="p">(</span><span class="n">test_expression_pairs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span></div>
+
+<div class="viewcode-block" id="HConfigBase.get_children"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.base.HConfigBase.get_children">[docs]</a>    <span class="k">def</span> <span class="nf">get_children</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">test</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">expression</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Iterator</span><span class="p">[</span><span class="n">HConfigChild</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot; Find all children matching a text_match rule and return them. &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">text_match</span><span class="o">.</span><span class="n">dict_call</span><span class="p">(</span><span class="n">test</span><span class="p">,</span> <span class="n">child</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="n">expression</span><span class="p">):</span>
+                <span class="k">yield</span> <span class="n">child</span></div>
+
+<div class="viewcode-block" id="HConfigBase.add_shallow_copy_of"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.base.HConfigBase.add_shallow_copy_of">[docs]</a>    <span class="k">def</span> <span class="nf">add_shallow_copy_of</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">child_to_add</span><span class="p">:</span> <span class="n">HConfigChild</span><span class="p">,</span> <span class="n">merged</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">HConfigChild</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot; Add a nested copy of a child_to_add to self.children &quot;&quot;&quot;</span>
+
+        <span class="n">new_child</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">add_child</span><span class="p">(</span><span class="n">child_to_add</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">merged</span><span class="p">:</span>
+            <span class="n">new_child</span><span class="o">.</span><span class="n">instances</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="p">{</span>
+                    <span class="s2">&quot;hostname&quot;</span><span class="p">:</span> <span class="n">child_to_add</span><span class="o">.</span><span class="n">host</span><span class="o">.</span><span class="n">hostname</span><span class="p">,</span>
+                    <span class="s2">&quot;comments&quot;</span><span class="p">:</span> <span class="n">child_to_add</span><span class="o">.</span><span class="n">comments</span><span class="p">,</span>
+                    <span class="s2">&quot;tags&quot;</span><span class="p">:</span> <span class="n">child_to_add</span><span class="o">.</span><span class="n">tags</span><span class="p">,</span>
+                <span class="p">}</span>
+            <span class="p">)</span>
+        <span class="n">new_child</span><span class="o">.</span><span class="n">comments</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">child_to_add</span><span class="o">.</span><span class="n">comments</span><span class="p">)</span>
+        <span class="n">new_child</span><span class="o">.</span><span class="n">tags</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">child_to_add</span><span class="o">.</span><span class="n">tags</span><span class="p">)</span>
+        <span class="n">new_child</span><span class="o">.</span><span class="n">order_weight</span> <span class="o">=</span> <span class="n">child_to_add</span><span class="o">.</span><span class="n">order_weight</span>
+
+        <span class="k">return</span> <span class="n">new_child</span></div>
+
+<div class="viewcode-block" id="HConfigBase.rebuild_children_dict"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.base.HConfigBase.rebuild_children_dict">[docs]</a>    <span class="k">def</span> <span class="nf">rebuild_children_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot; Rebuild self.children_dict &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">children_dict</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">children_dict</span><span class="o">.</span><span class="n">setdefault</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">text</span><span class="p">,</span> <span class="n">child</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="HConfigBase.delete_all_children"><a class="viewcode-back" href="../../../hier_config/hier_config/#hier_config.base.HConfigBase.delete_all_children">[docs]</a>    <span class="k">def</span> <span class="nf">delete_all_children</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot; Delete all children &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">rebuild_children_dict</span><span class="p">()</span></div>
+
+    <span class="k">def</span> <span class="nf">_with_tags</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">tags</span><span class="p">:</span> <span class="n">Set</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">new_instance</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">HConfig</span><span class="p">,</span> <span class="n">HConfigChild</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">HConfig</span><span class="p">,</span> <span class="n">HConfigChild</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Returns a new instance containing only sub-objects</span>
+<span class="sd">        with one of the tags in tags</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">tags</span><span class="o">.</span><span class="n">intersection</span><span class="p">(</span><span class="n">child</span><span class="o">.</span><span class="n">tags</span><span class="p">):</span>
+                <span class="n">new_child</span> <span class="o">=</span> <span class="n">new_instance</span><span class="o">.</span><span class="n">add_shallow_copy_of</span><span class="p">(</span><span class="n">child</span><span class="p">)</span>
+                <span class="c1"># pylint: disable=protected-access</span>
+                <span class="n">child</span><span class="o">.</span><span class="n">_with_tags</span><span class="p">(</span><span class="n">tags</span><span class="p">,</span> <span class="n">new_instance</span><span class="o">=</span><span class="n">new_child</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">new_instance</span>
+
+    <span class="k">def</span> <span class="nf">_config_to_get_to</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">HConfig</span><span class="p">,</span> <span class="n">HConfigChild</span><span class="p">],</span> <span class="n">delta</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">HConfig</span><span class="p">,</span> <span class="n">HConfigChild</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">HConfig</span><span class="p">,</span> <span class="n">HConfigChild</span><span class="p">]:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Figures out what commands need to be executed to transition from self to target.</span>
+<span class="sd">        self is the source data structure(i.e. the running_config),</span>
+<span class="sd">        target is the destination(i.e. generated_config)</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_config_to_get_to_left</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">delta</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_config_to_get_to_right</span><span class="p">(</span><span class="n">target</span><span class="p">,</span> <span class="n">delta</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">delta</span>
+
+    <span class="k">def</span> <span class="nf">_difference</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">HConfig</span><span class="p">,</span> <span class="n">HConfigChild</span><span class="p">],</span>
+        <span class="n">delta</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">HConfig</span><span class="p">,</span> <span class="n">HConfigChild</span><span class="p">],</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span><span class="n">HConfig</span><span class="p">,</span> <span class="n">HConfigChild</span><span class="p">]:</span>
+        <span class="k">for</span> <span class="n">self_child</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+            <span class="c1"># Not dealing with negations and defaults for now</span>
+            <span class="k">if</span> <span class="n">self_child</span><span class="o">.</span><span class="n">text</span><span class="o">.</span><span class="n">startswith</span><span class="p">((</span><span class="bp">self</span><span class="o">.</span><span class="n">_negation_prefix</span><span class="p">,</span> <span class="s2">&quot;default &quot;</span><span class="p">)):</span>
+                <span class="k">continue</span>
+
+            <span class="n">target_child</span> <span class="o">=</span> <span class="n">target</span><span class="o">.</span><span class="n">get_child</span><span class="p">(</span><span class="s2">&quot;equals&quot;</span><span class="p">,</span> <span class="n">self_child</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">target_child</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">delta</span><span class="o">.</span><span class="n">add_deep_copy_of</span><span class="p">(</span><span class="n">self_child</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">delta_child</span> <span class="o">=</span> <span class="n">delta</span><span class="o">.</span><span class="n">add_child</span><span class="p">(</span><span class="n">self_child</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+                <span class="c1"># pylint: disable=protected-access</span>
+                <span class="n">self_child</span><span class="o">.</span><span class="n">_difference</span><span class="p">(</span><span class="n">target_child</span><span class="p">,</span> <span class="n">delta_child</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">delta_child</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+                    <span class="n">delta_child</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">delta</span>
+
+    <span class="k">def</span> <span class="nf">_config_to_get_to_left</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">HConfig</span><span class="p">,</span> <span class="n">HConfigChild</span><span class="p">],</span> <span class="n">delta</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">HConfig</span><span class="p">,</span> <span class="n">HConfigChild</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># find self.children that are not in target.children</span>
+        <span class="c1"># i.e. what needs to be negated or defaulted</span>
+        <span class="c1"># Also, find out if another command in self.children will overwrite</span>
+        <span class="c1"># i.e. be idempotent</span>
+        <span class="k">for</span> <span class="n">self_child</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">self_child</span><span class="o">.</span><span class="n">text</span> <span class="ow">in</span> <span class="n">target</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">self_child</span><span class="o">.</span><span class="n">is_idempotent_command</span><span class="p">(</span><span class="n">target</span><span class="o">.</span><span class="n">children</span><span class="p">):</span>
+                <span class="k">continue</span>
+
+            <span class="c1"># in other but not self</span>
+            <span class="c1"># add this node but not any children</span>
+            <span class="n">deleted</span> <span class="o">=</span> <span class="n">delta</span><span class="o">.</span><span class="n">add_child</span><span class="p">(</span><span class="n">self_child</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+            <span class="n">deleted</span><span class="o">.</span><span class="n">negate</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">self_child</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+                <span class="n">deleted</span><span class="o">.</span><span class="n">comments</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;removes </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">self_child</span><span class="o">.</span><span class="n">children</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span><span class="si">}</span><span class="s2"> lines&quot;</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="nf">_config_to_get_to_right</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">target</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">HConfig</span><span class="p">,</span> <span class="n">HConfigChild</span><span class="p">],</span> <span class="n">delta</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">HConfig</span><span class="p">,</span> <span class="n">HConfigChild</span><span class="p">]</span>
+    <span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># find what would need to be added to source_config to get to self</span>
+        <span class="k">for</span> <span class="n">target_child</span> <span class="ow">in</span> <span class="n">target</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+            <span class="c1"># if the child exist, recurse into its children</span>
+            <span class="n">self_child</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_child</span><span class="p">(</span><span class="s2">&quot;equals&quot;</span><span class="p">,</span> <span class="n">target_child</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+            <span class="c1"># the child is absent, add it</span>
+            <span class="k">if</span> <span class="n">self_child</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">new_item</span> <span class="o">=</span> <span class="n">delta</span><span class="o">.</span><span class="n">add_deep_copy_of</span><span class="p">(</span><span class="n">target_child</span><span class="p">)</span>
+                <span class="c1"># mark the new item and all of its children as new_in_config</span>
+                <span class="n">new_item</span><span class="o">.</span><span class="n">new_in_config</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">for</span> <span class="n">child</span> <span class="ow">in</span> <span class="n">new_item</span><span class="o">.</span><span class="n">all_children</span><span class="p">():</span>
+                    <span class="n">child</span><span class="o">.</span><span class="n">new_in_config</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">if</span> <span class="n">new_item</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+                    <span class="n">new_item</span><span class="o">.</span><span class="n">comments</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="s2">&quot;new section&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># This creates a new HConfigChild object just in case there are some delta children</span>
+                <span class="c1"># Not very efficient, think of a way to not do this</span>
+                <span class="n">subtree</span> <span class="o">=</span> <span class="n">delta</span><span class="o">.</span><span class="n">add_child</span><span class="p">(</span><span class="n">target_child</span><span class="o">.</span><span class="n">text</span><span class="p">)</span>
+                <span class="c1"># pylint: disable=protected-access</span>
+                <span class="n">self_child</span><span class="o">.</span><span class="n">_config_to_get_to</span><span class="p">(</span><span class="n">target_child</span><span class="p">,</span> <span class="n">subtree</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">subtree</span><span class="o">.</span><span class="n">children</span><span class="p">:</span>
+                    <span class="n">subtree</span><span class="o">.</span><span class="n">delete</span><span class="p">()</span>
+                <span class="c1"># Do we need to rewrite the child and its children as well?</span>
+                <span class="k">elif</span> <span class="n">self_child</span><span class="o">.</span><span class="n">sectional_overwrite_check</span><span class="p">():</span>
+                    <span class="n">target_child</span><span class="o">.</span><span class="n">overwrite_with</span><span class="p">(</span><span class="n">self_child</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="n">self_child</span><span class="o">.</span><span class="n">sectional_overwrite_no_negate_check</span><span class="p">():</span>
+                    <span class="n">target_child</span><span class="o">.</span><span class="n">overwrite_with</span><span class="p">(</span><span class="n">self_child</span><span class="p">,</span> <span class="n">delta</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+
+    <span class="nd">@cached_property</span>
+    <span class="k">def</span> <span class="nf">_negation_prefix</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+        <span class="k">return</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">options</span><span class="p">[</span><span class="s2">&quot;negation&quot;</span><span class="p">])</span> <span class="o">+</span> <span class="s2">&quot; &quot;</span></div>
+</pre></div>
+
+           </div>
+           
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2020, Andrew Edwards, Jan Brooks, James Williams.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>
