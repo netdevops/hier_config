@@ -27,7 +27,6 @@ jobs:
         pip install setuptools wheel twine sphinx sphinx_rtd_theme
     - name: Build docs
       run: |
-        git checkout -b gh-pages
         cd docs/_mkdocs
         sphinx-apidoc -f -o hier_config ../../hier_config
         make github
