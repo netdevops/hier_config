@@ -1,4 +1,4 @@
-name: deploy to pypi and github pages
+name: deploy to github pages
 
 on:
   push:
@@ -25,13 +25,6 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install setuptools wheel twine sphinx sphinx_rtd_theme
-    - name: Build and publish to Pypi
-      env:
-        TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-      run: |
-        python setup.py sdist bdist_wheel
-        twine upload dist/*
     - name: Build docs
       run: |
         git checkout -b gh-pages
