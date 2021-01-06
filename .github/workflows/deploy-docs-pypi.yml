@@ -1,5 +1,11 @@
 name: deploy to pypi and github pages
 
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
 # on:
 #   release:
 #    types: [created]
