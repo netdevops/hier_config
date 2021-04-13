@@ -27,6 +27,7 @@ jobs:
         poetry install
     - name: Run tests 
       run: |
+        poetry shell
         mypy hier_config
         pylint --rcfile=pylintrc hier_config
         pytest
