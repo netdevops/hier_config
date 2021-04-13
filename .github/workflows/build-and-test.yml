@@ -20,14 +20,9 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
+    - name: Run tests
+      uses: snok/install-poetry@v1.1.2
       run: |
-        curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
-        export PATH="$HOME/.poetry/bin:$PATH"
-        poetry install
-    - name: Run tests 
-      run: |
-        export PATH="$HOME/.poetry/bin:$PATH"
         poetry shell
         mypy hier_config
         pylint --rcfile=pylintrc hier_config
