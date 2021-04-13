@@ -7,13 +7,18 @@ Fork, then clone the repo:
 git@github.com:YOUR-USERNAME/hier_config.git
 ```
 
+Install Poetry:
+
+```
+https://python-poetry.org/docs/#installation
+```
+
 Set up your environment:
 
 ```
 cd hier_config
-python3 -m venv env
-source venv/bin/activate
-./setup.py install
+poetry install
+poetry shell
 ```
 
 Create a branch
@@ -25,13 +30,13 @@ git checkout -b YOUR-BRANCH
 Make sure tests pass:
 
 ```
-./tests/tests.py
+pytest
 ```
 
 Make your change. Add tests for your change. Make the tests pass:
 
 ```
-./tests/tests.py
+pytest
 ```
 
 Push to your fork and submit a pull request.
