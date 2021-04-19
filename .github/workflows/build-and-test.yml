@@ -20,12 +20,11 @@ jobs:
       uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install dependencies
+    - name: Install poetry
+      uses: snok/install-poetry@v1.1.2
+    - name: Run tests
       run: |
-        python -m pip install --upgrade pip
-        pip install ".[testing]"
-    - name: Run tests 
-      run: |
-        mypy hier_config
-        pylint --rcfile=pylintrc hier_config
-        pytest
+        poetry install --no-interaction --no-root
+        poetry run mypy hier_config
+        poetry run pylint --rcfile=pylintrc hier_config
+        poetry run pytest
