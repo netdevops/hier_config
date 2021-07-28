@@ -3,6 +3,7 @@ from typing import List, Set, Union, Optional
 import yaml
 
 from .root import HConfig
+from .options import HConfigOptions
 
 
 class Host:
@@ -18,8 +19,8 @@ class Host:
         import yaml
         from hier_config.host import Host
 
-        options = yaml.load(open('./tests/fixtures/options_ios.yml'), loader=yaml.SafeLoader())
-        host = Host('example.rtr', 'ios', options)
+        options = yaml.load(open("./tests/fixtures/options_ios.yml"), loader=yaml.SafeLoader())
+        host = Host("example.rtr", "ios", options)
 
         # Example of loading running config and generated configs into a host object
         host.load_running_config_from_file("./tests/files/running_config.conf)
@@ -31,7 +32,7 @@ class Host:
         # Example of creating a remediation config without a tag targeting specific config
         host.remediation_config()
 
-        # Example of creating a remediation config with a tag ('safe') targeting a specific config.
+        # Example of creating a remediation config with a tag ("safe") targeting a specific config.
         host.remediation_config_filtered_text({"safe"}, set()})
     """
 
@@ -41,9 +42,14 @@ class Host:
         os: str,
         hconfig_options: dict,
     ):
-        self.hconfig_options = hconfig_options
         self.hostname = hostname
         self.os = os
+
+        if hconfig_options:
+            self.hconfig_options = hconfig_options
+        else:
+            self.hconfig_optins = HConfigOptions(self.os).options
+
         self._hconfig_tags: List[dict] = list()
         self._running_config: Optional[HConfig] = None
         self._generated_config: Optional[HConfig] = None
