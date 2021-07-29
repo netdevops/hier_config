@@ -1,4 +1,4 @@
-base_options = {
+base_options: dict = {
     "style": None,
     "sectional_overwrite": [],
     "sectional_overwrite_no_negate": [],
@@ -13,7 +13,7 @@ base_options = {
     "negation_default_when": [],
     "negation_negate_with": [],
 }
-ios_options = {
+ios_options: dict = {
     "style": "ios",
     "ordering": [
         {"lineage": [{"startswith": "no vlan filter"}], "order": 700},
@@ -78,7 +78,7 @@ ios_options = {
 }
 
 
-def options_for(os: str):
+def options_for(os: str) -> dict:
     """ Create base options on an OS level. """
 
     if os == "ios":
