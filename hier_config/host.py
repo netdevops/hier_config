@@ -44,12 +44,9 @@ class Host:
     ):
         self.hostname = hostname
         self.os = os
-
-        if hconfig_options:
-            self.hconfig_options = hconfig_options
-        else:
-            self.hconfig_optins = options_for(self.os)
-
+        self.hconfig_options = (
+            hconfig_options if hconfig_options else options_for(self.os)
+        )
         self._hconfig_tags: List[dict] = list()
         self._running_config: Optional[HConfig] = None
         self._generated_config: Optional[HConfig] = None
