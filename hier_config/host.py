@@ -3,7 +3,7 @@ from typing import List, Set, Union, Optional
 import yaml
 
 from .root import HConfig
-from .options import HConfigOptions
+from .options import options_for
 
 
 class Host:
@@ -48,7 +48,7 @@ class Host:
         if hconfig_options:
             self.hconfig_options = hconfig_options
         else:
-            self.hconfig_optins = HConfigOptions(self.os).options
+            self.hconfig_optins = options_for(self.os)
 
         self._hconfig_tags: List[dict] = list()
         self._running_config: Optional[HConfig] = None
