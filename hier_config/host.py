@@ -40,7 +40,7 @@ class Host:
         self,
         hostname: str,
         os: str,
-        hconfig_options: dict,
+        hconfig_options: dict = None,
     ):
         self.hostname = hostname
         self.os = os
