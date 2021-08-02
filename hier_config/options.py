@@ -688,16 +688,15 @@ eos_options: dict = {
 
 def options_for(os: str) -> dict:
     """ Create base options on an OS level. """
+    options = {
+        "ios": ios_options,
+        "iosxe": iosxe_options,
+        "iosxr": iosxr_options,
+        "nxos": nxos_options,
+        "eos": eos_options,
+    }
 
-    if os == "ios":
-        return {**base_options, **ios_options}
-    elif os == "iosxe":
-        return {**base_options, **iosxe_options}
-    elif os == "iosxr":
-        return {**base_options, **iosxr_options}
-    elif os == "nxos":
-        return {**base_options, **nxos_options}
-    elif os == "eos":
-        return {**base_options, **eos_options}
+    if options.get(os):
+        return {**base_options, **options.get(os)}
 
-    return {"style": os, **base_options}
+    return {**base_options, "style": os}
