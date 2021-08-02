@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "Hierarchical Configuration"
+name = "hier-config"
 version = "2.0.1"
 description = "A network configuration comparison tool, used to build remediation configurations."
 packages = [
