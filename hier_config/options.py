@@ -688,7 +688,7 @@ eos_options: dict = {
 
 def options_for(os: str) -> dict:
     """ Create base options on an OS level. """
-    options = {
+    options: dict = {
         "ios": ios_options,
         "iosxe": iosxe_options,
         "iosxr": iosxr_options,
@@ -697,6 +697,6 @@ def options_for(os: str) -> dict:
     }
 
     if options.get(os):
-        return {**base_options, **options.get(os)}
+        return {**base_options, **options[os]}
 
     return {**base_options, "style": os}
