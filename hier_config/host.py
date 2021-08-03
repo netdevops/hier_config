@@ -51,6 +51,7 @@ class Host:
         self._running_config: Optional[HConfig] = None
         self._generated_config: Optional[HConfig] = None
         self._remediation_config: Optional[HConfig] = None
+        self._rollback_config: Optional[HConfig] = None
 
     def __repr__(self) -> str:
         return f"Host(hostname={self.hostname})"
@@ -88,6 +89,26 @@ class Host:
         self._remediation_config = remediation
 
         return remediation
+
+    def rollback_config(self) -> HConfig:
+        """
+        Once a self.running_config and self.generated_config have been created,
+        generate a self.rollback_config
+        """
+        if isinstance(self._rollback_config, HConfig):
+            return self._rollback_config
+
+        if self.running_config and self.generated_config:
+            rollback = self.generated_config.config_to_get_to(self.running_config)
+        else:
+            raise AttributeError("Missing host.running_config or host.generated_config")
+
+        rollback.add_sectional_exiting()
+        rollback.set_order_weight()
+        rollback.add_tags(self.hconfig_tags)
+        self._rollback_config = rollback
+
+        return rollback
 
     @property
     def hconfig_tags(self) -> List[dict]:
@@ -168,4 +189,7 @@ class Host:
         return NotImplemented
 
     def _get_remediation_config(self) -> HConfig:  # pylint: disable=no-self-use
+        return NotImplemented
+
+    def _get_rollback_config(self) -> HConfig:  # pylint: disable=no-self-use
         return NotImplemented

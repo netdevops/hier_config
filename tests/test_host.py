@@ -31,6 +31,17 @@ class TestHost:
         assert len(self.host.remediation_config().children) > 0
         assert len(self.host_bltn_opts.remediation_config().children) > 0
 
+    def test_load_rollback(self, running_config, generated_config):
+        self.host.load_running_config(running_config)
+        self.host.load_generated_config(generated_config)
+        self.host.rollback_config()
+        self.host_bltn_opts.load_running_config(running_config)
+        self.host_bltn_opts.load_generated_config(generated_config)
+        self.host_bltn_opts.rollback_config()
+
+        assert len(self.host.rollback_config().children) > 0
+        assert len(self.host_bltn_opts.rollback_config().children) > 0
+
     def test_load_tags(self, tags_ios):
         self.host.load_tags(tags_ios)
         assert len(self.host.hconfig_tags) > 0
