@@ -36,6 +36,8 @@ class Host:
         host.remediation_config_filtered_text({"safe"}, set()})
     """
 
+    # pylint: disable=too-many-instance-attributes
+
     def __init__(
         self,
         hostname: str,
