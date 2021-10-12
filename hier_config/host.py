@@ -1,3 +1,4 @@
+from functools import lru_cache
 from typing import List, Set, Union, Optional
 
 import yaml
@@ -50,7 +51,6 @@ class Host:
         self._hconfig_tags: List[dict] = list()
         self._running_config: Optional[HConfig] = None
         self._generated_config: Optional[HConfig] = None
-        self._remediation_config: Optional[HConfig] = None
 
     def __repr__(self) -> str:
         return f"Host(hostname={self.hostname})"
@@ -69,14 +69,12 @@ class Host:
             self._generated_config = self._get_generated_config()
         return self._generated_config
 
+    @lru_cache()
     def remediation_config(self) -> HConfig:
         """
         Once self.running_config and self.generated_config have been created,
         create self.remediation_config
         """
-        if isinstance(self._remediation_config, HConfig):
-            return self._remediation_config
-
         if self.running_config and self.generated_config:
             remediation = self.running_config.config_to_get_to(self.generated_config)
         else:
@@ -85,9 +83,25 @@ class Host:
         remediation.add_sectional_exiting()
         remediation.set_order_weight()
         remediation.add_tags(self.hconfig_tags)
-        self._remediation_config = remediation
 
         return remediation
+
+    @lru_cache()
+    def rollback_config(self) -> HConfig:
+        """
+        Once a self.running_config and self.generated_config have been created,
+        generate a self.rollback_config
+        """
+        if self.running_config and self.generated_config:
+            rollback = self.generated_config.config_to_get_to(self.running_config)
+        else:
+            raise AttributeError("Missing host.running_config or host.generated_config")
+
+        rollback.add_sectional_exiting()
+        rollback.set_order_weight()
+        rollback.add_tags(self.hconfig_tags)
+
+        return rollback
 
     @property
     def hconfig_tags(self) -> List[dict]:
@@ -165,7 +179,4 @@ class Host:
         return NotImplemented
 
     def _get_generated_config(self) -> HConfig:  # pylint: disable=no-self-use
-        return NotImplemented
-
-    def _get_remediation_config(self) -> HConfig:  # pylint: disable=no-self-use
         return NotImplemented
