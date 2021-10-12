@@ -1,0 +1,11 @@
+site_name: Hierarchical Configuration
+site_url: https://hier_config.readthedocs.io/
+repo_url: https://github.com/netdevops/hier_config
+theme:
+  name: readthedocs
+
+nav:
+- Home: index.md
+- Install: install.md
+- Getting Started: getting-started.md
+- Advanced Topics: advanced-topics.md
