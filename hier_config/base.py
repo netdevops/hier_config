@@ -271,7 +271,7 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
     def add_shallow_copy_of(
         self, child_to_add: HConfigChild, merged: bool = False
     ) -> HConfigChild:
-        """ Add a nested copy of a child_to_add to self.children """
+        """Add a nested copy of a child_to_add to self.children"""
 
         new_child = self.add_child(child_to_add.text)
 

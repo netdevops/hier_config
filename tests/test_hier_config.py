@@ -410,7 +410,6 @@ class TestHConfig:
         difference_children = list(
             c.cisco_style_text() for c in difference.all_children_sorted()
         )
-        # breakpoint()
 
         assert len(difference_children) == 6
         assert "c" in difference

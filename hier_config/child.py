@@ -100,7 +100,6 @@ class HConfigChild(HConfigBase):
         """ Returns the distance to the root HConfig object i.e. indent level """
         return self.parent.depth() + 1
 
-    # Consider removing, no internal or other use that I am aware of
     def move(self, new_parent: Union[HConfig, HConfigChild]) -> None:
         """
         move one HConfigChild object to different HConfig parent object
