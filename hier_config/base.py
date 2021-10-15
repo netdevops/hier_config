@@ -179,14 +179,6 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
         """ Yield all children recursively that are untagged """
         yield from (c for c in self.all_children_sorted() if None in c.tags)
 
-    def all_children_sorted_by_tags(
-        self, include_tags: Set[str], exclude_tags: Set[str]
-    ) -> Iterator[HConfigChild]:
-        """ Yield all children recursively that match include/exlcude tags """
-        for child in self.all_children_sorted():
-            if child.line_inclusion_test(include_tags, exclude_tags):
-                yield child
-
     def all_children_sorted(self) -> Iterator[HConfigChild]:
         """ Recursively find and yield all children sorted at each hierarchy """
         for child in sorted(self.children):
