@@ -339,8 +339,9 @@ class HConfig(HConfigBase):
                     temp_banner = []
                 continue
 
-            # Test if this line is the start of a banner
-            if line.startswith("banner "):
+            # Test if this line is the start of a banner and not an empty banner
+            # Empty banners matching the below expression have been seen on NX-OS
+            if line.startswith("banner ") and line != "banner motd ##":
                 in_banner = True
                 temp_banner.append(line)
                 banner_words = line.split()
