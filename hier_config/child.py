@@ -9,6 +9,7 @@ from typing import (
     Type,
     Iterable,
     Tuple,
+    Dict,
 )
 from logging import getLogger
 
@@ -367,6 +368,29 @@ class HConfigChild(HConfigBase):
             return False
 
         return matches == rule_lineage_len
+
+    def _difference(
+        self,
+        target: Union[HConfig, HConfigChild],
+        delta: Union[HConfig, HConfigChild],
+        in_acl: bool = False,
+        target_acl_children: Optional[Dict[str, HConfigChild]] = None,
+    ) -> Union[HConfig, HConfigChild]:
+        if target_acl_children is None:
+            target_acl_children = {}
+
+        sw_matches = tuple(f"ip{x} access-list " for x in ("", "v4", "v6"))
+        # ipv4_acl_regex = "^(?:ip|ipv4) access-list (?:extended )?(?:standard )?"
+        # ipv6_acl_regex = "^ipv6 access-list (?:extended )?(?:standard )?"
+        # if re.search(f"({ipv4_acl_regex}|{ipv6_acl_regex})", self.text):
+        if self.text.startswith(sw_matches):
+            in_acl = True
+            for child in target.children:
+                target_acl_children[self._strip_acl_sequence_number(child)] = child
+
+        return super()._difference(
+            target, delta, in_acl=in_acl, target_acl_children=target_acl_children
+        )
 
     def _swap_negation(self) -> HConfigChild:
         """ Swap negation of a self.text """

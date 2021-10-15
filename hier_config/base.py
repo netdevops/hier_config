@@ -329,17 +329,36 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
 
         return delta
 
+    @staticmethod
+    def _strip_acl_sequence_number(hier_child: HConfigChild) -> str:
+        words = hier_child.text.split()
+        if words[0].isdecimal():
+            words.pop(0)
+        return " ".join(words)
+
     def _difference(
         self,
         target: Union[HConfig, HConfigChild],
         delta: Union[HConfig, HConfigChild],
+        in_acl: bool = False,
+        target_acl_children: Optional[Dict[str, HConfigChild]] = None,
     ) -> Union[HConfig, HConfigChild]:
+
+        if target_acl_children is None:
+            target_acl_children = {}
+
         for self_child in self.children:
             # Not dealing with negations and defaults for now
             if self_child.text.startswith((self._negation_prefix, "default ")):
                 continue
 
-            target_child = target.get_child("equals", self_child.text)
+            if in_acl:
+                # Ignore ACL sequence numbers
+                target_child = target_acl_children.get(
+                    self._strip_acl_sequence_number(self_child)
+                )
+            else:
+                target_child = target.get_child("equals", self_child.text)
 
             if target_child is None:
                 delta.add_deep_copy_of(self_child)
