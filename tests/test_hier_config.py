@@ -392,7 +392,49 @@ class TestHConfig:
         pass
 
     def test_add_shallow_copy_of(self):
-        pass
+        base_config = HConfig(host=self.host_a)
+
+        config_a = HConfig(host=self.host_a)
+        interface_a = config_a.add_child("interface Vlan2")
+        interface_a.append_tags({"ta", "tb"})
+        interface_a.comments.add("ca")
+        interface_a.order_weight = 200
+
+        config_b = HConfig(host=self.host_b)
+        interface_b = config_b.add_child("interface Vlan2")
+        interface_b.append_tags({"tc"})
+        interface_b.comments.add("cc")
+        interface_b.order_weight = 201
+
+        copied_interface = base_config.add_shallow_copy_of(interface_a, merged=True)
+        assert copied_interface.tags == {"ta", "tb"}
+        assert copied_interface.comments == {"ca"}
+        assert copied_interface.order_weight == 200
+        assert copied_interface.instances == [
+            {
+                "hostname": interface_a.host.hostname,
+                "comments": interface_a.comments,
+                "tags": interface_a.tags,
+            }
+        ]
+
+        copied_interface = base_config.add_shallow_copy_of(interface_b, merged=True)
+
+        assert copied_interface.tags == {"ta", "tb", "tc"}
+        assert copied_interface.comments == {"ca", "cc"}
+        assert copied_interface.order_weight == 201
+        assert copied_interface.instances == [
+            {
+                "hostname": interface_a.host.hostname,
+                "comments": interface_a.comments,
+                "tags": interface_a.tags,
+            },
+            {
+                "hostname": interface_b.host.hostname,
+                "comments": interface_b.comments,
+                "tags": interface_b.tags,
+            },
+        ]
 
     def test_line_inclusion_test(self):
         config = HConfig(host=self.host_a)
