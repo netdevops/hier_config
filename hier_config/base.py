@@ -273,8 +273,9 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
                 }
             )
         new_child.comments.update(child_to_add.comments)
-        new_child.tags.update(child_to_add.tags)
         new_child.order_weight = child_to_add.order_weight
+        if child_to_add.is_leaf:
+            new_child.append_tags({t for t in child_to_add.tags if isinstance(t, str)})
 
         return new_child
 
