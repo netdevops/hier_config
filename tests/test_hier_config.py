@@ -254,17 +254,26 @@ class TestHConfig:
 
     def test_all_children_sorted_by_tags(self):
         config = HConfig(host=self.host_a)
-        interface = config.add_child("interface Vlan2")
-        ip_address_a = interface.add_child("ip address 192.168.1.1/24")
-        ip_address_a.append_tags("a")
-        ip_address_ab = interface.add_child("ip address 192.168.2.1/24")
-        ip_address_ab.append_tags(["a", "b"])
+        config_a = config.add_child("a")
+        config_aa = config_a.add_child("aa")
+        config_a.add_child("ab")
+        config_aaa = config_aa.add_child("aaa")
+        config_aab = config_aa.add_child("aab")
+        config_aaa.append_tags("aaa")
+        config_aab.append_tags("aab")
 
-        assert len(list(config.all_children_sorted_by_tags({"a"}, {"b"}))) == 1
-        assert ip_address_a is list(config.all_children_sorted_by_tags({"a"}, {"b"}))[0]
-        assert len(list(config.all_children_sorted_by_tags({"a"}, set()))) == 3
-        assert len(list(config.all_children_sorted_by_tags(set(), {"a"}))) == 0
-        assert len(list(config.all_children_sorted_by_tags(set(), set()))) == 0
+        case_1_matches = [
+            c.text for c in config.all_children_sorted_by_tags({"aaa"}, set())
+        ]
+        assert ["a", "aa", "aaa"] == case_1_matches
+        case_2_matches = [
+            c.text for c in config.all_children_sorted_by_tags(set(), {"aab"})
+        ]
+        assert ["a", "aa", "aaa", "ab"] == case_2_matches
+        case_3_matches = [
+            c.text for c in config.all_children_sorted_by_tags({"aaa"}, {"aab"})
+        ]
+        assert ["a", "aa", "aaa"] == case_3_matches
 
     def test_all_children_sorted(self):
         hier = HConfig(host=self.host_a)

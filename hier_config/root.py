@@ -292,6 +292,13 @@ class HConfig(HConfigBase):
             raise ValueError
         return new_instance
 
+    def all_children_sorted_by_tags(
+        self, include_tags: Set[str], exclude_tags: Set[str]
+    ) -> Iterator[HConfigChild]:
+        """ Yield all children recursively that match include/exclude tags """
+        for child in sorted(self.children):
+            yield from child.all_children_sorted_by_tags(include_tags, exclude_tags)
+
     @staticmethod
     def _load_from_string_lines_end_of_banner_test(
         config_line: str, banner_end_lines: Set[str], banner_end_contains: List[str]

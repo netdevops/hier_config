@@ -12,6 +12,7 @@ from typing import (
     Dict,
 )
 from logging import getLogger
+from itertools import chain
 
 from .base import HConfigBase
 from . import text_match
@@ -329,6 +330,25 @@ class HConfigChild(HConfigBase):
             include_line = not bool(self.tags.intersection(exclude_tags))
 
         return include_line
+
+    def all_children_sorted_by_tags(
+        self, include_tags: Set[str], exclude_tags: Set[str]
+    ) -> Iterator[HConfigChild]:
+        """ Yield all children recursively that match include/exclude tags """
+        if self.is_leaf:
+            if self.line_inclusion_test(include_tags, exclude_tags):
+                yield self
+        else:
+            yielded_self = False
+            for child in sorted(self.children):
+                included_children = child.all_children_sorted_by_tags(
+                    include_tags, exclude_tags
+                )
+                if peek := next(included_children, None):
+                    if not yielded_self:
+                        yield self
+                        yielded_self = True
+                    yield from chain((peek,), included_children)
 
     def lineage_test(self, rule: dict, strip_negation: bool = False) -> bool:
         """ A generic test against a lineage of HConfigChild objects """
