@@ -133,7 +133,7 @@ class Host:
         if include_tags or exclude_tags:
             children = config.all_children_sorted_by_tags(include_tags, exclude_tags)
         else:
-            children = config.all_children()
+            children = config.all_children_sorted()
 
         return "\n".join(c.cisco_style_text() for c in children)
 

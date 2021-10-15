@@ -46,7 +46,14 @@ class TestHost:
         self.host.load_tags(tags_ios)
         assert len(self.host.hconfig_tags) > 0
 
-    def test_filter_remediation(self, running_config, generated_config, tags_ios):
+    def test_filter_remediation(
+        self,
+        running_config,
+        generated_config,
+        tags_ios,
+        remediation_config_with_safe_tags,
+        remediation_config_without_tags,
+    ):
         self.host.load_running_config(running_config)
         self.host.load_generated_config(generated_config)
         self.host.load_tags(tags_ios)
@@ -55,3 +62,5 @@ class TestHost:
         rem2 = self.host.remediation_config_filtered_text({"safe"}, set())
 
         assert rem1 != rem2
+        assert rem1 == remediation_config_without_tags
+        assert rem2 == remediation_config_with_safe_tags
