@@ -295,7 +295,10 @@ class TestHConfig:
         assert len(list(hier.all_children())) == 2
 
     def test_delete(self):
-        pass
+        hier = HConfig(host=self.host_a)
+        config_a = hier.add_child("a")
+        config_a.delete()
+        assert not hier.children
 
     def test_set_order_weight(self):
         hier = HConfig(host=self.host_a)
