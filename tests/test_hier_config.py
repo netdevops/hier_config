@@ -17,8 +17,6 @@ class TestHConfig:
 
     def test_bool(self):
         config = HConfig(host=self.host_a)
-        assert not config
-        config.add_child("test")
         assert config
 
     def test_merge(self):

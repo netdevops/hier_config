@@ -37,7 +37,7 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
         return len(list(self.all_children()))
 
     def __bool__(self) -> bool:
-        return bool(self.children)
+        return True
 
     def __contains__(self, item: str) -> bool:
         return item in self.children_dict
