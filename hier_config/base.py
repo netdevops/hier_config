@@ -216,14 +216,11 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
             yield from child.all_children()
 
     def get_child(self, test: str, expression: str) -> Optional[HConfigChild]:
-        """ Find a child by text_match rule. If it is not found, return None """
-        if test == "equals":
+        """Find a child by text_match rule. If it is not found, return None"""
+        if test == "equals" and isinstance(expression, str):
             return self.children_dict.get(expression, None)
 
-        try:
-            return next(self.get_children(test, expression))
-        except StopIteration:
-            return None
+        return next(self.get_children(test, expression), None)
 
     def get_child_deep(
         self, test_expression_pairs: List[Tuple[str, str]]
