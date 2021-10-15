@@ -141,8 +141,10 @@ class TestHConfig:
         hier = HConfig(host=self.host_a)
         hier.add_child("interface Vlan2")
         hier.add_child("interface Vlan3")
-        children = hier.get_children("startswith", "interface")
-        assert len(list(children)) == 2
+        children = list(hier.get_children("startswith", "interface"))
+        assert len(children) == 2
+        for child in children:
+            assert child.text.startswith("interface Vlan")
 
     def test_move(self):
         hier1 = HConfig(host=self.host_a)
