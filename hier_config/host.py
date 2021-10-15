@@ -130,7 +130,7 @@ class Host:
         self, include_tags: Set[str], exclude_tags: Set[str]
     ) -> str:
         config = self.remediation_config()
-        if any([include_tags, exclude_tags]):
+        if include_tags or exclude_tags:
             children = config.all_children_sorted_by_tags(include_tags, exclude_tags)
         else:
             children = config.all_children_sorted()

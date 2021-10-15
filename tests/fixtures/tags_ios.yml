@@ -29,4 +29,4 @@
     - no ip access-group
     - shutdown
     - no shutdown
-  add_tags: manaual
+  add_tags: manual
