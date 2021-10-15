@@ -228,10 +228,15 @@ class TestHConfig:
         assert isinstance(hier2.all_children(), types.GeneratorType)
 
     def test_lineage(self):
+        """ This is covered by test_path """
         pass
 
     def test_path(self):
-        pass
+        hier = HConfig(host=self.host_a)
+        config_a = hier.add_child("a")
+        config_aa = config_a.add_child("aa")
+        config_aaa = config_aa.add_child("aaa")
+        assert list(config_aaa.path()) == ["a", "aa", "aaa"]
 
     def test_cisco_style_text(self):
         hier = HConfig(host=self.host_a)

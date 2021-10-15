@@ -128,8 +128,8 @@ class HConfigChild(HConfigBase):
 
     def path(self) -> Iterator[str]:
         """ Return a list of the text instance variables from self.lineage """
-        for parent in self.lineage():
-            yield parent.text
+        for hier_object in self.lineage():
+            yield hier_object.text
 
     def cisco_style_text(
         self, style: str = "without_comments", tag: Optional[str] = None
