@@ -401,9 +401,21 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
         # find what would need to be added to source_config to get to self
         for target_child in target.children:
             # if the child exist, recurse into its children
-            self_child = self.get_child("equals", target_child.text)
+            if self_child := self.get_child("equals", target_child.text):
+                # This creates a new HConfigChild object just in case there are some delta children
+                # Not very efficient, think of a way to not do this
+                subtree = delta.add_child(target_child.text)
+                # pylint: disable=protected-access
+                self_child._config_to_get_to(target_child, subtree)
+                if not subtree.children:
+                    subtree.delete()
+                # Do we need to rewrite the child and its children as well?
+                elif self_child.sectional_overwrite_check():
+                    target_child.overwrite_with(self_child, delta, True)
+                elif self_child.sectional_overwrite_no_negate_check():
+                    target_child.overwrite_with(self_child, delta, False)
             # the child is absent, add it
-            if self_child is None:
+            else:
                 new_item = delta.add_deep_copy_of(target_child)
                 # mark the new item and all of its children as new_in_config
                 new_item.new_in_config = True
