@@ -423,19 +423,6 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
                     child.new_in_config = True
                 if new_item.children:
                     new_item.comments.add("new section")
-            else:
-                # This creates a new HConfigChild object just in case there are some delta children
-                # Not very efficient, think of a way to not do this
-                subtree = delta.add_child(target_child.text)
-                # pylint: disable=protected-access
-                self_child._config_to_get_to(target_child, subtree)
-                if not subtree.children:
-                    subtree.delete()
-                # Do we need to rewrite the child and its children as well?
-                elif self_child.sectional_overwrite_check():
-                    target_child.overwrite_with(self_child, delta, True)
-                elif self_child.sectional_overwrite_no_negate_check():
-                    target_child.overwrite_with(self_child, delta, False)
 
     @cached_property
     def _negation_prefix(self) -> str:
