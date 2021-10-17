@@ -159,6 +159,10 @@ class HConfigChild(HConfigBase):
         comments_str = f" !{', '.join(sorted(comments))}" if comments else ""
         return f"{indentation}{self.text}{comments_str}"
 
+    @property
+    def indentation(self):
+        return "  " * (self.depth() - 1)
+
     def delete(self) -> None:
         """Delete the current object from its parent"""
         self.parent.del_child(self)

@@ -13,6 +13,7 @@ from typing import (
 from logging import getLogger
 from abc import ABC, abstractmethod
 from functools import cached_property
+from itertools import chain
 
 from . import text_match
 
@@ -290,6 +291,37 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
         """Delete all children"""
         self.children.clear()
         self.rebuild_children_dict()
+
+    def unified_diff(self, target: Union[HConfig, HConfigChild]) -> Iterator[str]:
+        """
+        provides a similar output to difflib.unified_diff()
+
+        In its current state, this algorithm does not consider duplicate child differences.
+        e.g. two instances `endif` in a IOS-XR route-policy. It also does not respect the
+        order of commands where it may count, such as in ACLs. In the case of ACLs, they
+        should contain sequence numbers if order is important.
+        """
+        # if a self child is missing from the target "- self_child.text"
+        for self_child in self.children:
+            self_iter = iter((f"{self_child.indentation}{self_child.text}",))
+            if target_child := target.children_dict.get(self_child.text, None):
+                found = self_child.unified_diff(target_child)
+                if peek := next(found, None):
+                    yield from chain(self_iter, (peek,), found)
+            else:
+                yield f"{self_child.indentation}- {self_child.text}"
+                yield from (
+                    f"{c.indentation}- {c.text}"
+                    for c in self_child.all_children_sorted()
+                )
+        # if a target child is missing from self "+ target_child.text"
+        for target_child in target.children:
+            if target_child.text not in self.children_dict:
+                yield f"{target_child.indentation}+ {target_child.text}"
+                yield from (
+                    f"{c.indentation}+ {c.text}"
+                    for c in target_child.all_children_sorted()
+                )
 
     def _with_tags(
         self, tags: Set[str], new_instance: Union[HConfig, HConfigChild]
