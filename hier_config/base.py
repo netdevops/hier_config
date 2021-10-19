@@ -94,13 +94,13 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
         return bool(self.children)
 
     def add_children_deep(self, lines: List[str]) -> None:
-        """ Add child instances of HConfigChild deeply """
+        """Add child instances of HConfigChild deeply"""
         if lines:
             child = self.add_child(lines.pop(0))
             child.add_children_deep(lines)
 
     def add_children(self, lines: List[str]) -> None:
-        """ Add child instances of HConfigChild """
+        """Add child instances of HConfigChild"""
         for line in lines:
             self.add_child(line)
 
