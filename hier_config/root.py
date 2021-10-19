@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 logger = getLogger(__name__)
 
 
-class HConfig(HConfigBase):
+class HConfig(HConfigBase):  # pylint: disable=too-many-public-methods
 
     """
     A class for representing and comparing Cisco configurations in a

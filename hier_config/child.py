@@ -395,6 +395,7 @@ class HConfigChild(HConfigBase):
         in_acl: bool = False,
         target_acl_children: Optional[Dict[str, HConfigChild]] = None,
     ) -> Union[HConfig, HConfigChild]:
+
         if target_acl_children is None:
             target_acl_children = {}
 
