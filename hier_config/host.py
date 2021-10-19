@@ -48,7 +48,7 @@ class Host:
         self.hconfig_options = (
             hconfig_options if hconfig_options else options_for(self.os)
         )
-        self._hconfig_tags: List[dict] = list()
+        self._hconfig_tags: List[dict] = []
         self._running_config: Optional[HConfig] = None
         self._generated_config: Optional[HConfig] = None
 
@@ -167,7 +167,7 @@ class Host:
     @staticmethod
     def _load_from_file(name: str, parse_yaml: bool = False) -> Union[list, dict, str]:
         """Opens a config file and loads it as a string."""
-        with open(name) as file:
+        with open(name) as file:  # pylint: disable=unspecified-encoding
             content = file.read()
 
         if parse_yaml:

@@ -109,7 +109,7 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
         idx: Optional[int] = None,
         force_duplicate: bool = False,
     ) -> HConfigChild:
-        """ Add a child instance of HConfigChild """
+        """Add a child instance of HConfigChild"""
 
         if idx is None:
             idx = len(self.children)
@@ -161,7 +161,7 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
         return tag_spec
 
     def del_child_by_text(self, text: str) -> None:
-        """ Delete all children with the provided text """
+        """Delete all children with the provided text"""
         if text in self.children_dict:
             self.children[:] = [c for c in self.children if c.text != text]
             self.rebuild_children_dict()
@@ -176,11 +176,11 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
             self.rebuild_children_dict()
 
     def all_children_sorted_untagged(self) -> Iterator[HConfigChild]:
-        """ Yield all children recursively that are untagged """
+        """Yield all children recursively that are untagged"""
         yield from (c for c in self.all_children_sorted() if None in c.tags)
 
     def all_children_sorted(self) -> Iterator[HConfigChild]:
-        """ Recursively find and yield all children sorted at each hierarchy """
+        """Recursively find and yield all children sorted at each hierarchy"""
         for child in sorted(self.children):
             yield child
             yield from child.all_children_sorted()
@@ -188,7 +188,7 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
     def all_children_sorted_with_lineage_rules(
         self, rules: List[dict]
     ) -> Iterator[HConfigChild]:
-        """ Recursively find and yield all children sorted at each hierarchy given lineage rules """
+        """Recursively find and yield all children sorted at each hierarchy given lineage rules"""
         yielded = set()
         matched: Set[HConfigChild] = set()
         # pylint: disable=too-many-nested-blocks
@@ -210,7 +210,7 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
                         break
 
     def all_children(self) -> Iterator[HConfigChild]:
-        """ Recursively find and yield all children at each hierarchy """
+        """Recursively find and yield all children at each hierarchy"""
         for child in self.children:
             yield child
             yield from child.all_children()
@@ -252,7 +252,7 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
         return result
 
     def get_children(self, test: str, expression: str) -> Iterator[HConfigChild]:
-        """ Find all children matching a text_match rule and return them. """
+        """Find all children matching a text_match rule and return them."""
         for child in self.children:
             if text_match.dict_call(test, child.text, expression):
                 yield child
@@ -280,13 +280,13 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
         return new_child
 
     def rebuild_children_dict(self) -> None:
-        """ Rebuild self.children_dict """
+        """Rebuild self.children_dict"""
         self.children_dict = {}
         for child in self.children:
             self.children_dict.setdefault(child.text, child)
 
     def delete_all_children(self) -> None:
-        """ Delete all children """
+        """Delete all children"""
         self.children.clear()
         self.rebuild_children_dict()
 
@@ -333,10 +333,6 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
         in_acl: bool = False,
         target_acl_children: Optional[Dict[str, HConfigChild]] = None,
     ) -> Union[HConfig, HConfigChild]:
-
-        if target_acl_children is None:
-            target_acl_children = {}
-
         for self_child in self.children:
             # Not dealing with negations and defaults for now
             if self_child.text.startswith((self._negation_prefix, "default ")):
@@ -344,6 +340,7 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
 
             if in_acl:
                 # Ignore ACL sequence numbers
+                assert isinstance(target_acl_children, dict)
                 target_child = target_acl_children.get(
                     self._strip_acl_sequence_number(self_child)
                 )
@@ -354,8 +351,24 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
                 delta.add_deep_copy_of(self_child)
             else:
                 delta_child = delta.add_child(self_child.text)
-                # pylint: disable=protected-access
-                self_child._difference(target_child, delta_child)
+                sw_matches = tuple(f"ip{x} access-list " for x in ("", "v4", "v6"))
+
+                if self_child.text.startswith(sw_matches):
+                    # pylint: disable=protected-access
+                    self_child._difference(
+                        target_child,
+                        delta_child,
+                        in_acl=True,
+                        target_acl_children={
+                            self._strip_acl_sequence_number(c): c
+                            for c in target_child.children
+                        },
+                    )
+                else:
+                    self_child._difference(  # pylint: disable=protected-access
+                        target_child, delta_child
+                    )
+
                 if not delta_child.children:
                     delta_child.delete()
 

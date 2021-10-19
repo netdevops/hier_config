@@ -230,7 +230,7 @@ class TestHConfig:
         assert isinstance(hier2.all_children(), types.GeneratorType)
 
     def test_lineage(self):
-        """ This is covered by test_path """
+        """This is covered by test_path"""
         pass
 
     def test_path(self):
@@ -485,3 +485,19 @@ class TestHConfig:
             c.cisco_style_text() for c in difference.all_children_sorted()
         )
         assert len(difference_children) == 6
+
+    @staticmethod
+    def test_difference3(options_ios):
+        host = Host(hostname="test_host", os="ios", hconfig_options=options_ios)
+        rc = ["ip access-list extended test", " 10 a", " 20 b"]
+        step = ["ip access-list extended test", " 10 a", " 20 b", " 30 c"]
+        rc_hier = HConfig(host=host)
+        rc_hier.load_from_string("\n".join(rc))
+        step_hier = HConfig(host=host)
+        step_hier.load_from_string("\n".join(step))
+
+        difference = step_hier.difference(rc_hier)
+        difference_children = list(
+            c.cisco_style_text() for c in difference.all_children_sorted()
+        )
+        assert difference_children == ["ip access-list extended test", "  30 c"]
