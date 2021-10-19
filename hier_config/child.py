@@ -160,7 +160,7 @@ class HConfigChild(HConfigBase):
         return f"{indentation}{self.text}{comments_str}"
 
     @property
-    def indentation(self):
+    def indentation(self) -> str:
         return "  " * (self.depth() - 1)
 
     def delete(self) -> None:
