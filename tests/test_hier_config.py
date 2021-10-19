@@ -450,6 +450,25 @@ class TestHConfig:
     def test_lineage_test(self):
         pass
 
+    def test_future_config(self):
+        running_config = HConfig(host=self.host_a)
+        running_config.add_children_deep(["a", "aa", "aaa", "aaaa"])
+        running_config.add_children_deep(["a", "ab", "aba", "abaa"])
+        config = HConfig(host=self.host_a)
+        config.add_children_deep(["a", "ac"])
+        config.add_children_deep(["a", "no ab"])
+        config.add_children_deep(["a", "no az"])
+
+        future_config = running_config.future(config)
+        assert list(c.cisco_style_text() for c in future_config.all_children()) == [
+            "a",
+            "  ac",  # config lines are added first
+            "  no az",
+            "  aa",  # self lines not in config are added last
+            "    aaa",
+            "      aaaa",
+        ]
+
     def test_difference1(self):
         rc = ["a", " a1", " a2", " a3", "b"]
         step = ["a", " a1", " a2", " a3", " a4", " a5", "b", "c", "d", " d1"]

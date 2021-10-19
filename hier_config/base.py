@@ -287,6 +287,59 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
         for child in self.children:
             self.children_dict.setdefault(child.text, child)
 
+    def _future(
+        self,
+        config: Union[HConfig, HConfigChild],
+        future_config: Union[HConfig, HConfigChild],
+    ) -> None:
+        # TODO
+        # The initial draft should focus on simple declaration and negation
+        # Use this as the new write_verify mechanism. This will ensure the results are accurate.
+        # Account for special cases
+        # - negate a numbered ACL when removing an item
+        # - idempotent commands
+        #   - This will imply that all idempotent command handling be done in hier_config and not by outside modules
+        # - sectional exiting
+        # - negate with
+        # - remediation fixups
+        # - sectional_overwrite
+        # - sectional_overwrite with no negate
+
+        negated_or_recursed = set()
+        for config_child in config.children:
+            # sectional_overwrite
+            # account for the negation
+            if config_child.sectional_overwrite_check():
+                future_config.add_deep_copy_of(config_child)
+            # sectional_overwrite_no_negate
+            elif config_child.sectional_overwrite_no_negate_check():
+                future_config.add_deep_copy_of(config_child)
+            # The config_child being applied is already in self
+            elif self_child := self.get_child("equals", config_child.text):
+                future_child = future_config.add_shallow_copy_of(self_child)
+                self_child._future(config_child, future_child)
+                negated_or_recursed.add(config_child.text)
+            # The a child is being negated
+            elif config_child.text.startswith(self._negation_prefix):
+                unnegated_command = config_child.text[len(self._negation_prefix) :]
+                if self.get_child("equals", unnegated_command):
+                    negated_or_recursed.add(unnegated_command)
+                # Account for "no ..." commands in the running config
+                else:
+                    future_config.add_shallow_copy_of(config_child)
+            else:
+                future_config.add_deep_copy_of(config_child)
+
+        for self_child in self.children:
+            if self_child.text in negated_or_recursed:
+                continue
+            else:
+                future_config.add_deep_copy_of(self_child)
+
+
+        # elif self_child.sectional_overwrite_no_negate_check():
+        #   target_child.overwrite_with(self_child, delta, False)
+
     def delete_all_children(self) -> None:
         """Delete all children"""
         self.children.clear()

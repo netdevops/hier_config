@@ -280,6 +280,16 @@ class HConfig(HConfigBase):  # pylint: disable=too-many-public-methods
                     exit_line.tags = child.tags
                     exit_line.order_weight = 999
 
+    def future(self, config: HConfig) -> HConfig:
+        # TODO
+        # The initial draft should focus on simple declaration and negation
+        # Account for special cases
+        # - negate a numbered ACL when removing an item
+        # - idempotent commands
+        future_config = HConfig(host=self.host)
+        self._future(config, future_config)
+        return future_config
+
     def with_tags(self, tags: Set[str]) -> HConfig:
         """
         Returns a new instance containing only sub-objects
