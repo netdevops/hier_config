@@ -687,7 +687,7 @@ eos_options: dict = {
 
 
 def options_for(os: str) -> dict:
-    """ Create base options on an OS level. """
+    """Create base options on an OS level."""
     options: dict = {
         "ios": ios_options,
         "iosxe": iosxe_options,

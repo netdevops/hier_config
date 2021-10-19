@@ -11,6 +11,7 @@ from typing import (
     Tuple,
 )
 from logging import getLogger
+from itertools import chain
 
 from .base import HConfigBase
 from . import text_match
@@ -79,7 +80,7 @@ class HConfigChild(HConfigBase):
 
     @property
     def root(self) -> HConfig:
-        """ returns the HConfig object at the base of the tree """
+        """returns the HConfig object at the base of the tree"""
         return self.parent.root
 
     @property
@@ -95,10 +96,9 @@ class HConfigChild(HConfigBase):
         return HConfigChild
 
     def depth(self) -> int:
-        """ Returns the distance to the root HConfig object i.e. indent level """
+        """Returns the distance to the root HConfig object i.e. indent level"""
         return self.parent.depth() + 1
 
-    # Consider removing, no internal or other use that I am aware of
     def move(self, new_parent: Union[HConfig, HConfigChild]) -> None:
         """
         move one HConfigChild object to different HConfig parent object
@@ -121,19 +121,19 @@ class HConfigChild(HConfigBase):
         self.delete()
 
     def lineage(self) -> Iterator[HConfigChild]:
-        """ Yields the lineage of parent objects, up to but excluding the root """
+        """Yields the lineage of parent objects, up to but excluding the root"""
         yield from self.parent.lineage()
         yield self
 
     def path(self) -> Iterator[str]:
-        """ Return a list of the text instance variables from self.lineage """
-        for parent in self.lineage():
-            yield parent.text
+        """Return a list of the text instance variables from self.lineage"""
+        for hier_object in self.lineage():
+            yield hier_object.text
 
     def cisco_style_text(
         self, style: str = "without_comments", tag: Optional[str] = None
     ) -> str:
-        """ Return a Cisco style formated line i.e. indentation_level + text ! comments """
+        """Return a Cisco style formated line i.e. indentation_level + text ! comments"""
 
         comments = []
         if style == "without_comments":
@@ -155,14 +155,12 @@ class HConfigChild(HConfigBase):
         elif style == "with_comments":
             comments.extend(self.comments)
 
-        return "{}{}{}".format(
-            "  " * (self.depth() - 1),  # render the indentation
-            self.text,
-            " !{}".format(", ".join(sorted(comments))) if comments else "",
-        )
+        indentation = "  " * (self.depth() - 1)
+        comments_str = f" !{', '.join(sorted(comments))}" if comments else ""
+        return f"{indentation}{self.text}{comments_str}"
 
     def delete(self) -> None:
-        """ Delete the current object from its parent """
+        """Delete the current object from its parent"""
         self.parent.del_child(self)
 
     def append_tag(self, tag: str) -> None:
@@ -208,7 +206,7 @@ class HConfigChild(HConfigBase):
             self._tags.difference_update(tags)
 
     def negate(self) -> HConfigChild:
-        """ Negate self.text """
+        """Negate self.text"""
         for rule in self.options["negation_negate_with"]:
             if self.lineage_test(rule):
                 self.text = rule["use"]
@@ -222,17 +220,17 @@ class HConfigChild(HConfigBase):
 
     @property
     def is_leaf(self) -> bool:
-        """ returns True if there are no children and is not an instance of HConfig """
+        """returns True if there are no children and is not an instance of HConfig"""
         return not self.is_branch
 
     @property
     def is_branch(self) -> bool:
-        """ returns True if there are children or is an instance of HConfig """
+        """returns True if there are children or is an instance of HConfig"""
         return bool(self.children)
 
     @property
     def tags(self) -> Set[Optional[str]]:
-        """ Recursive access to tags on all leaf nodes """
+        """Recursive access to tags on all leaf nodes"""
         if self.is_branch:
             found_tags = set()
             for child in self.children:
@@ -246,7 +244,7 @@ class HConfigChild(HConfigBase):
 
     @tags.setter
     def tags(self, value: Set[str]) -> None:
-        """ Recursive access to tags on all leaf nodes """
+        """Recursive access to tags on all leaf nodes"""
         if self.is_branch:
             for child in self.children:
                 # see comment in getter
@@ -255,7 +253,7 @@ class HConfigChild(HConfigBase):
             self._tags = value
 
     def is_idempotent_command(self, other_children: Iterable[HConfigChild]) -> bool:
-        """ Determine if self.text is an idempotent change. """
+        """Determine if self.text is an idempotent change."""
         # Blacklist commands from matching as idempotent
         for rule in self.options["idempotent_commands_blacklist"]:
             if self.lineage_test(rule, True):
@@ -290,7 +288,7 @@ class HConfigChild(HConfigBase):
         return False
 
     def sectional_overwrite_check(self) -> bool:
-        """ Determines if self.text matches a sectional overwrite rule """
+        """Determines if self.text matches a sectional overwrite rule"""
         for rule in self.options["sectional_overwrite"]:
             if self.lineage_test(rule):
                 return True
@@ -302,7 +300,7 @@ class HConfigChild(HConfigBase):
         delta: Union[HConfig, HConfigChild],
         negate: bool = True,
     ) -> None:
-        """ Deletes delta.child[self.text], adds a deep copy of self to delta """
+        """Deletes delta.child[self.text], adds a deep copy of self to delta"""
         if other.children != self.children:
             if negate:
                 delta.del_child_by_text(self.text)
@@ -329,8 +327,24 @@ class HConfigChild(HConfigBase):
 
         return include_line
 
+    def all_children_sorted_by_tags(
+        self, include_tags: Set[str], exclude_tags: Set[str]
+    ) -> Iterator[HConfigChild]:
+        """Yield all children recursively that match include/exclude tags"""
+        if self.is_leaf:
+            if self.line_inclusion_test(include_tags, exclude_tags):
+                yield self
+        else:
+            self_iter = iter((self,))
+            for child in sorted(self.children):
+                included_children = child.all_children_sorted_by_tags(
+                    include_tags, exclude_tags
+                )
+                if peek := next(included_children, None):
+                    yield from chain(self_iter, (peek,), included_children)
+
     def lineage_test(self, rule: dict, strip_negation: bool = False) -> bool:
-        """ A generic test against a lineage of HConfigChild objects """
+        """A generic test against a lineage of HConfigChild objects"""
         if rule.get("match_leaf", False):
             lineage_obj: Iterator[HConfigChild] = (o for o in (self,))
             lineage_depth = 1
@@ -369,7 +383,7 @@ class HConfigChild(HConfigBase):
         return matches == rule_lineage_len
 
     def _swap_negation(self) -> HConfigChild:
-        """ Swap negation of a self.text """
+        """Swap negation of a self.text"""
         if self.text.startswith(self._negation_prefix):
             self.text = self.text[len(self._negation_prefix) :]
         else:
@@ -378,7 +392,7 @@ class HConfigChild(HConfigBase):
         return self
 
     def _default(self) -> HConfigChild:
-        """ Default self.text """
+        """Default self.text"""
         if self.text.startswith(self._negation_prefix):
             self.text = "default " + self.text[len(self._negation_prefix) :]
         else:
@@ -398,8 +412,8 @@ class HConfigChild(HConfigBase):
 
     @staticmethod
     def _explode_lineage_rule(rule: dict) -> Tuple[list, list]:
-        text_match_rules: List[dict] = list()
-        object_rules = list()
+        text_match_rules: List[dict] = []
+        object_rules = []
         for test, expression in rule.items():
             if test in {"new_in_config", "negative_intersection_tags"}:
                 object_rules.append({"test": test, "expression": expression})
@@ -474,7 +488,7 @@ class HConfigChild(HConfigBase):
         return items
 
     def _duplicate_child_allowed_check(self) -> bool:
-        """ Determine if duplicate(identical text) children are allowed under the parent """
+        """Determine if duplicate(identical text) children are allowed under the parent"""
         for rule in self.options["parent_allows_duplicate_child"]:
             if self.lineage_test(rule):
                 return True

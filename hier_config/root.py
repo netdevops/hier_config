@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 logger = getLogger(__name__)
 
 
-class HConfig(HConfigBase):
+class HConfig(HConfigBase):  # pylint: disable=too-many-public-methods
 
     """
     A class for representing and comparing Cisco configurations in a
@@ -66,7 +66,7 @@ class HConfig(HConfigBase):
         self.real_indent_level = -1
 
         self.options.setdefault("negation", "no")
-        self._logs: List[str] = list()
+        self._logs: List[str] = []
 
     def __repr__(self) -> str:
         return f"HConfig(host={self.host})"
@@ -76,7 +76,7 @@ class HConfig(HConfigBase):
 
     @property
     def root(self) -> HConfig:
-        """ returns the HConfig object at the base of the tree """
+        """returns the HConfig object at the base of the tree"""
         return self
 
     @property
@@ -85,7 +85,7 @@ class HConfig(HConfigBase):
 
     @property
     def is_leaf(self) -> bool:
-        """ returns True if there are no children and is not an instance of HConfig """
+        """returns True if there are no children and is not an instance of HConfig"""
         return False
 
     @property
@@ -94,7 +94,7 @@ class HConfig(HConfigBase):
 
     @property
     def is_branch(self) -> bool:
-        """ returns True if there are children or is an instance of HConfig """
+        """returns True if there are children or is an instance of HConfig"""
         return True
 
     @property
@@ -103,7 +103,7 @@ class HConfig(HConfigBase):
 
     @property
     def tags(self) -> Set[Optional[str]]:
-        """ Recursive access to tags on all leaf nodes """
+        """Recursive access to tags on all leaf nodes"""
         found_tags: Set[Optional[str]] = set()
         for child in self.children:
             found_tags.update(child.tags)
@@ -111,12 +111,12 @@ class HConfig(HConfigBase):
 
     @tags.setter
     def tags(self, value: Set[str]) -> None:
-        """ Recursive access to tags on all leaf nodes """
+        """Recursive access to tags on all leaf nodes"""
         for child in self.children:
             child.tags = value  # type: ignore
 
     def merge(self, other: HConfig) -> None:
-        """ Merges two HConfig objects """
+        """Merges two HConfig objects"""
         for child in other.children:
             self.add_deep_copy_of(child, merged=True)
 
@@ -127,13 +127,13 @@ class HConfig(HConfigBase):
         yield from ()
 
     def load_from_file(self, file_path: Union[str, Path]) -> None:
-        """ Load configuration text from a file """
-        with open(file_path) as file:
+        """Load configuration text from a file"""
+        with open(file_path) as file:  # pylint: disable=unspecified-encoding
             config_text = file.read()
         self.load_from_string(config_text)
 
     def load_from_string(self, config_text: str) -> None:
-        """ Create Hierarchical Configuration nested objects from text """
+        """Create Hierarchical Configuration nested objects from text"""
         for sub in self.options["full_text_sub"]:
             config_text = re.sub(sub["search"], sub["replace"], config_text)
 
@@ -207,7 +207,7 @@ class HConfig(HConfigBase):
                         child.remove_tags(rule["remove_tags"])
 
     def depth(self) -> int:
-        """ Returns the distance to the root HConfig object i.e. indent level """
+        """Returns the distance to the root HConfig object i.e. indent level"""
         return 0
 
     def difference(self, target: HConfig) -> HConfig:
@@ -292,6 +292,13 @@ class HConfig(HConfigBase):
             raise ValueError
         return new_instance
 
+    def all_children_sorted_by_tags(
+        self, include_tags: Set[str], exclude_tags: Set[str]
+    ) -> Iterator[HConfigChild]:
+        """Yield all children recursively that match include/exclude tags"""
+        for child in sorted(self.children):
+            yield from child.all_children_sorted_by_tags(include_tags, exclude_tags)
+
     @staticmethod
     def _load_from_string_lines_end_of_banner_test(
         config_line: str, banner_end_lines: Set[str], banner_end_contains: List[str]
@@ -332,8 +339,9 @@ class HConfig(HConfigBase):
                     temp_banner = []
                 continue
 
-            # Test if this line is the start of a banner
-            if line.startswith("banner "):
+            # Test if this line is the start of a banner and not an empty banner
+            # Empty banners matching the below expression have been seen on NX-OS
+            if line.startswith("banner ") and line != "banner motd ##":
                 in_banner = True
                 temp_banner.append(line)
                 banner_words = line.split()
@@ -413,5 +421,5 @@ class HConfig(HConfigBase):
                     acl.children.remove(entry)
 
     def _duplicate_child_allowed_check(self) -> bool:
-        """ Determine if duplicate(identical text) children are allowed under the parent """
+        """Determine if duplicate(identical text) children are allowed under the parent"""
         return False

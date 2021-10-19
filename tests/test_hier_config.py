@@ -17,8 +17,6 @@ class TestHConfig:
 
     def test_bool(self):
         config = HConfig(host=self.host_a)
-        assert not config
-        config.add_child("test")
         assert config
 
     def test_merge(self):
@@ -143,8 +141,10 @@ class TestHConfig:
         hier = HConfig(host=self.host_a)
         hier.add_child("interface Vlan2")
         hier.add_child("interface Vlan3")
-        children = hier.get_children("startswith", "interface")
-        assert len(list(children)) == 2
+        children = list(hier.get_children("startswith", "interface"))
+        assert len(children) == 2
+        for child in children:
+            assert child.text.startswith("interface Vlan")
 
     def test_move(self):
         hier1 = HConfig(host=self.host_a)
@@ -230,10 +230,15 @@ class TestHConfig:
         assert isinstance(hier2.all_children(), types.GeneratorType)
 
     def test_lineage(self):
+        """This is covered by test_path"""
         pass
 
     def test_path(self):
-        pass
+        hier = HConfig(host=self.host_a)
+        config_a = hier.add_child("a")
+        config_aa = config_a.add_child("aa")
+        config_aaa = config_aa.add_child("aaa")
+        assert list(config_aaa.path()) == ["a", "aa", "aaa"]
 
     def test_cisco_style_text(self):
         hier = HConfig(host=self.host_a)
@@ -256,17 +261,26 @@ class TestHConfig:
 
     def test_all_children_sorted_by_tags(self):
         config = HConfig(host=self.host_a)
-        interface = config.add_child("interface Vlan2")
-        ip_address_a = interface.add_child("ip address 192.168.1.1/24")
-        ip_address_a.append_tags("a")
-        ip_address_ab = interface.add_child("ip address 192.168.2.1/24")
-        ip_address_ab.append_tags(["a", "b"])
+        config_a = config.add_child("a")
+        config_aa = config_a.add_child("aa")
+        config_a.add_child("ab")
+        config_aaa = config_aa.add_child("aaa")
+        config_aab = config_aa.add_child("aab")
+        config_aaa.append_tags("aaa")
+        config_aab.append_tags("aab")
 
-        assert len(list(config.all_children_sorted_by_tags({"a"}, {"b"}))) == 1
-        assert ip_address_a is list(config.all_children_sorted_by_tags({"a"}, {"b"}))[0]
-        assert len(list(config.all_children_sorted_by_tags({"a"}, set()))) == 3
-        assert len(list(config.all_children_sorted_by_tags(set(), {"a"}))) == 0
-        assert len(list(config.all_children_sorted_by_tags(set(), set()))) == 0
+        case_1_matches = [
+            c.text for c in config.all_children_sorted_by_tags({"aaa"}, set())
+        ]
+        assert ["a", "aa", "aaa"] == case_1_matches
+        case_2_matches = [
+            c.text for c in config.all_children_sorted_by_tags(set(), {"aab"})
+        ]
+        assert ["a", "aa", "aaa", "ab"] == case_2_matches
+        case_3_matches = [
+            c.text for c in config.all_children_sorted_by_tags({"aaa"}, {"aab"})
+        ]
+        assert ["a", "aa", "aaa"] == case_3_matches
 
     def test_all_children_sorted(self):
         hier = HConfig(host=self.host_a)
@@ -281,7 +295,10 @@ class TestHConfig:
         assert len(list(hier.all_children())) == 2
 
     def test_delete(self):
-        pass
+        hier = HConfig(host=self.host_a)
+        config_a = hier.add_child("a")
+        config_a.delete()
+        assert not hier.children
 
     def test_set_order_weight(self):
         hier = HConfig(host=self.host_a)
@@ -375,7 +392,49 @@ class TestHConfig:
         pass
 
     def test_add_shallow_copy_of(self):
-        pass
+        base_config = HConfig(host=self.host_a)
+
+        config_a = HConfig(host=self.host_a)
+        interface_a = config_a.add_child("interface Vlan2")
+        interface_a.append_tags({"ta", "tb"})
+        interface_a.comments.add("ca")
+        interface_a.order_weight = 200
+
+        config_b = HConfig(host=self.host_b)
+        interface_b = config_b.add_child("interface Vlan2")
+        interface_b.append_tags({"tc"})
+        interface_b.comments.add("cc")
+        interface_b.order_weight = 201
+
+        copied_interface = base_config.add_shallow_copy_of(interface_a, merged=True)
+        assert copied_interface.tags == {"ta", "tb"}
+        assert copied_interface.comments == {"ca"}
+        assert copied_interface.order_weight == 200
+        assert copied_interface.instances == [
+            {
+                "hostname": interface_a.host.hostname,
+                "comments": interface_a.comments,
+                "tags": interface_a.tags,
+            }
+        ]
+
+        copied_interface = base_config.add_shallow_copy_of(interface_b, merged=True)
+
+        assert copied_interface.tags == {"ta", "tb", "tc"}
+        assert copied_interface.comments == {"ca", "cc"}
+        assert copied_interface.order_weight == 201
+        assert copied_interface.instances == [
+            {
+                "hostname": interface_a.host.hostname,
+                "comments": interface_a.comments,
+                "tags": interface_a.tags,
+            },
+            {
+                "hostname": interface_b.host.hostname,
+                "comments": interface_b.comments,
+                "tags": interface_b.tags,
+            },
+        ]
 
     def test_line_inclusion_test(self):
         config = HConfig(host=self.host_a)
@@ -403,7 +462,6 @@ class TestHConfig:
         difference_children = list(
             c.cisco_style_text() for c in difference.all_children_sorted()
         )
-        # breakpoint()
 
         assert len(difference_children) == 6
         assert "c" in difference
@@ -427,3 +485,19 @@ class TestHConfig:
             c.cisco_style_text() for c in difference.all_children_sorted()
         )
         assert len(difference_children) == 6
+
+    @staticmethod
+    def test_difference3(options_ios):
+        host = Host(hostname="test_host", os="ios", hconfig_options=options_ios)
+        rc = ["ip access-list extended test", " 10 a", " 20 b"]
+        step = ["ip access-list extended test", " 10 a", " 20 b", " 30 c"]
+        rc_hier = HConfig(host=host)
+        rc_hier.load_from_string("\n".join(rc))
+        step_hier = HConfig(host=host)
+        step_hier.load_from_string("\n".join(step))
+
+        difference = step_hier.difference(rc_hier)
+        difference_children = list(
+            c.cisco_style_text() for c in difference.all_children_sorted()
+        )
+        assert difference_children == ["ip access-list extended test", "  30 c"]
