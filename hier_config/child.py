@@ -338,16 +338,13 @@ class HConfigChild(HConfigBase):
             if self.line_inclusion_test(include_tags, exclude_tags):
                 yield self
         else:
-            yielded_self = False
+            self_iter = iter((self,))
             for child in sorted(self.children):
                 included_children = child.all_children_sorted_by_tags(
                     include_tags, exclude_tags
                 )
                 if peek := next(included_children, None):
-                    if not yielded_self:
-                        yield self
-                        yielded_self = True
-                    yield from chain((peek,), included_children)
+                    yield from chain(self_iter, (peek,), included_children)
 
     def lineage_test(self, rule: dict, strip_negation: bool = False) -> bool:
         """ A generic test against a lineage of HConfigChild objects """
