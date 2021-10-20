@@ -95,13 +95,10 @@ Once the configs are loaded into the host object, a remediation can be created.
 host.remediation_config()
 ```
 
-`host.remediation_config()` is loaded as a python object. To view the results of the remediation, create a new variable from the `remediation_config()` object and iterate through the `all_children()` or `all_children_sorted()` function.
+`host.remediation_config()` is loaded as a python object. To view the results of the remediation, call the `host.remediation_config_filtered_text(include_tags={}, exclude_tags={})` method.
 
 ```python
-remediation_config = host.remediation_config()
-
-for line in remediation_config.all_children_sorted():
-    print(line.cisco_style_text())
+print(host.remediation_config_filtered_text(include_tags={}, exclude_tags={}))
 ```
 
 If you're using the examples from the `/tests/fixtures` folder in the [github](https://github.com/netdevops/hier_config/) repository, you should see an output that resembles:
