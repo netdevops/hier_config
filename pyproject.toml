@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "hier-config"
-version = "2.0.3"
+version = "2.1.0"
 description = "A network configuration comparison tool, used to build remediation configurations."
 packages = [
     { include="hier_config", from="."},

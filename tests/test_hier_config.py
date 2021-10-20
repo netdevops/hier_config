@@ -501,3 +501,31 @@ class TestHConfig:
             c.cisco_style_text() for c in difference.all_children_sorted()
         )
         assert difference_children == ["ip access-list extended test", "  30 c"]
+
+    @staticmethod
+    def test_unified_diff(options_ios):
+        host = Host(hostname="test_host", os="ios", hconfig_options=options_ios)
+        config_a = HConfig(host=host)
+        config_b = HConfig(host=host)
+        # deep differences
+        config_a.add_children_deep(["a", "aa", "aaa", "aaaa"])
+        config_b.add_children_deep(["a", "aa", "aab", "aaba"])
+        # these children will be the same and should not appear in the diff
+        config_a.add_children_deep(["b", "ba", "baa"])
+        config_b.add_children_deep(["b", "ba", "baa"])
+        # root level differences
+        config_a.add_children_deep(["c", "ca"])
+        config_b.add_child("d")
+
+        diff = list(config_a.unified_diff(config_b))
+        assert diff == [
+            "a",
+            "  aa",
+            "    - aaa",
+            "      - aaaa",
+            "    + aab",
+            "      + aaba",
+            "- c",
+            "  - ca",
+            "+ d",
+        ]

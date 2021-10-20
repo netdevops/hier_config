@@ -13,6 +13,7 @@ from typing import (
 from logging import getLogger
 from abc import ABC, abstractmethod
 from functools import cached_property
+from itertools import chain
 
 from . import text_match
 
@@ -92,13 +93,14 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
     def has_children(self) -> bool:
         return bool(self.children)
 
-    def add_children(self, lines: List[str]) -> None:
-        """
-        Add child instances of HConfigChild
+    def add_children_deep(self, lines: List[str]) -> None:
+        """Add child instances of HConfigChild deeply"""
+        if lines:
+            child = self.add_child(lines.pop(0))
+            child.add_children_deep(lines)
 
-        :param lines: HConfigChild object -> type list
-        :return: None
-        """
+    def add_children(self, lines: List[str]) -> None:
+        """Add child instances of HConfigChild"""
         for line in lines:
             self.add_child(line)
 
@@ -290,6 +292,37 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
         self.children.clear()
         self.rebuild_children_dict()
 
+    def unified_diff(self, target: Union[HConfig, HConfigChild]) -> Iterator[str]:
+        """
+        provides a similar output to difflib.unified_diff()
+
+        In its current state, this algorithm does not consider duplicate child differences.
+        e.g. two instances `endif` in an IOS-XR route-policy. It also does not respect the
+        order of commands where it may count, such as in ACLs. In the case of ACLs, they
+        should contain sequence numbers if order is important.
+        """
+        # if a self child is missing from the target "- self_child.text"
+        for self_child in self.children:
+            self_iter = iter((f"{self_child.indentation}{self_child.text}",))
+            if target_child := target.children_dict.get(self_child.text, None):
+                found = self_child.unified_diff(target_child)
+                if peek := next(found, None):
+                    yield from chain(self_iter, (peek,), found)
+            else:
+                yield f"{self_child.indentation}- {self_child.text}"
+                yield from (
+                    f"{c.indentation}- {c.text}"
+                    for c in self_child.all_children_sorted()
+                )
+        # if a target child is missing from self "+ target_child.text"
+        for target_child in target.children:
+            if target_child.text not in self.children_dict:
+                yield f"{target_child.indentation}+ {target_child.text}"
+                yield from (
+                    f"{c.indentation}+ {c.text}"
+                    for c in target_child.all_children_sorted()
+                )
+
     def _with_tags(
         self, tags: Set[str], new_instance: Union[HConfig, HConfigChild]
     ) -> Union[HConfig, HConfigChild]:
@@ -400,17 +433,7 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
         # find what would need to be added to source_config to get to self
         for target_child in target.children:
             # if the child exist, recurse into its children
-            self_child = self.get_child("equals", target_child.text)
-            # the child is absent, add it
-            if self_child is None:
-                new_item = delta.add_deep_copy_of(target_child)
-                # mark the new item and all of its children as new_in_config
-                new_item.new_in_config = True
-                for child in new_item.all_children():
-                    child.new_in_config = True
-                if new_item.children:
-                    new_item.comments.add("new section")
-            else:
+            if self_child := self.get_child("equals", target_child.text):
                 # This creates a new HConfigChild object just in case there are some delta children
                 # Not very efficient, think of a way to not do this
                 subtree = delta.add_child(target_child.text)
@@ -423,6 +446,15 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
                     target_child.overwrite_with(self_child, delta, True)
                 elif self_child.sectional_overwrite_no_negate_check():
                     target_child.overwrite_with(self_child, delta, False)
+            # the child is absent, add it
+            else:
+                new_item = delta.add_deep_copy_of(target_child)
+                # mark the new item and all of its children as new_in_config
+                new_item.new_in_config = True
+                for child in new_item.all_children():
+                    child.new_in_config = True
+                if new_item.children:
+                    new_item.comments.add("new section")
 
     @cached_property
     def _negation_prefix(self) -> str:
