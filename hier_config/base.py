@@ -297,7 +297,7 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
         provides a similar output to difflib.unified_diff()
 
         In its current state, this algorithm does not consider duplicate child differences.
-        e.g. two instances `endif` in a IOS-XR route-policy. It also does not respect the
+        e.g. two instances `endif` in an IOS-XR route-policy. It also does not respect the
         order of commands where it may count, such as in ACLs. In the case of ACLs, they
         should contain sequence numbers if order is important.
         """
