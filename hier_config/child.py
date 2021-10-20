@@ -155,9 +155,8 @@ class HConfigChild(HConfigBase):
         elif style == "with_comments":
             comments.extend(self.comments)
 
-        indentation = "  " * (self.depth() - 1)
         comments_str = f" !{', '.join(sorted(comments))}" if comments else ""
-        return f"{indentation}{self.text}{comments_str}"
+        return f"{self.indentation}{self.text}{comments_str}"
 
     @property
     def indentation(self) -> str:
