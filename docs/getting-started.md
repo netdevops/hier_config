@@ -101,7 +101,7 @@ host.remediation_config()
 print(host.remediation_config_filtered_text(include_tags={}, exclude_tags={}))
 ```
 
-If you're using the examples from the `/tests/fixtures` folder in the [github](https://github.com/netdevops/hier_config/) repository, you should see an output that resembles:
+> If you're using the examples from the `/tests/fixtures` folder in the [github](https://github.com/netdevops/hier_config/) repository, you should see an output that resembles:
 
 ```text
 vlan 3
