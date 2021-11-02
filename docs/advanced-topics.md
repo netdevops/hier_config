@@ -12,7 +12,7 @@ Lineage rules are rules that are written in YAML. They allow users to seek out v
 
 In the above example, a start of a lineage is defined with the **- lineage:** syntax. From there the interface is defined with the **- startswith: interface** syntax under the **- lineage:** umbrella. This tells hier_config to search for any configuration that starts with the string **interface** as the parent of a configuration line. When it finds an **interface** parent, it then looks at any child configuration line of the interface that starts with the string **description**.
 
-With lineage rules, you can get as deep into the children or as shallow as you need. Suppose you want to inspect the existance or absence of http, ssh, snmp, and logging within a configuration. This can be done with a single lineage rule, like so:
+With lineage rules, you can get as deep into the children or as shallow as you need. Suppose you want to inspect the existence or absence of http, ssh, snmp, and logging within a configuration. This can be done with a single lineage rule, like so:
 
 ```yaml
 - lineage:
@@ -27,7 +27,7 @@ With lineage rules, you can get as deep into the children or as shallow as you n
     - no logging
 ```
 
-Or suppose, you want to inspect whether BGP IPv4 AFI's are activated. You can do this with the following:
+Or suppose, you want to inspect whether BGP IPv4 AFIs are activated. You can do this with the following:
 
 ```yaml
 - lineage:
@@ -69,17 +69,17 @@ When hier_config consumes the lineage rules, it consumes them as a list of linea
 
 ## Working with Tags
 
-With a firm understanding of lineage rules, more complex use cases become available within hier_config. A powerful usecase is the ability to tag specific sections of configuration and only display remediations based on those tags. This becomes very handy when you're attempting to execute a maintenance that only targets low risk configuration changes or isolate the more risky configuration changes to scrutinize their execution during a maintenance.
+With a firm understanding of lineage rules, more complex use cases become available within hier_config. A powerful use case is the ability to tag specific sections of configuration and only display remediations based on those tags. This becomes very handy when you're attempting to execute a maintenance that only targets low risk configuration changes or isolate the more risky configuration changes to scrutinize their execution during a maintenance.
 
 Tagging expands on the use of the lineage rules by creating an **add_tags** keyword to a lineage rule.
 
-Suppose you had a running configuration that had a ntp configuration that looked like:
+Suppose you had a running configuration that had an ntp configuration that looked like:
 
 ```text
 ntp server 192.0.2.1 prefer version 2
 ```
 
-However, your intended configuration utilized a publically available NTP server on the internet:
+However, your intended configuration utilized a publicly available NTP server on the internet:
 
 ```text
 ip name-server 1.1.1.1
@@ -99,35 +99,36 @@ You could create a lineage rule that targeted that specific remediation like thi
   add_tags: ntp
 ```
 
-Now, we can modify the script above to load the tags and create a remediation of the said tags:
+Now we can modify the script above to load the tags and create a remediation of the said tags:
 
 ```python
 #!/usr/bin/env python3
+
 # Import the hier_config Host library
 from hier_config import Host
+
 # Create a hier_config Host object
 host = Host(hostname="aggr-example.rtr", os="ios")
+
 # Load the tagged lineage rules
 host.load_tags_from_file("./tests/fixtures/tags_ios.yml")
+
 # Load a running configuration from a file
 host.load_running_config_from_file("./tests/fixtures/running_config.conf")
+
 # Load an intended configuration from a file
 host.load_generated_config_from_file("./tests/fixtures/generated_config.conf")
+
 # Create the remediation steps
 host.remediation_config()
+
 # Display the remediation steps for only the "ntp" tags
 print(host.remediation_config_filtered_text(include_tags={"ntp"}, exclude_tags={}))
 ```
 
-In the script, we made two changes. The first change is the load the tagged lineage rules:
-`host.load_tags_from_file("./tests/fixtures/tags_ios.yml")` and the second is to filter the remediation steps by only including steps that are tagged with **ntp** via the **include_tags** argument.
-
-Tags can also be loaded from a JSON object. An example of this is:
-
-```python
-tags = [{"lineage": [{"startswith": "ntp"}, {"startswith": "no ntp"}], "add_tags": ["ntp"]}]
-host.load_tags(tags)
-```
+In the script, we made two changes. The first change is to load the tagged lineage rules:
+`host.load_tags_from_file("./tests/fixtures/tags_ios.yml")`.
+And the second is to filter the remediation steps by only including steps that are tagged with **ntp** via the **include_tags** argument.
 
 The remediation looks like:
 
@@ -140,7 +141,7 @@ ntp server time.nist.gov
 
 ## hier_config Options
 
-There are a number of options that can be loaded into hier_config to make it better conform to the nuances of your network device. By default, hier_config loads a set of [sane defaults](https://github.com/netdevops/hier_config/blob/master/hier_config/options.py) for Cisco IOS, IOSXE, IOSXR, NXOS, and Arista EOS.
+There are a number of options that can be loaded into hier_config to make it better conform to the nuances of your network device. By default, hier_config loads a set of [sane defaults](https://github.com/netdevops/hier_config/blob/master/hier_config/options.py) for Cisco IOS, IOS XE, IOS XR, NX-OS, and Arista EOS.
 
 Below are the configuration options available for manipulation.
 
@@ -162,17 +163,20 @@ base_options: dict = {
 }
 ```
 
-The default options can be completely overwritten and loaded from a yaml file or individual components of the options can be manipulated to provide the functionality that is desired.
+The default options can be completely overwritten and loaded from a yaml file, or individual components of the options can be manipulated to provide the functionality that is desired.
 
-Here is an example of manipulating the builtin options.
+Here is an example of manipulating the built-in options.
 
 ```python
 # Import the hier_config Host library
 from hier_config import Host
+
 # Create a hier_config Host object
 host = Host(hostname="aggr-example.rtr", os="ios")
-# Create a NTP negation ordered lineage rule
+
+# Create an NTP negation ordered lineage rule
 ordered_negate_ntp = {"lineage": [{"startswith": ["no ntp"], "order": 700}]}
+
 # Update the hier_config options "ordering" key.
 host.hconfig_options["ordering"].append(ordered_negate_ntp)
 ```
@@ -182,16 +186,19 @@ Here is an example of completely overwriting the default options and loading in 
 ```python
 # import YAML
 import yaml
+
 # Import the hier_config Host library
 from hier_config import Host
+
 # Load the hier_config options into memory
 with open("./tests/fixtures/options_ios.yml") as f:
     options = yaml.load(f.read(), Loader=yaml.SafeLoader)
+
 # Create a hier_config Host object
 host = Host(hostame="aggr-example.rtr", os="ios", hconfig_options=options)
 ```
 
-The following sections cover the options.
+In the following sections, I'll cover the available options.
 
 #### style
 
@@ -205,7 +212,7 @@ style: ios
 
 #### sectional_overwrite_no_negate
 
-The sectional overwrite with no negate hier_config option will completely overwrite sections of configuration without negating them. This option is often used with the RPL sections of IOS-XR devices that require that the entire RPL be re-created when making modifications to them, rather than editing individual lines within the RPL.
+The sectional overwrite with no negate hier_config option will completely overwrite sections of configuration without negating them. This option is often used with the RPL sections of IOS XR devices that require that the entire RPL be re-created when making modifications to them, rather than editing individual lines within the RPL.
 
 An example of sectional overwrite with no negate is:
 
@@ -229,7 +236,7 @@ Sectional overwrite is just like sectional overwrite with no negate, except that
 
 #### ordering
 
-Ordering is one of the most useful hier_config options. This allows you to use lineage rules to define the order in which remediation steps are presented to the user. For the ntp example above, the ntp server was negated (`no ntp server 192.0.2.1`) before the new ntp server was added. In most cases, this wouldn't be advantagous. Thus, ordering can be used to define the proper order to execute commands.
+Ordering is one of the most useful hier_config options. This allows you to use lineage rules to define the order in which remediation steps are presented to the user. For the ntp example above, the ntp server was negated (`no ntp server 192.0.2.1`) before the new ntp server was added. In most cases, this wouldn't be advantageous. Thus, ordering can be used to define the proper order to execute commands.
 
 All commands are assigned a default order weight of 500, with a usable order weight of 1 - 999. The smaller the weight value, the higher on the list of steps a command is to be executed. The larger the weight value, the lower on the list of steps a command is to be executed. To create an order in which new ntp servers are added before old ntp servers are removed, you can create an order lineage that weights the negation to the bottom.
 
@@ -261,7 +268,7 @@ coming soon...
 
 #### sectional_exiting
 
-Sectional exiting are configuration sections that have a configuration syntax that define the end of a configuration section. Examples of this are RPL (route policy language) configurations in IOSXR or peer policy and peer session configurations in IOS BGP sections. The sectional exiting configuration allows you to define the configuration syntax so that hier_config can render a remediation that properly exits those configurations.
+Sectional exiting features configuration sections that have a configuration syntax that defines the end of a configuration section. Examples of this are RPL (route policy language) configurations in IOS XR or peer policy and peer session configurations in IOS BGP sections. The sectional exiting configuration allows you to define the configuration syntax so that hier_config can render a remediation that properly exits those configurations.
 
 An example of sectional exiting is:
 
@@ -287,7 +294,7 @@ full_text_sub:
   replace: ""
 ```
 
-This example simply searches for a banner message in the configuration and replaces it with a empty string.
+This example simply searches for a banner message in the configuration and replaces it with an empty string.
 
 #### per_line_sub
 
@@ -297,6 +304,7 @@ An example is removing lines such as:
 
 ```text
 Building configuration...
+
 Current configuration : 3781 bytes
 ```
 
@@ -330,7 +338,7 @@ idempotent_commands:
   - startswith: description
 ```
 
-The lineage rules above define that defining a vlan name and updating an interface description are both idempotent commands.
+The lineage rules above specify that defining a vlan name and updating an interface description are both idempotent commands.
 
 #### negation_default_when
 
