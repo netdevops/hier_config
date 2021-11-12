@@ -281,11 +281,7 @@ class HConfig(HConfigBase):  # pylint: disable=too-many-public-methods
                     exit_line.order_weight = 999
 
     def future(self, config: HConfig) -> HConfig:
-        # TODO
-        # The initial draft should focus on simple declaration and negation
-        # Account for special cases
-        # - negate a numbered ACL when removing an item
-        # - idempotent commands
+        """EXPERIMENTAL - predict the future config after config is applied to self"""
         future_config = HConfig(host=self.host)
         self._future(config, future_config)
         return future_config

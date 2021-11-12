@@ -292,19 +292,20 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
         config: Union[HConfig, HConfigChild],
         future_config: Union[HConfig, HConfigChild],
     ) -> None:
-        # TODO
-        # The initial draft should focus on simple declaration and negation
-        # Use this as the new write_verify mechanism. This will ensure the results are accurate.
-        # Account for special cases
-        # - negate a numbered ACL when removing an item
-        # - idempotent commands
-        #   - This will imply that all idempotent command handling be done in hier_config and not by outside modules
-        # - sectional exiting
-        # - negate with
-        # - remediation fixups
-        # - sectional_overwrite
-        # - sectional_overwrite with no negate
-
+        """
+        TODO
+        This initial draft focuses on simple declaration and negation which still leaves much to do:
+        Account for these cases
+        - negate a numbered ACL when removing an item
+        - idempotent commands
+          - This will imply that all idempotent command handling be done in
+            hier_config and not by outside modules
+        - sectional exiting
+        - negate with
+        - remediation fixups
+        - sectional_overwrite
+        - sectional_overwrite with no negate
+        """
         negated_or_recursed = set()
         for config_child in config.children:
             # sectional_overwrite
@@ -333,12 +334,7 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
         for self_child in self.children:
             if self_child.text in negated_or_recursed:
                 continue
-            else:
-                future_config.add_deep_copy_of(self_child)
-
-
-        # elif self_child.sectional_overwrite_no_negate_check():
-        #   target_child.overwrite_with(self_child, delta, False)
+            future_config.add_deep_copy_of(self_child)
 
     def delete_all_children(self) -> None:
         """Delete all children"""
