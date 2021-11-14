@@ -293,23 +293,17 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
         future_config: Union[HConfig, HConfigChild],
     ) -> None:
         """
-        TODO
-        This initial draft focuses on simple declaration and negation which still leaves much to do:
-        Account for these cases
+        The below cases still need to be accounted for:
         - negate a numbered ACL when removing an item
-        - idempotent commands
-          - This will imply that all idempotent command handling be done in
-            hier_config and not by outside modules
         - sectional exiting
         - negate with
-        - remediation fixups
-        - sectional_overwrite
-        - sectional_overwrite with no negate
+        - idempotent command blacklist
+        - idempotent_acl_check
+        - and likely others
         """
         negated_or_recursed = set()
         for config_child in config.children:
             # sectional_overwrite
-            # account for the negation
             if config_child.sectional_overwrite_check():
                 future_config.add_deep_copy_of(config_child)
             # sectional_overwrite_no_negate

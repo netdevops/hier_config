@@ -281,7 +281,13 @@ class HConfig(HConfigBase):  # pylint: disable=too-many-public-methods
                     exit_line.order_weight = 999
 
     def future(self, config: HConfig) -> HConfig:
-        """EXPERIMENTAL - predict the future config after config is applied to self"""
+        """
+        EXPERIMENTAL - predict the future config after config is applied to self
+
+        The quality of the this method's output will in part depend on how well
+        the OS options are tuned. Ensuring that idempotency rules are accurate is
+        especially important.
+        """
         future_config = HConfig(host=self.host)
         self._future(config, future_config)
         return future_config
