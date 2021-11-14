@@ -274,7 +274,9 @@ class HConfigChild(HConfigBase):
         # Idempotent command identification
         return bool(self.idempotent_for(other_children))
 
-    def idempotent_for(self, other_children: Iterable[HConfigChild]) -> Optional[HConfigChild]:
+    def idempotent_for(
+        self, other_children: Iterable[HConfigChild]
+    ) -> Optional[HConfigChild]:
         for rule in self.options["idempotent_commands"]:
             if self.lineage_test(rule, True):
                 for other_child in other_children:
