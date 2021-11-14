@@ -76,6 +76,15 @@ This feature is useful in cases where you need to determine what the configurati
 - Ensuring that a configuration change was applied successfully to a device.
   - i.e. Does the post-change config match the predicted future config?
 - Providing a future state config that can be fed into batfish, or similar, to predict if a change will cause an impact.
+- Building rollback configs. If you have the future config state, then generating a rollback config can be done by simply building the remediation config in the reverse direction `rollback = future.config_to_get_to(running)`.
+  - If you are building rollbacks for a series of config changes, you can feed the post-change-1 future config into the process for determining the post-change-2 future config e.g. 
+      ```shell
+      post_change_1_config = running_config.future(change_1_config)
+      change_1_rollback_config = post_change_1_config.config_to_get_to(running_config)
+      post_change_2_config = post_change_1_config.future(change_2_config)
+      change_2_rollback_config = post_change_2_config.config_to_get_to(post_change_1_config)
+      ...
+      ```
 
 In its current state, this algorithm does not consider:
 - negate a numbered ACL when removing an item
