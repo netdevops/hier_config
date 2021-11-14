@@ -316,6 +316,7 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
             # The config_child being applied is already in self
             elif self_child := self.get_child("equals", config_child.text):
                 future_child = future_config.add_shallow_copy_of(self_child)
+                # pylint: disable=protected-access
                 self_child._future(config_child, future_child)
                 negated_or_recursed.add(config_child.text)
             # The a child is being negated
