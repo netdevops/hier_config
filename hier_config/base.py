@@ -309,6 +309,10 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
             # sectional_overwrite_no_negate
             elif config_child.sectional_overwrite_no_negate_check():
                 future_config.add_deep_copy_of(config_child)
+            # Idempotent commands
+            elif self_child := config_child.idempotent_for(self.children):
+                future_config.add_deep_copy_of(config_child)
+                negated_or_recursed.add(self_child.text)
             # The config_child being applied is already in self
             elif self_child := self.get_child("equals", config_child.text):
                 future_child = future_config.add_shallow_copy_of(self_child)
