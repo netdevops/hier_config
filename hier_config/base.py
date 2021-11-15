@@ -287,54 +287,6 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
         for child in self.children:
             self.children_dict.setdefault(child.text, child)
 
-    def _future(
-        self,
-        config: Union[HConfig, HConfigChild],
-        future_config: Union[HConfig, HConfigChild],
-    ) -> None:
-        """
-        The below cases still need to be accounted for:
-        - negate a numbered ACL when removing an item
-        - sectional exiting
-        - negate with
-        - idempotent command blacklist
-        - idempotent_acl_check
-        - and likely others
-        """
-        negated_or_recursed = set()
-        for config_child in config.children:
-            # sectional_overwrite
-            if config_child.sectional_overwrite_check():
-                future_config.add_deep_copy_of(config_child)
-            # sectional_overwrite_no_negate
-            elif config_child.sectional_overwrite_no_negate_check():
-                future_config.add_deep_copy_of(config_child)
-            # Idempotent commands
-            elif self_child := config_child.idempotent_for(self.children):
-                future_config.add_deep_copy_of(config_child)
-                negated_or_recursed.add(self_child.text)
-            # The config_child being applied is already in self
-            elif self_child := self.get_child("equals", config_child.text):
-                future_child = future_config.add_shallow_copy_of(self_child)
-                # pylint: disable=protected-access
-                self_child._future(config_child, future_child)
-                negated_or_recursed.add(config_child.text)
-            # The a child is being negated
-            elif config_child.text.startswith(self._negation_prefix):
-                unnegated_command = config_child.text[len(self._negation_prefix) :]
-                if self.get_child("equals", unnegated_command):
-                    negated_or_recursed.add(unnegated_command)
-                # Account for "no ..." commands in the running config
-                else:
-                    future_config.add_shallow_copy_of(config_child)
-            else:
-                future_config.add_deep_copy_of(config_child)
-
-        for self_child in self.children:
-            if self_child.text in negated_or_recursed:
-                continue
-            future_config.add_deep_copy_of(self_child)
-
     def delete_all_children(self) -> None:
         """Delete all children"""
         self.children.clear()
@@ -370,6 +322,57 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
                     f"{c.indentation}+ {c.text}"
                     for c in target_child.all_children_sorted()
                 )
+
+    def _future(
+        self,
+        config: Union[HConfig, HConfigChild],
+        future_config: Union[HConfig, HConfigChild],
+    ) -> None:
+        """
+        The below cases still need to be accounted for:
+        - negate a numbered ACL when removing an item
+        - sectional exiting
+        - negate with
+        - idempotent command blacklist
+        - idempotent_acl_check
+        - and likely others
+        """
+        negated_or_recursed = set()
+        for config_child in config.children:
+            # sectional_overwrite
+            if config_child.sectional_overwrite_check():
+                future_config.add_deep_copy_of(config_child)
+            # sectional_overwrite_no_negate
+            elif config_child.sectional_overwrite_no_negate_check():
+                future_config.add_deep_copy_of(config_child)
+            # Idempotent commands
+            elif self_child := config_child.idempotent_for(self.children):
+                future_config.add_deep_copy_of(config_child)
+                negated_or_recursed.add(self_child.text)
+            # config_child is already in self
+            elif self_child := self.get_child("equals", config_child.text):
+                future_child = future_config.add_shallow_copy_of(self_child)
+                # pylint: disable=protected-access
+                self_child._future(config_child, future_child)
+                negated_or_recursed.add(config_child.text)
+            # config_child is being negated
+            elif config_child.text.startswith(self._negation_prefix):
+                unnegated_command = config_child.text[len(self._negation_prefix) :]
+                if self.get_child("equals", unnegated_command):
+                    negated_or_recursed.add(unnegated_command)
+                # Account for "no ..." commands in the running config
+                else:
+                    future_config.add_shallow_copy_of(config_child)
+            # config_child is not in self and doesn't match a special case
+            else:
+                future_config.add_deep_copy_of(config_child)
+
+        for self_child in self.children:
+            # self_child matched an above special case and should be ignored
+            if self_child.text in negated_or_recursed:
+                continue
+            # self_child was not modified above and should be present in the future config
+            future_config.add_deep_copy_of(self_child)
 
     def _with_tags(
         self, tags: Set[str], new_instance: Union[HConfig, HConfigChild]
