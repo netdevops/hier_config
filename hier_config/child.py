@@ -272,13 +272,17 @@ class HConfigChild(HConfigBase):
                         return True
 
         # Idempotent command identification
+        return bool(self.idempotent_for(other_children))
+
+    def idempotent_for(
+        self, other_children: Iterable[HConfigChild]
+    ) -> Optional[HConfigChild]:
         for rule in self.options["idempotent_commands"]:
             if self.lineage_test(rule, True):
                 for other_child in other_children:
                     if other_child.lineage_test(rule, True):
-                        return True
-
-        return False
+                        return other_child
+        return None
 
     def sectional_overwrite_no_negate_check(self) -> bool:
         """
