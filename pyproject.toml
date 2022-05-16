@@ -1,12 +1,12 @@
 [tool.poetry]
 name = "hier-config"
-version = "2.2.0"
+version = "2.2.1"
 description = "A network configuration comparison tool, used to build remediation configurations."
 packages = [
     { include="hier_config", from="."},
 ]
 authors = [
-    "Andrew Edwards <andrew.edwards@rackspace.com>",
+    "Andrew Edwards <edwards.andrew@heb.com>",
     "James Williams <james.williams@networktocode.com",
     "Jan Brooks <jan.brooks@rackspace.com"
 ]
