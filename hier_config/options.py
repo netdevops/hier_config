@@ -350,7 +350,6 @@ nxos_options: dict = {
                         "ip telnet source-interface",
                         "ip tacacs source-interface",
                         "logging source-interface",
-                        "tacacs-server",
                     ],
                     "re_search": "^spanning-tree vlan ([\\d,-]+) priority",
                 }
