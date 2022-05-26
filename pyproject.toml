@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "hier-config"
-version = "2.2.1"
+version = "2.2.2"
 description = "A network configuration comparison tool, used to build remediation configurations."
 packages = [
     { include="hier_config", from="."},
@@ -27,7 +27,7 @@ classifiers = [
 ]
 [tool.poetry.dependencies]
 python = "^3.8"
-PyYAML = "^5.4.1"
+PyYAML = "^6.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.3"
