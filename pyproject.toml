@@ -27,7 +27,7 @@ classifiers = [
 ]
 [tool.poetry.dependencies]
 python = "^3.8"
-PyYAML = "^6.0"
+PyYAML = ">= 5.4, <= 6.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.3"
