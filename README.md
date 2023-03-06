@@ -34,7 +34,7 @@ Basic Usage Example
 In the below example, we create a hier_config host object, load a running config and a generated config into the host object, load the remediation, and print out the remediation lines to bring a device into spec.
 
 ```
->>> from hier_config import Host
+>>> from hier_config import Host, HConfig
 >>> import yaml
 >>>
 >>> options = yaml.load(open('./tests/fixtures/options_ios.yml'), Loader=yaml.SafeLoader)
