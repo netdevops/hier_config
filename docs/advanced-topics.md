@@ -160,6 +160,7 @@ base_options: dict = {
     "idempotent_commands": [],
     "negation_default_when": [],
     "negation_negate_with": [],
+    "negation_replace": [],
 }
 ```
 
@@ -347,6 +348,40 @@ coming soon...
 #### negation_default_with
 
 coming soon...
+
+#### negation_replace
+
+Used to apply exceptions on 'no' commands. This option is similar to
+per_line_sub but applied in the config removal pipeline.
+
+Mandatory parameters:
+```text
+search - regex to match and separate by groups
+replace - replaced expression used by re.sub. Can be a fixed string or a group
+          sorted in search
+```
+
+e.g. - ipv6 prefix-list commands:
+```text
+ipv6 prefix-list spine-to-leaf-v6 seq 1 permit 2801:80:3ea1:1::/64 ge 65
+no ipv6 prefix-list spine-to-leaf-v6 seq 1
+```
+
+```yaml
+negation_replace:
+- lineage:
+  - re_search: ipv6 prefix-list \b.* permit
+  search: (ipv6 prefix-list \b.* seq \b[0-9]+).(permit\b.*)
+  replace: 'no \1 '
+```
+
+```text
+original:
+no ipv6 prefix-list spine-to-leaf-v6 seq 1 permit 2801:80:3ea1:1::/64 ge 65
+
+result:
+no ipv6 prefix-list spine-to-leaf-v6 seq 1
+```
 
 ## Custom hier_config Workflows
 
