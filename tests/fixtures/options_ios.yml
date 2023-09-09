@@ -102,9 +102,10 @@ idempotent_commands:
   - startswith: name
 - lineage:
   - startswith: interface
-  - startswith:
-    - description
-    - ip address
+  - startswith: description
+- lineage:
+  - startswith: interface
+  - startswith: ip address
 
 # Default when expression: list of expressions
 negation_default_when: []
