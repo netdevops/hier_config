@@ -28,12 +28,12 @@ classifiers = [
 [tool.poetry.dependencies]
 python = ">=3.8.1,<4.0"
 PyYAML = ">= 5.4"
+types-pyyaml = "^6.0.12.12"
 
 [tool.poetry.group.dev.dependencies]
 black = "^23.12.1"
 flake8 = "^7.0.0"
 pytest = "^7.4.4"
-pytest-flake8 = "^1.1.1"
 mypy = "^1.8.0"
 pylint = "^3.0.3"
 pytest-cov = "^4.1.0"

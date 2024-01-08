@@ -27,4 +27,5 @@ jobs:
         poetry install --no-interaction --no-root
         poetry run mypy hier_config
         poetry run pylint --rcfile=pylintrc hier_config
+        poetry run flake8 .
         poetry run pytest
