@@ -69,12 +69,8 @@ ios_options: dict = {
     ],
     "idempotent_commands": [
         {"lineage": [{"startswith": "vlan"}, {"startswith": "name"}]},
-        {
-            "lineage": [
-                {"startswith": "interface"},
-                {"startswith": ["description", "ip address"]},
-            ]
-        },
+        {"lineage": [{"startswith": "interface"}, {"startswith": "description"}]},
+        {"lineage": [{"startswith": "interface"}, {"startswith": "ip address"}]},
     ],
 }
 iosxe_options: dict = {

@@ -37,11 +37,11 @@ class Host:
         host.remediation_config_filtered_text({"safe"}, set()})
     """
 
-    def __init__(
+    def __init__(  # pylint: disable=dangerous-default-value
         self,
         hostname: str,
         os: str,
-        hconfig_options: dict = None,
+        hconfig_options: dict = {},
     ):
         self.hostname = hostname
         self.os = os
@@ -175,8 +175,8 @@ class Host:
 
         return content
 
-    def _get_running_config(self) -> HConfig:  # pylint: disable=no-self-use
+    def _get_running_config(self) -> HConfig:
         return NotImplemented
 
-    def _get_generated_config(self) -> HConfig:  # pylint: disable=no-self-use
+    def _get_generated_config(self) -> HConfig:
         return NotImplemented

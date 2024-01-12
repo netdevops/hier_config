@@ -135,7 +135,7 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
             self.logs.append(f"Found a duplicate section: {list(self.path()) + [text]}")
         return self.children_dict[text]
 
-    def path(self) -> Iterator[str]:  # pylint: disable=no-self-use
+    def path(self) -> Iterator[str]:
         yield from ()
 
     def add_deep_copy_of(
