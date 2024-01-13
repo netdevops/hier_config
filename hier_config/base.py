@@ -473,6 +473,12 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
 
             # in other but not self
             # add this node but not any children
+            if (
+                self_child.text.startswith("set")
+                and self.options["negation"] == "delete"
+            ):
+                self_child.text = self_child.text.replace("set ", "", 1)
+
             deleted = delta.add_child(self_child.text)
             deleted.negate()
             if self_child.children:

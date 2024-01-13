@@ -5,6 +5,8 @@ style: comware5
 # negation prefix
 negation: 'undo'
 
+syntax_style: "cisco"
+
 sectional_overwrite: []
 sectional_overwrite_no_negate: []
 ordering: []
