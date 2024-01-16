@@ -148,6 +148,8 @@ Below are the configuration options available for manipulation.
 ```python
 base_options: dict = {
     "style": None,
+    "negation": "no",
+    "syntax_style": "cisco",
     "sectional_overwrite": [],
     "sectional_overwrite_no_negate": [],
     "ordering": [],
@@ -208,6 +210,28 @@ Example:
 
 ```yaml
 style: ios
+```
+
+#### negation
+
+The **negation** defines how an os handles negation. The default is **no**. However, in some circumstances, the negation method is different. Comware, for instance uses **undo** as the negation method and set based syntax uses **delete** for negation.
+
+```yaml
+negation: no
+```
+
+#### syntax_style
+
+**syntax_style** is used when using a configuration syntax that is different than Cisco ios-style configuration syntax. The only non-Cisco based syntax supported is **juniper**. Calling the juniper syntax style will call additional parsing methods when loading configurations into memory.
+
+Default:
+```yaml
+syntax_style: cisco
+```
+
+Juniper:
+```yaml
+syntax_style: juniper
 ```
 
 #### sectional_overwrite_no_negate

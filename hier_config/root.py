@@ -66,6 +66,7 @@ class HConfig(HConfigBase):  # pylint: disable=too-many-public-methods
         self.real_indent_level = -1
 
         self.options.setdefault("negation", "no")
+        self.options.setdefault("syntax_style", "cisco")
         self._logs: List[str] = []
 
     def __repr__(self) -> str:
@@ -134,6 +135,8 @@ class HConfig(HConfigBase):  # pylint: disable=too-many-public-methods
 
     def load_from_string(self, config_text: str) -> None:
         """Create Hierarchical Configuration nested objects from text"""
+        config_text = self._convert_to_set_commands(config_text)
+
         for sub in self.options["full_text_sub"]:
             config_text = re.sub(sub["search"], sub["replace"], config_text)
 
@@ -435,3 +438,49 @@ class HConfig(HConfigBase):  # pylint: disable=too-many-public-methods
     def _duplicate_child_allowed_check(self) -> bool:
         """Determine if duplicate(identical text) children are allowed under the parent"""
         return False
+
+    def _convert_to_set_commands(self, config_str: str) -> str:
+        """
+        Convert a Junupier style config string into a list of set commands.
+
+        Args:
+            config_str (str): The config string to convert to set commands
+        Returns:
+            config_str (str): Configuration string
+        """
+        if self.options["syntax_style"] == "juniper":
+            lines = config_str.split("\n")
+            path: List[str] = []
+            set_commands: List[str] = []
+
+            for line in lines:
+                stripped_line = line.strip()
+
+                # Skip empty lines
+                if not stripped_line:
+                    continue
+
+                # Strip ; from the end of the line
+                if stripped_line.endswith(";"):
+                    stripped_line = stripped_line.replace(";", "")
+
+                # Count the number of spaces at the beginning to determine the level
+                level = line.find(stripped_line) // 4
+
+                # Adjust the current path based on the level
+                path = path[:level]
+
+                # If the line ends with '{' or '}', it starts a new block
+                if stripped_line.endswith(("{", "}")):
+                    path.append(stripped_line[:-1].strip())
+                elif stripped_line.startswith(("set", "delete")):
+                    # It's already a set command, so just add it to the list
+                    set_commands.append(stripped_line)
+                else:
+                    # It's a command line, construct the full command
+                    command = "set " + " ".join(path) + " " + stripped_line
+                    set_commands.append(command)
+
+            config_str = "\n".join(set_commands)
+
+        return config_str

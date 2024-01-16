@@ -5,6 +5,36 @@ import pytest
 
 
 @pytest.fixture(scope="module")
+def generated_config_junos():
+    return open(f"{_fixture_dir()}/generated_config_junos.conf").read()
+
+
+@pytest.fixture(scope="module")
+def running_config_junos():
+    return open(f"{_fixture_dir()}/running_config_junos.conf").read()
+
+
+@pytest.fixture(scope="module")
+def generated_config_flat_junos():
+    return open(f"{_fixture_dir()}/generated_config_flat_junos.conf").read()
+
+
+@pytest.fixture(scope="module")
+def running_config_flat_junos():
+    return open(f"{_fixture_dir()}/running_config_flat_junos.conf").read()
+
+
+@pytest.fixture(scope="module")
+def remediation_config_flat_junos():
+    return open(f"{_fixture_dir()}/remediation_config_flat_junos.conf").read()
+
+
+@pytest.fixture(scope="module")
+def options_junos():
+    return yaml.safe_load(open(f"{_fixture_dir()}/options_junos.yml").read())
+
+
+@pytest.fixture(scope="module")
 def generated_config():
     return open(f"{_fixture_dir()}/generated_config.conf").read()
 

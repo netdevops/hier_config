@@ -13,7 +13,12 @@ Hierarchical Configuraiton has been used extensively on:
 
 However, any NOS that utilizes a CLI syntax that is structured in a similar fasion to IOS should work mostly out of the box.
 
-The code documentation can be found at: https://netdevops.io/hier_config/
+NOS's that utilize a `set` based CLI syntax has been added as experimental functionality. OS's that utilize this syntax are:
+
+- [x] Juniper JunOS
+- [x] VyOS
+
+The code documentation can be found at: https://hier-config.readthedocs.io/
 
 Installation
 ============
@@ -50,7 +55,7 @@ HConfig(host=Host(hostname=example.rtr))
 >>>
 >>> # Build and Print the all lines of the remediation config
 >>>
->>> print(host.remediation_config_filtered_text()):
+>>> print(host.remediation_config_filtered_text({}, {}))
 vlan 3
   name switch_mgmt_10.0.3.0/24
 vlan 4

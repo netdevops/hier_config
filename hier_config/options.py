@@ -1,5 +1,7 @@
 base_options: dict = {
     "style": None,
+    "negation": "no",
+    "syntax_style": "cisco",
     "sectional_overwrite": [],
     "sectional_overwrite_no_negate": [],
     "ordering": [],
@@ -681,6 +683,20 @@ eos_options: dict = {
 }
 
 
+junos_options: dict = {
+    "style": "junos",
+    "negation": "delete",
+    "syntax_style": "juniper",
+}
+
+
+vyos_options: dict = {
+    "style": "vyos",
+    "negation": "delete",
+    "syntax_style": "juniper",
+}
+
+
 def options_for(os: str) -> dict:
     """Create base options on an OS level."""
     options: dict = {
@@ -689,6 +705,8 @@ def options_for(os: str) -> dict:
         "iosxr": iosxr_options,
         "nxos": nxos_options,
         "eos": eos_options,
+        "junos": junos_options,
+        "vyos": vyos_options,
     }
 
     if options.get(os):
