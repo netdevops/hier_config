@@ -190,37 +190,61 @@ vlan 2
 "set" based operating systems can now be remediated in experimental capacity. Here is an example of a JunOS style remediation.
 
 ```
->>> from hier_config import Host
+$ cat ./tests/fixtures/running_config_flat_junos.confset system host-name aggr-example.rtr
+
+set firewall family inet filter TEST term 1 from source-address 10.0.0.0/29
+set firewall family inet filter TEST term 1 then accept
+
+set vlans switch_mgmt_10.0.2.0/24 vlan-id 2
+set vlans switch_mgmt_10.0.2.0/24 l3-interface irb.2
+
+set vlans switch_mgmt_10.0.4.0/24 vlan-id 3
+set vlans switch_mgmt_10.0.4.0/24 l3-interface irb.3
+
+set interfaces irb unit 2 family inet address 10.0.2.1/24
+set interfaces irb unit 2 family inet description "switch_10.0.2.0/24"
+set interfaces irb unit 2 family inet disable
+
+set interfaces irb unit 3 family inet address 10.0.4.1/16
+set interfaces irb unit 3 family inet filter input TEST
+set interfaces irb unit 3 family inet mtu 9000
+set interfaces irb unit 3 family inet description "switch_mgmt_10.0.4.0/24"
+
+
+$ python3
+Python 3.8.10 (default, Nov 22 2023, 10:22:35) 
+[GCC 9.4.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
 >>> import yaml
+>>> from hier_config import Host
 >>>
->>> options = yaml.load(open('./tests/fixtures/options_junos.yml'), Loader=yaml.SafeLoader)
->>> host = Host('example.rtr', 'ios', options)
->>>
+>>> host = Host('example.rtr', 'junos')
+>>> 
 >>> # Build Hierarchical Configuration object for the Running Config
 >>> host.load_running_config_from_file("./tests/fixtures/running_config_flat_junos.conf")
->>>
+>>> 
 >>> # Build Hierarchical Configuration object for the Generated Config
 >>> host.load_generated_config_from_file("./tests/fixtures/generated_config_flat_junos.conf")
->>>
+>>> 
 >>> # Build and Print the all lines of the remediation config
 >>> print(host.remediation_config_filtered_text({}, {}))
 delete vlans switch_mgmt_10.0.4.0/24 vlan-id 3
 delete vlans switch_mgmt_10.0.4.0/24 l3-interface irb.3
-delete interfaces irb unit 2 disable
+delete interfaces irb unit 2 family inet disable
 delete interfaces irb unit 3 family inet address 10.0.4.1/16
-delete interfaces irb unit 3 description "switch_mgmt_10.0.4.0/24"
+delete interfaces irb unit 3 family inet description "switch_mgmt_10.0.4.0/24"
 set vlans switch_mgmt_10.0.3.0/24 vlan-id 3
 set vlans switch_mgmt_10.0.3.0/24 l3-interface irb.3
 set vlans switch_mgmt_10.0.4.0/24 vlan-id 4
 set vlans switch_mgmt_10.0.4.0/24 l3-interface irb.4
 set interfaces irb unit 2 family inet filter input TEST
-set interfaces irb unit 2 mtu 9000
+set interfaces irb unit 2 family inet mtu 9000
 set interfaces irb unit 3 family inet address 10.0.3.1/16
-set interfaces irb unit 3 description "switch_mgmt_10.0.3.0/24"
+set interfaces irb unit 3 family inet description "switch_mgmt_10.0.3.0/24"
 set interfaces irb unit 4 family inet address 10.0.4.1/16
 set interfaces irb unit 4 family inet filter input TEST
-set interfaces irb unit 4 mtu 9000
-set interfaces irb unit 4 description "switch_mgmt_10.0.4.0/24"
+set interfaces irb unit 4 family inet mtu 9000
+set interfaces irb unit 4 family inet description "switch_mgmt_10.0.4.0/24"
 ```
 
 Configurations loaded into Hier Config as Juniper-style syntax are converted to a flat `set` based configuration format. Remediations are then rendered using this `set` style syntax.
@@ -283,27 +307,36 @@ $ python3
 Python 3.8.10 (default, Nov 22 2023, 10:22:35) 
 [GCC 9.4.0] on linux
 Type "help", "copyright", "credits" or "license" for more information.
->>> from hier_config import Host
 >>> import yaml
->>> options = yaml.load(open('./tests/fixtures/options_junos.yml'), Loader=yaml.SafeLoader)
->>> host = Host('example.rtr', 'ios', options)
+>>> from hier_config import Host
+>>> 
+>>> host = Host('example.rtr', 'junos')
+>>> 
+>>> # Build Hierarchical Configuration object for the Running Config
 >>> host.load_running_config_from_file("./tests/fixtures/running_config_junos.conf")
-
->>> for line in host.running_config.children:
-...     print(line.text)
-... 
-set system host-name aggr-example.rtr
-set firewall family inet filter TEST term 1 from source-address 10.0.0.0/29
-set firewall family inet filter TEST term 1 then accept
-set vlans switch_mgmt_10.0.2.0/24 vlan-id 2
-set vlans switch_mgmt_10.0.2.0/24 l3-interface irb.2
-set vlans switch_mgmt_10.0.4.0/24 vlan-id 3
-set vlans switch_mgmt_10.0.4.0/24 l3-interface irb.3
-set interfaces irb unit 2 family inet address 10.0.2.1/24
-set interfaces irb unit 2 family inet description "switch_10.0.2.0/24"
-set interfaces irb unit 2 family inet disable
-set interfaces irb unit 3 family inet address 10.0.4.1/16
-set interfaces irb unit 3 family inet filter input TEST
-set interfaces irb unit 3 family inet mtu 9000
-set interfaces irb unit 3 family inet description "switch_mgmt_10.0.4.0/24"
+>>> 
+>>> # Build Hierarchical Configuration object for the Generated Config
+>>> host.load_generated_config_from_file("./tests/fixtures/generated_config_junos.conf")
+>>> 
+>>> # Build and Print the all lines of the remediation config
+>>> print(host.remediation_config_filtered_text({}, {}))
+delete vlans switch_mgmt_10.0.4.0/24 vlan-id 3
+delete vlans switch_mgmt_10.0.4.0/24 l3-interface irb.3
+delete interfaces irb unit 2 family inet description "switch_10.0.2.0/24"
+delete interfaces irb unit 2 family inet disable
+delete interfaces irb unit 3 family inet address 10.0.4.1/16
+delete interfaces irb unit 3 family inet description "switch_mgmt_10.0.4.0/24"
+set vlans switch_mgmt_10.0.3.0/24 vlan-id 3
+set vlans switch_mgmt_10.0.3.0/24 l3-interface irb.3
+set vlans switch_mgmt_10.0.4.0/24 vlan-id 4
+set vlans switch_mgmt_10.0.4.0/24 l3-interface irb.4
+set interfaces irb unit 2 family inet filter input TEST
+set interfaces irb unit 2 family inet mtu 9000
+set interfaces irb unit 2 family inet description "switch_mgmt_10.0.2.0/24"
+set interfaces irb unit 3 family inet address 10.0.3.1/16
+set interfaces irb unit 3 family inet description "switch_mgmt_10.0.3.0/24"
+set interfaces irb unit 4 family inet address 10.0.4.1/16
+set interfaces irb unit 4 family inet filter input TEST
+set interfaces irb unit 4 family inet mtu 9000
+set interfaces irb unit 4 family inet description "switch_mgmt_10.0.4.0/24"
 ```
