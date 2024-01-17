@@ -121,3 +121,7 @@ negation_default_when: []
 #   - startswith: description
 #   use: no description
 negation_negate_with: []
+
+# Negate expressions with replace: lineage expression -> negate replace
+# Use search and replace options to find and replace some line expression
+negation_replace: []

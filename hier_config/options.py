@@ -14,6 +14,7 @@ base_options: dict = {
     "idempotent_commands": [],
     "negation_default_when": [],
     "negation_negate_with": [],
+    "negation_replace": [],
 }
 ios_options: dict = {
     "style": "ios",
