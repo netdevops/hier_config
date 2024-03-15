@@ -371,6 +371,87 @@ class TestHConfig:
         )
         assert len(list(remediation_config_hier.all_children())) == 2
 
+    def test_config_to_get_to_with_tags(self):
+        """
+        Consider the case where we want to selectively remediate only parts
+        of a configuration, we have two options:
+            (1) filter the generated and running configurations by tags, and create
+                the remediation: this will work *almost* as expected but will fail
+                spectacularly for some edge cases (see below)
+            (2) create the remediation from the generated and running configurations, and
+                then filter by tags on the remediation
+        Option (1) can fail in the following example scenario:
+            - we want to remove a specific BGP neighbor configuration
+            - we retrieve the running configuration which has that neighbor
+            - we get our generated configuration, which does NOT have that neighbor
+            - we create a tag:
+                - add_tags: our_neighbor
+                  lineage:
+                    - equals: router bgp 65535
+                    - equals: neighbor 192.0.2.1
+            - we filter both configurations to only include the `our_neighbor` tag
+            - we generate the remediation configuration on the filtered configuration
+            - the remediation configuration is:
+                no router bgp 65535
+        This happens because the generated configuration is completely empty once it is
+        filtered: it does not contain this neighbor, hence it does not contain anything!
+
+        The right (?) approach is therefore to compute the remediation configuration and
+        only filter it afterwards, which requires that we are able to tag it properly.
+        This test checks that we must be able to get "partial" remediation
+        configurations, without ever encountering the "no router bgp 65535" example.
+        """
+        running_config_hier = HConfig(host=self.host_a)
+        interface = running_config_hier.add_child("interface Vlan2")
+        ip_address = interface.add_child("ip address 192.168.1.1/24")
+        ip_address.append_tags("ip_address")
+        router_bgp = running_config_hier.add_child("router bgp 65535")
+        neighbor = router_bgp.add_child("neighbor 192.0.2.1")
+        neighbor.append_tags(["bgp", "neighbor"])
+
+        generated_config_hier = HConfig(host=self.host_a)
+        vlan_3 = generated_config_hier.add_child("interface Vlan3")
+        vlan_3.append_tag("vlan3")
+        router_bgp = generated_config_hier.add_child("router bgp 65535")
+        neighbor_2 = router_bgp.add_child("neighbor 192.0.2.2")
+        neighbor_2.append_tags(["bgp", "neighbor_2"])
+
+        remediation_config_hier_no_tags = running_config_hier.config_to_get_to(
+            generated_config_hier
+        )
+        assert len(list(remediation_config_hier_no_tags.all_children())) == 5
+
+        remediation_config_hier_include = running_config_hier.config_to_get_to(
+            generated_config_hier
+        )
+        children = remediation_config_hier_include.all_children_sorted_by_tags(
+            {"vlan3"}, set()
+        )
+        assert next(children).tags & vlan_3.tags
+        assert next(children, None) is None
+
+        remediation_config_hier_exclude = running_config_hier.config_to_get_to(
+            generated_config_hier
+        )
+        children = remediation_config_hier_exclude.all_children_sorted_by_tags(
+            set(), {"vlan3"}
+        )
+        assert next(children).tags & interface.tags
+        assert next(children).tags & {"bgp"}
+        assert next(children).tags & neighbor_2.tags
+        assert next(children).tags & neighbor.tags
+        assert next(children, None) is None
+
+        remediation_config_hier_include_deep = running_config_hier.config_to_get_to(
+            generated_config_hier
+        )
+        children = remediation_config_hier_include_deep.all_children_sorted_by_tags(
+            {"neighbor"}, set()
+        )
+        assert next(children).tags & {"bgp"}
+        assert next(children).tags & neighbor.tags
+        assert next(children, None) is None
+
     def test_config_to_get_to_right(self):
         running_config_hier = HConfig(host=self.host_a)
         running_config_hier.add_child("do not add me")
