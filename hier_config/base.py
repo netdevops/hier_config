@@ -480,6 +480,7 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
                 self_child.text = self_child.text.replace("set ", "", 1)
 
             deleted = delta.add_child(self_child.text)
+            deleted.append_tags({t for t in self_child.tags if isinstance(t, str)})
             deleted.negate()
             if self_child.children:
                 deleted.comments.add(f"removes {len(self_child.children) + 1} lines")
