@@ -548,3 +548,99 @@ class TestHConfig:
             "  - ca",
             "+ d",
         ]
+
+    @staticmethod
+    def test_unified_diff_with_tags(options_ios):
+        host = Host(hostname="test_host", os="ios", hconfig_options=options_ios)
+        config_a = HConfig(host=host)
+        config_b = HConfig(host=host)
+        tags = [
+            {
+                "add_tags": "aaaa",
+                "lineage": [
+                    {"equals": "a"},
+                    {"equals": "aa"},
+                    {"equals": "aaa"},
+                    {"equals": "aaaa"},
+                ],
+            },
+            {
+                "add_tags": "aaba",
+                "lineage": [
+                    {"equals": "a"},
+                    {"equals": "aa"},
+                    {"equals": "aab"},
+                    {"equals": "aaba"},
+                ],
+            },
+            {
+                "add_tags": "ca",
+                "lineage": [
+                    {"equals": "c"},
+                    {"equals": "ca"},
+                ],
+            },
+        ]
+
+        # deep differences
+        config_a.add_children_deep(["a", "aa", "aaa", "aaaa"])
+        config_b.add_children_deep(["a", "aa", "aab", "aaba"])
+        # these children will be the same and should not appear in the diff
+        config_a.add_children_deep(["b", "ba", "baa"])
+        config_b.add_children_deep(["b", "ba", "baa"])
+        # root level differences
+        config_a.add_children_deep(["c", "ca"])
+        config_b.add_child("d")
+
+        config_a.add_tags(tags)
+        config_b.add_tags(tags)
+
+        # no tags, this must be the same as test_unified_diff
+        diff = list(config_a.unified_diff(config_b))
+        assert diff == [
+            "a",
+            "  aa",
+            "    - aaa",
+            "      - aaaa",
+            "    + aab",
+            "      + aaba",
+            "- c",
+            "  - ca",
+            "+ d",
+        ]
+
+        # exclude
+        diff = list(config_a.unified_diff(config_b, exclude_tags={"aaba"}))
+        assert diff == [
+            "a",
+            "  aa",
+            "    - aaa",
+            "      - aaaa",
+            "- c",
+            "  - ca",
+            "+ d",
+        ]
+
+        # exclude both
+        diff = list(config_a.unified_diff(config_b, exclude_tags={"aaba", "aaaa"}))
+        assert diff == [
+            "- c",
+            "  - ca",
+            "+ d",
+        ]
+
+        # include only aaba
+        diff = list(config_a.unified_diff(config_b, include_tags={"aaba"}))
+        assert diff == [
+            "a",
+            "  aa",
+            "    + aab",
+            "      + aaba",
+        ]
+
+        # include only ac
+        diff = list(config_a.unified_diff(config_b, include_tags={"ca"}))
+        assert diff == [
+            "- c",
+            "  - ca",
+        ]
