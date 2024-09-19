@@ -135,7 +135,8 @@ class HConfig(HConfigBase):  # pylint: disable=too-many-public-methods
 
     def load_from_string(self, config_text: str) -> None:
         """Create Hierarchical Configuration nested objects from text"""
-        config_text = self._convert_to_set_commands(config_text)
+        if self.options["syntax_style"] == "juniper":
+            config_text = self._convert_to_set_commands(config_text)
 
         for sub in self.options["full_text_sub"]:
             config_text = re.sub(sub["search"], sub["replace"], config_text)
@@ -441,46 +442,45 @@ class HConfig(HConfigBase):  # pylint: disable=too-many-public-methods
 
     def _convert_to_set_commands(self, config_str: str) -> str:
         """
-        Convert a Junupier style config string into a list of set commands.
-
+        Convert a Juniper style config string into a list of set commands.
         Args:
             config_str (str): The config string to convert to set commands
         Returns:
             config_str (str): Configuration string
         """
-        if self.options["syntax_style"] == "juniper":
-            lines = config_str.split("\n")
-            path: List[str] = []
-            set_commands: List[str] = []
+        lines = []
+        path = []
+        for line in config_str.splitlines():
+            stripped_line = line.strip()
 
-            for line in lines:
-                stripped_line = line.strip()
+            # Skip empty lines
+            if not stripped_line:
+                continue
 
-                # Skip empty lines
-                if not stripped_line:
+            # Strip ; from the end of the line
+            stripped_line = stripped_line.rstrip(";")
+
+            # Skip comments
+            if stripped_line.startswith(("/*", "#")):
+                continue
+
+            # Handle block start / end
+            if stripped_line.endswith("{"):
+                path.append(stripped_line.rstrip("{").strip())
+                continue
+            if stripped_line.endswith("}"):
+                try:
+                    path.pop()
                     continue
+                except IndexError as e:
+                    raise ValueError("unexpected extra end of block '}'") from e
 
-                # Strip ; from the end of the line
-                if stripped_line.endswith(";"):
-                    stripped_line = stripped_line.replace(";", "")
+            # If it's not already a set command, build it
+            if not stripped_line.startswith(("set", self.options["negation"])):
+                stripped_line = "set " + " ".join(path) + " " + stripped_line
+            lines.append(stripped_line)
 
-                # Count the number of spaces at the beginning to determine the level
-                level = line.find(stripped_line) // 4
+        if path:
+            raise ValueError("unterminated configuration: missing '}'?")
 
-                # Adjust the current path based on the level
-                path = path[:level]
-
-                # If the line ends with '{' or '}', it starts a new block
-                if stripped_line.endswith(("{", "}")):
-                    path.append(stripped_line[:-1].strip())
-                elif stripped_line.startswith(("set", "delete")):
-                    # It's already a set command, so just add it to the list
-                    set_commands.append(stripped_line)
-                else:
-                    # It's a command line, construct the full command
-                    command = "set " + " ".join(path) + " " + stripped_line
-                    set_commands.append(command)
-
-            config_str = "\n".join(set_commands)
-
-        return config_str
+        return "\n".join(lines)
