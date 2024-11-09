@@ -1,4 +1,3 @@
----
 - lineage:
   - equals:
     - no ip http secure-server

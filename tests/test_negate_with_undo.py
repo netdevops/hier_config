@@ -1,19 +1,13 @@
-import pytest
+from hier_config import Host
+from hier_config.platforms.model import Platform
 
-from hier_config.host import Host
 
-
-class TestNegateWithUndo:
-    @pytest.fixture(autouse=True)
-    def setUpClass(self, options_negate_with_undo):
-        self.os = "comware5"
-        self.running_config = "test_for_undo\nundo test_for_redo"
-        self.generated_config = "undo test_for_undo\ntest_for_redo"
-        self.remediation = "undo test_for_undo\ntest_for_redo"
-        self.host = Host("example1.rtr", self.os, options_negate_with_undo)
-
-    def test_merge(self):
-        self.host.load_running_config(self.running_config)
-        self.host.load_generated_config(self.generated_config)
-        self.host.remediation_config()
-        assert self.remediation == str(self.host.remediation_config())
+def test_merge_with_undo() -> None:
+    running_config = "test_for_undo\nundo test_for_redo"
+    generated_config = "undo test_for_undo\ntest_for_redo"
+    remediation = "undo test_for_undo\ntest_for_redo"
+    host = Host(Platform.HP_COMWARE5)
+    host.load_running_config(running_config)
+    host.load_generated_config(generated_config)
+    host.remediation_config()
+    assert remediation == str(host.remediation_config())
