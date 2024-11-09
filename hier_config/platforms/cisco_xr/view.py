@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from collections.abc import Iterable
 from ipaddress import AddressValueError, IPv4Address, IPv4Interface
 from re import sub
@@ -16,52 +14,6 @@ from hier_config.platforms.view_base import (
     ConfigViewInterfaceBase,
     HConfigViewBase,
 )
-
-
-class HConfigViewCiscoIOSXR(HConfigViewBase):
-    def dot1q_mode_from_vlans(
-        self,
-        untagged_vlan: int | None = None,
-        tagged_vlans: tuple[int, ...] = (),
-        *,
-        tagged_all: bool = False,
-    ) -> InterfaceDot1qMode | None:
-        raise NotImplementedError
-
-    @property
-    def hostname(self) -> str | None:
-        if child := self.config.get_child(startswith="hostname "):
-            return child.text.split()[1].lower()
-        return None
-
-    @property
-    def interface_names_mentioned(self) -> frozenset[str]:
-        raise NotImplementedError
-
-    @property
-    def interface_views(self) -> Iterable[ConfigViewInterfaceCiscoIOSXR]:
-        for interface in self.interfaces:
-            yield ConfigViewInterfaceCiscoIOSXR(interface)
-
-    @property
-    def interfaces(self) -> Iterable[HConfigChild]:
-        return self.config.get_children(startswith="interface ")
-
-    @property
-    def ipv4_default_gw(self) -> IPv4Address | None:
-        raise NotImplementedError
-
-    @property
-    def location(self) -> str:
-        raise NotImplementedError
-
-    @property
-    def stack_members(self) -> Iterable[StackMember]:
-        raise NotImplementedError
-
-    @property
-    def vlans(self) -> Iterable[Vlan]:
-        raise NotImplementedError
 
 
 class ConfigViewInterfaceCiscoIOSXR(ConfigViewInterfaceBase):  # noqa: PLR0904
@@ -207,4 +159,50 @@ class ConfigViewInterfaceCiscoIOSXR(ConfigViewInterfaceBase):  # noqa: PLR0904
 
     @property
     def vrf(self) -> str:
+        raise NotImplementedError
+
+
+class HConfigViewCiscoIOSXR(HConfigViewBase):
+    def dot1q_mode_from_vlans(
+        self,
+        untagged_vlan: int | None = None,
+        tagged_vlans: tuple[int, ...] = (),
+        *,
+        tagged_all: bool = False,
+    ) -> InterfaceDot1qMode | None:
+        raise NotImplementedError
+
+    @property
+    def hostname(self) -> str | None:
+        if child := self.config.get_child(startswith="hostname "):
+            return child.text.split()[1].lower()
+        return None
+
+    @property
+    def interface_names_mentioned(self) -> frozenset[str]:
+        raise NotImplementedError
+
+    @property
+    def interface_views(self) -> Iterable[ConfigViewInterfaceCiscoIOSXR]:
+        for interface in self.interfaces:
+            yield ConfigViewInterfaceCiscoIOSXR(interface)
+
+    @property
+    def interfaces(self) -> Iterable[HConfigChild]:
+        return self.config.get_children(startswith="interface ")
+
+    @property
+    def ipv4_default_gw(self) -> IPv4Address | None:
+        raise NotImplementedError
+
+    @property
+    def location(self) -> str:
+        raise NotImplementedError
+
+    @property
+    def stack_members(self) -> Iterable[StackMember]:
+        raise NotImplementedError
+
+    @property
+    def vlans(self) -> Iterable[Vlan]:
         raise NotImplementedError

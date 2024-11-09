@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from collections.abc import Iterable
 
 from hier_config.child import HConfigChild
@@ -10,12 +8,12 @@ from hier_config.model import (
     OrderingRule,
     ParentAllowsDuplicateChildRule,
     PerLineSubRule,
+    Platform,
     SectionalExitingRule,
     SectionalOverwriteNoNegateRule,
     SectionalOverwriteRule,
 )
 from hier_config.platforms.driver_base import HConfigDriverBase
-from hier_config.platforms.model import Platform
 
 
 class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-instance-attributes

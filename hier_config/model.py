@@ -1,9 +1,7 @@
-from __future__ import annotations
+from enum import Enum, auto
 
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import ConfigDict
-
-from hier_config.platforms.model import Platform
+from pydantic import ConfigDict, PositiveInt
 
 
 class BaseModel(PydanticBaseModel):
@@ -13,13 +11,8 @@ class BaseModel(PydanticBaseModel):
     # model_config = ConfigDict(frozen=True, extra="forbid")
 
 
-class Dump(BaseModel):
-    driver_platform: Platform
-    lines: tuple[DumpLine, ...]
-
-
 class DumpLine(BaseModel):
-    depth: int
+    depth: PositiveInt
     text: str
     tags: frozenset[str]
     comments: frozenset[str]
@@ -80,7 +73,7 @@ class IdempotentCommandsAvoidRule(BaseModel):
 
 
 class Instance(BaseModel):
-    id: int
+    id: PositiveInt
     comments: frozenset[str]
     tags: frozenset[str]
 
@@ -95,3 +88,20 @@ class NegationDefaultWithRule(BaseModel):
 
 
 SetLikeOfStr = frozenset[str] | set[str]
+
+
+class Platform(str, Enum):
+    ARISTA_EOS = auto()
+    CISCO_IOS = auto()
+    CISCO_NXOS = auto()
+    CISCO_XR = auto()
+    GENERIC = auto()  # used in cases where the specific platform is unimportant/unknown
+    HP_COMWARE5 = auto()
+    HP_PROCURVE = auto()
+    JUNIPER_JUNOS = auto()
+    VYOS = auto()
+
+
+class Dump(BaseModel):
+    driver_platform: Platform
+    lines: tuple[DumpLine, ...]

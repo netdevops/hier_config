@@ -1,11 +1,9 @@
-from __future__ import annotations
-
 from collections.abc import Iterable
 from ipaddress import AddressValueError, IPv4Address, IPv4Interface
 from re import sub
 
 from hier_config.child import HConfigChild
-from hier_config.platforms.functions import expand_range, expand_vlan_range
+from hier_config.platforms.functions import expand_range
 from hier_config.platforms.model import (
     InterfaceDot1qMode,
     InterfaceDuplex,
@@ -17,94 +15,6 @@ from hier_config.platforms.view_base import (
     ConfigViewInterfaceBase,
     HConfigViewBase,
 )
-
-
-class HConfigViewCiscoIOS(HConfigViewBase):
-    def dot1q_mode_from_vlans(
-        self,
-        untagged_vlan: int | None = None,
-        tagged_vlans: tuple[int, ...] = (),
-        *,
-        tagged_all: bool = False,
-    ) -> InterfaceDot1qMode | None:
-        raise NotImplementedError
-
-    @property
-    def hostname(self) -> str | None:
-        if child := self.config.get_child(startswith="hostname "):
-            return child.text.split()[1].lower()
-        return None
-
-    @property
-    def interface_names_mentioned(self) -> frozenset[str]:
-        """Returns a set with all the interface names mentioned in the config."""
-        return frozenset(model.name for model in self.interface_views)
-
-    @property
-    def interface_views(self) -> Iterable[ConfigViewInterfaceCiscoIOS]:
-        for interface in self.interfaces:
-            yield ConfigViewInterfaceCiscoIOS(interface)
-
-    @property
-    def interfaces(self) -> Iterable[HConfigChild]:
-        return self.config.get_children(startswith="interface ")
-
-    @property
-    def ipv4_default_gw(self) -> IPv4Address | None:
-        if gateway := self.config.get_child(startswith="ip default-gateway "):
-            return IPv4Address(gateway.text.split()[2])
-        return None
-
-    @property
-    def location(self) -> str:
-        if location := self.config.get_child(startswith="snmp-server location "):
-            return location.text.split(maxsplit=2)[2].replace('"', "")
-        return ""
-
-    @property
-    def stack_members(self) -> Iterable[StackMember]:
-        """
-        stacking
-           member 1 type "JL123" mac-address abc123-abc123
-           member 1 priority 255
-           member 2 type "JL123" mac-address abc123-abc123
-           member 2 priority 254
-           ...
-        """
-        for member in self.config.get_children(re_search="^switch .* provision .*"):
-            words = member.text.split()
-            member_id = int(words[1])
-            yield StackMember(
-                id=member_id, priority=256 - member_id, mac_address=None, model=words[3]
-            )
-
-    @property
-    def vlans(self) -> Iterable[Vlan]:
-        yielded_vlans: set[int] = set()
-
-        # Yield explicitly defined VLANs
-        for child in self.config.get_children(re_search="^vlan [0-9,-]+$"):
-            vlan_name = None
-            if name := child.get_child(startswith="name "):
-                _, vlan_name = name.text.split(maxsplit=1)
-                vlan_name = vlan_name.replace('"', "")
-            for vlan_id in expand_range(child.text.split()[1]):
-                yielded_vlans.add(vlan_id)
-                yield Vlan(
-                    id=vlan_id,
-                    name=vlan_name or None,
-                )
-
-        # Yield any remaining unnamed VLANs mentioned on interfaces
-        for interface_view in self.interface_views:
-            if (
-                native_vlan := interface_view.native_vlan
-            ) and native_vlan not in yielded_vlans:
-                yielded_vlans.add(native_vlan)
-                yield Vlan(
-                    id=native_vlan,
-                    name=None,
-                )
 
 
 class ConfigViewInterfaceCiscoIOS(ConfigViewInterfaceBase):  # noqa: PLR0904
@@ -303,8 +213,10 @@ class ConfigViewInterfaceCiscoIOS(ConfigViewInterfaceBase):  # noqa: PLR0904
 
     @property
     def tagged_vlans(self) -> tuple[int, ...]:
-        if child := self.config.get_child(startswith="switchport trunk allowed vlan "):
-            return tuple(expand_vlan_range(child.text))
+        if child := self.config.get_child(
+            re_search="^switchport trunk allowed vlan [0-9,-]+$"
+        ):
+            return tuple(expand_range(child.text.split()[4]))
         return ()
 
     @property
@@ -316,3 +228,91 @@ class ConfigViewInterfaceCiscoIOS(ConfigViewInterfaceBase):  # noqa: PLR0904
     @property
     def _bundle_prefix(self) -> str:
         return "Port-channel"
+
+
+class HConfigViewCiscoIOS(HConfigViewBase):
+    def dot1q_mode_from_vlans(
+        self,
+        untagged_vlan: int | None = None,
+        tagged_vlans: tuple[int, ...] = (),
+        *,
+        tagged_all: bool = False,
+    ) -> InterfaceDot1qMode | None:
+        raise NotImplementedError
+
+    @property
+    def hostname(self) -> str | None:
+        if child := self.config.get_child(startswith="hostname "):
+            return child.text.split()[1].lower()
+        return None
+
+    @property
+    def interface_names_mentioned(self) -> frozenset[str]:
+        """Returns a set with all the interface names mentioned in the config."""
+        return frozenset(model.name for model in self.interface_views)
+
+    @property
+    def interface_views(self) -> Iterable[ConfigViewInterfaceCiscoIOS]:
+        for interface in self.interfaces:
+            yield ConfigViewInterfaceCiscoIOS(interface)
+
+    @property
+    def interfaces(self) -> Iterable[HConfigChild]:
+        return self.config.get_children(startswith="interface ")
+
+    @property
+    def ipv4_default_gw(self) -> IPv4Address | None:
+        if gateway := self.config.get_child(startswith="ip default-gateway "):
+            return IPv4Address(gateway.text.split()[2])
+        return None
+
+    @property
+    def location(self) -> str:
+        if location := self.config.get_child(startswith="snmp-server location "):
+            return location.text.split(maxsplit=2)[2].replace('"', "")
+        return ""
+
+    @property
+    def stack_members(self) -> Iterable[StackMember]:
+        """
+        stacking
+           member 1 type "JL123" mac-address abc123-abc123
+           member 1 priority 255
+           member 2 type "JL123" mac-address abc123-abc123
+           member 2 priority 254
+           ...
+        """
+        for member in self.config.get_children(re_search="^switch .* provision .*"):
+            words = member.text.split()
+            member_id = int(words[1])
+            yield StackMember(
+                id=member_id, priority=256 - member_id, mac_address=None, model=words[3]
+            )
+
+    @property
+    def vlans(self) -> Iterable[Vlan]:
+        yielded_vlans: set[int] = set()
+
+        # Yield explicitly defined VLANs
+        for child in self.config.get_children(re_search="^vlan [0-9,-]+$"):
+            vlan_name = None
+            if name := child.get_child(startswith="name "):
+                _, vlan_name = name.text.split(maxsplit=1)
+                vlan_name = vlan_name.replace('"', "")
+            for vlan_id in expand_range(child.text.split()[1]):
+                yielded_vlans.add(vlan_id)
+                yield Vlan(
+                    id=vlan_id,
+                    name=vlan_name or None,
+                )
+
+        # Yield any remaining unnamed VLANs mentioned on interfaces
+        for interface_view in self.interface_views:
+            if (
+                native_vlan := interface_view.native_vlan
+            ) and native_vlan not in yielded_vlans:
+                yielded_vlans.add(native_vlan)
+                yield Vlan(
+                    id=native_vlan,
+                    name=None,
+                )

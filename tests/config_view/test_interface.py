@@ -1,6 +1,6 @@
 from hier_config import get_hconfig, get_hconfig_driver, get_hconfig_view
+from hier_config.model import Platform
 from hier_config.platforms.hp_procurve.functions import hp_procurve_expand_range
-from hier_config.platforms.model import Platform
 
 
 def test_hp_procurve_expand_range() -> None:

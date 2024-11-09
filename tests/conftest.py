@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from hier_config.platforms.model import Platform
+from hier_config.model import Platform
 
 
 @pytest.fixture(scope="module")

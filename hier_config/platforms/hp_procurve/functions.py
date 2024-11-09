@@ -1,6 +1,3 @@
-from __future__ import annotations
-
-
 def hp_procurve_expand_range(interface_range_str: str) -> tuple[str, ...]:
     """Expand interface ranges like 1/2-5,2/22-45."""
     interfaces: list[str] = []

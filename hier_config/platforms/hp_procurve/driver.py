@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import re
 from collections.abc import Callable, Iterable
 
@@ -10,10 +8,10 @@ from hier_config.model import (
     NegationDefaultWithRule,
     OrderingRule,
     PerLineSubRule,
+    Platform,
 )
 from hier_config.platforms.driver_base import HConfigDriverBase
 from hier_config.platforms.hp_procurve.functions import hp_procurve_expand_range
-from hier_config.platforms.model import Platform
 from hier_config.root import HConfig
 
 
@@ -89,6 +87,8 @@ def _fixup_hp_procurve_vlan(config: HConfig) -> None:
 
 def _fixup_hp_procurve_device_profile(config: HConfig) -> None:
     """
+    Separates the device-profile tagged-vlans onto individual lines.
+
     device-profile name "phone"
       tagged-vlan 10,20
 

@@ -1,14 +1,12 @@
-from __future__ import annotations
-
 from hier_config.model import (
     IdempotentCommandsRule,
     MatchRule,
     NegationDefaultWhenRule,
     PerLineSubRule,
+    Platform,
     SectionalExitingRule,
 )
 from hier_config.platforms.driver_base import HConfigDriverBase
-from hier_config.platforms.model import Platform
 
 
 class HConfigDriverAristaEOS(HConfigDriverBase):

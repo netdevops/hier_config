@@ -1,20 +1,8 @@
-from __future__ import annotations
-
 from enum import Enum, auto
 
+from pydantic import PositiveInt
+
 from hier_config.model import BaseModel
-
-
-class Platform(str, Enum):
-    ARISTA_EOS = auto()
-    CISCO_IOS = auto()
-    CISCO_NXOS = auto()
-    CISCO_XR = auto()
-    GENERIC = auto()  # used in cases where the specific platform is unimportant/unknown
-    HP_COMWARE5 = auto()
-    HP_PROCURVE = auto()
-    JUNIPER_JUNOS = auto()
-    VYOS = auto()
 
 
 class NACHostMode(str, Enum):
@@ -33,8 +21,8 @@ class InterfaceDot1qMode(str, Enum):
 
 
 class StackMember(BaseModel):
-    id: int
-    priority: int
+    id: PositiveInt
+    priority: PositiveInt
     mac_address: str | None  # not defined in cisco_ios stacks
     model: str
 
@@ -46,5 +34,5 @@ class InterfaceDuplex(str, Enum):
 
 
 class Vlan(BaseModel):
-    id: int
+    id: PositiveInt
     name: str | None

@@ -22,11 +22,15 @@ class HConfig(HConfigBase):  # noqa: PLR0904
     hierarchical tree data structure.
     """
 
-    __slots__ = ("driver",)
+    __slots__ = ("_driver",)
 
     def __init__(self, driver: HConfigDriverBase) -> None:
         super().__init__()
-        self.driver = driver
+        self._driver = driver
+
+    @property
+    def driver(self) -> HConfigDriverBase:
+        return self._driver
 
     def __str__(self) -> str:
         return "\n".join(str(c) for c in sorted(self.children))
@@ -79,15 +83,15 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         return HConfigChild
 
     @property
-    def tags(self) -> frozenset[str | None]:
+    def tags(self) -> frozenset[str]:
         """Recursive access to tags on all leaf nodes."""
-        found_tags: set[str | None] = set()
+        found_tags: set[str] = set()
         for child in self.children:
             found_tags.update(child.tags)
         return frozenset(found_tags)
 
     @tags.setter
-    def tags(self, value: Iterable[str]) -> None:
+    def tags(self, value: frozenset[str]) -> None:
         """Recursive access to tags on all leaf nodes."""
         for child in self.children:
             child.tags = value

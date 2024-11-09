@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from hier_config.model import (
     IdempotentCommandsAvoidRule,
     IdempotentCommandsRule,
@@ -7,9 +5,9 @@ from hier_config.model import (
     NegationDefaultWhenRule,
     NegationDefaultWithRule,
     PerLineSubRule,
+    Platform,
 )
 from hier_config.platforms.driver_base import HConfigDriverBase
-from hier_config.platforms.model import Platform
 
 
 class HConfigDriverCiscoNXOS(HConfigDriverBase):

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 from .exceptions import DuplicateChildError
 from .model import MatchRule, SetLikeOfStr
+from .platforms.driver_base import HConfigDriverBase
 
 if TYPE_CHECKING:
     from .child import HConfigChild
@@ -336,7 +337,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
                 self_child._future(config_child, future_child)  # noqa: SLF001
                 negated_or_recursed.add(config_child.text)
             # config_child is being negated
-            elif config_child.text.startswith(self._negation_prefix):
+            elif config_child.text.startswith(self.driver.negation_prefix):
                 unnegated_command = config_child.text_without_negation
                 if self.get_child(equals=unnegated_command):
                     negated_or_recursed.add(unnegated_command)
@@ -345,7 +346,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
                     future_config.add_shallow_copy_of(config_child)
             # The negated form of config_child is in self.children
             elif self_child := self.get_child(
-                equals=f"{self._negation_prefix}{config_child.text}"
+                equals=f"{self.driver.negation_prefix}{config_child.text}"
             ):
                 negated_or_recursed.add(self_child.text)
             # config_child is not in self and doesn't match a special case
@@ -358,6 +359,11 @@ class HConfigBase(ABC):  # noqa: PLR0904
                 continue
             # self_child was not modified above and should be present in the future config
             future_config.add_deep_copy_of(self_child)
+
+    @property
+    @abstractmethod
+    def driver(self) -> HConfigDriverBase:
+        pass
 
     def _with_tags(
         self, tags: frozenset[str], new_instance: HConfig | HConfigChild
@@ -405,7 +411,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
 
         for self_child in self.children:
             # Not dealing with negations and defaults for now
-            if self_child.text.startswith((self._negation_prefix, "default ")):
+            if self_child.text.startswith((self.driver.negation_prefix, "default ")):
                 continue
 
             if in_acl:
@@ -487,7 +493,3 @@ class HConfigBase(ABC):  # noqa: PLR0904
                     child.new_in_config = True
                 if new_item.children:
                     new_item.comments.add("new section")
-
-    @property
-    def _negation_prefix(self) -> str:
-        return f"{self.root.driver.negation} "

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from collections.abc import Callable
 from logging import getLogger
 
@@ -9,10 +7,10 @@ from hier_config.model import (
     NegationDefaultWithRule,
     OrderingRule,
     PerLineSubRule,
+    Platform,
     SectionalExitingRule,
 )
 from hier_config.platforms.driver_base import HConfigDriverBase
-from hier_config.platforms.model import Platform
 from hier_config.root import HConfig
 
 logger = getLogger(__name__)

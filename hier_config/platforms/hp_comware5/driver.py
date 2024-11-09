@@ -1,7 +1,5 @@
-from __future__ import annotations
-
+from hier_config.model import Platform
 from hier_config.platforms.driver_base import HConfigDriverBase
-from hier_config.platforms.model import Platform
 
 
 class HConfigDriverHPComware5(HConfigDriverBase):

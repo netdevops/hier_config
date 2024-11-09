@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from ipaddress import IPv4Address, IPv4Interface
@@ -13,93 +11,6 @@ from hier_config.platforms.model import (
     Vlan,
 )
 from hier_config.root import HConfig
-
-
-class HConfigViewBase(ABC):
-    def __init__(self, config: HConfig) -> None:
-        self.config = config
-
-    @property
-    def bundle_interface_views(self) -> Iterable[ConfigViewInterfaceBase]:
-        for interface_view in self.interface_views:
-            if interface_view.is_bundle:
-                yield interface_view
-
-    @abstractmethod
-    def dot1q_mode_from_vlans(
-        self,
-        untagged_vlan: int | None = None,
-        tagged_vlans: tuple[int, ...] = (),
-        *,
-        tagged_all: bool = False,
-    ) -> InterfaceDot1qMode | None:
-        pass
-
-    @property
-    @abstractmethod
-    def hostname(self) -> str | None:
-        pass
-
-    @property
-    @abstractmethod
-    def interface_names_mentioned(self) -> frozenset[str]:
-        """Returns a set with all the interface names mentioned in the config."""
-
-    def interface_view_by_name(self, name: str) -> ConfigViewInterfaceBase | None:
-        for interface_view in self.interface_views:
-            if interface_view.name == name:
-                return interface_view
-        return None
-
-    @property
-    @abstractmethod
-    def interface_views(self) -> Iterable[ConfigViewInterfaceBase]:
-        pass
-
-    @property
-    @abstractmethod
-    def interfaces(self) -> Iterable[HConfigChild]:
-        pass
-
-    @property
-    def interfaces_names(self) -> Iterable[str]:
-        for interface_view in self.interface_views:
-            yield interface_view.name
-
-    @property
-    @abstractmethod
-    def ipv4_default_gw(self) -> IPv4Address | None:
-        pass
-
-    @property
-    @abstractmethod
-    def location(self) -> str:
-        pass
-
-    @property
-    def module_numbers(self) -> Iterable[int]:
-        seen = set()
-        for interface_view in self.interface_views:
-            if module_number := interface_view.module_number:
-                if module_number in seen:
-                    continue
-                seen.add(module_number)
-                yield module_number
-
-    @property
-    @abstractmethod
-    def stack_members(self) -> Iterable[StackMember]:
-        """Determine the configured stack members."""
-
-    @property
-    def vlan_ids(self) -> frozenset[int]:
-        """Determine the VLAN IDs."""
-        return frozenset(vlan.id for vlan in self.vlans)
-
-    @property
-    @abstractmethod
-    def vlans(self) -> Iterable[Vlan]:
-        """Determine the configured VLANs."""
 
 
 class ConfigViewInterfaceBase:  # noqa: PLR0904
@@ -271,3 +182,90 @@ class ConfigViewInterfaceBase:  # noqa: PLR0904
     @abstractmethod
     def _bundle_prefix(self) -> str:
         pass
+
+
+class HConfigViewBase(ABC):
+    def __init__(self, config: HConfig) -> None:
+        self.config = config
+
+    @property
+    def bundle_interface_views(self) -> Iterable[ConfigViewInterfaceBase]:
+        for interface_view in self.interface_views:
+            if interface_view.is_bundle:
+                yield interface_view
+
+    @abstractmethod
+    def dot1q_mode_from_vlans(
+        self,
+        untagged_vlan: int | None = None,
+        tagged_vlans: tuple[int, ...] = (),
+        *,
+        tagged_all: bool = False,
+    ) -> InterfaceDot1qMode | None:
+        pass
+
+    @property
+    @abstractmethod
+    def hostname(self) -> str | None:
+        pass
+
+    @property
+    @abstractmethod
+    def interface_names_mentioned(self) -> frozenset[str]:
+        """Returns a set with all the interface names mentioned in the config."""
+
+    def interface_view_by_name(self, name: str) -> ConfigViewInterfaceBase | None:
+        for interface_view in self.interface_views:
+            if interface_view.name == name:
+                return interface_view
+        return None
+
+    @property
+    @abstractmethod
+    def interface_views(self) -> Iterable[ConfigViewInterfaceBase]:
+        pass
+
+    @property
+    @abstractmethod
+    def interfaces(self) -> Iterable[HConfigChild]:
+        pass
+
+    @property
+    def interfaces_names(self) -> Iterable[str]:
+        for interface_view in self.interface_views:
+            yield interface_view.name
+
+    @property
+    @abstractmethod
+    def ipv4_default_gw(self) -> IPv4Address | None:
+        pass
+
+    @property
+    @abstractmethod
+    def location(self) -> str:
+        pass
+
+    @property
+    def module_numbers(self) -> Iterable[int]:
+        seen = set()
+        for interface_view in self.interface_views:
+            if module_number := interface_view.module_number:
+                if module_number in seen:
+                    continue
+                seen.add(module_number)
+                yield module_number
+
+    @property
+    @abstractmethod
+    def stack_members(self) -> Iterable[StackMember]:
+        """Determine the configured stack members."""
+
+    @property
+    def vlan_ids(self) -> frozenset[int]:
+        """Determine the VLAN IDs."""
+        return frozenset(vlan.id for vlan in self.vlans)
+
+    @property
+    @abstractmethod
+    def vlans(self) -> Iterable[Vlan]:
+        """Determine the configured VLANs."""

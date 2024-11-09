@@ -2,8 +2,8 @@ from functools import lru_cache
 from pathlib import Path
 
 from .constructors import get_hconfig, get_hconfig_driver
+from .model import Platform
 from .platforms.driver_base import HConfigDriverBase
-from .platforms.model import Platform
 from .root import HConfig
 
 
@@ -114,8 +114,10 @@ class Host:
         )
         return "\n".join(c.cisco_style_text() for c in children)
 
-    def _get_running_config(self) -> HConfig:
+    @staticmethod
+    def _get_running_config() -> HConfig:
         return NotImplemented
 
-    def _get_generated_config(self) -> HConfig:
+    @staticmethod
+    def _get_generated_config() -> HConfig:
         return NotImplemented

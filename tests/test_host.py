@@ -1,7 +1,7 @@
 import pytest
 
 from hier_config import Host
-from hier_config.platforms.model import Platform
+from hier_config.model import Platform
 
 
 class TestHost:

@@ -1,6 +1,6 @@
 from hier_config import get_hconfig_from_simple
 from hier_config.constructors import get_hconfig_for_platform
-from hier_config.platforms.model import Platform
+from hier_config.model import Platform
 
 
 def test_negation_negate_with() -> None:

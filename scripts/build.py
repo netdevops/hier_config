@@ -174,7 +174,7 @@ def pyright() -> None:
 
 
 def _pyright_command() -> str:
-    return f"pyright --threads {_python_base_paths_str()}"
+    return f"pyright {_python_base_paths_str()}"
 
 
 @app.command()

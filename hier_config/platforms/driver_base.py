@@ -15,13 +15,15 @@ from hier_config.model import (
     OrderingRule,
     ParentAllowsDuplicateChildRule,
     PerLineSubRule,
+    Platform,
     SectionalExitingRule,
     SectionalOverwriteNoNegateRule,
     SectionalOverwriteRule,
 )
-from hier_config.platforms.model import Platform
 
 if TYPE_CHECKING:
+    from pydantic import PositiveInt
+
     from hier_config.child import HConfigChild
     from hier_config.root import HConfig
 
@@ -33,7 +35,7 @@ class HConfigDriverBase(ABC, BaseModel):  # pylint: disable=too-many-instance-at
     """
 
     negation: str = "no"
-    indentation: int = 2
+    indentation: PositiveInt = 2
     sectional_exiting_rules: tuple[SectionalExitingRule, ...] = ()
     sectional_overwrite_rules: tuple[SectionalOverwriteRule, ...] = ()
     sectional_overwrite_no_negate_rules: tuple[SectionalOverwriteNoNegateRule, ...] = ()
@@ -75,9 +77,13 @@ class HConfigDriverBase(ABC, BaseModel):  # pylint: disable=too-many-instance-at
 
     def swap_negation(self, child: HConfigChild) -> HConfigChild:
         """Swap negation of a `child.text`."""
-        if child.text.startswith(child._negation_prefix):
+        if child.text.startswith(self.negation_prefix):
             child.text = child.text_without_negation
         else:
-            child.text = f"{child._negation_prefix}{child.text}"
+            child.text = f"{self.negation_prefix}{child.text}"
 
         return child
+
+    @property
+    def negation_prefix(self) -> str:
+        return f"{self.negation} "

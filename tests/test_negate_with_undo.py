@@ -1,5 +1,5 @@
 from hier_config import Host
-from hier_config.platforms.model import Platform
+from hier_config.model import Platform
 
 
 def test_merge_with_undo() -> None:

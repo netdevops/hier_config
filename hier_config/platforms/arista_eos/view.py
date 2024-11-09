@@ -1,14 +1,12 @@
-from __future__ import annotations
-
 from collections.abc import Iterable
 from ipaddress import IPv4Address, IPv4Interface
 
 from hier_config.child import HConfigChild
+from hier_config.model import Platform
 from hier_config.platforms.model import (
     InterfaceDot1qMode,
     InterfaceDuplex,
     NACHostMode,
-    Platform,
     StackMember,
     Vlan,
 )
@@ -16,57 +14,6 @@ from hier_config.platforms.view_base import (
     ConfigViewInterfaceBase,
     HConfigViewBase,
 )
-
-
-class HConfigViewAristaEOS(HConfigViewBase):
-    def dot1q_mode_from_vlans(
-        self,
-        untagged_vlan: int | None = None,
-        tagged_vlans: tuple[int, ...] = (),
-        *,
-        tagged_all: bool = False,
-    ) -> InterfaceDot1qMode | None:
-        raise NotImplementedError
-
-    @property
-    def hostname(self) -> str | None:
-        if child := self.config.get_child(startswith="hostname "):
-            return child.text.split()[1].lower()
-        return None
-
-    @property
-    def interface_names_mentioned(self) -> frozenset[str]:
-        """Returns a set with all the interface names mentioned in the config."""
-        raise NotImplementedError
-
-    @property
-    def interface_views(self) -> Iterable[ConfigViewInterfaceAristaEOS]:
-        for interface in self.interfaces:
-            yield ConfigViewInterfaceAristaEOS(interface)
-
-    @property
-    def interfaces(self) -> Iterable[HConfigChild]:
-        return self.config.get_children(startswith="interface ")
-
-    @property
-    def ipv4_default_gw(self) -> IPv4Address | None:
-        raise NotImplementedError
-
-    @property
-    def location(self) -> str:
-        raise NotImplementedError
-
-    @property
-    def platform(self) -> Platform:
-        return Platform.ARISTA_EOS
-
-    @property
-    def stack_members(self) -> Iterable[StackMember]:
-        raise NotImplementedError
-
-    @property
-    def vlans(self) -> Iterable[Vlan]:
-        raise NotImplementedError
 
 
 class ConfigViewInterfaceAristaEOS(ConfigViewInterfaceBase):  # noqa: PLR0904
@@ -198,4 +145,55 @@ class ConfigViewInterfaceAristaEOS(ConfigViewInterfaceBase):  # noqa: PLR0904
 
     @property
     def _bundle_prefix(self) -> str:
+        raise NotImplementedError
+
+
+class HConfigViewAristaEOS(HConfigViewBase):
+    def dot1q_mode_from_vlans(
+        self,
+        untagged_vlan: int | None = None,
+        tagged_vlans: tuple[int, ...] = (),
+        *,
+        tagged_all: bool = False,
+    ) -> InterfaceDot1qMode | None:
+        raise NotImplementedError
+
+    @property
+    def hostname(self) -> str | None:
+        if child := self.config.get_child(startswith="hostname "):
+            return child.text.split()[1].lower()
+        return None
+
+    @property
+    def interface_names_mentioned(self) -> frozenset[str]:
+        """Returns a set with all the interface names mentioned in the config."""
+        raise NotImplementedError
+
+    @property
+    def interface_views(self) -> Iterable[ConfigViewInterfaceAristaEOS]:
+        for interface in self.interfaces:
+            yield ConfigViewInterfaceAristaEOS(interface)
+
+    @property
+    def interfaces(self) -> Iterable[HConfigChild]:
+        return self.config.get_children(startswith="interface ")
+
+    @property
+    def ipv4_default_gw(self) -> IPv4Address | None:
+        raise NotImplementedError
+
+    @property
+    def location(self) -> str:
+        raise NotImplementedError
+
+    @property
+    def platform(self) -> Platform:
+        return Platform.ARISTA_EOS
+
+    @property
+    def stack_members(self) -> Iterable[StackMember]:
+        raise NotImplementedError
+
+    @property
+    def vlans(self) -> Iterable[Vlan]:
         raise NotImplementedError

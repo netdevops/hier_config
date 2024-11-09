@@ -1,10 +1,10 @@
-name: hier_config build and test 
+name: hier_config build and test
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 
 jobs:
   build:
@@ -29,6 +29,5 @@ jobs:
     - name: Run tests
       run: |
         poetry install --no-interaction --no-root
-        poetry run mypy hier_config
         poetry run python scripts/build.py lint
         poetry run python scripts/build.py pytest

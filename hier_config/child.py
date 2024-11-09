@@ -4,7 +4,7 @@ from collections.abc import Iterable, Iterator
 from itertools import chain
 from logging import getLogger
 from re import search
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from .base import HConfigBase
 from .model import Instance, MatchRule, SetLikeOfStr
@@ -45,7 +45,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         self.new_in_config: bool = False
         self.instances: list[Instance] = []
         # To store externally inserted facts
-        self.facts: dict = {}  # type: ignore[type-arg]
+        self.facts: dict[Any, Any] = {}
 
     def __str__(self) -> str:
         return "\n".join(self.lines(sectional_exiting=True))
@@ -112,7 +112,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
 
     @property
     def text_without_negation(self) -> str:
-        return self.text.removeprefix(self._negation_prefix)
+        return self.text.removeprefix(self.driver.negation_prefix)
 
     @property
     def root(self) -> HConfig:
@@ -281,7 +281,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         return frozenset(self._tags)
 
     @tags.setter
-    def tags(self, value: Iterable[str]) -> None:
+    def tags(self, value: frozenset[str]) -> None:
         """Recursive access to tags on all leaf nodes."""
         if self.is_branch:
             for child in self.children:
@@ -450,10 +450,10 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
 
     def _swap_negation(self) -> HConfigChild:
         """Swap negation of a `self.text`."""
-        if self.text.startswith(self._negation_prefix):
+        if self.text.startswith(self.driver.negation_prefix):
             self.text = self.text_without_negation
         else:
-            self.text = f"{self._negation_prefix}{self.text}"
+            self.text = f"{self.driver.negation_prefix}{self.text}"
 
         return self
 

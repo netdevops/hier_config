@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from contextlib import suppress
 from itertools import islice
 from logging import getLogger
@@ -9,7 +7,7 @@ from re import search, sub
 from hier_config.platforms.driver_base import HConfigDriverBase
 
 from .child import HConfigChild
-from .model import Dump
+from .model import Dump, Platform
 from .platforms.arista_eos.driver import HConfigDriverAristaEOS
 from .platforms.arista_eos.view import HConfigViewAristaEOS
 from .platforms.cisco_ios.driver import HConfigDriverCiscoIOS
@@ -21,7 +19,6 @@ from .platforms.cisco_xr.view import HConfigViewCiscoIOSXR
 from .platforms.generic.driver import HConfigDriverGeneric
 from .platforms.hp_procurve.driver import HConfigDriverHPProcurve
 from .platforms.hp_procurve.view import HConfigViewHPProcurve
-from .platforms.model import Platform
 from .platforms.view_base import HConfigViewBase
 from .root import HConfig
 

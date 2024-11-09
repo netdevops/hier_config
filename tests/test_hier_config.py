@@ -10,8 +10,7 @@ from hier_config import (
     get_hconfig_from_simple,
 )
 from hier_config.constructors import get_hconfig_for_platform
-from hier_config.model import Instance, MatchRule
-from hier_config.platforms.model import Platform
+from hier_config.model import Instance, MatchRule, Platform
 
 
 def test_bool(platform_a: Platform) -> None:
@@ -466,7 +465,11 @@ def test_add_shallow_copy_of(platform_a: Platform, platform_b: Platform) -> None
     assert copied_interface.comments == frozenset(("ca",))
     assert copied_interface.order_weight == 200
     assert copied_interface.instances == [
-        Instance(id(interface_a), frozenset(interface_a.comments), interface_a.tags)
+        Instance(
+            id=id(interface_a),
+            comments=frozenset(interface_a.comments),
+            tags=interface_a.tags,
+        )
     ]
 
     copied_interface = base_config.add_shallow_copy_of(interface_b, merged=True)
@@ -476,14 +479,14 @@ def test_add_shallow_copy_of(platform_a: Platform, platform_b: Platform) -> None
     assert copied_interface.order_weight == 201
     assert copied_interface.instances == [
         Instance(
-            id(interface_a),
-            frozenset(interface_a.comments),
-            interface_a.tags,
+            id=id(interface_a),
+            comments=frozenset(interface_a.comments),
+            tags=interface_a.tags,
         ),
         Instance(
-            id(interface_b),
-            frozenset(interface_b.comments),
-            interface_b.tags,
+            id=id(interface_b),
+            comments=frozenset(interface_b.comments),
+            tags=interface_b.tags,
         ),
     ]
 
