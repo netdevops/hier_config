@@ -4,7 +4,7 @@ Experimental features are those features that work, but haven't been thoroughly 
 
 ## Rollback Configuration
 
-Starting in version 2.0.2, a featured called rollback configuraiton was introduced. The rollback configuration is exactly what it sounds like. It renders a rollback configuration in the event that a remediation causes a hiccup when being deployed. The rollback configuration does the inverse on a remediation. Instead of a remediation being renedered based upon the generated config, a rollback remediation is rendered from the generated config based upon the running configuration.
+Rollback configuration generation was introduced in version 2.0.2. The rollback configuration is exactly what it sounds like. It renders a rollback configuration in the event that a remediation causes a hiccup when being deployed. The rollback configuration does the inverse on a remediation. Instead of a remediation being rendered based upon the generated config, a rollback remediation is rendered from the generated config based upon the running configuration.
 
 A rollback configuration can be rendered once the running and generated configurations are loaded. Below is an example.
 
@@ -34,7 +34,7 @@ interface Vlan3
 
 ## Unified diff
 
-Starting in version 2.1.0, a featured called unified diff was introduced. It provides a similar output to difflib.unified_diff() but is aware of out of order lines and the parent child relationships present in the hier_config model of the configurations being diffed.  
+Unified diff was introduced in version 2.1.0. It provides a similar output to difflib.unified_diff() but is aware of out of order lines and the parent child relationships present in the hier_config model of the configurations being diffed.  
 
 This feature is useful in cases where you need to compare the differences of two network device configurations. Such as comparing the configs of redundant device pairs. Or, comparing running and intended configs. 
 
@@ -70,7 +70,7 @@ Out[1]:
 
 ## Future Config
 
-Starting in version 2.2.0, a featured called future config was introduced. It attempts to predict the running config after a change is applied.
+Future config was introduced in version 2.2.0. It attempts to predict the running config after a change is applied.
 
 This feature is useful in cases where you need to determine what the configuration state will be after a change is applied. Such as:
 - Ensuring that a configuration change was applied successfully to a device.
@@ -90,7 +90,7 @@ In its current state, this algorithm does not consider:
 - negate a numbered ACL when removing an item
 - sectional exiting
 - negate with
-- idempotent command blacklist
+- idempotent command avoid
 - idempotent_acl_check
 - and likely others
 

@@ -2,7 +2,7 @@
 
 > Hierarchical Configuration requires a minimum Python version of 3.8.
 
-Hierarchical Configuration can be installed directly from github or with pip:
+Hierarchical Configuration can be installed directly from GitHub or with pip:
 
 ## Github
 1. [Install Poetry](https://python-poetry.org/docs/#installation)

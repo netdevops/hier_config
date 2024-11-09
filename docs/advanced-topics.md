@@ -139,7 +139,7 @@ ip name-server 8.8.8.8
 ntp server time.nist.gov
 ```
 
-## hier_config Options
+## hier_config Drivers
 
 There are a number of options that can be loaded into hier_config to make it better conform to the nuances of your network device. By default, hier_config loads a set of [sane defaults](https://github.com/netdevops/hier_config/blob/master/hier_config/options.py) for Cisco IOS, IOS XE, IOS XR, NX-OS, and Arista EOS.
 
@@ -158,7 +158,7 @@ base_options: dict = {
     "sectional_exiting": [],
     "full_text_sub": [],
     "per_line_sub": [],
-    "idempotent_commands_blacklist": [],
+    "idempotent_commands_avoid": [],
     "idempotent_commands": [],
     "negation_default_when": [],
     "negation_negate_with": [],
@@ -262,7 +262,7 @@ Sectional overwrite is just like sectional overwrite with no negate, except that
 
 Ordering is one of the most useful hier_config options. This allows you to use lineage rules to define the order in which remediation steps are presented to the user. For the ntp example above, the ntp server was negated (`no ntp server 192.0.2.1`) before the new ntp server was added. In most cases, this wouldn't be advantageous. Thus, ordering can be used to define the proper order to execute commands.
 
-All commands are assigned a default order weight of 500, with a usable order weight of 1 - 999. The smaller the weight value, the higher on the list of steps a command is to be executed. The larger the weight value, the lower on the list of steps a command is to be executed. To create an order in which new ntp servers are added before old ntp servers are removed, you can create an order lineage that weights the negation to the bottom.
+All commands are assigned a default order weight of 0. Smaller negative values float the line to the top while larger positive values sink the line to the bottom. To create an order in which new ntp servers are added before old ntp servers are removed, you can create an order lineage that weights the negation to the bottom.
 
 Example:
 
@@ -270,7 +270,7 @@ Example:
 ordering:
 - lineage:
   - startswith: no ntp
-  order: 700
+  weight: 200
 ```
 
 With the above order lineage applied, the output of the above ntp example would look like:
@@ -342,7 +342,7 @@ per_line_sub:
   replace: ""
 ```
 
-#### idempotent_commands_blacklist
+#### idempotent_commands_avoid
 
 coming soon...
 
