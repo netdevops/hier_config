@@ -1,41 +1,30 @@
 from __future__ import annotations
-from typing import (
-    Optional,
-    List,
-    Iterator,
-    Dict,
-    Tuple,
-    Union,
-    Set,
-    TYPE_CHECKING,
-    Type,
-)
-from logging import getLogger
-from abc import ABC, abstractmethod
-from functools import cached_property
-from itertools import chain
 
-from . import text_match
+from abc import ABC, abstractmethod
+from collections.abc import Iterable, Iterator
+from itertools import chain
+from logging import getLogger
+from typing import TYPE_CHECKING
+
+from .exceptions import DuplicateChildError
+from .model import MatchRule, SetLikeOfStr
 
 if TYPE_CHECKING:
     from .child import HConfigChild
     from .root import HConfig
-    from .host import Host
 
 logger = getLogger(__name__)
 
 
-class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
-    def __init__(self) -> None:
-        self.children: List[HConfigChild] = []
-        self.children_dict: Dict[str, HConfigChild] = {}
-        self.host: Host
+class HConfigBase(ABC):  # noqa: PLR0904
+    __slots__ = ("children", "children_dict")
 
-    def __str__(self) -> str:
-        return "\n".join(c.cisco_style_text() for c in self.all_children())
+    def __init__(self) -> None:
+        self.children: list[HConfigChild] = []
+        self.children_dict: dict[str, HConfigChild] = {}
 
     def __len__(self) -> int:
-        return len(list(self.all_children()))
+        return len(tuple(self.all_children()))
 
     def __bool__(self) -> bool:
         return True
@@ -43,28 +32,15 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
     def __contains__(self, item: str) -> bool:
         return item in self.children_dict
 
-    def __eq__(self, other: object) -> bool:
-        if not isinstance(other, HConfigBase):
-            return NotImplemented
+    @abstractmethod
+    def __hash__(self) -> int:
+        pass
 
-        if len(self.children) != len(other.children):
-            return False
-
-        for self_child, other_child in zip(
-            sorted(self.children), sorted(other.children)
-        ):
-            if self_child != other_child:
-                return False
-
-        return True
+    def __iter__(self) -> Iterator[HConfigChild]:
+        return iter(self.children)
 
     @abstractmethod
     def _duplicate_child_allowed_check(self) -> bool:
-        pass
-
-    @property
-    @abstractmethod
-    def options(self) -> dict:
         pass
 
     @property
@@ -82,224 +58,213 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
 
     @property
     @abstractmethod
-    def logs(self) -> List[str]:
+    def _child_class(self) -> type[HConfigChild]:
         pass
 
-    @property
-    @abstractmethod
-    def _child_class(self) -> Type[HConfigChild]:
-        pass
-
-    def has_children(self) -> bool:
-        return bool(self.children)
-
-    def add_children_deep(self, lines: List[str]) -> None:
-        """Add child instances of HConfigChild deeply"""
-        if lines:
-            child = self.add_child(lines.pop(0))
-            child.add_children_deep(lines)
-
-    def add_children(self, lines: List[str]) -> None:
-        """Add child instances of HConfigChild"""
+    def add_children(self, lines: Iterable[str]) -> None:
+        """Add child instances of HConfigChild."""
         for line in lines:
             self.add_child(line)
 
     def add_child(
         self,
         text: str,
-        alert_on_duplicate: bool = False,
-        idx: Optional[int] = None,
+        *,
+        raise_on_duplicate: bool = False,
         force_duplicate: bool = False,
     ) -> HConfigChild:
-        """Add a child instance of HConfigChild"""
+        """
+        Add a child instance of HConfigChild.
+        """
+        if not text:
+            message = "text was empty"
+            raise ValueError(message)
 
-        if idx is None:
-            idx = len(self.children)
         # if child does not exist
         if text not in self:
-            new_item = self._child_class(self, text)  # type: ignore
-            self.children.insert(idx, new_item)
+            new_item = self._child_class(self, text)  # type: ignore[arg-type]
+            self.children.append(new_item)
             self.children_dict[text] = new_item
             return new_item
         # if child does exist and is allowed to be installed as a duplicate
         if self._duplicate_child_allowed_check() or force_duplicate:
-            new_item = self._child_class(self, text)  # type: ignore
-            self.children.insert(idx, new_item)
-            self.rebuild_children_dict()
+            new_item = self._child_class(self, text)  # type: ignore[arg-type]
+            self.children.append(new_item)
             return new_item
 
-        # If the child is already present and the parent does not allow
-        # duplicate children, return the existing child
-        # Ignore duplicate remarks in ACLs
-        if alert_on_duplicate and not text.startswith("remark "):
-            self.logs.append(f"Found a duplicate section: {list(self.path()) + [text]}")
+        # If the child is already present and the parent does not allow for it
+        if raise_on_duplicate:
+            message = f"Found a duplicate section: {(*self.path(), text)}"
+            raise DuplicateChildError(message)
         return self.children_dict[text]
 
-    def path(self) -> Iterator[str]:
+    def path(self) -> Iterator[str]:  # noqa: PLR6301
         yield from ()
 
     def add_deep_copy_of(
-        self, child_to_add: HConfigChild, merged: bool = False
+        self, child_to_add: HConfigChild, *, merged: bool = False
     ) -> HConfigChild:
-        """Add a nested copy of a child to self"""
+        """Add a nested copy of a child to self."""
         new_child = self.add_shallow_copy_of(child_to_add, merged=merged)
         for child in child_to_add.children:
             new_child.add_deep_copy_of(child, merged=merged)
 
         return new_child
 
-    def to_tag_spec(self, tags: Set[str]) -> List[dict]:
-        """
-        Returns the configuration as a tag spec definition
-
-        This is handy when you have a segment of config and need to
-        generate a tag spec to tag configuration in another instance
-        """
-        tag_spec = []
-        for child in self.all_children():
-            if not child.children:
-                child_spec = [{"equals": t} for t in child.path()]
-                tag_spec.append({"section": child_spec, "add_tags": tags})
-        return tag_spec
-
-    def del_child_by_text(self, text: str) -> None:
-        """Delete all children with the provided text"""
+    def delete_child_by_text(self, text: str) -> None:
+        """Delete all children with the provided text."""
         if text in self.children_dict:
             self.children[:] = [c for c in self.children if c.text != text]
             self.rebuild_children_dict()
 
-    def del_child(self, child: HConfigChild) -> None:
-        """Delete a child from self.children and self.children_dict"""
-        try:
-            self.children.remove(child)
-        except ValueError:
-            pass
-        else:
+    def delete_child(self, child: HConfigChild) -> None:
+        """Delete a child from self.children and self.children_dict."""
+        old_len = len(self.children)
+        self.children = [c for c in self.children if c is not child]
+        if old_len != len(self.children):
             self.rebuild_children_dict()
 
-    def all_children_sorted_untagged(self) -> Iterator[HConfigChild]:
-        """Yield all children recursively that are untagged"""
-        yield from (c for c in self.all_children_sorted() if None in c.tags)
-
     def all_children_sorted(self) -> Iterator[HConfigChild]:
-        """Recursively find and yield all children sorted at each hierarchy"""
+        """Recursively find and yield all children sorted at each hierarchy."""
         for child in sorted(self.children):
             yield child
             yield from child.all_children_sorted()
 
-    def all_children_sorted_with_lineage_rules(
-        self, rules: List[dict]
-    ) -> Iterator[HConfigChild]:
-        """Recursively find and yield all children sorted at each hierarchy given lineage rules"""
-        yielded = set()
-        matched: Set[HConfigChild] = set()
-        # pylint: disable=too-many-nested-blocks
-        for child in self.all_children_sorted():
-            for ancestor in child.lineage():
-                if ancestor in matched:
-                    yield child
-                    yielded.add(child)
-                    break
-            else:
-                for rule in rules:
-                    if child.lineage_test(rule, False):
-                        matched.add(child)
-                        for ancestor in child.lineage():
-                            if ancestor in yielded:
-                                continue
-                            yield ancestor
-                            yielded.add(ancestor)
-                        break
-
     def all_children(self) -> Iterator[HConfigChild]:
-        """Recursively find and yield all children at each hierarchy"""
+        """Recursively find and yield all children at each hierarchy."""
         for child in self.children:
             yield child
             yield from child.all_children()
 
-    def get_child(self, test: str, expression: str) -> Optional[HConfigChild]:
-        """Find a child by text_match rule. If it is not found, return None"""
-        if test == "equals" and isinstance(expression, str):
-            return self.children_dict.get(expression, None)
-
-        return next(self.get_children(test, expression), None)
-
-    def get_child_deep(
-        self, test_expression_pairs: List[Tuple[str, str]]
-    ) -> Optional[HConfigChild]:
+    def get_child_deep(self, match_rules: tuple[MatchRule, ...]) -> HConfigChild | None:
         """
-        Find a child recursively with a list of test/expression pairs
-
-        e.g.
-
-        .. code:: python
-
-            result = hier_obj.get_child_deep([('equals', 'control-plane'),
-                                              ('equals', 'service-policy input system-cpp-policy')])
+        Find the first child recursively given a tuple of MatchRules.
         """
+        return next(self.get_children_deep(match_rules), None)
 
-        test, expression = test_expression_pairs.pop(0)
-        if test == "equals":
-            result = self.children_dict.get(expression, None)
-            if result and test_expression_pairs:
-                return result.get_child_deep(test_expression_pairs)
-            return result
+    def get_children_deep(
+        self, match_rules: tuple[MatchRule, ...]
+    ) -> Iterator[HConfigChild]:
+        """
+        Find children recursively given a tuple of MatchRules.
+        """
+        rule = match_rules[0]
+        remaining_rules = match_rules[1:]
+        for child in self.get_children(
+            equals=rule.equals,
+            startswith=rule.startswith,
+            endswith=rule.endswith,
+            contains=rule.contains,
+            re_search=rule.re_search,
+        ):
+            if remaining_rules:
+                yield from child.get_children_deep(remaining_rules)
+            else:
+                yield child
 
-        try:
-            result = next(self.get_children(test, expression))
-        except StopIteration:
-            return None
-        if result and test_expression_pairs:
-            return result.get_child_deep(test_expression_pairs)
-        return result
+    def get_child(
+        self,
+        *,
+        equals: str | SetLikeOfStr | None = None,
+        startswith: str | tuple[str, ...] | None = None,
+        endswith: str | tuple[str, ...] | None = None,
+        contains: str | tuple[str, ...] | None = None,
+        re_search: str | None = None,
+    ) -> HConfigChild | None:
+        """Find a child by text_match rule. If it is not found, return None."""
+        return next(
+            self.get_children(
+                equals=equals,
+                startswith=startswith,
+                endswith=endswith,
+                contains=contains,
+                re_search=re_search,
+            ),
+            None,
+        )
 
-    def get_children(self, test: str, expression: str) -> Iterator[HConfigChild]:
+    def get_children(
+        self,
+        *,
+        equals: str | SetLikeOfStr | None = None,
+        startswith: str | tuple[str, ...] | None = None,
+        endswith: str | tuple[str, ...] | None = None,
+        contains: str | tuple[str, ...] | None = None,
+        re_search: str | None = None,
+    ) -> Iterator[HConfigChild]:
         """Find all children matching a text_match rule and return them."""
-        for child in self.children:
-            if text_match.dict_call(test, child.text, expression):
+        # For isinstance(equals, str) only matches, find the first child using children_dict
+        children_slice = slice(None, None)
+        if (
+            isinstance(equals, str)
+            and startswith is endswith is contains is re_search is None
+        ):
+            if child := self.children_dict.get(equals):
+                yield child
+                children_slice = slice(self.children.index(child) + 1, None)
+            else:
+                return
+
+        elif (
+            isinstance(startswith, str | tuple)
+            and equals is endswith is contains is re_search is None
+        ):
+            duplicates_allowed = None
+            for child_text, child in self.children_dict.items():
+                if child_text.startswith(startswith):
+                    yield child
+                    if duplicates_allowed is None:
+                        duplicates_allowed = self._duplicate_child_allowed_check()
+                    if duplicates_allowed:
+                        children_slice = slice(self.children.index(child) + 1, None)
+                        break
+            else:
+                return
+
+        for child in self.children[children_slice]:
+            if child.matches(
+                equals=equals,
+                startswith=startswith,
+                endswith=endswith,
+                contains=contains,
+                re_search=re_search,
+            ):
                 yield child
 
     def add_shallow_copy_of(
-        self, child_to_add: HConfigChild, merged: bool = False
+        self, child_to_add: HConfigChild, *, merged: bool = False
     ) -> HConfigChild:
-        """Add a nested copy of a child_to_add to self.children"""
-
+        """Add a nested copy of a child_to_add to self.children."""
         new_child = self.add_child(child_to_add.text)
 
         if merged:
-            new_child.instances.append(
-                {
-                    "hostname": child_to_add.host.hostname,
-                    "comments": child_to_add.comments,
-                    "tags": child_to_add.tags,
-                }
-            )
+            new_child.instances.append(child_to_add.instance)
         new_child.comments.update(child_to_add.comments)
         new_child.order_weight = child_to_add.order_weight
         if child_to_add.is_leaf:
-            new_child.append_tags({t for t in child_to_add.tags if isinstance(t, str)})
+            new_child.tags_add(child_to_add.tags)
 
         return new_child
 
     def rebuild_children_dict(self) -> None:
-        """Rebuild self.children_dict"""
+        """Rebuild self.children_dict."""
         self.children_dict = {}
         for child in self.children:
             self.children_dict.setdefault(child.text, child)
 
     def delete_all_children(self) -> None:
-        """Delete all children"""
+        """Delete all children."""
         self.children.clear()
         self.rebuild_children_dict()
 
-    def unified_diff(self, target: Union[HConfig, HConfigChild]) -> Iterator[str]:
+    def unified_diff(self, target: HConfig | HConfigChild) -> Iterator[str]:
         """
-        provides a similar output to difflib.unified_diff()
-
         In its current state, this algorithm does not consider duplicate child differences.
         e.g. two instances `endif` in an IOS-XR route-policy. It also does not respect the
         order of commands where it may count, such as in ACLs. In the case of ACLs, they
         should contain sequence numbers if order is important.
+
+        provides a similar output to difflib.unified_diff()
         """
         # if a self child is missing from the target "- self_child.text"
         for self_child in self.children:
@@ -323,46 +288,66 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
                     for c in target_child.all_children_sorted()
                 )
 
-    def _future(
+    def _future_pre(self, config: HConfig | HConfigChild) -> tuple[set[str], set[str]]:
+        negated_or_recursed = set()
+        config_children_ignore = set()
+        for self_child in self.children:
+            # Is the command effectively negating a command in self.children?
+            if (
+                negation_text := self.root.driver.negation_negate_with_check(self_child)
+            ) and (config_child := config.get_child(equals=negation_text)):
+                negated_or_recursed.add(self_child.text)
+                config_children_ignore.add(config_child.text)
+        return negated_or_recursed, config_children_ignore
+
+    def _future(  # noqa: C901
         self,
-        config: Union[HConfig, HConfigChild],
-        future_config: Union[HConfig, HConfigChild],
+        config: HConfig | HConfigChild,
+        future_config: HConfig | HConfigChild,
     ) -> None:
         """
         The below cases still need to be accounted for:
         - negate a numbered ACL when removing an item
-        - sectional exiting
-        - negate with
-        - idempotent command blacklist
+        - idempotent command avoid list
         - idempotent_acl_check
-        - and likely others
+        - and likely others.
         """
-        negated_or_recursed = set()
+        negated_or_recursed, config_children_ignore = self._future_pre(config)
+
         for config_child in config.children:
+            if config_child.text in config_children_ignore:
+                continue
             # sectional_overwrite
-            if config_child.sectional_overwrite_check():
-                future_config.add_deep_copy_of(config_child)
             # sectional_overwrite_no_negate
-            elif config_child.sectional_overwrite_no_negate_check():
+            if (
+                config_child.sectional_overwrite_check()
+                or config_child.sectional_overwrite_no_negate_check()
+            ):
                 future_config.add_deep_copy_of(config_child)
             # Idempotent commands
-            elif self_child := config_child.idempotent_for(self.children):
+            elif self_child := self.root.driver.idempotent_for(
+                config_child, self.children
+            ):
                 future_config.add_deep_copy_of(config_child)
                 negated_or_recursed.add(self_child.text)
             # config_child is already in self
-            elif self_child := self.get_child("equals", config_child.text):
+            elif self_child := self.get_child(equals=config_child.text):
                 future_child = future_config.add_shallow_copy_of(self_child)
-                # pylint: disable=protected-access
-                self_child._future(config_child, future_child)
+                self_child._future(config_child, future_child)  # noqa: SLF001
                 negated_or_recursed.add(config_child.text)
             # config_child is being negated
             elif config_child.text.startswith(self._negation_prefix):
-                unnegated_command = config_child.text[len(self._negation_prefix) :]
-                if self.get_child("equals", unnegated_command):
+                unnegated_command = config_child.text_without_negation
+                if self.get_child(equals=unnegated_command):
                     negated_or_recursed.add(unnegated_command)
                 # Account for "no ..." commands in the running config
                 else:
                     future_config.add_shallow_copy_of(config_child)
+            # The negated form of config_child is in self.children
+            elif self_child := self.get_child(
+                equals=f"{self._negation_prefix}{config_child.text}"
+            ):
+                negated_or_recursed.add(self_child.text)
             # config_child is not in self and doesn't match a special case
             else:
                 future_config.add_deep_copy_of(config_child)
@@ -375,27 +360,25 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
             future_config.add_deep_copy_of(self_child)
 
     def _with_tags(
-        self, tags: Set[str], new_instance: Union[HConfig, HConfigChild]
-    ) -> Union[HConfig, HConfigChild]:
+        self, tags: frozenset[str], new_instance: HConfig | HConfigChild
+    ) -> HConfig | HConfigChild:
         """
-        Returns a new instance containing only sub-objects
-        with one of the tags in tags
+        Adds children recursively that have a subset of tags.
         """
         for child in self.children:
-            if tags.intersection(child.tags):
+            if tags.issubset(child.tags):
                 new_child = new_instance.add_shallow_copy_of(child)
-                # pylint: disable=protected-access
-                child._with_tags(tags, new_instance=new_child)
+                child._with_tags(tags, new_instance=new_child)  # noqa: SLF001
 
         return new_instance
 
     def _config_to_get_to(
-        self, target: Union[HConfig, HConfigChild], delta: Union[HConfig, HConfigChild]
-    ) -> Union[HConfig, HConfigChild]:
+        self, target: HConfig | HConfigChild, delta: HConfig | HConfigChild
+    ) -> HConfig | HConfigChild:
         """
         Figures out what commands need to be executed to transition from self to target.
         self is the source data structure(i.e. the running_config),
-        target is the destination(i.e. generated_config)
+        target is the destination(i.e. generated_config).
 
         """
         self._config_to_get_to_left(target, delta)
@@ -412,11 +395,14 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
 
     def _difference(
         self,
-        target: Union[HConfig, HConfigChild],
-        delta: Union[HConfig, HConfigChild],
+        target: HConfig | HConfigChild,
+        delta: HConfig | HConfigChild,
+        target_acl_children: dict[str, HConfigChild] | None = None,
+        *,
         in_acl: bool = False,
-        target_acl_children: Optional[Dict[str, HConfigChild]] = None,
-    ) -> Union[HConfig, HConfigChild]:
+    ) -> HConfig | HConfigChild:
+        acl_sw_matches = tuple(f"ip{x} access-list " for x in ("", "v4", "v6"))
+
         for self_child in self.children:
             # Not dealing with negations and defaults for now
             if self_child.text.startswith((self._negation_prefix, "default ")):
@@ -424,42 +410,38 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
 
             if in_acl:
                 # Ignore ACL sequence numbers
-                assert isinstance(target_acl_children, dict)
+                if target_acl_children is None:
+                    message = "target_acl_children cannot be None"
+                    raise TypeError(message)
                 target_child = target_acl_children.get(
                     self._strip_acl_sequence_number(self_child)
                 )
             else:
-                target_child = target.get_child("equals", self_child.text)
+                target_child = target.get_child(equals=self_child.text)
 
             if target_child is None:
                 delta.add_deep_copy_of(self_child)
             else:
                 delta_child = delta.add_child(self_child.text)
-                sw_matches = tuple(f"ip{x} access-list " for x in ("", "v4", "v6"))
-
-                if self_child.text.startswith(sw_matches):
-                    # pylint: disable=protected-access
-                    self_child._difference(
+                if self_child.text.startswith(acl_sw_matches):
+                    self_child._difference(  # noqa: SLF001
                         target_child,
                         delta_child,
-                        in_acl=True,
                         target_acl_children={
                             self._strip_acl_sequence_number(c): c
                             for c in target_child.children
                         },
+                        in_acl=True,
                     )
                 else:
-                    self_child._difference(  # pylint: disable=protected-access
-                        target_child, delta_child
-                    )
-
+                    self_child._difference(target_child, delta_child)  # noqa: SLF001
                 if not delta_child.children:
                     delta_child.delete()
 
         return delta
 
     def _config_to_get_to_left(
-        self, target: Union[HConfig, HConfigChild], delta: Union[HConfig, HConfigChild]
+        self, target: HConfig | HConfigChild, delta: HConfig | HConfigChild
     ) -> None:
         # find self.children that are not in target.children
         # i.e. what needs to be negated or defaulted
@@ -473,36 +455,29 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
 
             # in other but not self
             # add this node but not any children
-            if (
-                self_child.text.startswith("set")
-                and self.options["negation"] == "delete"
-            ):
-                self_child.text = self_child.text.replace("set ", "", 1)
-
             deleted = delta.add_child(self_child.text)
             deleted.negate()
             if self_child.children:
                 deleted.comments.add(f"removes {len(self_child.children) + 1} lines")
 
     def _config_to_get_to_right(
-        self, target: Union[HConfig, HConfigChild], delta: Union[HConfig, HConfigChild]
+        self, target: HConfig | HConfigChild, delta: HConfig | HConfigChild
     ) -> None:
         # find what would need to be added to source_config to get to self
         for target_child in target.children:
             # if the child exist, recurse into its children
-            if self_child := self.get_child("equals", target_child.text):
+            if self_child := self.get_child(equals=target_child.text):
                 # This creates a new HConfigChild object just in case there are some delta children
                 # Not very efficient, think of a way to not do this
                 subtree = delta.add_child(target_child.text)
-                # pylint: disable=protected-access
-                self_child._config_to_get_to(target_child, subtree)
+                self_child._config_to_get_to(target_child, subtree)  # noqa: SLF001
                 if not subtree.children:
                     subtree.delete()
                 # Do we need to rewrite the child and its children as well?
                 elif self_child.sectional_overwrite_check():
-                    target_child.overwrite_with(self_child, delta, True)
+                    target_child.overwrite_with(self_child, delta)
                 elif self_child.sectional_overwrite_no_negate_check():
-                    target_child.overwrite_with(self_child, delta, False)
+                    target_child.overwrite_with(self_child, delta, negate=False)
             # the child is absent, add it
             else:
                 new_item = delta.add_deep_copy_of(target_child)
@@ -513,6 +488,6 @@ class HConfigBase(ABC):  # pylint: disable=too-many-public-methods
                 if new_item.children:
                     new_item.comments.add("new section")
 
-    @cached_property
+    @property
     def _negation_prefix(self) -> str:
-        return str(self.options["negation"]) + " "
+        return f"{self.root.driver.negation} "

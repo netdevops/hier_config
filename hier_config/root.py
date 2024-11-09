@@ -1,231 +1,155 @@
 from __future__ import annotations
-from itertools import islice
-import re
-from pathlib import Path
-from typing import Optional, Set, Union, Iterator, List, TYPE_CHECKING, Tuple, Type
+
+from collections.abc import Iterable, Iterator
 from logging import getLogger
+
+from hier_config.platforms.driver_base import HConfigDriverBase
 
 from .base import HConfigBase
 from .child import HConfigChild
-
-if TYPE_CHECKING:
-    from .host import Host
+from .model import Dump, DumpLine
 
 logger = getLogger(__name__)
 
+# Refactoring ideas:
+# - What if children were moved into its own class? e.g. child.children.add()
+# - Cases of children.index() could be replaced with an identity based version.
 
-class HConfig(HConfigBase):  # pylint: disable=too-many-public-methods
 
+class HConfig(HConfigBase):  # noqa: PLR0904
     """
-    A class for representing and comparing Cisco configurations in a
+    A class for representing and comparing Cisco like configurations in a
     hierarchical tree data structure.
-
-    Example usage:
-
-    .. code:: python
-
-        # Setup basic environment
-
-        from hier_config import HConfig, Host
-        import yaml
-
-        options = yaml.safe_load(open('./tests/fixtures/options_ios.yml'))
-        host = Host('example.rtr', 'ios', options)
-
-        # Build HConfig object for the Running Config
-
-        running_config_hier = HConfig(host=host)
-        running_config_hier.load_from_file('./tests/fixtures/running_config.conf')
-
-        # Build Hierarchical Configuration object for the Generated Config
-
-        generated_config_hier = HConfig(host=host)
-        generated_config_hier.load_from_file('./tests/fixtures/generated_config.conf')
-
-        # Build Hierarchical Configuration object for the Remediation Config
-
-        remediation_config_hier = running_config_hier.config_to_get_to(generated_config_hier)
-
-        for line in remediation_config_hier.all_children():
-            print(line.cisco_style_text())
-
-    See:
-
-        ./tests/fixtures/tags_ios.yml and ./tests/fixtures/options_ios.yml
-
-        for test examples of options and tags.
     """
 
-    def __init__(self, host: Host):
-        super().__init__()
-        assert hasattr(host, "hostname")
-        assert hasattr(host, "os")
-        assert hasattr(host, "hconfig_options")
-        self.host = host
-        self.parent = self
-        self.real_indent_level = -1
+    __slots__ = ("driver",)
 
-        self.options.setdefault("negation", "no")
-        self.options.setdefault("syntax_style", "cisco")
-        self._logs: List[str] = []
+    def __init__(self, driver: HConfigDriverBase) -> None:
+        super().__init__()
+        self.driver = driver
+
+    def __str__(self) -> str:
+        return "\n".join(str(c) for c in sorted(self.children))
 
     def __repr__(self) -> str:
-        return f"HConfig(host={self.host})"
+        return f"HConfig(driver={self.driver.platform}, lines={self.dump_simple()})"
 
     def __hash__(self) -> int:
-        return id(self)
+        return hash(*self.children)
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, HConfig):
+            return NotImplemented
+
+        if len(self.children) != len(other.children):
+            return False
+
+        return all(
+            self_child == other_child
+            for self_child, other_child in zip(
+                sorted(self.children), sorted(other.children), strict=False
+            )
+        )
 
     @property
-    def root(self) -> HConfig:
-        """returns the HConfig object at the base of the tree"""
+    def real_indent_level(self) -> int:
+        return -1
+
+    @property
+    def parent(self) -> HConfig:
         return self
 
     @property
-    def options(self) -> dict:
-        return self.host.hconfig_options
+    def root(self) -> HConfig:
+        """Returns the HConfig object at the base of the tree."""
+        return self
 
     @property
     def is_leaf(self) -> bool:
-        """returns True if there are no children and is not an instance of HConfig"""
+        """Returns True if there are no children and is not an instance of HConfig."""
         return False
 
     @property
-    def logs(self) -> List[str]:
-        return self._logs
-
-    @property
     def is_branch(self) -> bool:
-        """returns True if there are children or is an instance of HConfig"""
+        """Returns True if there are children or is an instance of HConfig."""
         return True
 
     @property
-    def _child_class(self) -> Type[HConfigChild]:
+    def _child_class(self) -> type[HConfigChild]:
         return HConfigChild
 
     @property
-    def tags(self) -> Set[Optional[str]]:
-        """Recursive access to tags on all leaf nodes"""
-        found_tags: Set[Optional[str]] = set()
+    def tags(self) -> frozenset[str | None]:
+        """Recursive access to tags on all leaf nodes."""
+        found_tags: set[str | None] = set()
         for child in self.children:
             found_tags.update(child.tags)
-        return found_tags
+        return frozenset(found_tags)
 
     @tags.setter
-    def tags(self, value: Set[str]) -> None:
-        """Recursive access to tags on all leaf nodes"""
+    def tags(self, value: Iterable[str]) -> None:
+        """Recursive access to tags on all leaf nodes."""
         for child in self.children:
-            child.tags = value  # type: ignore
+            child.tags = value
 
-    def merge(self, other: HConfig) -> None:
-        """Merges two HConfig objects"""
-        for child in other.children:
-            self.add_deep_copy_of(child, merged=True)
+    def merge(self, other: HConfig | Iterable[HConfig]) -> HConfig:
+        """Merges other HConfig objects into this one."""
+        other_configs = (other,) if isinstance(other, HConfig) else other
 
-    def lineage(self) -> Iterator[HConfigChild]:
+        for other_config in other_configs:
+            for child in other_config.children:
+                self.add_deep_copy_of(child, merged=True)
+
+        return self
+
+    def add_children_deep(self, lines: Iterable[str]) -> HConfigChild:
+        """Add child instances of HConfigChild deeply."""
+        base: HConfig | HConfigChild = self
+        for line in lines:
+            base = base.add_child(line)
+        if isinstance(base, HConfig):
+            message = "base was an HConfig object for some reason."
+            raise TypeError(message)
+        return base
+
+    def lineage(self) -> Iterator[HConfigChild]:  # noqa: PLR6301
         """
-        Yields the lineage of parent objects, up to but excluding the root
+        Yields the lineage of parent objects, up to but excluding the root.
         """
         yield from ()
 
-    def load_from_file(self, file_path: Union[str, Path]) -> None:
-        """Load configuration text from a file"""
-        with open(file_path) as file:  # pylint: disable=unspecified-encoding
-            config_text = file.read()
-        self.load_from_string(config_text)
+    def lines(self, *, sectional_exiting: bool = False) -> Iterable[str]:
+        for child in sorted(self.children):
+            yield from child.lines(sectional_exiting=sectional_exiting)
 
-    def load_from_string(self, config_text: str) -> None:
-        """Create Hierarchical Configuration nested objects from text"""
-        if self.options["syntax_style"] == "juniper":
-            config_text = self._convert_to_set_commands(config_text)
+    def dump_simple(self, *, sectional_exiting: bool = False) -> tuple[str, ...]:
+        return tuple(self.lines(sectional_exiting=sectional_exiting))
 
-        for sub in self.options["full_text_sub"]:
-            config_text = re.sub(sub["search"], sub["replace"], config_text)
-
-        self._load_from_string_lines(config_text)
-
-        if self.host.os == "ios":
-            self._remove_acl_remarks()
-            self._add_acl_sequence_numbers()
-            self._rm_ipv6_acl_sequence_numbers()
-
-    def load_from_dump(self, dump: List[dict]) -> None:
-        """Load an HConfig dump"""
-        last_item: Union[HConfig, HConfigChild] = self
-        for item in dump:
-            # parent is the root
-            if item["depth"] == 1:
-                parent: Union[HConfig, HConfigChild] = self
-            # has the same parent
-            elif last_item.depth() == item["depth"]:
-                parent = last_item.parent
-            # is a child object
-            elif last_item.depth() + 1 == item["depth"]:
-                parent = last_item
-            # has a parent somewhere closer to the root but not the root
-            else:
-                # last_item.lineage() = (a, b, c, d, e), new_item['depth'] = 2,
-                # parent = a
-                parent = next(
-                    islice(last_item.lineage(), item["depth"] - 2, item["depth"] - 1)
+    def dump(self) -> Dump:
+        """Dump loaded HConfig data."""
+        return Dump(
+            driver_platform=self.driver.platform,
+            lines=tuple(
+                DumpLine(
+                    depth=c.depth(),
+                    text=c.text,
+                    tags=frozenset(c.tags),
+                    comments=frozenset(c.comments),
+                    new_in_config=c.new_in_config,
                 )
-            # also accept 'line'
-            # obj = parent.add_child(item.get('text', item['line']), force_duplicate=True)
-            obj = parent.add_child(item["text"], force_duplicate=True)
-            obj.tags = set(item["tags"])
-            obj.comments = set(item["comments"])
-            obj.new_in_config = item["new_in_config"]
-            last_item = obj
+                for c in self.all_children_sorted()
+            ),
+        )
 
-    def dump(self, lineage_rules: Optional[List[dict]] = None) -> List[dict]:
-        """Dump a list of loaded HConfig data"""
-        if lineage_rules:
-            children = self.all_children_sorted_with_lineage_rules(lineage_rules)
-        else:
-            children = self.all_children_sorted()
-
-        output = []
-        for child in children:
-            output.append(
-                {
-                    "depth": child.depth(),
-                    "text": child.text,
-                    "tags": list(child.tags),
-                    "comments": list(child.comments),
-                    "new_in_config": child.new_in_config,
-                }
-            )
-
-        return output
-
-    def add_tags(self, tag_rules: list, strip_negation: bool = False) -> None:
-        """
-        Handler for tagging sections of Hierarchical Configuration data structure
-        for inclusion and exclusion.
-        """
-        for rule in tag_rules:
-            for child in self.all_children():
-                if child.lineage_test(rule, strip_negation):
-                    if "add_tags" in rule:
-                        child.append_tags(rule["add_tags"])
-                    if "remove_tags" in rule:
-                        child.remove_tags(rule["remove_tags"])
-
-    def depth(self) -> int:
-        """Returns the distance to the root HConfig object i.e. indent level"""
+    def depth(self) -> int:  # noqa: PLR6301
+        """Returns the distance to the root HConfig object i.e. indent level."""
         return 0
 
     def difference(self, target: HConfig) -> HConfig:
         """
-        Creates a new HConfig object with the config from self that is not in target
-
-        Example usage:
-        whats in the config.lines v.s. in running config
-        i.e. did all my configuration changes get written to the running config
-
-        :param target: HConfig - The configuration to check against
-        :return: HConfig - missing config additions
+        Creates a new HConfig object with the config from self that is not in target.
         """
-        delta = HConfig(host=self.host)
+        delta = HConfig(self.driver)
         difference = self._difference(target, delta)
         # Makes mypy happy
         if not isinstance(difference, HConfig):
@@ -233,16 +157,16 @@ class HConfig(HConfigBase):  # pylint: disable=too-many-public-methods
         return difference
 
     def config_to_get_to(
-        self, target: HConfig, delta: Optional[HConfig] = None
+        self, target: HConfig, delta: HConfig | None = None
     ) -> HConfig:
         """
         Figures out what commands need to be executed to transition from self to target.
         self is the source data structure(i.e. the running_config),
-        target is the destination(i.e. generated_config)
+        target is the destination(i.e. generated_config).
 
         """
         if delta is None:
-            delta = HConfig(host=self.host)
+            delta = HConfig(self.driver)
 
         root_config = self._config_to_get_to(target, delta)
         if not isinstance(root_config, HConfig):
@@ -252,235 +176,62 @@ class HConfig(HConfigBase):  # pylint: disable=too-many-public-methods
 
     def add_ancestor_copy_of(
         self, parent_to_add: HConfigChild
-    ) -> Union[HConfig, HConfigChild]:
+    ) -> HConfig | HConfigChild:
         """
         Add a copy of the ancestry of parent_to_add to self
-        and return the deepest child which is equivalent to parent_to_add
+        and return the deepest child which is equivalent to parent_to_add.
         """
-        base: Union[HConfig, HConfigChild] = self
+        base: HConfig | HConfigChild = self
         for parent in parent_to_add.lineage():
             base = base.add_shallow_copy_of(parent)
 
         return base
 
-    def set_order_weight(self) -> None:
-        """Sets self.order integer on all children"""
+    def set_order_weight(self) -> HConfig:
+        """Sets self.order integer on all children."""
         for child in self.all_children():
-            for rule in self.options["ordering"]:
-                if child.lineage_test(rule):
-                    child.order_weight = rule["order"]
-
-    def add_sectional_exiting(self) -> None:
-        """
-        Adds the sectional exiting text as a child
-        """
-        for child in self.all_children():
-            for rule in self.options["sectional_exiting"]:
-                if child.lineage_test(rule):
-                    exit_line = child.get_child("equals", rule["exit_text"])
-                    if exit_line is None:
-                        exit_line = child.add_child(rule["exit_text"])
-
-                    exit_line.tags = child.tags
-                    exit_line.order_weight = 999
+            for rule in self.driver.ordering_rules:
+                if child.lineage_test(rule.lineage):
+                    child.order_weight = rule.weight
+        return self
 
     def future(self, config: HConfig) -> HConfig:
         """
-        EXPERIMENTAL - predict the future config after config is applied to self
+        EXPERIMENTAL - predict the future config after config is applied to self.
 
-        The quality of the this method's output will in part depend on how well
+        The quality of this method's output will in part depend on how well
         the OS options are tuned. Ensuring that idempotency rules are accurate is
         especially important.
         """
-        future_config = HConfig(host=self.host)
+        future_config = HConfig(self.driver)
         self._future(config, future_config)
         return future_config
 
-    def with_tags(self, tags: Set[str]) -> HConfig:
+    def with_tags(self, tags: Iterable[str]) -> HConfig:
         """
-        Returns a new instance containing only sub-objects
-        with one of the tags in tags
+        Returns a new instance recursively containing children that only have a subset of tags.
         """
-        new_instance = HConfig(self.host)
-        result = self._with_tags(tags, new_instance)
+        new_instance = HConfig(self.driver)
+        result = self._with_tags(frozenset(tags), new_instance)
         # Makes mypy happy
         if not isinstance(result, HConfig):
-            raise ValueError
+            raise TypeError
         return new_instance
 
     def all_children_sorted_by_tags(
-        self, include_tags: Set[str], exclude_tags: Set[str]
+        self, include_tags: Iterable[str], exclude_tags: Iterable[str]
     ) -> Iterator[HConfigChild]:
-        """Yield all children recursively that match include/exclude tags"""
+        """Yield all children recursively that match include/exclude tags."""
         for child in sorted(self.children):
             yield from child.all_children_sorted_by_tags(include_tags, exclude_tags)
 
-    @staticmethod
-    def _load_from_string_lines_end_of_banner_test(
-        config_line: str, banner_end_lines: Set[str], banner_end_contains: List[str]
-    ) -> bool:
-        if config_line.startswith("^"):
-            return True
-        if config_line in banner_end_lines:
-            return True
-        if any([c in config_line for c in banner_end_contains]):
-            return True
-        return False
-
-    # pylint: disable=too-many-locals,too-many-branches,too-many-statements
-    def _load_from_string_lines(self, config_text: str) -> None:
-        current_section: Union[HConfig, HConfigChild] = self
-        most_recent_item: Union[HConfig, HConfigChild] = current_section
-        indent_adjust = 0
-        end_indent_adjust = []
-        temp_banner = []
-        banner_end_lines = {"EOF", "%", "!"}
-        banner_end_contains: List[str] = []
-        in_banner = False
-
-        for line in config_text.splitlines():
-            # Process banners in configuration into one line
-            if in_banner:
-                if line != "!":
-                    temp_banner.append(line)
-
-                # Test if this line is the end of a banner
-                if self._load_from_string_lines_end_of_banner_test(
-                    str(line), banner_end_lines, banner_end_contains
-                ):
-                    in_banner = False
-                    most_recent_item = self.add_child("\n".join(temp_banner), True)
-                    most_recent_item.real_indent_level = 0
-                    current_section = self
-                    temp_banner = []
-                continue
-
-            # Test if this line is the start of a banner and not an empty banner
-            # Empty banners matching the below expression have been seen on NX-OS
-            if line.startswith("banner ") and line != "banner motd ##":
-                in_banner = True
-                temp_banner.append(line)
-                banner_words = line.split()
-                try:
-                    banner_end_contains.append(banner_words[2])
-                    banner_end_lines.add(banner_words[2][:1])
-                    banner_end_lines.add(banner_words[2][:2])
-                except IndexError:
-                    pass
-                continue
-
-            actual_indent = len(line) - len(line.lstrip())
-            line = " " * actual_indent + " ".join(line.split())
-            for sub in self.options["per_line_sub"]:
-                line = re.sub(sub["search"], sub["replace"], line)
-            line = line.rstrip()
-
-            # If line is now empty, move to the next
-            if not line:
-                continue
-
-            # Determine indentation level
-            this_indent = len(line) - len(line.lstrip()) + indent_adjust
-
-            line = line.lstrip()
-
-            # Walks back up the tree
-            while this_indent <= current_section.real_indent_level:
-                current_section = current_section.parent
-
-            # Walks down the tree by one step
-            if this_indent > most_recent_item.real_indent_level:
-                current_section = most_recent_item
-
-            most_recent_item = current_section.add_child(line, True)
-            most_recent_item.real_indent_level = this_indent
-
-            for expression in self.options["indent_adjust"]:
-                if re.search(expression["start_expression"], line):
-                    indent_adjust += 1
-                    end_indent_adjust.append(expression["end_expression"])
-                    break
-            if end_indent_adjust and re.search(end_indent_adjust[0], line):
-                indent_adjust -= 1
-                del end_indent_adjust[0]
-        assert not in_banner, "we are still in a banner for some reason"
-
-    def _add_acl_sequence_numbers(self) -> None:
-        """
-        Add ACL sequence numbers for use on configurations with a style of 'ios'
-        """
-        ipv4_acl_sw = "ip access-list"
-        # ipv6_acl_sw = ('ipv6 access-list')
-        if self.host.os in ["ios"]:
-            acl_line_sw: Tuple[str, ...] = ("permit", "deny")
-        else:
-            acl_line_sw = ("permit", "deny", "remark")
+    def deep_copy(self) -> HConfig:
+        """Return a copy of this object."""
+        new_instance = HConfig(self.driver)
         for child in self.children:
-            if child.text.startswith(ipv4_acl_sw):
-                sequence_number = 10
-                for sub_child in child.children:
-                    if sub_child.text.startswith(acl_line_sw):
-                        sub_child.text = f"{sequence_number} {sub_child.text}"
-                        sequence_number += 10
+            new_instance.add_deep_copy_of(child)
+        return new_instance
 
-    def _rm_ipv6_acl_sequence_numbers(self) -> None:
-        """If there are sequence numbers in the IPv6 ACL, remove them"""
-        for acl in self.get_children("startswith", "ipv6 access-list "):
-            for entry in acl.children:
-                if entry.text.startswith("sequence"):
-                    entry.text = " ".join(entry.text.split()[2:])
-
-    def _remove_acl_remarks(self) -> None:
-        for acl in self.get_children("startswith", "ip access-list "):
-            for entry in acl.children:
-                if entry.text.startswith("remark"):
-                    acl.children.remove(entry)
-
-    def _duplicate_child_allowed_check(self) -> bool:
-        """Determine if duplicate(identical text) children are allowed under the parent"""
+    def _duplicate_child_allowed_check(self) -> bool:  # noqa: PLR6301
+        """Determine if duplicate(identical text) children are allowed under the parent."""
         return False
-
-    def _convert_to_set_commands(self, config_str: str) -> str:
-        """
-        Convert a Juniper style config string into a list of set commands.
-        Args:
-            config_str (str): The config string to convert to set commands
-        Returns:
-            config_str (str): Configuration string
-        """
-        lines = []
-        path = []
-        for line in config_str.splitlines():
-            stripped_line = line.strip()
-
-            # Skip empty lines
-            if not stripped_line:
-                continue
-
-            # Strip ; from the end of the line
-            stripped_line = stripped_line.rstrip(";")
-
-            # Skip comments
-            if stripped_line.startswith(("/*", "#")):
-                continue
-
-            # Handle block start / end
-            if stripped_line.endswith("{"):
-                path.append(stripped_line.rstrip("{").strip())
-                continue
-            if stripped_line.endswith("}"):
-                try:
-                    path.pop()
-                    continue
-                except IndexError as e:
-                    raise ValueError("unexpected extra end of block '}'") from e
-
-            # If it's not already a set command, build it
-            if not stripped_line.startswith(("set", self.options["negation"])):
-                stripped_line = "set " + " ".join(path) + " " + stripped_line
-            lines.append(stripped_line)
-
-        if path:
-            raise ValueError("unterminated configuration: missing '}'?")
-
-        return "\n".join(lines)
