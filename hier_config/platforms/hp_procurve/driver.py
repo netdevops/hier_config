@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass
 
 from hier_config.child import HConfigChild
 from hier_config.model import (
@@ -109,7 +108,6 @@ def _fixup_hp_procurve_device_profile(config: HConfig) -> None:
             tagged_vlan.delete()
 
 
-@dataclass(frozen=True)
 class HConfigDriverHPProcurve(HConfigDriverBase):
     negation_negate_with_rules: tuple[NegationDefaultWithRule, ...] = (
         NegationDefaultWithRule(

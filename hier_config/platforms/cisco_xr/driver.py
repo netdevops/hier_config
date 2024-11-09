@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from dataclasses import dataclass
 
 from hier_config.child import HConfigChild
 from hier_config.model import (
@@ -19,7 +18,6 @@ from hier_config.platforms.driver_base import HConfigDriverBase
 from hier_config.platforms.model import Platform
 
 
-@dataclass(frozen=True)
 class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-instance-attributes
     sectional_exiting_rules: tuple[SectionalExitingRule, ...] = (
         SectionalExitingRule(

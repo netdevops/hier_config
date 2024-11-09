@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 from hier_config.model import (
     IdempotentCommandsAvoidRule,
     IdempotentCommandsRule,
@@ -14,7 +12,6 @@ from hier_config.platforms.driver_base import HConfigDriverBase
 from hier_config.platforms.model import Platform
 
 
-@dataclass(frozen=True)
 class HConfigDriverCiscoNXOS(HConfigDriverBase):
     per_line_sub_rules: tuple[PerLineSubRule, ...] = (
         PerLineSubRule(search="^Building configuration.*", replace=""),

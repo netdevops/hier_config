@@ -357,9 +357,9 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
     @property
     def instance(self) -> Instance:
         return Instance(
-            id(self),
-            frozenset(self.comments),
-            frozenset(self.tags),
+            id=id(self),
+            comments=frozenset(self.comments),
+            tags=frozenset(self.tags),
         )
 
     def all_children_sorted_by_tags(

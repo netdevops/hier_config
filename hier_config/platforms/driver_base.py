@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from hier_config.model import (
+    BaseModel,
     FullTextSubRule,
     IdempotentCommandsAvoidRule,
     IdempotentCommandsRule,
@@ -26,8 +26,7 @@ if TYPE_CHECKING:
     from hier_config.root import HConfig
 
 
-@dataclass(frozen=True)
-class HConfigDriverBase(ABC):  # pylint: disable=too-many-instance-attributes
+class HConfigDriverBase(ABC, BaseModel):  # pylint: disable=too-many-instance-attributes
     """
     Defines all hier_config options, rules, and rule checking methods.
     Override methods as needed.

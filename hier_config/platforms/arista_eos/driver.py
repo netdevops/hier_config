@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
 from hier_config.model import (
     IdempotentCommandsRule,
     MatchRule,
@@ -13,7 +11,6 @@ from hier_config.platforms.driver_base import HConfigDriverBase
 from hier_config.platforms.model import Platform
 
 
-@dataclass(frozen=True)
 class HConfigDriverAristaEOS(HConfigDriverBase):
     sectional_exiting_rules: tuple[SectionalExitingRule, ...] = (
         SectionalExitingRule(

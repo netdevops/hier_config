@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
 from logging import getLogger
 
 from hier_config.model import (
@@ -87,7 +86,6 @@ def _add_acl_sequence_numbers(config: HConfig) -> None:
                     sequence_number += 10
 
 
-@dataclass(frozen=True)
 class HConfigDriverCiscoIOS(HConfigDriverBase):
     negation_negate_with_rules: tuple[NegationDefaultWithRule, ...] = (
         NegationDefaultWithRule(

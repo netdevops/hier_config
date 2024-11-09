@@ -96,7 +96,10 @@ class HConfigViewHPProcurve(HConfigViewBase):
             if words[2] == "type":
                 member_id = int(words[1])
                 yield StackMember(
-                    member_id, 256 - member_id, words[5], words[3].replace('"', "")
+                    id=member_id,
+                    priority=256 - member_id,
+                    mac_address=words[5],
+                    model=words[3].replace('"', ""),
                 )
 
     @property

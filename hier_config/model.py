@@ -1,10 +1,16 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-
-from pydantic import BaseModel
+from pydantic import BaseModel as PydanticBaseModel
+from pydantic import ConfigDict
 
 from hier_config.platforms.model import Platform
+
+
+class BaseModel(PydanticBaseModel):
+    """Pydantic.BaseModel with a safe config applied."""
+
+    model_config = ConfigDict(frozen=True, strict=True, extra="forbid")
+    # model_config = ConfigDict(frozen=True, extra="forbid")
 
 
 class Dump(BaseModel):
@@ -20,8 +26,7 @@ class DumpLine(BaseModel):
     new_in_config: bool
 
 
-@dataclass(frozen=True, slots=True, eq=False)
-class MatchRule:
+class MatchRule(BaseModel):
     equals: str | frozenset[str] | None = None
     startswith: str | tuple[str, ...] | None = None
     endswith: str | tuple[str, ...] | None = None
@@ -29,75 +34,62 @@ class MatchRule:
     re_search: str | None = None
 
 
-@dataclass(frozen=True, slots=True, eq=False)
-class SectionalExitingRule:
+class SectionalExitingRule(BaseModel):
     lineage: tuple[MatchRule, ...]
     exit_text: str
 
 
-@dataclass(frozen=True, slots=True, eq=False)
-class SectionalOverwriteRule:
+class SectionalOverwriteRule(BaseModel):
     lineage: tuple[MatchRule, ...]
 
 
-@dataclass(frozen=True, slots=True, eq=False)
-class SectionalOverwriteNoNegateRule:
+class SectionalOverwriteNoNegateRule(BaseModel):
     lineage: tuple[MatchRule, ...]
 
 
-@dataclass(frozen=True, slots=True, eq=False)
-class OrderingRule:
+class OrderingRule(BaseModel):
     lineage: tuple[MatchRule, ...]
     weight: int
 
 
-@dataclass(frozen=True, slots=True, eq=False)
-class IndentAdjustRule:
+class IndentAdjustRule(BaseModel):
     start_expression: str
     end_expression: str
 
 
-@dataclass(frozen=True, slots=True, eq=False)
-class ParentAllowsDuplicateChildRule:
+class ParentAllowsDuplicateChildRule(BaseModel):
     lineage: tuple[MatchRule, ...]
 
 
-@dataclass(frozen=True, slots=True, eq=False)
-class FullTextSubRule:
+class FullTextSubRule(BaseModel):
     search: str
     replace: str
 
 
-@dataclass(frozen=True, slots=True, eq=False)
-class PerLineSubRule:
+class PerLineSubRule(BaseModel):
     search: str
     replace: str
 
 
-@dataclass(frozen=True, slots=True, eq=False)
-class IdempotentCommandsRule:
+class IdempotentCommandsRule(BaseModel):
     lineage: tuple[MatchRule, ...]
 
 
-@dataclass(frozen=True, slots=True, eq=False)
-class IdempotentCommandsAvoidRule:
+class IdempotentCommandsAvoidRule(BaseModel):
     lineage: tuple[MatchRule, ...]
 
 
-@dataclass(frozen=True, slots=True)
-class Instance:
+class Instance(BaseModel):
     id: int
     comments: frozenset[str]
     tags: frozenset[str]
 
 
-@dataclass(frozen=True, slots=True, eq=False)
-class NegationDefaultWhenRule:
+class NegationDefaultWhenRule(BaseModel):
     lineage: tuple[MatchRule, ...]
 
 
-@dataclass(frozen=True, slots=True, eq=False)
-class NegationDefaultWithRule:
+class NegationDefaultWithRule(BaseModel):
     lineage: tuple[MatchRule, ...]
     use: str
 

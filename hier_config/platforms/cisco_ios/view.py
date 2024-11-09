@@ -74,7 +74,9 @@ class HConfigViewCiscoIOS(HConfigViewBase):
         for member in self.config.get_children(re_search="^switch .* provision .*"):
             words = member.text.split()
             member_id = int(words[1])
-            yield StackMember(member_id, 256 - member_id, None, words[3])
+            yield StackMember(
+                id=member_id, priority=256 - member_id, mac_address=None, model=words[3]
+            )
 
     @property
     def vlans(self) -> Iterable[Vlan]:

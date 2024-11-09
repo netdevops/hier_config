@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
 from enum import Enum, auto
+
+from hier_config.model import BaseModel
 
 
 class Platform(str, Enum):
@@ -31,8 +32,7 @@ class InterfaceDot1qMode(str, Enum):
     TAGGED_ALL = auto()
 
 
-@dataclass
-class StackMember:
+class StackMember(BaseModel):
     id: int
     priority: int
     mac_address: str | None  # not defined in cisco_ios stacks
@@ -45,7 +45,6 @@ class InterfaceDuplex(str, Enum):
     HALF = auto()
 
 
-@dataclass(frozen=True, slots=True)
-class Vlan:
+class Vlan(BaseModel):
     id: int
     name: str | None
