@@ -44,6 +44,31 @@ def tag_rules_ios() -> tuple[TagRule, ...]:
     )
 
 
+@pytest.fixture(scope="module")
+def generated_config_junos() -> str:
+    return _fixture_file_read("generated_config_junos.conf")
+
+
+@pytest.fixture(scope="module")
+def running_config_junos() -> str:
+    return _fixture_file_read("running_config_junos.conf")
+
+
+@pytest.fixture(scope="module")
+def generated_config_flat_junos() -> str:
+    return _fixture_file_read("generated_config_flat_junos.conf")
+
+
+@pytest.fixture(scope="module")
+def running_config_flat_junos() -> str:
+    return _fixture_file_read("running_config_flat_junos.conf")
+
+
+@pytest.fixture(scope="module")
+def remediation_config_flat_junos() -> str:
+    return _fixture_file_read("remediation_config_flat_junos.conf")
+
+
 def _fixture_file_read(filename: str) -> str:
     return str(
         Path(__file__)

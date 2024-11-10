@@ -47,7 +47,6 @@ refurb = "*"
 ruff = "*"
 typer = "*"
 types-pyyaml = "*"
-vulture = "*"
 yamllint = "*"
 
 

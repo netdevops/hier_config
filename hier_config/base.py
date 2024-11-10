@@ -465,10 +465,9 @@ class HConfigBase(ABC):  # noqa: PLR0904
 
             # in other but not self
             # add this node but not any children
-            deleted = delta.add_child(self_child.text)
-            deleted.negate()
+            negated = delta.add_child(self_child.text).negate()
             if self_child.children:
-                deleted.comments.add(f"removes {len(self_child.children) + 1} lines")
+                negated.comments.add(f"removes {len(self_child.children) + 1} lines")
 
     def _config_to_get_to_right(
         self,

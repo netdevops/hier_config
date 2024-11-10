@@ -19,7 +19,7 @@ from hier_config.platforms.view_base import (
 
 
 class ConfigViewInterfaceHPProcurve(  # noqa: PLR0904 pylint: disable=abstract-method
-     ConfigViewInterfaceBase,
+    ConfigViewInterfaceBase,
 ):
     @property
     def bundle_id(self) -> str | None:

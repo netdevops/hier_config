@@ -1,11 +1,11 @@
-from hier_config import get_hconfig_from_simple
-from hier_config.constructors import get_hconfig_for_platform
+from hier_config import get_hconfig_fast_load
+from hier_config.constructors import get_hconfig
 from hier_config.model import Platform
 
 
 def test_negation_negate_with() -> None:
     platform = Platform.HP_PROCURVE
-    running_config = get_hconfig_from_simple(
+    running_config = get_hconfig_fast_load(
         platform,
         (
             "aaa port-access authenticator 1/1 tx-period 3",
@@ -16,7 +16,7 @@ def test_negation_negate_with() -> None:
             'aaa port-access 1/1 critical-auth user-role "allowall"',
         ),
     )
-    generated_config = get_hconfig_for_platform(platform)
+    generated_config = get_hconfig(platform)
     remediation_config = running_config.config_to_get_to(generated_config)
     assert remediation_config.dump_simple() == (
         "aaa port-access authenticator 1/1 tx-period 30",
@@ -30,7 +30,7 @@ def test_negation_negate_with() -> None:
 
 def test_idempotent_for() -> None:
     platform = Platform.HP_PROCURVE
-    running_config = get_hconfig_from_simple(
+    running_config = get_hconfig_fast_load(
         platform,
         (
             "aaa port-access authenticator 1/1 tx-period 3",
@@ -41,7 +41,7 @@ def test_idempotent_for() -> None:
             'aaa port-access 1/1 critical-auth user-role "allowall"',
         ),
     )
-    generated_config = get_hconfig_from_simple(
+    generated_config = get_hconfig_fast_load(
         platform,
         (
             "aaa port-access authenticator 1/1 tx-period 4",
@@ -65,8 +65,8 @@ def test_idempotent_for() -> None:
 
 def test_future() -> None:
     platform = Platform.HP_PROCURVE
-    running_config = get_hconfig_for_platform(platform)
-    remediation_config = get_hconfig_from_simple(
+    running_config = get_hconfig(platform)
+    remediation_config = get_hconfig_fast_load(
         platform,
         (
             "aaa port-access authenticator 3/34",

@@ -49,9 +49,6 @@ def get_hconfig_driver(platform: Platform) -> HConfigDriverBase:  # noqa: PLR091
             return HConfigDriverJuniperJUNOS()
         case Platform.VYOS:
             return HConfigDriverVYOS()
-        case _:
-            message = f"Unsupported platform: {platform}"
-            raise ValueError(message)
 
 
 def get_hconfig_view(config: HConfig) -> HConfigViewBase:
@@ -71,15 +68,14 @@ def get_hconfig_view(config: HConfig) -> HConfigViewBase:
             raise ValueError(message)
 
 
-def get_hconfig_for_platform(platform: Platform) -> HConfig:
-    return HConfig(get_hconfig_driver(platform))
-
-
-def get_hconfig(driver: HConfigDriverBase, config_raw: Path | str) -> HConfig:
+def get_hconfig(
+    platform_or_driver: Platform | HConfigDriverBase,
+    config_raw: Path | str = "",
+) -> HConfig:
     if isinstance(config_raw, Path):
         config_raw = config_raw.read_text(encoding="utf8")
 
-    config = HConfig(driver)
+    config = HConfig(_get_driver(platform_or_driver))
     for rule in config.driver.full_text_sub_rules:
         config_raw = sub(rule.search, rule.replace, config_raw)
 
@@ -96,7 +92,7 @@ def get_hconfig(driver: HConfigDriverBase, config_raw: Path | str) -> HConfig:
 
 def get_hconfig_from_dump(dump: Dump) -> HConfig:
     """Load an HConfig dump."""
-    config = get_hconfig_for_platform(dump.driver_platform)
+    config = get_hconfig(dump.driver_platform)
     last_item: HConfig | HConfigChild = config
     for item in dump.lines:
         # parent is the root
@@ -120,11 +116,12 @@ def get_hconfig_from_dump(dump: Dump) -> HConfig:
     return config
 
 
-def get_hconfig_from_simple(
-    platform: Platform,
+def get_hconfig_fast_load(
+    platform_or_driver: Platform | HConfigDriverBase,
     lines: list[str] | tuple[str, ...] | str,
 ) -> HConfig:
-    config = get_hconfig_for_platform(platform)
+    driver = _get_driver(platform_or_driver)
+    config = get_hconfig(driver)
     if isinstance(lines, str):
         lines = lines.splitlines()
 
@@ -148,6 +145,14 @@ def get_hconfig_from_simple(
         child.delete_sectional_exit()
 
     return config
+
+
+def _get_driver(platform_or_driver: Platform | HConfigDriverBase) -> HConfigDriverBase:
+    match platform_or_driver:
+        case Platform():
+            return get_hconfig_driver(platform_or_driver)
+        case HConfigDriverBase():
+            return platform_or_driver
 
 
 def _analyze_indent(

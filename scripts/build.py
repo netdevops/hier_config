@@ -30,7 +30,6 @@ def lint(*, fix: bool = False) -> None:
             _pylint_command(),
             _yamllint_command(),
             _flynt_command(fix=fix),
-            *_vulture_commands(),
             _refurb_command(),
         ),
     )
@@ -49,7 +48,6 @@ def all_code_checks(*, fix: bool = False) -> None:
             _pytest_command(),
             _yamllint_command(),
             _flynt_command(fix=fix),
-            *_vulture_commands(),
             _refurb_command(),
         ),
     )
@@ -190,17 +188,6 @@ def _flynt_command(*, fix: bool) -> str:
     if fix:
         return f"flynt -tc {_python_base_paths_str()}"
     return f"flynt -d -tc -f {_python_base_paths_str()}"
-
-
-@app.command()
-def vulture() -> None:
-    """Run vulture to find dead code."""
-    _run_commands_threaded(tuple(_vulture_commands()))
-
-
-def _vulture_commands() -> Iterable[str]:
-    for path in _python_base_paths():
-        yield f"vulture --min-confidence 70 {path}"
 
 
 @cache

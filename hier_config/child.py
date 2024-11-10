@@ -77,7 +77,6 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
             self.text != other.text
             or self.tags != other.tags
             or self.comments != other.comments
-            or self.new_in_config != other.new_in_config
         ):
             return False
 
@@ -250,7 +249,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         if self.negation_default_when_check(self):
             return self._default()
 
-        return self._swap_negation()
+        return self.driver.swap_negation(self)
 
     def negation_default_when_check(self, config: HConfigChild) -> bool:
         return any(
@@ -449,15 +448,6 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         for line in lines:
             base = base.add_child(line)
         return base
-
-    def _swap_negation(self) -> HConfigChild:
-        """Swap negation of a `self.text`."""
-        if self.text.startswith(self.driver.negation_prefix):
-            self.text = self.text_without_negation
-        else:
-            self.text = f"{self.driver.negation_prefix}{self.text}"
-
-        return self
 
     def _default(self) -> HConfigChild:
         """Default self.text."""

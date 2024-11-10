@@ -1,15 +1,12 @@
-from hier_config import get_hconfig_from_simple
-from hier_config.constructors import get_hconfig_for_platform
+from hier_config import get_hconfig_fast_load
+from hier_config.constructors import get_hconfig
 from hier_config.model import Platform
 
 
 def test_logging_console_emergencies_scenario_1() -> None:
     platform = Platform.CISCO_IOS
-    running_config = get_hconfig_from_simple(platform, ("no logging console",))
-    generated_config = get_hconfig_from_simple(
-        platform,
-        ("logging console emergencies",),
-    )
+    running_config = get_hconfig_fast_load(platform, ("no logging console",))
+    generated_config = get_hconfig_fast_load(platform, ("logging console emergencies",))
     remediation_config = running_config.config_to_get_to(generated_config)
     assert remediation_config.dump_simple() == ("logging console emergencies",)
     future_config = running_config.future(remediation_config)
@@ -23,11 +20,8 @@ def test_logging_console_emergencies_scenario_1() -> None:
 
 def test_logging_console_emergencies_scenario_2() -> None:
     platform = Platform.CISCO_IOS
-    running_config = get_hconfig_from_simple(platform, ("logging console",))
-    generated_config = get_hconfig_from_simple(
-        platform,
-        ("logging console emergencies",),
-    )
+    running_config = get_hconfig_fast_load(platform, ("logging console",))
+    generated_config = get_hconfig_fast_load(platform, ("logging console emergencies",))
     remediation_config = running_config.config_to_get_to(generated_config)
     assert remediation_config.dump_simple() == ("logging console emergencies",)
     future_config = running_config.future(remediation_config)
@@ -41,11 +35,8 @@ def test_logging_console_emergencies_scenario_2() -> None:
 
 def test_logging_console_emergencies_scenario_3() -> None:
     platform = Platform.CISCO_IOS
-    running_config = get_hconfig_for_platform(platform)
-    generated_config = get_hconfig_from_simple(
-        platform,
-        ("logging console emergencies",),
-    )
+    running_config = get_hconfig(platform)
+    generated_config = get_hconfig_fast_load(platform, ("logging console emergencies",))
     remediation_config = running_config.config_to_get_to(generated_config)
     assert remediation_config.dump_simple() == ("logging console emergencies",)
     future_config = running_config.future(remediation_config)

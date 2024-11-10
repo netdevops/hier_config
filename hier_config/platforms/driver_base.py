@@ -28,7 +28,6 @@ class HConfigDriverBase(ABC, BaseModel):  # pylint: disable=too-many-instance-at
     Override methods as needed.
     """
 
-    negation: str = "no"
     indentation: PositiveInt = 2
     sectional_exiting_rules: tuple[SectionalExitingRule, ...] = ()
     sectional_overwrite_rules: tuple[SectionalOverwriteRule, ...] = ()
@@ -81,5 +80,9 @@ class HConfigDriverBase(ABC, BaseModel):  # pylint: disable=too-many-instance-at
         return child
 
     @property
+    def declaration_prefix(self) -> str:
+        return ""
+
+    @property
     def negation_prefix(self) -> str:
-        return f"{self.negation} "
+        return "no "

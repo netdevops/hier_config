@@ -7,7 +7,7 @@ from pydantic import ConfigDict, PositiveInt
 class BaseModel(PydanticBaseModel):
     """Pydantic.BaseModel with a safe config applied."""
 
-    model_config = ConfigDict(frozen=True, strict=True, extra="forbid")
+    model_config = ConfigDict(frozen=True, extra="forbid")
 
 
 class DumpLine(BaseModel):
