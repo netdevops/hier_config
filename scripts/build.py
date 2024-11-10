@@ -32,7 +32,7 @@ def lint(*, fix: bool = False) -> None:
             _flynt_command(fix=fix),
             *_vulture_commands(),
             _refurb_command(),
-        )
+        ),
     )
 
 
@@ -51,7 +51,7 @@ def all_code_checks(*, fix: bool = False) -> None:
             _flynt_command(fix=fix),
             *_vulture_commands(),
             _refurb_command(),
-        )
+        ),
     )
 
 
@@ -73,7 +73,10 @@ def _ruff_format_command(*, fix: bool) -> str:
 
 @app.command()
 def ruff_check(
-    *, fix: bool = False, unsafe_fixes: bool = False, statistics: bool = False
+    *,
+    fix: bool = False,
+    unsafe_fixes: bool = False,
+    statistics: bool = False,
 ) -> None:
     """Run Ruff linter."""
     _run(_ruff_check_command(fix=fix, unsafe_fixes=unsafe_fixes, statistics=statistics))
@@ -221,7 +224,10 @@ def _project_base_files(glob: str) -> Iterable[Path]:
 def _project_paths(glob: str) -> Iterable[Path]:
     for base_dir in ("hier_config", "tests", "scripts"):
         base_path = _repo_path().joinpath(base_dir)
-        assert base_path.exists()
+        if not base_path.exists():
+            message = f"{base_path=} does not exist"
+            raise FileNotFoundError(message)
+
         if next(base_path.glob(glob), None):
             yield base_path
 
@@ -238,24 +244,27 @@ def _run_commands_threaded(commands: tuple[str, ...]) -> NoReturn:
         ):
             command, return_code, output = future.result()
             if return_code:
-                print(output)
+                print(output)  # noqa: T201
             return_codes[command] = return_code
 
     error_found = False
     for command, return_code in return_codes.items():
         if return_code != 0:
-            print(f"{command.split()[0]} -> {return_code}")
+            print(f"{command.split()[0]} -> {return_code}")  # noqa: T201
             error_found = True
     if error_found:
         sys.exit(1)
-    print("No issues found")
+    print("No issues found")  # noqa: T201
     sys.exit()
 
 
 def _run(
-    command: str, *, check: bool = True, environment: dict[str, str] | None = None
+    command: str,
+    *,
+    check: bool = True,
+    environment: dict[str, str] | None = None,
 ) -> int:
-    print(f"\n======== {command} ========\n")
+    print(f"\n======== {command} ========\n")  # noqa: T201
     my_env = os.environ.copy()
     if environment:
         my_env.update(environment)
@@ -266,9 +275,11 @@ def _run(
 
 
 def _run_for_thread(command: str) -> tuple[str, int, str]:
-    print(f"Running: {command}")
+    print(f"Running: {command}")  # noqa: T201
     result = subprocess.run(  # noqa: S603
-        command.split(), check=False, capture_output=True
+        command.split(),
+        check=False,
+        capture_output=True,
     )
     output = f"\n======== {command} ========\n{result.stdout.decode()}\n{result.stderr.decode()}"
     return command, result.returncode, output

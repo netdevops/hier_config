@@ -16,8 +16,7 @@ from hier_config.root import HConfig
 
 
 def _fixup_hp_procurve_aaa_port_access_fixup(config: HConfig) -> None:
-    """
-    aaa port-access authenticator 1/15-1/20,1/26-1/40,2/14-2/20,2/25-2/28,2/30-2/44,3/8-3/44,4/1-4/2,4/8-4/44,5/1-5/2,5/8-5/15,5/17-5/28,5/30-5/44
+    """Aaa port-access authenticator 1/15-1/20,1/26-1/40,2/14-2/20,2/25-2/28,2/30-2/44,3/8-3/44,4/1-4/2,4/8-4/44,5/1-5/2,5/8-5/15,5/17-5/28,5/30-5/44
     aaa port-access mac-based 1/15-1/20,1/26-1/40,2/14-2/20,2/25-2/28,2/30-2/44,3/8-3/44,4/1-4/2,4/8-4/44,5/1-5/2,5/8-5/28,5/30-5/44.
 
     to
@@ -27,8 +26,8 @@ def _fixup_hp_procurve_aaa_port_access_fixup(config: HConfig) -> None:
     """
     for aaa_port_access in tuple(
         config.get_children(
-            re_search=r"^aaa port-access (authenticator|mac-based) [0-9,/\-Ttrk]+$"
-        )
+            re_search=r"^aaa port-access (authenticator|mac-based) [0-9,/\-Ttrk]+$",
+        ),
     ):
         words = aaa_port_access.text.split()
         if not any(c in words[3] for c in ("-", ",")):
@@ -39,8 +38,7 @@ def _fixup_hp_procurve_aaa_port_access_fixup(config: HConfig) -> None:
 
 
 def _fixup_hp_procurve_vlan(config: HConfig) -> None:
-    """
-    Move native/tagged vlan config to the interface config for easier modeling and remediation
+    """Move native/tagged vlan config to the interface config for easier modeling and remediation
     vlan 1
        no untagged 1/2-1/22,1/26-1/44,2/2-2/21,2/26-2/44
     vlan 80
@@ -63,21 +61,24 @@ def _fixup_hp_procurve_vlan(config: HConfig) -> None:
         vlan_id = vlan.text.split()[1]
         if untagged_interfaces := vlan.get_child(startswith="untagged "):
             untagged_interface_names = hp_procurve_expand_range(
-                untagged_interfaces.text.split()[1]
+                untagged_interfaces.text.split()[1],
             )
             for untagged_interface_name in sorted(untagged_interface_names):
                 config.add_children_deep(
-                    (f"interface {untagged_interface_name}", f"untagged vlan {vlan_id}")
+                    (
+                        f"interface {untagged_interface_name}",
+                        f"untagged vlan {vlan_id}",
+                    ),
                 )
             untagged_interfaces.delete()
 
         if tagged_interfaces := vlan.get_child(startswith="tagged "):
             tagged_interface_names = hp_procurve_expand_range(
-                tagged_interfaces.text.split()[1]
+                tagged_interfaces.text.split()[1],
             )
             for tagged_interface_name in sorted(tagged_interface_names):
                 config.add_children_deep(
-                    (f"interface {tagged_interface_name}", f"tagged vlan {vlan_id}")
+                    (f"interface {tagged_interface_name}", f"tagged vlan {vlan_id}"),
                 )
             tagged_interfaces.delete()
 
@@ -86,8 +87,7 @@ def _fixup_hp_procurve_vlan(config: HConfig) -> None:
 
 
 def _fixup_hp_procurve_device_profile(config: HConfig) -> None:
-    """
-    Separates the device-profile tagged-vlans onto individual lines.
+    """Separates the device-profile tagged-vlans onto individual lines.
 
     device-profile name "phone"
       tagged-vlan 10,20
@@ -133,16 +133,18 @@ class HConfigDriverHPProcurve(HConfigDriverBase):
     )
     idempotent_commands_rules: tuple[IdempotentCommandsRule, ...] = (
         IdempotentCommandsRule(
-            lineage=(MatchRule(startswith="aaa authentication port-access eap-radius"),)
+            lineage=(
+                MatchRule(startswith="aaa authentication port-access eap-radius"),
+            ),
         ),
         IdempotentCommandsRule(
-            lineage=(MatchRule(startswith="aaa accounting update periodic "),)
+            lineage=(MatchRule(startswith="aaa accounting update periodic "),),
         ),
         IdempotentCommandsRule(
             lineage=(
                 MatchRule(startswith="interface "),
                 MatchRule(startswith="untagged vlan "),
-            )
+            ),
         ),
         IdempotentCommandsRule(
             lineage=(
@@ -206,7 +208,9 @@ class HConfigDriverHPProcurve(HConfigDriverBase):
     )
 
     def idempotent_for(
-        self, config: HConfigChild, other_children: Iterable[HConfigChild]
+        self,
+        config: HConfigChild,
+        other_children: Iterable[HConfigChild],
     ) -> HConfigChild | None:
         if result := super().idempotent_for(config, other_children):
             return result
@@ -225,7 +229,10 @@ class HConfigDriverHPProcurve(HConfigDriverBase):
             )
             for expression, stop_index in rules:
                 if result := self._idempotent_for_helper(
-                    expression, stop_index, config, other_children
+                    expression,
+                    stop_index,
+                    config,
+                    other_children,
                 ):
                     return result
 
@@ -277,14 +284,22 @@ class HConfigDriverHPProcurve(HConfigDriverBase):
         )
         for expression, end_index, prepend, append in rules:
             if result := self._negation_negate_with_helper(
-                expression, end_index, prepend, append, config
+                expression,
+                end_index,
+                prepend,
+                append,
+                config,
             ):
                 return result
         return None
 
     @staticmethod
     def _negation_negate_with_helper(
-        expression: str, end_index: int, prepend: str, append: str, config: HConfigChild
+        expression: str,
+        end_index: int,
+        prepend: str,
+        append: str,
+        config: HConfigChild,
     ) -> str | None:
         if re.search(expression, config.text):
             words = config.text.split()

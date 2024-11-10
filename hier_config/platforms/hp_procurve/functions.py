@@ -12,7 +12,8 @@ def hp_procurve_expand_range(interface_range_str: str) -> tuple[str, ...]:
 
 
 def _hp_procurve_expand_range_segment(
-    interface_range: str, interfaces: list[str]
+    interface_range: str,
+    interfaces: list[str],
 ) -> None:
     start_stop = interface_range.split("-")
     if len(start_stop) != 2:

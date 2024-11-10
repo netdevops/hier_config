@@ -8,7 +8,6 @@ class BaseModel(PydanticBaseModel):
     """Pydantic.BaseModel with a safe config applied."""
 
     model_config = ConfigDict(frozen=True, strict=True, extra="forbid")
-    # model_config = ConfigDict(frozen=True, extra="forbid")
 
 
 class DumpLine(BaseModel):
@@ -25,6 +24,11 @@ class MatchRule(BaseModel):
     endswith: str | tuple[str, ...] | None = None
     contains: str | tuple[str, ...] | None = None
     re_search: str | None = None
+
+
+class TagRule(BaseModel):
+    match_rules: tuple[MatchRule, ...]
+    apply_tags: frozenset[str]
 
 
 class SectionalExitingRule(BaseModel):

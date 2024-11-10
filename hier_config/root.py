@@ -1,13 +1,16 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator
 from logging import getLogger
-
-from hier_config.platforms.driver_base import HConfigDriverBase
+from typing import TYPE_CHECKING
 
 from .base import HConfigBase
 from .child import HConfigChild
 from .model import Dump, DumpLine
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
+
+    from hier_config.platforms.driver_base import HConfigDriverBase
 
 logger = getLogger(__name__)
 
@@ -17,8 +20,7 @@ logger = getLogger(__name__)
 
 
 class HConfig(HConfigBase):  # noqa: PLR0904
-    """
-    A class for representing and comparing Cisco like configurations in a
+    """A class for representing and comparing Cisco like configurations in a
     hierarchical tree data structure.
     """
 
@@ -51,7 +53,9 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         return all(
             self_child == other_child
             for self_child, other_child in zip(
-                sorted(self.children), sorted(other.children), strict=False
+                sorted(self.children),
+                sorted(other.children),
+                strict=False,
             )
         )
 
@@ -117,9 +121,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         return base
 
     def lineage(self) -> Iterator[HConfigChild]:  # noqa: PLR6301
-        """
-        Yields the lineage of parent objects, up to but excluding the root.
-        """
+        """Yields the lineage of parent objects, up to but excluding the root."""
         yield from ()
 
     def lines(self, *, sectional_exiting: bool = False) -> Iterable[str]:
@@ -150,9 +152,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         return 0
 
     def difference(self, target: HConfig) -> HConfig:
-        """
-        Creates a new HConfig object with the config from self that is not in target.
-        """
+        """Creates a new HConfig object with the config from self that is not in target."""
         delta = HConfig(self.driver)
         difference = self._difference(target, delta)
         # Makes mypy happy
@@ -161,10 +161,11 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         return difference
 
     def config_to_get_to(
-        self, target: HConfig, delta: HConfig | None = None
+        self,
+        target: HConfig,
+        delta: HConfig | None = None,
     ) -> HConfig:
-        """
-        Figures out what commands need to be executed to transition from self to target.
+        """Figures out what commands need to be executed to transition from self to target.
         self is the source data structure(i.e. the running_config),
         target is the destination(i.e. generated_config).
 
@@ -179,10 +180,10 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         return root_config
 
     def add_ancestor_copy_of(
-        self, parent_to_add: HConfigChild
+        self,
+        parent_to_add: HConfigChild,
     ) -> HConfig | HConfigChild:
-        """
-        Add a copy of the ancestry of parent_to_add to self
+        """Add a copy of the ancestry of parent_to_add to self
         and return the deepest child which is equivalent to parent_to_add.
         """
         base: HConfig | HConfigChild = self
@@ -200,8 +201,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         return self
 
     def future(self, config: HConfig) -> HConfig:
-        """
-        EXPERIMENTAL - predict the future config after config is applied to self.
+        """EXPERIMENTAL - predict the future config after config is applied to self.
 
         The quality of this method's output will in part depend on how well
         the OS options are tuned. Ensuring that idempotency rules are accurate is
@@ -212,9 +212,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         return future_config
 
     def with_tags(self, tags: Iterable[str]) -> HConfig:
-        """
-        Returns a new instance recursively containing children that only have a subset of tags.
-        """
+        """Returns a new instance recursively containing children that only have a subset of tags."""
         new_instance = HConfig(self.driver)
         result = self._with_tags(frozenset(tags), new_instance)
         # Makes mypy happy
@@ -223,7 +221,9 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         return new_instance
 
     def all_children_sorted_by_tags(
-        self, include_tags: Iterable[str], exclude_tags: Iterable[str]
+        self,
+        include_tags: Iterable[str],
+        exclude_tags: Iterable[str],
     ) -> Iterator[HConfigChild]:
         """Yield all children recursively that match include/exclude tags."""
         for child in sorted(self.children):

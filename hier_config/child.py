@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Iterator
 from itertools import chain
 from logging import getLogger
 from re import search
@@ -10,6 +9,8 @@ from .base import HConfigBase
 from .model import Instance, MatchRule, SetLikeOfStr
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
+
     from hier_config.platforms.driver_base import HConfigDriverBase
 
     from .root import HConfig
@@ -19,7 +20,7 @@ logger = getLogger(__name__)
 
 
 class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attributes
-    HConfigBase
+    HConfigBase,
 ):
     __slots__ = (
         "_tags",
@@ -65,7 +66,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
                 self.new_in_config,
                 self.order_weight,
                 *self.children,
-            )
+            ),
         )
 
     def __eq__(self, other: object) -> bool:
@@ -86,7 +87,9 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         return all(
             self_child == other_child
             for self_child, other_child in zip(
-                sorted(self.children), sorted(other.children), strict=False
+                sorted(self.children),
+                sorted(other.children),
+                strict=False,
             )
         )
 
@@ -103,8 +106,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
 
     @text.setter
     def text(self, value: str) -> None:
-        """
-        Used for when self.text is changed after the object
+        """Used for when self.text is changed after the object
         is instantiated to rebuild the children dictionary.
         """
         self._text = value.strip()
@@ -154,8 +156,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         return self.parent.depth() + 1
 
     def move(self, new_parent: HConfig | HConfigChild) -> None:
-        """
-        move one HConfigChild object to different HConfig parent object.
+        """Move one HConfigChild object to different HConfig parent object.
 
         .. code:: python
 
@@ -184,7 +185,9 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
             yield child.text
 
     def cisco_style_text(
-        self, style: str = "without_comments", tag: str | None = None
+        self,
+        style: str = "without_comments",
+        tag: str | None = None,
     ) -> str:
         """Return a Cisco style formated line i.e. indentation_level + text ! comments."""
         comments = []
@@ -219,9 +222,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         self.parent.delete_child(self)
 
     def tags_add(self, tag: str | Iterable[str]) -> None:
-        """
-        Add a tag to self._tags on all leaf nodes.
-        """
+        """Add a tag to self._tags on all leaf nodes."""
         if self.is_branch:
             for child in self.children:
                 child.tags_add(tag)
@@ -231,9 +232,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
             self._tags.update(tag)
 
     def tags_remove(self, tag: str | Iterable[str]) -> None:
-        """
-        Remove a tag from self._tags on all leaf nodes.
-        """
+        """Remove a tag from self._tags on all leaf nodes."""
         if self.is_branch:
             for child in self.children:
                 child.tags_remove(tag)
@@ -304,8 +303,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         return bool(self.driver.idempotent_for(self, other_children))
 
     def sectional_overwrite_no_negate_check(self) -> bool:
-        """
-        Check self's text to see if negation should be handled by
+        """Check self's text to see if negation should be handled by
         overwriting the section without first negating it.
         """
         return any(
@@ -339,10 +337,11 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
                 new_item.comments.add("re-create section")
 
     def line_inclusion_test(
-        self, include_tags: Iterable[str], exclude_tags: Iterable[str]
+        self,
+        include_tags: Iterable[str],
+        exclude_tags: Iterable[str],
     ) -> bool:
-        """
-        Given the line_tags, include_tags, and exclude_tags,
+        """Given the line_tags, include_tags, and exclude_tags,
         determine if the line should be included.
         """
         include_line = False
@@ -363,7 +362,9 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         )
 
     def all_children_sorted_by_tags(
-        self, include_tags: Iterable[str], exclude_tags: Iterable[str]
+        self,
+        include_tags: Iterable[str],
+        exclude_tags: Iterable[str],
     ) -> Iterator[HConfigChild]:
         """Yield all children recursively that match include/exclude tags."""
         if self.is_leaf:
@@ -373,7 +374,8 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
             self_iter = iter((self,))
             for child in sorted(self.children):
                 included_children = child.all_children_sorted_by_tags(
-                    include_tags, exclude_tags
+                    include_tags,
+                    exclude_tags,
                 )
                 if peek := next(included_children, None):
                     yield from chain(self_iter, (peek,), included_children)
@@ -402,8 +404,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         contains: str | tuple[str, ...] | None = None,
         re_search: str | None = None,
     ) -> bool:
-        """
-        True if `self.text` matches all the criteria.
+        """True if `self.text` matches all the criteria.
 
         If all args are None, the function will return True.
         If multiple args are provided, then all will need to match in order to return True.
@@ -435,7 +436,8 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
             if contains not in self.text:
                 return False
         elif isinstance(  # pylint: disable=confusing-consecutive-elif
-            contains, tuple
+            contains,
+            tuple,
         ) and not any(c in self.text for c in contains):
             return False
 

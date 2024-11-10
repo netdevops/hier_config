@@ -17,15 +17,18 @@ from .platforms.cisco_nxos.view import HConfigViewCiscoNXOS
 from .platforms.cisco_xr.driver import HConfigDriverCiscoIOSXR
 from .platforms.cisco_xr.view import HConfigViewCiscoIOSXR
 from .platforms.generic.driver import HConfigDriverGeneric
+from .platforms.hp_comware5.driver import HConfigDriverHPComware5
 from .platforms.hp_procurve.driver import HConfigDriverHPProcurve
 from .platforms.hp_procurve.view import HConfigViewHPProcurve
+from .platforms.juniper_junos.driver import HConfigDriverJuniperJUNOS
 from .platforms.view_base import HConfigViewBase
+from .platforms.vyos.driver import HConfigDriverVYOS
 from .root import HConfig
 
 logger = getLogger(__name__)
 
 
-def get_hconfig_driver(platform: Platform) -> HConfigDriverBase:
+def get_hconfig_driver(platform: Platform) -> HConfigDriverBase:  # noqa: PLR0911
     """Create base options on an OS level."""
     match platform:
         case Platform.ARISTA_EOS:
@@ -40,6 +43,12 @@ def get_hconfig_driver(platform: Platform) -> HConfigDriverBase:
             return HConfigDriverGeneric()
         case Platform.HP_PROCURVE:
             return HConfigDriverHPProcurve()
+        case Platform.HP_COMWARE5:
+            return HConfigDriverHPComware5()
+        case Platform.JUNIPER_JUNOS:
+            return HConfigDriverJuniperJUNOS()
+        case Platform.VYOS:
+            return HConfigDriverVYOS()
         case _:
             message = f"Unsupported platform: {platform}"
             raise ValueError(message)
@@ -101,11 +110,7 @@ def get_hconfig_from_dump(dump: Dump) -> HConfig:
             parent = last_item
         # has a parent somewhere closer to the root but not the root
         else:
-            # last_item.lineage() = (a, b, c, d, e), new_item['depth'] = 2,
-            # parent = a
             parent = next(islice(last_item.lineage(), item.depth - 2, item.depth - 1))
-        # also accept 'line'
-        # obj = parent.add_child(item.get('text', item['line']), force_duplicate=True)
         obj = parent.add_child(item.text, force_duplicate=True)
         obj.tags = frozenset(item.tags)
         obj.comments = set(item.comments)
@@ -116,7 +121,8 @@ def get_hconfig_from_dump(dump: Dump) -> HConfig:
 
 
 def get_hconfig_from_simple(
-    platform: Platform, lines: list[str] | tuple[str, ...] | str
+    platform: Platform,
+    lines: list[str] | tuple[str, ...] | str,
 ) -> HConfig:
     config = get_hconfig_for_platform(platform)
     if isinstance(lines, str):
@@ -177,7 +183,9 @@ def _adjust_indent(
 
 
 def _config_from_string_lines_end_of_banner_test(
-    config_line: str, banner_end_lines: frozenset[str], banner_end_contains: list[str]
+    config_line: str,
+    banner_end_lines: frozenset[str],
+    banner_end_contains: list[str],
 ) -> bool:
     if config_line.startswith("^"):
         return True
@@ -207,11 +215,14 @@ def _load_from_string_lines(config: HConfig, config_text: str) -> None:  # noqa:
 
             # Test if this line is the end of a banner
             if _config_from_string_lines_end_of_banner_test(
-                line, frozenset(banner_end_lines), banner_end_contains
+                line,
+                frozenset(banner_end_lines),
+                banner_end_contains,
             ):
                 in_banner = False
                 most_recent_item = config.add_child(
-                    "\n".join(temp_banner), raise_on_duplicate=True
+                    "\n".join(temp_banner),
+                    raise_on_duplicate=True,
                 )
                 most_recent_item.real_indent_level = 0
                 current_section = config
@@ -257,7 +268,10 @@ def _load_from_string_lines(config: HConfig, config_text: str) -> None:  # noqa:
             line,
         )
         indent_adjust, end_indent_adjust = _adjust_indent(
-            config.driver, line, indent_adjust, end_indent_adjust
+            config.driver,
+            line,
+            indent_adjust,
+            end_indent_adjust,
         )
 
         if end_indent_adjust and search(end_indent_adjust[0], line):
@@ -269,8 +283,7 @@ def _load_from_string_lines(config: HConfig, config_text: str) -> None:  # noqa:
 
 
 def _convert_to_set_commands(config_raw: str) -> str:
-    """
-    Convert a Juniper style config string into a list of set commands.
+    """Convert a Juniper style config string into a list of set commands.
 
     Args:
         config_raw (str): The config string to convert to set commands

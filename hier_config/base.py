@@ -1,17 +1,18 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Iterable, Iterator
 from itertools import chain
 from logging import getLogger
 from typing import TYPE_CHECKING
 
 from .exceptions import DuplicateChildError
-from .model import MatchRule, SetLikeOfStr
-from .platforms.driver_base import HConfigDriverBase
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable, Iterator
+
     from .child import HConfigChild
+    from .model import MatchRule, SetLikeOfStr
+    from .platforms.driver_base import HConfigDriverBase
     from .root import HConfig
 
 logger = getLogger(__name__)
@@ -74,9 +75,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
         raise_on_duplicate: bool = False,
         force_duplicate: bool = False,
     ) -> HConfigChild:
-        """
-        Add a child instance of HConfigChild.
-        """
+        """Add a child instance of HConfigChild."""
         if not text:
             message = "text was empty"
             raise ValueError(message)
@@ -103,7 +102,10 @@ class HConfigBase(ABC):  # noqa: PLR0904
         yield from ()
 
     def add_deep_copy_of(
-        self, child_to_add: HConfigChild, *, merged: bool = False
+        self,
+        child_to_add: HConfigChild,
+        *,
+        merged: bool = False,
     ) -> HConfigChild:
         """Add a nested copy of a child to self."""
         new_child = self.add_shallow_copy_of(child_to_add, merged=merged)
@@ -138,17 +140,14 @@ class HConfigBase(ABC):  # noqa: PLR0904
             yield from child.all_children()
 
     def get_child_deep(self, match_rules: tuple[MatchRule, ...]) -> HConfigChild | None:
-        """
-        Find the first child recursively given a tuple of MatchRules.
-        """
+        """Find the first child recursively given a tuple of MatchRules."""
         return next(self.get_children_deep(match_rules), None)
 
     def get_children_deep(
-        self, match_rules: tuple[MatchRule, ...]
+        self,
+        match_rules: tuple[MatchRule, ...],
     ) -> Iterator[HConfigChild]:
-        """
-        Find children recursively given a tuple of MatchRules.
-        """
+        """Find children recursively given a tuple of MatchRules."""
         rule = match_rules[0]
         remaining_rules = match_rules[1:]
         for child in self.get_children(
@@ -233,7 +232,10 @@ class HConfigBase(ABC):  # noqa: PLR0904
                 yield child
 
     def add_shallow_copy_of(
-        self, child_to_add: HConfigChild, *, merged: bool = False
+        self,
+        child_to_add: HConfigChild,
+        *,
+        merged: bool = False,
     ) -> HConfigChild:
         """Add a nested copy of a child_to_add to self.children."""
         new_child = self.add_child(child_to_add.text)
@@ -259,8 +261,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
         self.rebuild_children_dict()
 
     def unified_diff(self, target: HConfig | HConfigChild) -> Iterator[str]:
-        """
-        In its current state, this algorithm does not consider duplicate child differences.
+        """In its current state, this algorithm does not consider duplicate child differences.
         e.g. two instances `endif` in an IOS-XR route-policy. It also does not respect the
         order of commands where it may count, such as in ACLs. In the case of ACLs, they
         should contain sequence numbers if order is important.
@@ -306,8 +307,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
         config: HConfig | HConfigChild,
         future_config: HConfig | HConfigChild,
     ) -> None:
-        """
-        The below cases still need to be accounted for:
+        """The below cases still need to be accounted for:
         - negate a numbered ACL when removing an item
         - idempotent command avoid list
         - idempotent_acl_check
@@ -327,7 +327,8 @@ class HConfigBase(ABC):  # noqa: PLR0904
                 future_config.add_deep_copy_of(config_child)
             # Idempotent commands
             elif self_child := self.root.driver.idempotent_for(
-                config_child, self.children
+                config_child,
+                self.children,
             ):
                 future_config.add_deep_copy_of(config_child)
                 negated_or_recursed.add(self_child.text)
@@ -346,7 +347,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
                     future_config.add_shallow_copy_of(config_child)
             # The negated form of config_child is in self.children
             elif self_child := self.get_child(
-                equals=f"{self.driver.negation_prefix}{config_child.text}"
+                equals=f"{self.driver.negation_prefix}{config_child.text}",
             ):
                 negated_or_recursed.add(self_child.text)
             # config_child is not in self and doesn't match a special case
@@ -366,11 +367,11 @@ class HConfigBase(ABC):  # noqa: PLR0904
         pass
 
     def _with_tags(
-        self, tags: frozenset[str], new_instance: HConfig | HConfigChild
+        self,
+        tags: frozenset[str],
+        new_instance: HConfig | HConfigChild,
     ) -> HConfig | HConfigChild:
-        """
-        Adds children recursively that have a subset of tags.
-        """
+        """Adds children recursively that have a subset of tags."""
         for child in self.children:
             if tags.issubset(child.tags):
                 new_child = new_instance.add_shallow_copy_of(child)
@@ -379,10 +380,11 @@ class HConfigBase(ABC):  # noqa: PLR0904
         return new_instance
 
     def _config_to_get_to(
-        self, target: HConfig | HConfigChild, delta: HConfig | HConfigChild
+        self,
+        target: HConfig | HConfigChild,
+        delta: HConfig | HConfigChild,
     ) -> HConfig | HConfigChild:
-        """
-        Figures out what commands need to be executed to transition from self to target.
+        """Figures out what commands need to be executed to transition from self to target.
         self is the source data structure(i.e. the running_config),
         target is the destination(i.e. generated_config).
 
@@ -420,7 +422,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
                     message = "target_acl_children cannot be None"
                     raise TypeError(message)
                 target_child = target_acl_children.get(
-                    self._strip_acl_sequence_number(self_child)
+                    self._strip_acl_sequence_number(self_child),
                 )
             else:
                 target_child = target.get_child(equals=self_child.text)
@@ -447,7 +449,9 @@ class HConfigBase(ABC):  # noqa: PLR0904
         return delta
 
     def _config_to_get_to_left(
-        self, target: HConfig | HConfigChild, delta: HConfig | HConfigChild
+        self,
+        target: HConfig | HConfigChild,
+        delta: HConfig | HConfigChild,
     ) -> None:
         # find self.children that are not in target.children
         # i.e. what needs to be negated or defaulted
@@ -467,7 +471,9 @@ class HConfigBase(ABC):  # noqa: PLR0904
                 deleted.comments.add(f"removes {len(self_child.children) + 1} lines")
 
     def _config_to_get_to_right(
-        self, target: HConfig | HConfigChild, delta: HConfig | HConfigChild
+        self,
+        target: HConfig | HConfigChild,
+        delta: HConfig | HConfigChild,
     ) -> None:
         # find what would need to be added to source_config to get to self
         for target_child in target.children:

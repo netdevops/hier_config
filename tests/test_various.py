@@ -14,12 +14,14 @@ def test_issue104() -> None:
     platform = Platform.CISCO_NXOS
     running_config = get_hconfig(get_hconfig_driver(platform), running_config_raw)
     generated_config = get_hconfig(get_hconfig_driver(platform), generated_config_raw)
-    rem = running_config.config_to_get_to(generated_config)
+    remediation_config = running_config.config_to_get_to(generated_config)
     expected_rem_lines = {
         "no tacacs-server deadtime 3",
         "no tacacs-server host 192.168.1.99 key 7 Test12345",
         "tacacs-server host 192.168.1.98 key 0 Test135 timeout 3",
         "tacacs-server host 192.168.100.98 key 0 test135 timeout 3",
     }
-    rem_lines = {line.cisco_style_text() for line in rem.all_children()}
-    assert expected_rem_lines == rem_lines
+    remediation_lines = {
+        line.cisco_style_text() for line in remediation_config.all_children()
+    }
+    assert expected_rem_lines == remediation_lines

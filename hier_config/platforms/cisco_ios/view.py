@@ -72,8 +72,6 @@ class ConfigViewInterfaceCiscoIOS(ConfigViewInterfaceBase):  # noqa: PLR0904
                 yield IPv4Interface("/".join(ipv4_address[2:4]))
             except AddressValueError:
                 continue
-                # message = f"{self.name} does not a have a valid IPv4 Address: {ipv4_address_obj.text}"
-                # raise AddressValueError(message)
 
     @property
     def is_bundle(self) -> bool:
@@ -161,7 +159,7 @@ class ConfigViewInterfaceCiscoIOS(ConfigViewInterfaceBase):  # noqa: PLR0904
         # It's configured as a trunk
         if self.config.get_child(equals="switchport mode trunk"):
             if vlan := self.config.get_child(
-                startswith="switchport trunk native vlan "
+                startswith="switchport trunk native vlan ",
             ):
                 return int(vlan.text.split()[4])
 
@@ -208,15 +206,15 @@ class ConfigViewInterfaceCiscoIOS(ConfigViewInterfaceBase):  # noqa: PLR0904
     def tagged_all(self) -> bool:
         return bool(
             self.config.get_child(equals="switchport mode trunk")
-            and not self.tagged_vlans
+            and not self.tagged_vlans,
         )
 
     @property
     def tagged_vlans(self) -> tuple[int, ...]:
         if child := self.config.get_child(
-            re_search="^switchport trunk allowed vlan [0-9,-]+$"
+            re_search="^switchport trunk allowed vlan [0-9,-]+$",
         ):
-            return tuple(expand_range(child.text.split()[4]))
+            return expand_range(child.text.split()[4])
         return ()
 
     @property
@@ -274,19 +272,21 @@ class HConfigViewCiscoIOS(HConfigViewBase):
 
     @property
     def stack_members(self) -> Iterable[StackMember]:
-        """
-        stacking
-           member 1 type "JL123" mac-address abc123-abc123
-           member 1 priority 255
-           member 2 type "JL123" mac-address abc123-abc123
-           member 2 priority 254
-           ...
+        """stacking
+        member 1 type "JL123" mac-address abc123-abc123
+        member 1 priority 255
+        member 2 type "JL123" mac-address abc123-abc123
+        member 2 priority 254
+        ...
         """
         for member in self.config.get_children(re_search="^switch .* provision .*"):
             words = member.text.split()
             member_id = int(words[1])
             yield StackMember(
-                id=member_id, priority=256 - member_id, mac_address=None, model=words[3]
+                id=member_id,
+                priority=256 - member_id,
+                mac_address=None,
+                model=words[3],
             )
 
     @property

@@ -3,7 +3,7 @@ from hier_config.model import Platform
 from hier_config.platforms.driver_base import HConfigDriverBase
 
 
-class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-instance-attributes
+class HConfigDriverJuniperJUNOS(HConfigDriverBase):  # pylint: disable=too-many-instance-attributes
     negation: str = "delete"
     declaration: str = "set"
 

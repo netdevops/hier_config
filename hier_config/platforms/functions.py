@@ -9,5 +9,7 @@ def expand_range(number_range_str: str) -> tuple[int, ...]:
             numbers.extend(n for n in range(start, stop + 1))
         else:
             numbers.append(int(start_stop[0]))
-    assert len(set(numbers)) == len(numbers)
+    if len(set(numbers)) != len(numbers):
+        message = "len(set(numbers)) must be equal to len(numbers)."
+        raise ValueError(message)
     return tuple(numbers)

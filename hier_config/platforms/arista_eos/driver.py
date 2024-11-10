@@ -220,7 +220,7 @@ class HConfigDriverAristaEOS(HConfigDriverBase):
             lineage=(
                 MatchRule(startswith="interface"),
                 MatchRule(equals="logging event link-status"),
-            )
+            ),
         ),
     )
 

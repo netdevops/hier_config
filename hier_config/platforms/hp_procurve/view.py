@@ -19,7 +19,7 @@ from hier_config.platforms.view_base import (
 
 
 class ConfigViewInterfaceHPProcurve(  # noqa: PLR0904 pylint: disable=abstract-method
-    ConfigViewInterfaceBase
+     ConfigViewInterfaceBase,
 ):
     @property
     def bundle_id(self) -> str | None:
@@ -29,7 +29,7 @@ class ConfigViewInterfaceHPProcurve(  # noqa: PLR0904 pylint: disable=abstract-m
     def bundle_member_interfaces(self) -> Iterable[str]:
         # trunk 1/45,2/45 trk1 trunk
         bundle = self.config.parent.get_child(
-            re_search=rf"^trunk .* {self.name.lower()} (trunk|lacp)$"
+            re_search=rf"^trunk .* {self.name.lower()} (trunk|lacp)$",
         )
         if self.is_bundle and bundle is None:
             message = (
@@ -91,8 +91,6 @@ class ConfigViewInterfaceHPProcurve(  # noqa: PLR0904 pylint: disable=abstract-m
                 yield IPv4Interface("/".join(ipv4_address[2:4]))
             except AddressValueError:
                 continue
-                # message = f"{self.name} does not a have a valid IPv4 Address: {ipv4_address_obj.text}"
-                # raise
 
     @property
     def is_bundle(self) -> bool:
@@ -137,14 +135,14 @@ class ConfigViewInterfaceHPProcurve(  # noqa: PLR0904 pylint: disable=abstract-m
         return bool(
             self.config.parent.get_child(
                 equals=f"aaa port-access {self.name} auth-order mac-based authenticator",
-            )
+            ),
         )
 
     @property
     def nac_max_dot1x_clients(self) -> int:
         """Determine the max dot1x clients."""
         if child := self.config.parent.get_child(
-            startswith=f"aaa port-access authenticator {self.name} client-limit "
+            startswith=f"aaa port-access authenticator {self.name} client-limit ",
         ):
             return int(child.text.split()[5])
         return 1
@@ -153,7 +151,7 @@ class ConfigViewInterfaceHPProcurve(  # noqa: PLR0904 pylint: disable=abstract-m
     def nac_max_mab_clients(self) -> int:
         """Determine the max mab clients."""
         if child := self.config.parent.get_child(
-            startswith=f"aaa port-access mac-based {self.name} addr-limit "
+            startswith=f"aaa port-access mac-based {self.name} addr-limit ",
         ):
             return int(child.text.split()[5])
         return 1
@@ -293,13 +291,12 @@ class HConfigViewHPProcurve(HConfigViewBase):
 
     @property
     def stack_members(self) -> Iterable[StackMember]:
-        """
-        stacking
-           member 1 type "JL123" mac-address abc123-abc123
-           member 1 priority 255
-           member 2 type "JL123" mac-address abc123-abc123
-           member 2 priority 254
-           ...
+        """stacking
+        member 1 type "JL123" mac-address abc123-abc123
+        member 1 priority 255
+        member 2 type "JL123" mac-address abc123-abc123
+        member 2 priority 254
+        ...
         """
         stacking = self.config.get_child(equals="stacking")
         if not stacking:

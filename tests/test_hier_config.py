@@ -41,7 +41,9 @@ def test_load_from_file(platform_a: Platform) -> None:
     config = "interface Vlan2\n ip address 1.1.1.1 255.255.255.0"
 
     with tempfile.NamedTemporaryFile(
-        mode="r+", delete=False, encoding="utf8"
+        mode="r+",
+        delete=False,
+        encoding="utf8",
     ) as myfile:
         myfile.file.write(config)
         myfile.file.flush()
@@ -77,7 +79,7 @@ def test_add_ancestor_copy_of(platform_a: Platform) -> None:
     hier1 = get_hconfig_for_platform(platform_a)
     interface = hier1.add_child("interface Vlan2")
     interface.add_children(
-        ("description switch-mgmt-192.168.1.0/24", "ip address 192.168.1.0/24")
+        ("description switch-mgmt-192.168.1.0/24", "ip address 192.168.1.0/24"),
     )
     hier1.add_ancestor_copy_of(interface)
 
@@ -86,9 +88,8 @@ def test_add_ancestor_copy_of(platform_a: Platform) -> None:
 
 
 def test_depth(platform_a: Platform) -> None:
-    hier = get_hconfig_for_platform(platform_a)
-    ip_address = hier.add_children_deep(
-        ("interface Vlan2", "ip address 192.168.1.1 255.255.255.0")
+    ip_address = get_hconfig_for_platform(platform_a).add_children_deep(
+        ("interface Vlan2", "ip address 192.168.1.1 255.255.255.0"),
     )
     assert ip_address.depth() == 2
 
@@ -105,15 +106,15 @@ def test_get_child_deep(platform_a: Platform) -> None:
     hier = get_hconfig_for_platform(platform_a)
     interface1 = hier.add_child("interface Vlan1")
     interface1.add_children(
-        ("ip address 192.168.1.1 255.255.255.0", "description asdf1")
+        ("ip address 192.168.1.1 255.255.255.0", "description asdf1"),
     )
     interface2 = hier.add_child("interface Vlan2")
     interface2.add_children(
-        ("ip address 192.168.2.1 255.255.255.0", "description asdf2")
+        ("ip address 192.168.2.1 255.255.255.0", "description asdf2"),
     )
     interface3 = hier.add_child("interface Vlan3")
     interface3.add_children(
-        ("ip address 192.168.3.1 255.255.255.0", "description asdf3")
+        ("ip address 192.168.3.1 255.255.255.0", "description asdf3"),
     )
 
     # search all 'interface vlan' interfaces for 'ip address'
@@ -122,8 +123,8 @@ def test_get_child_deep(platform_a: Platform) -> None:
             (
                 MatchRule(startswith="interface Vlan"),
                 MatchRule(startswith="ip address "),
-            )
-        )
+            ),
+        ),
     )
     assert len(children) == 3
     children = list(
@@ -131,8 +132,8 @@ def test_get_child_deep(platform_a: Platform) -> None:
             (
                 MatchRule(startswith="interface Vlan1"),
                 MatchRule(startswith="ip address "),
-            )
-        )
+            ),
+        ),
     )
     assert len(children) == 1
     children = list(
@@ -140,8 +141,8 @@ def test_get_child_deep(platform_a: Platform) -> None:
             (
                 MatchRule(equals="interface Vlan2"),
                 MatchRule(equals="ip address 192.168.2.1 255.255.255.0"),
-            )
-        )
+            ),
+        ),
     )
     assert len(children) == 1
 
@@ -157,9 +158,9 @@ def test_child_deep2() -> None:
         len(
             list(
                 config.get_children_deep(
-                    (MatchRule(startswith="a"), MatchRule(startswith="b"))
-                )
-            )
+                    (MatchRule(startswith="a"), MatchRule(startswith="b")),
+                ),
+            ),
         )
         == 3
     )
@@ -168,9 +169,9 @@ def test_child_deep2() -> None:
         len(
             list(
                 config.get_children_deep(
-                    (MatchRule(equals="a"), MatchRule(startswith="b2"))
-                )
-            )
+                    (MatchRule(equals="a"), MatchRule(startswith="b2")),
+                ),
+            ),
         )
         == 1
     )
@@ -228,7 +229,7 @@ def test_rebuild_children_dict(platform_a: Platform) -> None:
     hier1 = get_hconfig_for_platform(platform_a)
     interface = hier1.add_child("interface Vlan2")
     interface.add_children(
-        ("description switch-mgmt-192.168.1.0/24", "ip address 192.168.1.0/24")
+        ("description switch-mgmt-192.168.1.0/24", "ip address 192.168.1.0/24"),
     )
     delta_a = hier1
     hier1.rebuild_children_dict()
@@ -257,17 +258,15 @@ def test_add_children(platform_a: Platform) -> None:
 
 
 def test_add_child(platform_a: Platform) -> None:
-    hier = get_hconfig_for_platform(platform_a)
-    interface = hier.add_child("interface Vlan2")
+    interface = get_hconfig_for_platform(platform_a).add_child("interface Vlan2")
     assert interface.depth() == 1
     assert interface.text == "interface Vlan2"
 
 
 def test_add_deep_copy_of(platform_a: Platform, platform_b: Platform) -> None:
-    hier1 = get_hconfig_for_platform(platform_a)
-    interface1 = hier1.add_child("interface Vlan2")
+    interface1 = get_hconfig_for_platform(platform_a).add_child("interface Vlan2")
     interface1.add_children(
-        ("description switch-mgmt-192.168.1.0/24", "ip address 192.168.1.0/24")
+        ("description switch-mgmt-192.168.1.0/24", "ip address 192.168.1.0/24"),
     )
 
     hier2 = get_hconfig_for_platform(platform_b)
@@ -282,17 +281,18 @@ def test_lineage() -> None:
 
 
 def test_path(platform_a: Platform) -> None:
-    hier = get_hconfig_for_platform(platform_a)
-    config_a = hier.add_child("a")
-    config_aa = config_a.add_child("aa")
-    config_aaa = config_aa.add_child("aaa")
+    config_aaa = get_hconfig_for_platform(platform_a).add_children_deep(
+        ("a", "aa", "aaa")
+    )
     assert tuple(config_aaa.path()) == ("a", "aa", "aaa")
 
 
 def test_cisco_style_text(platform_a: Platform) -> None:
-    hier = get_hconfig_for_platform(platform_a)
-    interface = hier.add_child("interface Vlan2")
-    ip_address = interface.add_child("ip address 192.168.1.1 255.255.255.0")
+    ip_address = (
+        get_hconfig_for_platform(platform_a)
+        .add_child("interface Vlan2")
+        .add_child("ip address 192.168.1.1 255.255.255.0")
+    )
     assert ip_address.cisco_style_text() == "  ip address 192.168.1.1 255.255.255.0"
     assert isinstance(ip_address.cisco_style_text(), str)
     assert not isinstance(ip_address.cisco_style_text(), list)
@@ -321,7 +321,8 @@ def test_all_children_sorted_by_tags(platform_a: Platform) -> None:
     case_3_matches = [
         c.text
         for c in config.all_children_sorted_by_tags(
-            frozenset(("aaa",)), frozenset(("aab",))
+            frozenset(("aaa",)),
+            frozenset(("aab",)),
         )
     ]
     assert case_3_matches == ["a", "aa", "aaa"]
@@ -360,8 +361,7 @@ def test_to_tag_spec() -> None:
 
 
 def test_tags(platform_a: Platform) -> None:
-    config = get_hconfig_for_platform(platform_a)
-    interface = config.add_child("interface Vlan2")
+    interface = get_hconfig_for_platform(platform_a).add_child("interface Vlan2")
     ip_address = interface.add_child("ip address 192.168.1.1/24")
     assert not interface.tags
     assert not ip_address.tags
@@ -401,8 +401,7 @@ def test_with_tags() -> None:
 
 
 def test_negate(platform_a: Platform) -> None:
-    hier = get_hconfig_for_platform(platform_a)
-    interface = hier.add_child("interface Vlan2")
+    interface = get_hconfig_for_platform(platform_a).add_child("interface Vlan2")
     interface.negate()
     assert interface.text == "no interface Vlan2"
 
@@ -414,7 +413,7 @@ def test_config_to_get_to(platform_a: Platform) -> None:
     generated_config_hier = get_hconfig_for_platform(platform_a)
     generated_config_hier.add_child("interface Vlan3")
     remediation_config_hier = running_config_hier.config_to_get_to(
-        generated_config_hier
+        generated_config_hier,
     )
     assert len(list(remediation_config_hier.all_children())) == 2
 
@@ -427,7 +426,8 @@ def test_config_to_get_to_right(platform_a: Platform) -> None:
     generated_config_hier.add_child("add me")
     delta = get_hconfig_for_platform(platform_a)
     running_config_hier._config_to_get_to_right(  # noqa: SLF001
-        generated_config_hier, delta
+        generated_config_hier,
+        delta,
     )
     assert "do not add me" not in delta
     assert "add me" in delta
@@ -448,14 +448,12 @@ def test_overwrite_with() -> None:
 def test_add_shallow_copy_of(platform_a: Platform, platform_b: Platform) -> None:
     base_config = get_hconfig_for_platform(platform_a)
 
-    config_a = get_hconfig_for_platform(platform_a)
-    interface_a = config_a.add_child("interface Vlan2")
+    interface_a = get_hconfig_for_platform(platform_a).add_child("interface Vlan2")
     interface_a.tags_add(frozenset(("ta", "tb")))
     interface_a.comments.add("ca")
     interface_a.order_weight = 200
 
-    config_b = get_hconfig_for_platform(platform_b)
-    interface_b = config_b.add_child("interface Vlan2")
+    interface_b = get_hconfig_for_platform(platform_b).add_child("interface Vlan2")
     interface_b.tags_add(frozenset(("tc",)))
     interface_b.comments.add("cc")
     interface_b.order_weight = 201
@@ -469,7 +467,7 @@ def test_add_shallow_copy_of(platform_a: Platform, platform_b: Platform) -> None
             id=id(interface_a),
             comments=frozenset(interface_a.comments),
             tags=interface_a.tags,
-        )
+        ),
     ]
 
     copied_interface = base_config.add_shallow_copy_of(interface_b, merged=True)
@@ -492,9 +490,8 @@ def test_add_shallow_copy_of(platform_a: Platform, platform_b: Platform) -> None
 
 
 def test_line_inclusion_test(platform_a: Platform) -> None:
-    config = get_hconfig_for_platform(platform_a)
-    ip_address_ab = config.add_children_deep(
-        ("interface Vlan2", "ip address 192.168.2.1/24")
+    ip_address_ab = get_hconfig_for_platform(platform_a).add_children_deep(
+        ("interface Vlan2", "ip address 192.168.2.1/24"),
     )
     ip_address_ab.tags_add(frozenset(("a", "b")))
 
@@ -532,9 +529,10 @@ def test_difference1(platform_a: Platform) -> None:
     rc = ("a", " a1", " a2", " a3", "b")
     step = ("a", " a1", " a2", " a3", " a4", " a5", "b", "c", "d", " d1")
     rc_hier = get_hconfig(get_hconfig_driver(platform_a), "\n".join(rc))
-    step_hier = get_hconfig(get_hconfig_driver(platform_a), "\n".join(step))
 
-    difference = step_hier.difference(rc_hier)
+    difference = get_hconfig(
+        get_hconfig_driver(platform_a), "\n".join(step)
+    ).difference(rc_hier)
     difference_children = tuple(
         c.cisco_style_text() for c in difference.all_children_sorted()
     )
@@ -558,9 +556,9 @@ def test_difference2() -> None:
     rc_hier = get_hconfig(get_hconfig_driver(platform), "\n".join(rc))
     step_hier = get_hconfig(get_hconfig_driver(platform), "\n".join(step))
 
-    difference = step_hier.difference(rc_hier)
     difference_children = tuple(
-        c.cisco_style_text() for c in difference.all_children_sorted()
+        c.cisco_style_text()
+        for c in step_hier.difference(rc_hier).all_children_sorted()
     )
     assert len(difference_children) == 6
 
@@ -572,9 +570,9 @@ def test_difference3() -> None:
     rc_hier = get_hconfig(get_hconfig_driver(platform), "\n".join(rc))
     step_hier = get_hconfig(get_hconfig_driver(platform), "\n".join(step))
 
-    difference = step_hier.difference(rc_hier)
     difference_children = tuple(
-        c.cisco_style_text() for c in difference.all_children_sorted()
+        c.cisco_style_text()
+        for c in step_hier.difference(rc_hier).all_children_sorted()
     )
     assert difference_children == ("ip access-list extended test", "  30 c")
 
@@ -615,8 +613,7 @@ def test_idempotent_commands() -> None:
     interface_name = "interface 1/1"
     config_a.add_children_deep((interface_name, "untagged vlan 1"))
     config_b.add_children_deep((interface_name, "untagged vlan 2"))
-    remediation_config = config_a.config_to_get_to(config_b)
-    interface = remediation_config.get_child(equals=interface_name)
+    interface = config_a.config_to_get_to(config_b).get_child(equals=interface_name)
     assert interface is not None
     assert interface.get_child(equals="untagged vlan 2")
     assert len(interface.children) == 1
@@ -629,10 +626,9 @@ def test_idempotent_commands2() -> None:
     interface_name = "interface 1/1"
     config_a.add_children_deep((interface_name, "authentication host-mode multi-auth"))
     config_b.add_children_deep(
-        (interface_name, "authentication host-mode multi-domain")
+        (interface_name, "authentication host-mode multi-domain"),
     )
-    remediation_config = config_a.config_to_get_to(config_b)
-    interface = remediation_config.get_child(equals=interface_name)
+    interface = config_a.config_to_get_to(config_b).get_child(equals=interface_name)
     assert interface is not None
     assert interface.get_child(equals="authentication host-mode multi-domain")
     assert len(interface.children) == 1

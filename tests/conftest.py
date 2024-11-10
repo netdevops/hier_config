@@ -1,8 +1,10 @@
 from pathlib import Path
 
 import pytest
+import yaml
+from pydantic import TypeAdapter
 
-from hier_config.model import Platform
+from hier_config.model import Platform, TagRule
 
 
 @pytest.fixture(scope="module")
@@ -35,11 +37,18 @@ def platform_b() -> Platform:
     return Platform.CISCO_IOS
 
 
+@pytest.fixture(scope="module")
+def tag_rules_ios() -> tuple[TagRule, ...]:
+    return TypeAdapter(tuple[TagRule, ...]).validate_python(
+        yaml.safe_load(_fixture_file_read("tag_rules_ios.yml"))
+    )
+
+
 def _fixture_file_read(filename: str) -> str:
     return str(
         Path(__file__)
         .resolve()
         .parent.joinpath("fixtures")
         .joinpath(filename)
-        .read_text(encoding="utf8")
+        .read_text(encoding="utf8"),
     )

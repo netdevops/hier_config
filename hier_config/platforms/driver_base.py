@@ -1,9 +1,9 @@
-from __future__ import annotations
-
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable
-from typing import TYPE_CHECKING
 
+from pydantic import PositiveInt
+
+from hier_config.child import HConfigChild
 from hier_config.model import (
     BaseModel,
     FullTextSubRule,
@@ -20,17 +20,11 @@ from hier_config.model import (
     SectionalOverwriteNoNegateRule,
     SectionalOverwriteRule,
 )
-
-if TYPE_CHECKING:
-    from pydantic import PositiveInt
-
-    from hier_config.child import HConfigChild
-    from hier_config.root import HConfig
+from hier_config.root import HConfig
 
 
 class HConfigDriverBase(ABC, BaseModel):  # pylint: disable=too-many-instance-attributes
-    """
-    Defines all hier_config options, rules, and rule checking methods.
+    """Defines all hier_config options, rules, and rule checking methods.
     Override methods as needed.
     """
 
@@ -55,7 +49,9 @@ class HConfigDriverBase(ABC, BaseModel):  # pylint: disable=too-many-instance-at
         return False
 
     def idempotent_for(
-        self, config: HConfigChild, other_children: Iterable[HConfigChild]
+        self,
+        config: HConfigChild,
+        other_children: Iterable[HConfigChild],
     ) -> HConfigChild | None:
         for rule in self.idempotent_commands_rules:
             if config.lineage_test(rule.lineage):

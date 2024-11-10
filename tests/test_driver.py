@@ -7,7 +7,7 @@ from hier_config.platforms.cisco_xr.driver import HConfigDriverCiscoIOSXR
 from hier_config.platforms.generic.driver import HConfigDriverGeneric
 from hier_config.platforms.hp_comware5.driver import HConfigDriverHPComware5
 from hier_config.platforms.hp_procurve.driver import HConfigDriverHPProcurve
-from hier_config.platforms.vyos.driver import HConfigDriverVyos
+from hier_config.platforms.vyos.driver import HConfigDriverVYOS
 
 
 def test_get_hconfig_driver() -> None:
@@ -18,4 +18,4 @@ def test_get_hconfig_driver() -> None:
     assert isinstance(get_hconfig_driver(Platform.GENERIC), HConfigDriverGeneric)
     assert isinstance(get_hconfig_driver(Platform.HP_PROCURVE), HConfigDriverHPProcurve)
     assert isinstance(get_hconfig_driver(Platform.HP_COMWARE5), HConfigDriverHPComware5)
-    assert isinstance(get_hconfig_driver(Platform.VYOS), HConfigDriverVyos)
+    assert isinstance(get_hconfig_driver(Platform.VYOS), HConfigDriverVYOS)

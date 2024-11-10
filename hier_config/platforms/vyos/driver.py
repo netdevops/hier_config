@@ -3,7 +3,7 @@ from hier_config.model import Platform
 from hier_config.platforms.driver_base import HConfigDriverBase
 
 
-class HConfigDriverVyos(HConfigDriverBase):  # pylint: disable=too-many-instance-attributes
+class HConfigDriverVYOS(HConfigDriverBase):  # pylint: disable=too-many-instance-attributes
     negation: str = "delete"
     declaration: str = "set"
 

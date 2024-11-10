@@ -34,10 +34,11 @@ def test_hp_procurve_expand_range() -> None:
 
 
 def test_bundle_name(cisco_ios_show_running_config: str) -> None:
-    config = get_hconfig(
-        get_hconfig_driver(Platform.CISCO_IOS), cisco_ios_show_running_config
-    )
-    config_view = get_hconfig_view(config)
-    interface_view = config_view.interface_view_by_name("GigabitEthernet1/1/3")
+    interface_view = get_hconfig_view(
+        get_hconfig(
+            get_hconfig_driver(Platform.CISCO_IOS),
+            cisco_ios_show_running_config,
+        )
+    ).interface_view_by_name("GigabitEthernet1/1/3")
     assert interface_view is not None
     assert interface_view.bundle_name == "Port-channel1"

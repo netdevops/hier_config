@@ -63,10 +63,10 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
         SectionalOverwriteNoNegateRule(lineage=(MatchRule(startswith="prefix-set"),)),
         SectionalOverwriteNoNegateRule(lineage=(MatchRule(startswith="route-policy"),)),
         SectionalOverwriteNoNegateRule(
-            lineage=(MatchRule(startswith="extcommunity-set"),)
+            lineage=(MatchRule(startswith="extcommunity-set"),),
         ),
         SectionalOverwriteNoNegateRule(
-            lineage=(MatchRule(startswith="community-set"),)
+            lineage=(MatchRule(startswith="community-set"),),
         ),
     )
     ordering_rules: tuple[OrderingRule, ...] = (
@@ -82,7 +82,8 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
 
     indent_adjust_rules: tuple[IndentAdjustRule, ...] = (
         IndentAdjustRule(
-            start_expression="^\\s*template", end_expression="^\\s*end-template"
+            start_expression="^\\s*template",
+            end_expression="^\\s*end-template",
         ),
     )
     parent_allows_duplicate_child_rules: tuple[ParentAllowsDuplicateChildRule, ...] = (
@@ -224,7 +225,7 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
             lineage=(MatchRule(startswith="hostname"),),
         ),
         IdempotentCommandsRule(
-            lineage=(MatchRule(startswith="logging source-interface"),)
+            lineage=(MatchRule(startswith="logging source-interface"),),
         ),
         IdempotentCommandsRule(
             lineage=(
@@ -269,7 +270,8 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
 
     @staticmethod
     def idempotent_acl_check(
-        config: HConfigChild, other_children: Iterable[HConfigChild]
+        config: HConfigChild,
+        other_children: Iterable[HConfigChild],
     ) -> bool:
         if isinstance(config.parent, HConfigChild):
             acl = ("ipv4 access-list ", "ipv6 access-list ")
