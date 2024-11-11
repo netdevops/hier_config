@@ -450,9 +450,8 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         self.text = f"default {self.text_without_negation}"
         return self
 
-    @property
-    def _child_class(self) -> type[HConfigChild]:
-        return HConfigChild
+    def _get_child(self, text: str) -> HConfigChild:
+        return HConfigChild(self, text)
 
     def _duplicate_child_allowed_check(self) -> bool:
         """Determine if duplicate(identical text) children are allowed under the parent."""
