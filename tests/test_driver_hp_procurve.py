@@ -79,4 +79,4 @@ def test_future() -> None:
         ),
     )
     future_config = running_config.future(remediation_config)
-    assert not list(remediation_config.unified_diff(future_config))
+    assert not tuple(remediation_config.unified_diff(future_config))

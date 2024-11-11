@@ -43,10 +43,6 @@ class HConfigDriverBase(ABC, BaseModel):  # pylint: disable=too-many-instance-at
     negation_negate_with_rules: tuple[NegationDefaultWithRule, ...] = ()
     post_load_callbacks: tuple[Callable[[HConfig], None], ...] = ()
 
-    @staticmethod
-    def idempotent_acl_check(_: HConfigChild, __: Iterable[HConfigChild]) -> bool:
-        return False
-
     def idempotent_for(
         self,
         config: HConfigChild,

@@ -41,13 +41,14 @@ class HConfigBase(ABC):  # noqa: PLR0904
     def __iter__(self) -> Iterator[HConfigChild]:
         return iter(self.children)
 
+    @property
     @abstractmethod
-    def _duplicate_child_allowed_check(self) -> bool:
+    def root(self) -> HConfig:
         pass
 
     @property
     @abstractmethod
-    def root(self) -> HConfig:
+    def driver(self) -> HConfigDriverBase:
         pass
 
     @abstractmethod
@@ -56,11 +57,6 @@ class HConfigBase(ABC):  # noqa: PLR0904
 
     @abstractmethod
     def depth(self) -> int:
-        pass
-
-    @property
-    @abstractmethod
-    def _child_class(self) -> type[HConfigChild]:
         pass
 
     def add_children(self, lines: Iterable[str]) -> None:
@@ -291,8 +287,8 @@ class HConfigBase(ABC):  # noqa: PLR0904
                 )
 
     def _future_pre(self, config: HConfig | HConfigChild) -> tuple[set[str], set[str]]:
-        negated_or_recursed = set()
-        config_children_ignore = set()
+        negated_or_recursed: set[str] = set()
+        config_children_ignore: set[str] = set()
         for self_child in self.children:
             # Is the command effectively negating a command in self.children?
             if (
@@ -310,7 +306,6 @@ class HConfigBase(ABC):  # noqa: PLR0904
         """The below cases still need to be accounted for:
         - negate a numbered ACL when removing an item
         - idempotent command avoid list
-        - idempotent_acl_check
         - and likely others.
         """
         negated_or_recursed, config_children_ignore = self._future_pre(config)
@@ -363,7 +358,11 @@ class HConfigBase(ABC):  # noqa: PLR0904
 
     @property
     @abstractmethod
-    def driver(self) -> HConfigDriverBase:
+    def _child_class(self) -> type[HConfigChild]:
+        pass
+
+    @abstractmethod
+    def _duplicate_child_allowed_check(self) -> bool:
         pass
 
     def _with_tags(

@@ -15,7 +15,7 @@ def test_logging_console_emergencies_scenario_1() -> None:
     assert rollback.dump_simple() == ("no logging console",)
     running_after_rollback = future_config.future(rollback)
 
-    assert not list(running_config.unified_diff(running_after_rollback))
+    assert not tuple(running_config.unified_diff(running_after_rollback))
 
 
 def test_logging_console_emergencies_scenario_2() -> None:
@@ -30,7 +30,7 @@ def test_logging_console_emergencies_scenario_2() -> None:
     assert rollback.dump_simple() == ("logging console",)
     running_after_rollback = future_config.future(rollback)
 
-    assert not list(running_config.unified_diff(running_after_rollback))
+    assert not tuple(running_config.unified_diff(running_after_rollback))
 
 
 def test_logging_console_emergencies_scenario_3() -> None:
@@ -45,4 +45,4 @@ def test_logging_console_emergencies_scenario_3() -> None:
     assert rollback.dump_simple() == ("logging console debugging",)
     running_after_rollback = future_config.future(rollback)
 
-    assert not list(running_config.unified_diff(running_after_rollback))
+    assert not tuple(running_config.unified_diff(running_after_rollback))

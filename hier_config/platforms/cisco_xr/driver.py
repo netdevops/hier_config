@@ -268,11 +268,11 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
         ),
     )
 
-    @staticmethod
-    def idempotent_acl_check(
+    def idempotent_for(
+        self,
         config: HConfigChild,
         other_children: Iterable[HConfigChild],
-    ) -> bool:
+    ) -> HConfigChild | None:
         if isinstance(config.parent, HConfigChild):
             acl = ("ipv4 access-list ", "ipv6 access-list ")
             if config.parent.text.startswith(acl):
@@ -280,8 +280,9 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
                 for other_child in other_children:
                     other_sn = other_child.text.split(" ", 1)[0]
                     if self_sn == other_sn:
-                        return True
-        return False
+                        return other_child
+
+        return super().idempotent_for(config, other_children)
 
     @property
     def platform(self) -> Platform:

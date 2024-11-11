@@ -85,16 +85,6 @@ def _ruff_check_command(*, fix: bool, unsafe_fixes: bool, statistics: bool) -> s
 
 
 @app.command()
-def black(*, fix: bool = False) -> None:
-    """Run black code formatter."""
-    _run(_black_command(fix=fix))
-
-
-def _black_command(*, fix: bool) -> str:
-    return f"black {'' if fix else '--check '}{_repo_path().relative_to(Path.cwd())}"
-
-
-@app.command()
 def pytest(
     *,
     profile: bool = False,
@@ -220,7 +210,7 @@ def _project_paths(glob: str) -> Iterable[Path]:
 
 
 def _run_commands_threaded(commands: tuple[str, ...]) -> NoReturn:
-    return_codes = {}
+    return_codes: dict[str, int] = {}
     with ThreadPoolExecutor(max_workers=len(commands)) as executor:
         for future in as_completed(
             executor.submit(

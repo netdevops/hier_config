@@ -189,7 +189,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         tag: str | None = None,
     ) -> str:
         """Return a Cisco style formated line i.e. indentation_level + text ! comments."""
-        comments = []
+        comments: list[str] = []
         if style == "without_comments":
             pass
         elif style == "merged":
@@ -294,10 +294,6 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
             if self.lineage_test(rule.lineage):
                 return False
 
-        # Handles idempotent acl entry identification
-        if self.driver.idempotent_acl_check(self, other_children):
-            return True
-
         # Idempotent command identification
         return bool(self.driver.idempotent_for(self, other_children))
 
@@ -355,7 +351,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
     @property
     def instance(self) -> Instance:
         return Instance(
-            id=id(self),
+            id=id(self.root),
             comments=frozenset(self.comments),
             tags=frozenset(self.tags),
         )

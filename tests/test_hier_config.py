@@ -28,12 +28,12 @@ def test_merge(platform_a: Platform, platform_b: Platform) -> None:
     hier2 = get_hconfig(platform_b)
     hier2.add_child("interface Vlan3")
 
-    assert len(list(hier1.all_children())) == 1
-    assert len(list(hier2.all_children())) == 1
+    assert len(tuple(hier1.all_children())) == 1
+    assert len(tuple(hier2.all_children())) == 1
 
     hier1.merge(hier2)
 
-    assert len(list(hier1.all_children())) == 2
+    assert len(tuple(hier1.all_children())) == 2
 
 
 def test_load_from_file(platform_a: Platform) -> None:
@@ -50,13 +50,13 @@ def test_load_from_file(platform_a: Platform) -> None:
         hier = get_hconfig(get_hconfig_driver(platform_a), Path(myfile.name))
         Path(myfile.name).unlink()
 
-    assert len(list(hier.all_children())) == 2
+    assert len(tuple(hier.all_children())) == 2
 
 
 def test_load_from_config_text(platform_a: Platform) -> None:
     config = "interface Vlan2\n ip address 1.1.1.1 255.255.255.0"
     hier = get_hconfig(get_hconfig_driver(platform_a), config)
-    assert len(list(hier.all_children())) == 2
+    assert len(tuple(hier.all_children())) == 2
 
 
 def test_dump_and_load_from_dump_and_compare(platform_a: Platform) -> None:
@@ -82,7 +82,7 @@ def test_add_ancestor_copy_of(platform_a: Platform) -> None:
     )
     hier1.add_ancestor_copy_of(interface)
 
-    assert len(list(hier1.all_children())) == 3
+    assert len(tuple(hier1.all_children())) == 3
     assert isinstance(hier1.all_children(), types.GeneratorType)
 
 
@@ -117,7 +117,7 @@ def test_get_child_deep(platform_a: Platform) -> None:
     )
 
     # search all 'interface vlan' interfaces for 'ip address'
-    children = list(
+    children = tuple(
         hier.get_children_deep(
             (
                 MatchRule(startswith="interface Vlan"),
@@ -126,7 +126,7 @@ def test_get_child_deep(platform_a: Platform) -> None:
         ),
     )
     assert len(children) == 3
-    children = list(
+    children = tuple(
         hier.get_children_deep(
             (
                 MatchRule(startswith="interface Vlan1"),
@@ -135,7 +135,7 @@ def test_get_child_deep(platform_a: Platform) -> None:
         ),
     )
     assert len(children) == 1
-    children = list(
+    children = tuple(
         hier.get_children_deep(
             (
                 MatchRule(equals="interface Vlan2"),
@@ -155,7 +155,7 @@ def test_child_deep2() -> None:
 
     assert (
         len(
-            list(
+            tuple(
                 config.get_children_deep(
                     (MatchRule(startswith="a"), MatchRule(startswith="b")),
                 ),
@@ -166,7 +166,7 @@ def test_child_deep2() -> None:
 
     assert (
         len(
-            list(
+            tuple(
                 config.get_children_deep(
                     (MatchRule(equals="a"), MatchRule(startswith="b2")),
                 ),
@@ -180,7 +180,7 @@ def test_get_children(platform_a: Platform) -> None:
     hier = get_hconfig(platform_a)
     hier.add_child("interface Vlan2")
     hier.add_child("interface Vlan3")
-    children = list(hier.get_children(startswith="interface"))
+    children = tuple(hier.get_children(startswith="interface"))
     assert len(children) == 2
     for child in children:
         assert child.text.startswith("interface Vlan")
@@ -191,16 +191,16 @@ def test_move(platform_a: Platform, platform_b: Platform) -> None:
     interface1 = hier1.add_child("interface Vlan2")
     interface1.add_child("192.168.0.1/30")
 
-    assert len(list(hier1.all_children())) == 2
+    assert len(tuple(hier1.all_children())) == 2
 
     hier2 = get_hconfig(platform_b)
 
-    assert not list(hier2.all_children())
+    assert not tuple(hier2.all_children())
 
     interface1.move(hier2)
 
-    assert not list(hier1.all_children())
-    assert len(list(hier2.all_children())) == 2
+    assert not tuple(hier1.all_children())
+    assert len(tuple(hier2.all_children())) == 2
 
 
 def test_del_child_by_text(platform_a: Platform) -> None:
@@ -208,20 +208,20 @@ def test_del_child_by_text(platform_a: Platform) -> None:
     hier.add_child("interface Vlan2")
     hier.delete_child_by_text("interface Vlan2")
 
-    assert not list(hier.all_children())
+    assert not tuple(hier.all_children())
 
 
 def test_del_child(platform_a: Platform) -> None:
     hier1 = get_hconfig(platform_a)
     hier1.add_child("interface Vlan2")
 
-    assert len(list(hier1.all_children())) == 1
+    assert len(tuple(hier1.all_children())) == 1
 
     child_to_delete = hier1.get_child(startswith="interface")
     assert child_to_delete is not None
     hier1.delete_child(child_to_delete)
 
-    assert not list(hier1.all_children())
+    assert not tuple(hier1.all_children())
 
 
 def test_rebuild_children_dict(platform_a: Platform) -> None:
@@ -234,7 +234,7 @@ def test_rebuild_children_dict(platform_a: Platform) -> None:
     hier1.rebuild_children_dict()
     delta_b = hier1
 
-    assert list(delta_a.all_children()) == list(delta_b.all_children())
+    assert tuple(delta_a.all_children()) == tuple(delta_b.all_children())
 
 
 def test_add_children(platform_a: Platform) -> None:
@@ -246,14 +246,14 @@ def test_add_children(platform_a: Platform) -> None:
     interface1 = hier1.add_child("interface Vlan2")
     interface1.add_children(interface_items1)
 
-    assert len(list(hier1.all_children())) == 3
+    assert len(tuple(hier1.all_children())) == 3
 
     interface_items2 = ("description switch-mgmt 192.168.1.0/24",)
     hier2 = get_hconfig(platform_a)
     interface2 = hier2.add_child("interface Vlan2")
     interface2.add_children(interface_items2)
 
-    assert len(list(hier2.all_children())) == 2
+    assert len(tuple(hier2.all_children())) == 2
 
 
 def test_add_child(platform_a: Platform) -> None:
@@ -271,7 +271,7 @@ def test_add_deep_copy_of(platform_a: Platform, platform_b: Platform) -> None:
     hier2 = get_hconfig(platform_b)
     hier2.add_deep_copy_of(interface1)
 
-    assert len(list(hier2.all_children())) == 3
+    assert len(tuple(hier2.all_children())) == 3
     assert isinstance(hier2.all_children(), types.GeneratorType)
 
 
@@ -329,14 +329,14 @@ def test_all_children_sorted(platform_a: Platform) -> None:
     hier = get_hconfig(platform_a)
     interface = hier.add_child("interface Vlan2")
     interface.add_child("standby 1 ip 10.15.11.1")
-    assert len(list(hier.all_children_sorted())) == 2
+    assert len(tuple(hier.all_children_sorted())) == 2
 
 
 def test_all_children(platform_a: Platform) -> None:
     hier = get_hconfig(platform_a)
     interface = hier.add_child("interface Vlan2")
     interface.add_child("standby 1 ip 10.15.11.1")
-    assert len(list(hier.all_children())) == 2
+    assert len(tuple(hier.all_children())) == 2
 
 
 def test_delete(platform_a: Platform) -> None:
@@ -412,17 +412,17 @@ def test_config_to_get_to(platform_a: Platform) -> None:
     remediation_config_hier = running_config_hier.config_to_get_to(
         generated_config_hier,
     )
-    assert len(list(remediation_config_hier.all_children())) == 2
+    assert len(tuple(remediation_config_hier.all_children())) == 2
 
 
-def test_config_to_get_to_right(platform_a: Platform) -> None:
+def test_config_to_get_to2(platform_a: Platform) -> None:
     running_config_hier = get_hconfig(platform_a)
     running_config_hier.add_child("do not add me")
     generated_config_hier = get_hconfig(platform_a)
     generated_config_hier.add_child("do not add me")
     generated_config_hier.add_child("add me")
     delta = get_hconfig(platform_a)
-    running_config_hier._config_to_get_to_right(  # noqa: SLF001
+    running_config_hier.config_to_get_to(
         generated_config_hier,
         delta,
     )
@@ -461,7 +461,7 @@ def test_add_shallow_copy_of(platform_a: Platform, platform_b: Platform) -> None
     assert copied_interface.order_weight == 200
     assert copied_interface.instances == [
         Instance(
-            id=id(interface_a),
+            id=id(interface_a.root),
             comments=frozenset(interface_a.comments),
             tags=interface_a.tags,
         ),
@@ -474,12 +474,12 @@ def test_add_shallow_copy_of(platform_a: Platform, platform_b: Platform) -> None
     assert copied_interface.order_weight == 201
     assert copied_interface.instances == [
         Instance(
-            id=id(interface_a),
+            id=id(interface_a.root),
             comments=frozenset(interface_a.comments),
             tags=interface_a.tags,
         ),
         Instance(
-            id=id(interface_b),
+            id=id(interface_b.root),
             comments=frozenset(interface_b.comments),
             tags=interface_b.tags,
         ),
@@ -641,10 +641,10 @@ def test_future_config_no_command_in_source() -> None:
     future_config = running_config.future(remediation_config)
     assert len(future_config.children) == 1
     assert future_config.get_child(equals="no service dhcp")
-    assert not list(future_config.unified_diff(generated_config))
+    assert not tuple(future_config.unified_diff(generated_config))
     rollback_config = future_config.config_to_get_to(running_config)
     assert len(rollback_config.children) == 1
     assert rollback_config.get_child(equals="service dhcp")
     calculated_running_config = future_config.future(rollback_config)
     assert not calculated_running_config.children
-    assert not list(calculated_running_config.unified_diff(running_config))
+    assert not tuple(calculated_running_config.unified_diff(running_config))

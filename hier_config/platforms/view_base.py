@@ -146,7 +146,7 @@ class ConfigViewInterfaceBase:  # noqa: PLR0904
     @property
     @abstractmethod
     def poe(self) -> bool:
-        """Determine the PoE is enabled."""
+        """Determine if PoE is enabled."""
 
     @property
     @abstractmethod
@@ -247,7 +247,7 @@ class HConfigViewBase(ABC):
 
     @property
     def module_numbers(self) -> Iterable[int]:
-        seen = set()
+        seen: set[int] = set()
         for interface_view in self.interface_views:
             if module_number := interface_view.module_number:
                 if module_number in seen:

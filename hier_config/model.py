@@ -1,7 +1,7 @@
 from enum import Enum, auto
 
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import ConfigDict, PositiveInt
+from pydantic import ConfigDict, NonNegativeInt, PositiveInt
 
 
 class BaseModel(PydanticBaseModel):
@@ -11,7 +11,7 @@ class BaseModel(PydanticBaseModel):
 
 
 class DumpLine(BaseModel):
-    depth: PositiveInt
+    depth: NonNegativeInt
     text: str
     tags: frozenset[str]
     comments: frozenset[str]

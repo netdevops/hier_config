@@ -30,10 +30,6 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         super().__init__()
         self._driver = driver
 
-    @property
-    def driver(self) -> HConfigDriverBase:
-        return self._driver
-
     def __str__(self) -> str:
         return "\n".join(str(c) for c in sorted(self.children))
 
@@ -58,6 +54,10 @@ class HConfig(HConfigBase):  # noqa: PLR0904
                 strict=False,
             )
         )
+
+    @property
+    def driver(self) -> HConfigDriverBase:
+        return self._driver
 
     @property
     def real_indent_level(self) -> int:
@@ -174,6 +174,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
             delta = HConfig(self.driver)
 
         root_config = self._config_to_get_to(target, delta)
+        # Makes mypy happy
         if not isinstance(root_config, HConfig):
             raise TypeError
 

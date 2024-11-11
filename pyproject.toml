@@ -58,16 +58,6 @@ build-backend = "poetry.core.masonry.api"
 [tool.pyright]
 typeCheckingMode = "strict"
 
-reportUnusedFunction = "none"
-reportPrivateUsage = "none"
-reportUnknownParameterType = "none"
-reportUnknownLambdaType = "none"
-reportIncompatibleMethodOverride = "none"
-reportUnknownArgumentType = "none"
-reportUnknownMemberType = "none"
-reportUnknownVariableType = "none"
-reportMissingTypeStubs = "none"
-
 
 [tool.pylint.message_control]
 load-plugins = [
@@ -89,14 +79,13 @@ load-plugins = [
     "pylint_pydantic",
 ]
 disable = [
-    "bad-dunder-name",  # produces several false positives
     "broad-exception-caught",  # Covered by ruff BLE001
+    "bad-dunder-name",  # Covered by ruff PLW3201
     "consider-alternative-union-syntax",  # covered by Ruff's UP007
-    "duplicate-code",  # There are too many cases where this check hits that are difficult to address
+    "duplicate-code",  # Enable this at some point in the future
     "eq-without-hash", # Covered by ruff PLW1641
     "fixme",  # Covered by ruff FIX002
     "import-outside-toplevel", # Covered by ruff PLC0415
-    "invalid-name",
     "line-too-long",  # Whatever ruff format determines the line should look like is fine
     "missing-class-docstring",
     "missing-function-docstring",
@@ -124,12 +113,12 @@ disable = [
 #]
 
 [tool.mypy]
-ignore_missing_imports = true
+strict = true
+#ignore_missing_imports = false
 pretty = true
 show_column_numbers = true
 show_error_codes = true
 show_error_context = true
-strict = true
 warn_unreachable = true
 plugins = [
     "pydantic.mypy"
@@ -140,9 +129,12 @@ plugins = [
 line-length = 88
 target-version = "py310"
 
+[tool.ruff.format]
+docstring-code-format = true
+
 [tool.ruff.lint]
-preview = true
 select = ["ALL"]
+preview = true
 ignore = [
     # The below checks we might never enable
     "B019",  # using lru_cache can cause memory leaks

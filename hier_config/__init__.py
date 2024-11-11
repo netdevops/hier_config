@@ -6,12 +6,14 @@ from .constructors import (
     get_hconfig_from_dump,
     get_hconfig_view,
 )
+from .model import Platform
 from .root import HConfig
 from .workflow import WorkflowRemediation
 
 __all__ = (
     "HConfig",
     "HConfigChild",
+    "Platform",
     "WorkflowRemediation",
     "get_hconfig",
     "get_hconfig_driver",

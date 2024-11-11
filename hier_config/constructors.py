@@ -116,6 +116,10 @@ def get_hconfig_from_dump(dump: Dump) -> HConfig:
     return config
 
 
+def get_hconfig_fast_generic_load(lines: list[str] | tuple[str, ...] | str) -> HConfig:
+    return get_hconfig_fast_load(Platform.GENERIC, lines)
+
+
 def get_hconfig_fast_load(
     platform_or_driver: Platform | HConfigDriverBase,
     lines: list[str] | tuple[str, ...] | str,
@@ -207,7 +211,7 @@ def _load_from_string_lines(config: HConfig, config_text: str) -> None:  # noqa:
     most_recent_item: HConfig | HConfigChild = current_section
     indent_adjust = 0
     end_indent_adjust: list[str] = []
-    temp_banner = []
+    temp_banner: list[str] = []
     banner_end_lines = {"EOF", "%", "!"}
     banner_end_contains: list[str] = []
     in_banner = False
