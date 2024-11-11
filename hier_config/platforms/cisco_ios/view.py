@@ -1,6 +1,7 @@
 from collections.abc import Iterable
 from ipaddress import AddressValueError, IPv4Address, IPv4Interface
 from re import sub
+from typing import Optional
 
 from hier_config.child import HConfigChild
 from hier_config.platforms.functions import expand_range
@@ -19,7 +20,7 @@ from hier_config.platforms.view_base import (
 
 class ConfigViewInterfaceCiscoIOS(ConfigViewInterfaceBase):  # noqa: PLR0904
     @property
-    def bundle_id(self) -> str | None:
+    def bundle_id(self) -> Optional[str]:
         if channel_group := self.config.get_child(startswith="channel-group"):
             return channel_group.text.split()[1]
         return None
@@ -29,7 +30,7 @@ class ConfigViewInterfaceCiscoIOS(ConfigViewInterfaceBase):  # noqa: PLR0904
         raise NotImplementedError
 
     @property
-    def bundle_name(self) -> str | None:
+    def bundle_name(self) -> Optional[str]:
         if self.bundle_id:
             return f"{self._bundle_prefix}{self.bundle_id}"
         return None
@@ -61,7 +62,7 @@ class ConfigViewInterfaceCiscoIOS(ConfigViewInterfaceBase):  # noqa: PLR0904
         )
 
     @property
-    def ipv4_interface(self) -> IPv4Interface | None:
+    def ipv4_interface(self) -> Optional[IPv4Interface]:
         return next(iter(self.ipv4_interfaces), None)
 
     @property
@@ -90,7 +91,7 @@ class ConfigViewInterfaceCiscoIOS(ConfigViewInterfaceBase):  # noqa: PLR0904
         return self.name.lower().startswith("vlan")
 
     @property
-    def module_number(self) -> int | None:
+    def module_number(self) -> Optional[int]:
         words = self.number.split("/", 1)
         if len(words) == 1:
             return None
@@ -102,23 +103,24 @@ class ConfigViewInterfaceCiscoIOS(ConfigViewInterfaceBase):  # noqa: PLR0904
         return "authentication control-direction in" in self.config.children_dict
 
     @property
-    def nac_host_mode(self) -> NACHostMode | None:
+    def nac_host_mode(self) -> Optional[NACHostMode]:
         """Determine the NAC host mode."""
         mode = self.config.get_child(startswith="authentication host-mode ")
         if mode is None:
             return None
-        match mode.text.split()[2]:
-            case "multi-auth":
-                return NACHostMode.MULTI_AUTH
-            case "multi-domain":
-                return NACHostMode.MULTI_DOMAIN
-            case "multi-host":
-                return NACHostMode.MULTI_HOST
-            case "single-host":
-                return NACHostMode.SINGLE_HOST
-            case _ as unexpected:
-                message = f"Unhandled NAC host mode: {unexpected}"
-                raise ValueError(message)
+
+        mode_word = mode.text.split()[2]
+        if mode_word == "multi-auth":
+            return NACHostMode.MULTI_AUTH
+        if mode_word == "multi-domain":
+            return NACHostMode.MULTI_DOMAIN
+        if mode_word == "multi-host":
+            return NACHostMode.MULTI_HOST
+        if mode_word == "single-host":
+            return NACHostMode.SINGLE_HOST
+
+        message = f"Unhandled NAC host mode: {mode_word}"
+        raise ValueError(message)
 
     @property
     def nac_mab_first(self) -> bool:
@@ -140,7 +142,7 @@ class ConfigViewInterfaceCiscoIOS(ConfigViewInterfaceBase):  # noqa: PLR0904
         return self.config.text.split()[1]
 
     @property
-    def native_vlan(self) -> int | None:
+    def native_vlan(self) -> Optional[int]:
         # It's configured as a sub-interface
         if self.is_subinterface and (
             vlan := self.config.get_child(startswith="encapsulation dot1Q ")
@@ -177,7 +179,7 @@ class ConfigViewInterfaceCiscoIOS(ConfigViewInterfaceBase):  # noqa: PLR0904
         return sub("^[a-zA-Z-]+", "", self.name)
 
     @property
-    def parent_name(self) -> str | None:
+    def parent_name(self) -> Optional[str]:
         if self.is_subinterface:
             return self.name.split(".")[0]
         return None
@@ -191,7 +193,7 @@ class ConfigViewInterfaceCiscoIOS(ConfigViewInterfaceBase):  # noqa: PLR0904
         return int(self.name.split("/")[-1].split(".")[0])
 
     @property
-    def speed(self) -> tuple[int, ...] | None:
+    def speed(self) -> Optional[tuple[int, ...]]:
         if speed := self.config.get_child(startswith="speed "):
             if speed.text == "auto":
                 return None
@@ -199,7 +201,7 @@ class ConfigViewInterfaceCiscoIOS(ConfigViewInterfaceBase):  # noqa: PLR0904
         return None
 
     @property
-    def subinterface_number(self) -> int | None:
+    def subinterface_number(self) -> Optional[int]:
         return int(self.name.split(".")[0 - 1]) if self.is_subinterface else None
 
     @property
@@ -231,15 +233,15 @@ class ConfigViewInterfaceCiscoIOS(ConfigViewInterfaceBase):  # noqa: PLR0904
 class HConfigViewCiscoIOS(HConfigViewBase):
     def dot1q_mode_from_vlans(
         self,
-        untagged_vlan: int | None = None,
+        untagged_vlan: Optional[int] = None,
         tagged_vlans: tuple[int, ...] = (),
         *,
         tagged_all: bool = False,
-    ) -> InterfaceDot1qMode | None:
+    ) -> Optional[InterfaceDot1qMode]:
         raise NotImplementedError
 
     @property
-    def hostname(self) -> str | None:
+    def hostname(self) -> Optional[str]:
         if child := self.config.get_child(startswith="hostname "):
             return child.text.split()[1].lower()
         return None
@@ -259,7 +261,7 @@ class HConfigViewCiscoIOS(HConfigViewBase):
         return self.config.get_children(startswith="interface ")
 
     @property
-    def ipv4_default_gw(self) -> IPv4Address | None:
+    def ipv4_default_gw(self) -> Optional[IPv4Address]:
         if gateway := self.config.get_child(startswith="ip default-gateway "):
             return IPv4Address(gateway.text.split()[2])
         return None

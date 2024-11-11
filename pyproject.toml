@@ -18,6 +18,7 @@ classifiers = [
     "Intended Audience :: System Administrators",
     "Intended Audience :: Telecommunications Industry",
     "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -27,7 +28,7 @@ classifiers = [
     "Topic :: System :: Networking",
 ]
 [tool.poetry.dependencies]
-python = ">=3.10.0,<4.0"
+python = ">=3.9.0,<4.0"
 pydantic = "^2.9.2"
 
 [tool.poetry.group.dev.dependencies]
@@ -43,7 +44,6 @@ pytest-cov = "*"
 pytest-profiling = "*"
 pytest-runner = "*"
 pytest-xdist = "*"
-refurb = "*"
 ruff = "*"
 typer = "*"
 types-pyyaml = "*"
@@ -127,7 +127,7 @@ plugins = [
 
 [tool.ruff]
 line-length = 88
-target-version = "py310"
+target-version = "py39"
 
 [tool.ruff.format]
 docstring-code-format = true
@@ -160,6 +160,9 @@ ignore = [
     "DOC201",  # `return` is not documented in docstring
     "DOC402",  # `yield` is not documented in docstring
     "DOC501",  # Raised exception missing from docstring
+    # These can be re-enabled once we deprecate Python 3.9
+    "FA100",  # future-rewritable-type-annotation
+    "UP007",  # non-pep604-annotation
 ]
 
 [tool.ruff.lint.flake8-pytest-style]

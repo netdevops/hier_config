@@ -25,26 +25,24 @@ def _rm_10g_interfaces(config: HConfig) -> None:
     for interface in tuple(
         config.get_children(re_search=r"^interface (?:Ten)?GigabitEthernet\d/1/[1-4]$"),
     ):
-        match len(interface.children):
-            # An interface with no children is a dummy interface and can be removed
-            case 0:
-                logger.debug("deleting dummy interface %s", interface.text.split()[1])
+        length = len(interface.children)
+        # An interface with no children is a dummy interface and can be removed
+        if length == 0:
+            logger.debug("deleting dummy interface %s", interface.text.split()[1])
+            interface.delete()
+        # A TenGigabit interface that matches a Gigabit interface number (e.g. 1/1/2) and
+        # has 1 or fewer children (e.g. shutdown) is a dummy interface and can be removed.
+        elif length == 1 and "TenGigabitEthernet" in interface.text:
+            if (
+                other := config.children_dict.get(
+                    interface.text.replace("TenGigabitEthernet", "GigabitEthernet"),
+                )
+            ) and other.children:
+                logger.debug(
+                    "deleting dummy interface %s",
+                    interface.text.split()[1],
+                )
                 interface.delete()
-            # A TenGigabit interface that matches a Gigabit interface number (e.g. 1/1/2) and
-            # has 1 or fewer children (e.g. shutdown) is a dummy interface and can be removed.
-            case 1 if "TenGigabitEthernet" in interface.text:
-                if (
-                    other := config.children_dict.get(
-                        interface.text.replace("TenGigabitEthernet", "GigabitEthernet"),
-                    )
-                ) and other.children:
-                    logger.debug(
-                        "deleting dummy interface %s",
-                        interface.text.split()[1],
-                    )
-                    interface.delete()
-            case _:
-                pass
 
     # Sometime 10g interfaces show up in the 0 Slot on ports greater than 48 even
     # though they are on a module. These can be removed if they have no children.

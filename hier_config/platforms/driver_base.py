@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable
+from typing import Optional
 
 from pydantic import PositiveInt
 
@@ -47,7 +48,7 @@ class HConfigDriverBase(ABC, BaseModel):  # pylint: disable=too-many-instance-at
         self,
         config: HConfigChild,
         other_children: Iterable[HConfigChild],
-    ) -> HConfigChild | None:
+    ) -> Optional[HConfigChild]:
         for rule in self.idempotent_commands_rules:
             if config.lineage_test(rule.lineage):
                 for other_child in other_children:
@@ -55,7 +56,7 @@ class HConfigDriverBase(ABC, BaseModel):  # pylint: disable=too-many-instance-at
                         return other_child
         return None
 
-    def negation_negate_with_check(self, config: HConfigChild) -> str | None:
+    def negation_negate_with_check(self, config: HConfigChild) -> Optional[str]:
         for with_rule in self.negation_negate_with_rules:
             if config.lineage_test(with_rule.lineage):
                 return with_rule.use

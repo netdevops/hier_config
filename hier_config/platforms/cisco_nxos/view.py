@@ -1,6 +1,7 @@
 from collections.abc import Iterable
 from ipaddress import AddressValueError, IPv4Address, IPv4Interface
 from re import sub
+from typing import Optional
 
 from hier_config.child import HConfigChild
 from hier_config.platforms.model import (
@@ -18,7 +19,7 @@ from hier_config.platforms.view_base import (
 
 class ConfigViewInterfaceCiscoNXOS(ConfigViewInterfaceBase):  # noqa: PLR0904
     @property
-    def bundle_id(self) -> str | None:
+    def bundle_id(self) -> Optional[str]:
         raise NotImplementedError
 
     @property
@@ -26,7 +27,7 @@ class ConfigViewInterfaceCiscoNXOS(ConfigViewInterfaceBase):  # noqa: PLR0904
         raise NotImplementedError
 
     @property
-    def bundle_name(self) -> str | None:
+    def bundle_name(self) -> Optional[str]:
         raise NotImplementedError
 
     @property
@@ -49,7 +50,7 @@ class ConfigViewInterfaceCiscoNXOS(ConfigViewInterfaceBase):  # noqa: PLR0904
         raise NotImplementedError
 
     @property
-    def ipv4_interface(self) -> IPv4Interface | None:
+    def ipv4_interface(self) -> Optional[IPv4Interface]:
         return next(iter(self.ipv4_interfaces), None)
 
     @property
@@ -78,7 +79,7 @@ class ConfigViewInterfaceCiscoNXOS(ConfigViewInterfaceBase):  # noqa: PLR0904
         return self.name.lower().startswith("vlan")
 
     @property
-    def module_number(self) -> int | None:
+    def module_number(self) -> Optional[int]:
         words = self.number.split("/", 1)
         if len(words) == 1:
             return None
@@ -90,7 +91,7 @@ class ConfigViewInterfaceCiscoNXOS(ConfigViewInterfaceBase):  # noqa: PLR0904
         raise NotImplementedError
 
     @property
-    def nac_host_mode(self) -> NACHostMode | None:
+    def nac_host_mode(self) -> Optional[NACHostMode]:
         """Determine the NAC host mode."""
         raise NotImplementedError
 
@@ -114,7 +115,7 @@ class ConfigViewInterfaceCiscoNXOS(ConfigViewInterfaceBase):  # noqa: PLR0904
         return self.config.text.split()[1]
 
     @property
-    def native_vlan(self) -> int | None:
+    def native_vlan(self) -> Optional[int]:
         raise NotImplementedError
 
     @property
@@ -122,7 +123,7 @@ class ConfigViewInterfaceCiscoNXOS(ConfigViewInterfaceBase):  # noqa: PLR0904
         return sub("^[a-zA-Z-]+", "", self.name)
 
     @property
-    def parent_name(self) -> str | None:
+    def parent_name(self) -> Optional[str]:
         if self.is_subinterface:
             return self.name.split(".")[0]
         return None
@@ -136,11 +137,11 @@ class ConfigViewInterfaceCiscoNXOS(ConfigViewInterfaceBase):  # noqa: PLR0904
         return int(self.name.split("/")[-1].split(".")[0])
 
     @property
-    def speed(self) -> tuple[int, ...] | None:
+    def speed(self) -> Optional[tuple[int, ...]]:
         raise NotImplementedError
 
     @property
-    def subinterface_number(self) -> int | None:
+    def subinterface_number(self) -> Optional[int]:
         return int(self.name.split(".")[0 - 1]) if self.is_subinterface else None
 
     @property
@@ -163,15 +164,15 @@ class ConfigViewInterfaceCiscoNXOS(ConfigViewInterfaceBase):  # noqa: PLR0904
 class HConfigViewCiscoNXOS(HConfigViewBase):
     def dot1q_mode_from_vlans(
         self,
-        untagged_vlan: int | None = None,
+        untagged_vlan: Optional[int] = None,
         tagged_vlans: tuple[int, ...] = (),
         *,
         tagged_all: bool = False,
-    ) -> InterfaceDot1qMode | None:
+    ) -> Optional[InterfaceDot1qMode]:
         raise NotImplementedError
 
     @property
-    def hostname(self) -> str | None:
+    def hostname(self) -> Optional[str]:
         if child := self.config.get_child(startswith="hostname "):
             return child.text.split()[1].lower()
         return None
@@ -191,7 +192,7 @@ class HConfigViewCiscoNXOS(HConfigViewBase):
         return self.config.get_children(startswith="interface ")
 
     @property
-    def ipv4_default_gw(self) -> IPv4Address | None:
+    def ipv4_default_gw(self) -> Optional[IPv4Address]:
         raise NotImplementedError
 
     @property

@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 import os
 import subprocess  # noqa: S404
 import sys
-from collections.abc import Iterable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from functools import cache
 from pathlib import Path
-from typing import NoReturn
+from typing import TYPE_CHECKING, NoReturn
 
 from typer import Typer
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
 
 app = Typer()
 
@@ -30,7 +34,6 @@ def lint(*, fix: bool = False) -> None:
             _pylint_command(),
             _yamllint_command(),
             _flynt_command(fix=fix),
-            _refurb_command(),
         ),
     )
 
@@ -48,7 +51,6 @@ def all_code_checks(*, fix: bool = False) -> None:
             _pytest_command(),
             _yamllint_command(),
             _flynt_command(fix=fix),
-            _refurb_command(),
         ),
     )
 
@@ -126,16 +128,6 @@ def yamllint() -> None:
 
 def _yamllint_command() -> str:
     return f"yamllint {_repo_path().relative_to(Path.cwd())}"
-
-
-@app.command()
-def refurb() -> None:
-    """Run the refurb linter."""
-    _run(_refurb_command())
-
-
-def _refurb_command() -> str:
-    return f"refurb {_python_base_paths_str()}"
 
 
 @app.command()

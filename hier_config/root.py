@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from logging import getLogger
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional, Union
 
 from .base import HConfigBase
 from .child import HConfigChild
@@ -51,7 +51,6 @@ class HConfig(HConfigBase):  # noqa: PLR0904
             for self_child, other_child in zip(
                 sorted(self.children),
                 sorted(other.children),
-                strict=False,
             )
         )
 
@@ -99,7 +98,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         for child in self.children:
             child.tags = value
 
-    def merge(self, other: HConfig | Iterable[HConfig]) -> HConfig:
+    def merge(self, other: Union[HConfig, Iterable[HConfig]]) -> HConfig:
         """Merges other HConfig objects into this one."""
         other_configs = (other,) if isinstance(other, HConfig) else other
 
@@ -111,7 +110,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
 
     def add_children_deep(self, lines: Iterable[str]) -> HConfigChild:
         """Add child instances of HConfigChild deeply."""
-        base: HConfig | HConfigChild = self
+        base: Union[HConfig, HConfigChild] = self
         for line in lines:
             base = base.add_child(line)
         if isinstance(base, HConfig):
@@ -162,7 +161,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
     def config_to_get_to(
         self,
         target: HConfig,
-        delta: HConfig | None = None,
+        delta: Optional[HConfig] = None,
     ) -> HConfig:
         """Figures out what commands need to be executed to transition from self to target.
         self is the source data structure(i.e. the running_config),
@@ -182,11 +181,11 @@ class HConfig(HConfigBase):  # noqa: PLR0904
     def add_ancestor_copy_of(
         self,
         parent_to_add: HConfigChild,
-    ) -> HConfig | HConfigChild:
+    ) -> Union[HConfig, HConfigChild]:
         """Add a copy of the ancestry of parent_to_add to self
         and return the deepest child which is equivalent to parent_to_add.
         """
-        base: HConfig | HConfigChild = self
+        base: Union[HConfig, HConfigChild] = self
         for parent in parent_to_add.lineage():
             base = base.add_shallow_copy_of(parent)
 

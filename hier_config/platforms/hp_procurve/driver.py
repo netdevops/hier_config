@@ -1,5 +1,6 @@
 import re
 from collections.abc import Callable, Iterable
+from typing import Optional
 
 from hier_config.child import HConfigChild
 from hier_config.model import (
@@ -211,7 +212,7 @@ class HConfigDriverHPProcurve(HConfigDriverBase):
         self,
         config: HConfigChild,
         other_children: Iterable[HConfigChild],
-    ) -> HConfigChild | None:
+    ) -> Optional[HConfigChild]:
         if result := super().idempotent_for(config, other_children):
             return result
 
@@ -244,7 +245,7 @@ class HConfigDriverHPProcurve(HConfigDriverBase):
         end_index: int,
         config: HConfigChild,
         other_children: Iterable[HConfigChild],
-    ) -> HConfigChild | None:
+    ) -> Optional[HConfigChild]:
         if re.search(expression, config.text):
             words = config.text.split()
             startswith = " ".join(words[:end_index])
@@ -253,7 +254,7 @@ class HConfigDriverHPProcurve(HConfigDriverBase):
                     return other_child
         return None
 
-    def negation_negate_with_check(self, config: HConfigChild) -> str | None:
+    def negation_negate_with_check(self, config: HConfigChild) -> Optional[str]:
         result = super().negation_negate_with_check(config)
         if isinstance(result, str):
             return result
@@ -300,7 +301,7 @@ class HConfigDriverHPProcurve(HConfigDriverBase):
         prepend: str,
         append: str,
         config: HConfigChild,
-    ) -> str | None:
+    ) -> Optional[str]:
         if re.search(expression, config.text):
             words = config.text.split()
             return " ".join([prepend] + words[:end_index] + [append]).strip()

@@ -1,5 +1,6 @@
 from collections.abc import Iterable
 from logging import getLogger
+from typing import Optional
 
 from .model import TagRule
 from .root import HConfig
@@ -45,8 +46,8 @@ class WorkflowRemediation:
             message = "The running and generated configs must use the same driver."
             raise ValueError(message)
 
-        self._remediation_config: HConfig | None = None
-        self._rollback_config: HConfig | None = None
+        self._remediation_config: Optional[HConfig] = None
+        self._rollback_config: Optional[HConfig] = None
 
     @property
     def remediation_config(self) -> HConfig:
