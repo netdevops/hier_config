@@ -9,29 +9,45 @@ logger = getLogger(__name__)
 
 
 class WorkflowRemediation:
-    """A host object is a convenient way to loading host inventory
-    items into a single object.
+    """Manages configuration workflows for a network device by comparing
+    running and generated configurations and creating remediations to align
+    the device with the intended configuration state.
 
-    The default is to load "hostname", "os", and "options" to the host object,
-    however, it can easily be extended for developer needs.
+    Attributes:
+        running_config (HConfig): The current configuration of the network device.
+        generated_config (HConfig): The target configuration for the network device.
 
-    .. code:: python
+    Raises:
+        ValueError: If `running_config` and `generated_config` have different drivers.
 
-        import yaml
-        from hier_config.host import Host
+    Example:
+        Initialize `WorkflowRemediation` with the running and generated configurations
+        and generate remediation and rollback configurations.
 
-        options = yaml.load(open("./tests/fixtures/options_ios.yml"), loader=yaml.SafeLoader())
-        host = Host("example.rtr", "ios", options)
+        ```python
+        from hier_config import WorkflowRemediation, get_hconfig
+        from hier_config.model import Platform
 
-        # Example of loading running config and generated configs into a host object
-        host.load_running_config_from_file("./tests/files/running_config.conf)
-        host.load_generated_config_from_file("./tests/files/generated_config.conf)
+        # Create running and generated configurations as HConfig objects
+        running_config = get_hconfig(Platform.CISCO_IOS, "running_config_text")
+        generated_config = get_hconfig(Platform.CISCO_IOS, "generated_config_text")
 
-        # Example of creating a remediation config without a tag targeting specific config
-        host.remediation_config()
+        # Initialize WorkflowRemediation with running and generated configurations
+        workflow = WorkflowRemediation(running_config, generated_config)
 
-        # Example of creating a remediation config with a tag ("safe") targeting a specific config.
-        host.remediation_config_filtered_text({"safe"}, set()})
+        # Generate the remediation configuration to apply the target configuration to the device
+        remediation_config = workflow.remediation_config
+        print("Remediation configuration:")
+        for line in remediation_config.all_children_sorted():
+            print(line.cisco_style_text())
+
+        # Generate the rollback configuration to revert back to the running configuration
+        rollback_config = workflow.rollback_config
+        print("Rollback configuration:")
+        for line in rollback_config.all_children_sorted():
+            print(line.cisco_style_text())
+        ```
+
     """
 
     def __init__(
@@ -51,7 +67,16 @@ class WorkflowRemediation:
 
     @property
     def remediation_config(self) -> HConfig:
-        """Build the remediation config by comparing the running and generated configs."""
+        """Builds and returns the remediation configuration to bring the device
+        in line with the generated configuration.
+
+        Returns:
+            HConfig: The configuration needed to remediate the device.
+
+        Notes:
+            The remediation configuration is cached after the first call.
+
+        """
         if self._remediation_config:
             return self._remediation_config
 
@@ -65,7 +90,16 @@ class WorkflowRemediation:
 
     @property
     def rollback_config(self) -> HConfig:
-        """Build the rollback config by comparing the generated and running configs."""
+        """Builds and returns the rollback configuration to revert the device
+        from the generated configuration back to the running configuration.
+
+        Returns:
+            HConfig: The configuration required to roll back to the original state.
+
+        Notes:
+            The rollback configuration is cached after the first call.
+
+        """
         if self._rollback_config:
             return self._rollback_config
 
@@ -78,6 +112,16 @@ class WorkflowRemediation:
         return rollback_config
 
     def apply_remediation_tag_rules(self, tag_rules: tuple[TagRule, ...]) -> None:
+        """Applies tag rules to selectively label parts of the remediation configuration.
+
+        Args:
+            tag_rules (tuple[TagRule, ...]): A set of tag rules specifying sections to tag.
+
+        Notes:
+            This method is useful for managing configuration changes by marking specific
+            parts of the config for conditional remediation.
+
+        """
         for tag_rule in tag_rules:
             for child in self.remediation_config.get_children_deep(
                 tag_rule.match_rules
@@ -89,6 +133,20 @@ class WorkflowRemediation:
         include_tags: Iterable[str] = (),
         exclude_tags: Iterable[str] = (),
     ) -> str:
+        """Returns the remediation configuration as text, filtered by included and excluded tags.
+
+        Args:
+            include_tags (Iterable[str], optional): Tags to include in the output.
+            exclude_tags (Iterable[str], optional): Tags to exclude from the output.
+
+        Returns:
+            str: The filtered remediation configuration in a text format.
+
+        Notes:
+            - If no tags are provided, the complete sorted remediation configuration is returned.
+            - Sorting respects configuration hierarchy and specified tags.
+
+        """
         children = (
             self.remediation_config.all_children_sorted_by_tags(
                 include_tags, exclude_tags
