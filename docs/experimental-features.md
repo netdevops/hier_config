@@ -1,48 +1,27 @@
 # Experimental Features
 
-Experimental features are those features that work, but haven't been thoroughly tested enough to feel confident to use in production.
-
-## Rollback Configuration
-
-Rollback configuration generation was introduced in version 2.0.2. The rollback configuration is exactly what it sounds like. It renders a rollback configuration in the event that a remediation causes a hiccup when being deployed. The rollback configuration does the inverse on a remediation. Instead of a remediation being rendered based upon the generated config, a rollback remediation is rendered from the generated config based upon the running configuration.
-
-A rollback configuration can be rendered once the running and generated configurations are loaded. Below is an example.
-
-```bash
->>> from hier_config import Host
->>> host = Host(hostname="aggr-example.rtr", os="ios")
->>> host.load_running_config_from_file("./tests/fixtures/running_config.conf")
->>> host.load_generated_config_from_file("./tests/fixtures/generated_config.conf")
->>> rollback = host.rollback_config()
->>> for line in rollback.all_children_sorted():
-...     print(line.cisco_style_text())
-... 
-no vlan 4
-no interface Vlan4
-vlan 3
-  name switch_mgmt_10.0.4.0/24
-interface Vlan2
-  no mtu 9000
-  no ip access-group TEST in
-  shutdown
-interface Vlan3
-  description switch_mgmt_10.0.4.0/24
-  ip address 10.0.4.1 255.255.0.0
->>> 
-```
-
+Experimental features are functional but have not been tested extensively enough to be recommended for production use.
 
 ## Unified diff
 
-Unified diff was introduced in version 2.1.0. It provides a similar output to difflib.unified_diff() but is aware of out of order lines and the parent child relationships present in the hier_config model of the configurations being diffed.  
+The Unified Diff feature, introduced in version 2.1.0, provides output similar to `difflib.unified_diff()` but with added awareness of out-of-order lines and parent-child relationships in the Hier Config model of configurations being compared.
 
-This feature is useful in cases where you need to compare the differences of two network device configurations. Such as comparing the configs of redundant device pairs. Or, comparing running and intended configs. 
+This feature is particularly useful when comparing configurations from two network devices, such as redundant pairs, or when validating differences between running and intended configurations.
 
-In its current state, this algorithm does not consider duplicate child differences. e.g. two instances `endif` in an IOS-XR route-policy. It also does not respect the order of commands where it may count, such as in ACLs. In the case of ACLs, they should contain sequence numbers if order is important.
+Currently, the algorithm does not account for duplicate child entries (e.g., multiple `endif` statements in an IOS-XR route-policy) or enforce command order in sections where it may be critical, such as Access Control Lists (ACLs). For accurate ordering in ACLs, sequence numbers should be used if command order is important.
 
 ```bash
-In [1]: list(running_config.unified_diff(generated_config))
-Out[1]:
+>>> from hier_config import get_hconfig
+>>> from hier_config.model import Platform
+>>> from pprint import pprint
+>>>
+>>> running_config_text = open("./tests/fixtures/running_config.conf").read()
+>>> generated_config_text = open("./tests/fixtures/generated_config.conf").read()
+>>>
+>>> running_config = get_hconfig(Platform.CISCO_IOS, running_config_text)
+>>> generated_config = get_hconfig(Platform.CISCO_IOS, generated_config_text)
+>>>
+>>> pprint(list(running_config.unified_diff(generated_config)))
 ['vlan 3',
  '  - name switch_mgmt_10.0.4.0/24',
  '  + name switch_mgmt_10.0.3.0/24',
@@ -64,20 +43,19 @@ Out[1]:
  '  + ip address 10.0.4.1 255.255.0.0',
  '  + ip access-group TEST in',
  '  + no shutdown']
+>>>
 ```
-        
-
 
 ## Future Config
 
-Future config was introduced in version 2.2.0. It attempts to predict the running config after a change is applied.
+FThe Future Config feature, introduced in version 2.2.0, attempts to predict the state of the running configuration after a change is applied.
 
-This feature is useful in cases where you need to determine what the configuration state will be after a change is applied. Such as:
-- Ensuring that a configuration change was applied successfully to a device.
-  - i.e. Does the post-change config match the predicted future config?
-- Providing a future state config that can be fed into batfish, or similar, to predict if a change will cause an impact.
-- Building rollback configs. If you have the future config state, then generating a rollback config can be done by simply building the remediation config in the reverse direction `rollback = future.config_to_get_to(running)`.
-  - If you are building rollbacks for a series of config changes, you can feed the post-change-1 future config into the process for determining the post-change-2 future config e.g. 
+This feature is useful in scenarios where you need to determine the anticipated configuration state following a change, such as:
+- Verifying that a configuration change was successfully applied to a device
+  - For example, checking if the post-change configuration matches the predicted future configuration
+- Generating a future-state configuration that can be analyzed by tools like Batfish to assess the potential impact of a change
+- Building rollback configurations: once the future configuration state is known, a rollback configuration can be generated by simply creating the remediation in reverse `(rollback = future.config_to_get_to(running))`.
+  - When building rollbacks for a series of configuration changes, you can use the future configuration from each change as input for the subsequent change. For example, use the future configuration after Change 1 as the input for determining the future configuration after Change 2, and so on.
       ```shell
       post_change_1_config = running_config.future(change_1_config)
       change_1_rollback_config = post_change_1_config.config_to_get_to(running_config)
@@ -86,7 +64,7 @@ This feature is useful in cases where you need to determine what the configurati
       ...
       ```
 
-In its current state, this algorithm does not consider:
+Currently, this algorithm does not account for:
 - negate a numbered ACL when removing an item
 - sectional exiting
 - negate with
@@ -95,30 +73,21 @@ In its current state, this algorithm does not consider:
 - and likely others
 
 ```bash
-In [1]: from hier_config import HConfig, Host
-   ...:
-   ...:
-   ...: host = Host("test.dfw1", "ios")
-   ...: running_config = HConfig(host)
-   ...: running_config.load_from_file("./tests/fixtures/running_config.conf")
-   ...: remediation_config = HConfig(host)
-   ...: remediation_config.load_from_file("./tests/fixtures/remediation_config_without_tags.conf")
-   ...: future_config = running_config.future(remediation_config)
-   ...:
-   ...: print("\n##### running config")
-   ...: for line in running_config.all_children():
-   ...:     print(line.cisco_style_text())
-   ...:
-   ...: print("\n##### remediation config")
-   ...: for line in remediation_config.all_children():
-   ...:     print(line.cisco_style_text())
-   ...:
-   ...: print("\n##### future config")
-   ...: for line in future_config.all_children():
-   ...:     print(line.cisco_style_text())
-   ...:
-
-##### running config
+>>> from hier_config import get_hconfig
+>>> from hier_config.model import Platform
+>>> from pprint import pprint
+>>>
+>>> running_config_text = open("./tests/fixtures/running_config.conf").read()
+>>> remediation_config_text = open("./tests/fixtures/remediation_config_without_tags.conf").read()
+>>>
+>>> running_config = get_hconfig(Platform.CISCO_IOS, running_config_text)
+>>> remediation_config = get_hconfig(Platform.CISCO_IOS, remediation_config_text)
+>>>
+>>> print("Running Config")
+Running Config
+>>> for line in running_config.all_children():
+...     print(line.cisco_style_text())
+...
 hostname aggr-example.rtr
 ip access-list extended TEST
   10 permit ip 10.0.0.0 0.0.0.7 any
@@ -136,8 +105,12 @@ interface Vlan3
   ip address 10.0.4.1 255.255.0.0
   ip access-group TEST in
   no shutdown
-
-##### remediation config
+>>>
+>>> print("Remediation Config")
+Remediation Config
+>>> for line in remediation_config.all_children():
+...     print(line.cisco_style_text())
+...
 vlan 3
   name switch_mgmt_10.0.3.0/24
 vlan 4
@@ -155,8 +128,12 @@ interface Vlan4
   ip address 10.0.4.1 255.255.0.0
   ip access-group TEST in
   no shutdown
-
-##### future config
+>>>
+>>> print("Future Config")
+Future Config
+>>> for line in running_config.future(remediation_config).all_children():
+...     print(line.cisco_style_text())
+...
 vlan 3
   name switch_mgmt_10.0.3.0/24
 vlan 4
@@ -170,7 +147,6 @@ interface Vlan3
   description switch_mgmt_10.0.3.0/24
   ip address 10.0.3.1 255.255.0.0
   mtu 9000
-  ip address 10.0.4.1 255.255.0.0
   ip access-group TEST in
   no shutdown
 interface Vlan4
@@ -184,13 +160,15 @@ ip access-list extended TEST
   10 permit ip 10.0.0.0 0.0.0.7 any
 vlan 2
   name switch_mgmt_10.0.2.0/24
+>>>
 ```
 
 ## JunOS-style Syntax Remediation
-"set" based operating systems can now be remediated in experimental capacity. Here is an example of a JunOS style remediation.
+Operating systems that use "set"-based syntax can now be remediated experimentally. Below is an example of a JunOS-style remediation.
 
-```
-$ cat ./tests/fixtures/running_config_flat_junos.confset system host-name aggr-example.rtr
+```bash
+$ cat ./tests/fixtures/running_config_flat_junos.conf
+set system host-name aggr-example.rtr
 
 set firewall family inet filter TEST term 1 from source-address 10.0.0.0/29
 set firewall family inet filter TEST term 1 then accept
@@ -212,22 +190,22 @@ set interfaces irb unit 3 family inet description "switch_mgmt_10.0.4.0/24"
 
 
 $ python3
-Python 3.8.10 (default, Nov 22 2023, 10:22:35) 
-[GCC 9.4.0] on linux
-Type "help", "copyright", "credits" or "license" for more information.
->>> import yaml
->>> from hier_config import Host
+>>> from hier_config import WorkflowRemediation, get_hconfig
+>>> from hier_config.model import Platform
 >>>
->>> host = Host('example.rtr', 'junos')
->>> 
->>> # Build Hierarchical Configuration object for the Running Config
->>> host.load_running_config_from_file("./tests/fixtures/running_config_flat_junos.conf")
->>> 
->>> # Build Hierarchical Configuration object for the Generated Config
->>> host.load_generated_config_from_file("./tests/fixtures/generated_config_flat_junos.conf")
->>> 
->>> # Build and Print the all lines of the remediation config
->>> print(host.remediation_config_filtered_text({}, {}))
+>>> running_config_text = open("./tests/fixtures/running_config_flat_junos.conf").read()
+>>> generated_config_text = open("./tests/fixtures/generated_config_flat_junos.conf").read()
+# Create HConfig objects for the running and generated configurations using JunOS syntax
+>>> running_config = get_hconfig(Platform.JUNIPER_JUNOS, running_config_text)
+>>> generated_config = get_hconfig(Platform.JUNIPER_JUNOS, generated_config_text)
+>>>
+# Initialize WorkflowRemediation with the running and generated configurations
+>>> workflow = WorkflowRemediation(running_config, generated_config)
+>>>
+# Generate and display the remediation configuration
+>>> print("Remediation configuration:")
+Remediation configuration:
+>>> print(str(workflow.remediation_config))
 delete vlans switch_mgmt_10.0.4.0/24 vlan-id 3
 delete vlans switch_mgmt_10.0.4.0/24 l3-interface irb.3
 delete interfaces irb unit 2 family inet disable
@@ -245,11 +223,12 @@ set interfaces irb unit 4 family inet address 10.0.4.1/16
 set interfaces irb unit 4 family inet filter input TEST
 set interfaces irb unit 4 family inet mtu 9000
 set interfaces irb unit 4 family inet description "switch_mgmt_10.0.4.0/24"
+>>>
 ```
 
-Configurations loaded into Hier Config as Juniper-style syntax are converted to a flat `set` based configuration format. Remediations are then rendered using this `set` style syntax.
+Configurations loaded into Hier Config with Juniper-style syntax are converted to a flat, `set`-based format. Remediation steps are then generated using this `set` syntax.
 
-```
+```bash
 $ cat ./tests/fixtures/running_config_junos.conf 
 system {
     host-name aggr-example.rtr;
@@ -304,22 +283,22 @@ interfaces {
 }
 
 $ python3
-Python 3.8.10 (default, Nov 22 2023, 10:22:35) 
-[GCC 9.4.0] on linux
-Type "help", "copyright", "credits" or "license" for more information.
->>> import yaml
->>> from hier_config import Host
->>> 
->>> host = Host('example.rtr', 'junos')
->>> 
->>> # Build Hierarchical Configuration object for the Running Config
->>> host.load_running_config_from_file("./tests/fixtures/running_config_junos.conf")
->>> 
->>> # Build Hierarchical Configuration object for the Generated Config
->>> host.load_generated_config_from_file("./tests/fixtures/generated_config_junos.conf")
->>> 
->>> # Build and Print the all lines of the remediation config
->>> print(host.remediation_config_filtered_text({}, {}))
+>>> from hier_config import WorkflowRemediation, get_hconfig
+>>> from hier_config.model import Platform
+>>>
+>>> running_config_text = open("./tests/fixtures/running_config_junos.conf").read()
+>>> generated_config_text = open("./tests/fixtures/generated_config_junos.conf").read()
+# Create HConfig objects for the running and generated configurations using JunOS syntax
+>>> running_config = get_hconfig(Platform.JUNIPER_JUNOS, running_config_text)
+>>> generated_config = get_hconfig(Platform.JUNIPER_JUNOS, generated_config_text)
+>>>
+# Initialize WorkflowRemediation with the running and generated configurations
+>>> workflow = WorkflowRemediation(running_config, generated_config)
+>>>
+# Generate and display the remediation configuration
+>>> print("Remediation configuration:")
+Remediation configuration:
+>>> print(str(workflow.remediation_config))
 delete vlans switch_mgmt_10.0.4.0/24 vlan-id 3
 delete vlans switch_mgmt_10.0.4.0/24 l3-interface irb.3
 delete interfaces irb unit 2 family inet description "switch_10.0.2.0/24"
@@ -339,4 +318,5 @@ set interfaces irb unit 4 family inet address 10.0.4.1/16
 set interfaces irb unit 4 family inet filter input TEST
 set interfaces irb unit 4 family inet mtu 9000
 set interfaces irb unit 4 family inet description "switch_mgmt_10.0.4.0/24"
+>>>
 ```
