@@ -2,6 +2,8 @@ import re
 from collections.abc import Callable, Iterable
 from typing import Optional
 
+from pydantic import Field
+
 from hier_config.child import HConfigChild
 from hier_config.models import (
     IdempotentCommandsRule,
@@ -110,102 +112,120 @@ def _fixup_hp_procurve_device_profile(config: HConfig) -> None:
 
 
 class HConfigDriverHPProcurve(HConfigDriverBase):
-    negation_negate_with_rules: tuple[NegationDefaultWithRule, ...] = (
-        NegationDefaultWithRule(
-            lineage=(
-                MatchRule(startswith="interface "),
-                MatchRule(equals="disable"),
+    negation_negate_with_rules: list[NegationDefaultWithRule] = Field(
+        default=[
+            NegationDefaultWithRule(
+                lineage=(
+                    MatchRule(startswith="interface "),
+                    MatchRule(equals="disable"),
+                ),
+                use="enable",
             ),
-            use="enable",
-        ),
-        NegationDefaultWithRule(
-            lineage=(
-                MatchRule(startswith="interface "),
-                MatchRule(startswith="name "),
+            NegationDefaultWithRule(
+                lineage=(
+                    MatchRule(startswith="interface "),
+                    MatchRule(startswith="name "),
+                ),
+                use="no name",
             ),
-            use="no name",
-        ),
+        ]
     )
 
-    per_line_sub_rules: tuple[PerLineSubRule, ...] = (
-        PerLineSubRule(search=r"^\s*[#!].*", replace=""),
-        PerLineSubRule(search=r"^; .*", replace=""),
-        PerLineSubRule(search=r"^Running configuration:*", replace=""),
+    per_line_sub_rules: list[PerLineSubRule] = Field(
+        default=[
+            PerLineSubRule(search=r"^\s*[#!].*", replace=""),
+            PerLineSubRule(search=r"^; .*", replace=""),
+            PerLineSubRule(search=r"^Running configuration:*", replace=""),
+        ]
     )
-    idempotent_commands_rules: tuple[IdempotentCommandsRule, ...] = (
-        IdempotentCommandsRule(
-            lineage=(
-                MatchRule(startswith="aaa authentication port-access eap-radius"),
+    idempotent_commands_rules: list[IdempotentCommandsRule] = Field(
+        default=[
+            IdempotentCommandsRule(
+                lineage=(
+                    MatchRule(startswith="aaa authentication port-access eap-radius"),
+                ),
             ),
-        ),
-        IdempotentCommandsRule(
-            lineage=(MatchRule(startswith="aaa accounting update periodic "),),
-        ),
-        IdempotentCommandsRule(
-            lineage=(
-                MatchRule(startswith="interface "),
-                MatchRule(startswith="untagged vlan "),
+            IdempotentCommandsRule(
+                lineage=(MatchRule(startswith="aaa accounting update periodic "),),
             ),
-        ),
-        IdempotentCommandsRule(
-            lineage=(
-                MatchRule(startswith="interface "),
-                MatchRule(startswith="name "),
+            IdempotentCommandsRule(
+                lineage=(
+                    MatchRule(startswith="interface "),
+                    MatchRule(startswith="untagged vlan "),
+                ),
             ),
-        ),
+            IdempotentCommandsRule(
+                lineage=(
+                    MatchRule(startswith="interface "),
+                    MatchRule(startswith="name "),
+                ),
+            ),
+        ]
     )
-    ordering_rules: tuple[OrderingRule, ...] = (
-        # no aaa port-access {{ interface_name }} auth-priority  -- needs to happen before auth-order
-        OrderingRule(
-            lineage=(MatchRule(re_search=r"^no aaa port-access \S+ auth-priority"),),
-            weight=-10,
-        ),
-        # `no aaa port-access authenticator 5/43` needs to come before other similar commands
-        # e.g. `no aaa port-access authenticator 5/43 client-limit`
-        OrderingRule(
-            lineage=(MatchRule(re_search=r"^no aaa port-access authenticator \S+$"),),
-            weight=-10,
-        ),
-        # `aaa server-group radius "ise" host 172.16.1.1` should be defined after reference
-        OrderingRule(
-            lineage=(MatchRule(re_search=r"^aaa server-group radius \S+ host "),),
-            weight=10,
-        ),
-        # Need to add vlans before removing to prevent accidentally adding untagged vlan 1
-        OrderingRule(
-            lineage=(
-                MatchRule(startswith="interface "),
-                MatchRule(startswith=("no tagged vlan ", "no untagged vlan ")),
+    ordering_rules: list[OrderingRule] = Field(
+        default=[
+            # no aaa port-access {{ interface_name }} auth-priority  -- needs to happen before auth-order
+            OrderingRule(
+                lineage=(
+                    MatchRule(re_search=r"^no aaa port-access \S+ auth-priority"),
+                ),
+                weight=-10,
             ),
-            weight=10,
-        ),
-        OrderingRule(
-            lineage=(MatchRule(startswith="no tacacs-server "),),
-            weight=10,
-        ),
-        # In case a server is a member of a group, `no radius-server host 172.16.1.1 dyn-authorization` cannot
-        # be used before adding another server to that group
-        OrderingRule(
-            lineage=(
-                MatchRule(re_search=r"^no radius-server host \S+ dyn-authorization$"),
+            # `no aaa port-access authenticator 5/43` needs to come before other similar commands
+            # e.g. `no aaa port-access authenticator 5/43 client-limit`
+            OrderingRule(
+                lineage=(
+                    MatchRule(re_search=r"^no aaa port-access authenticator \S+$"),
+                ),
+                weight=-10,
             ),
-            weight=15,
-        ),
-        # Cannot use `no aaa server-group radius "ise" host 172.16.1.1` after removing that host
-        OrderingRule(
-            lineage=(MatchRule(re_search=r"^no aaa server-group radius \S+ host "),),
-            weight=20,
-        ),
-        # `no radius-server host 172.16.1.1` should be called last (cannot leave a server group empty)
-        OrderingRule(
-            lineage=(MatchRule(re_search=r"^no radius-server host \S+$"),),
-            weight=30,
-        ),
+            # `aaa server-group radius "ise" host 172.16.1.1` should be defined after reference
+            OrderingRule(
+                lineage=(MatchRule(re_search=r"^aaa server-group radius \S+ host "),),
+                weight=10,
+            ),
+            # Need to add vlans before removing to prevent accidentally adding untagged vlan 1
+            OrderingRule(
+                lineage=(
+                    MatchRule(startswith="interface "),
+                    MatchRule(startswith=("no tagged vlan ", "no untagged vlan ")),
+                ),
+                weight=10,
+            ),
+            OrderingRule(
+                lineage=(MatchRule(startswith="no tacacs-server "),),
+                weight=10,
+            ),
+            # In case a server is a member of a group, `no radius-server host 172.16.1.1 dyn-authorization` cannot
+            # be used before adding another server to that group
+            OrderingRule(
+                lineage=(
+                    MatchRule(
+                        re_search=r"^no radius-server host \S+ dyn-authorization$"
+                    ),
+                ),
+                weight=15,
+            ),
+            # Cannot use `no aaa server-group radius "ise" host 172.16.1.1` after removing that host
+            OrderingRule(
+                lineage=(
+                    MatchRule(re_search=r"^no aaa server-group radius \S+ host "),
+                ),
+                weight=20,
+            ),
+            # `no radius-server host 172.16.1.1` should be called last (cannot leave a server group empty)
+            OrderingRule(
+                lineage=(MatchRule(re_search=r"^no radius-server host \S+$"),),
+                weight=30,
+            ),
+        ]
     )
-    post_load_callbacks: tuple[Callable[[HConfig], None], ...] = (
-        _fixup_hp_procurve_aaa_port_access_fixup,
-        _fixup_hp_procurve_device_profile,
-        _fixup_hp_procurve_vlan,
+    post_load_callbacks: list[Callable[[HConfig], None]] = Field(
+        default=[
+            _fixup_hp_procurve_aaa_port_access_fixup,
+            _fixup_hp_procurve_device_profile,
+            _fixup_hp_procurve_vlan,
+        ]
     )
 
     def idempotent_for(

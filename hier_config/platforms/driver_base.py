@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable
 from typing import Optional
 
-from pydantic import PositiveInt
+from pydantic import Field, PositiveInt
 
 from hier_config.child import HConfigChild
 from hier_config.models import (
@@ -30,19 +30,25 @@ class HConfigDriverBase(ABC, BaseModel):  # pylint: disable=too-many-instance-at
     """
 
     indentation: PositiveInt = 2
-    sectional_exiting_rules: tuple[SectionalExitingRule, ...] = ()
-    sectional_overwrite_rules: tuple[SectionalOverwriteRule, ...] = ()
-    sectional_overwrite_no_negate_rules: tuple[SectionalOverwriteNoNegateRule, ...] = ()
-    ordering_rules: tuple[OrderingRule, ...] = ()
-    indent_adjust_rules: tuple[IndentAdjustRule, ...] = ()
-    parent_allows_duplicate_child_rules: tuple[ParentAllowsDuplicateChildRule, ...] = ()
-    full_text_sub_rules: tuple[FullTextSubRule, ...] = ()
-    per_line_sub_rules: tuple[PerLineSubRule, ...] = ()
-    idempotent_commands_avoid_rules: tuple[IdempotentCommandsAvoidRule, ...] = ()
-    idempotent_commands_rules: tuple[IdempotentCommandsRule, ...] = ()
-    negation_default_when_rules: tuple[NegationDefaultWhenRule, ...] = ()
-    negation_negate_with_rules: tuple[NegationDefaultWithRule, ...] = ()
-    post_load_callbacks: tuple[Callable[[HConfig], None], ...] = ()
+    sectional_exiting_rules: list[SectionalExitingRule] = Field(default=[])
+    sectional_overwrite_rules: list[SectionalOverwriteRule] = Field(default=[])
+    sectional_overwrite_no_negate_rules: list[SectionalOverwriteNoNegateRule] = Field(
+        default=[]
+    )
+    ordering_rules: list[OrderingRule] = Field(default=[])
+    indent_adjust_rules: list[IndentAdjustRule] = Field(default=[])
+    parent_allows_duplicate_child_rules: list[ParentAllowsDuplicateChildRule] = Field(
+        default=[]
+    )
+    full_text_sub_rules: list[FullTextSubRule] = Field(default=[])
+    per_line_sub_rules: list[PerLineSubRule] = Field(default=[])
+    idempotent_commands_avoid_rules: list[IdempotentCommandsAvoidRule] = Field(
+        default=[]
+    )
+    idempotent_commands_rules: list[IdempotentCommandsRule] = Field(default=[])
+    negation_default_when_rules: list[NegationDefaultWhenRule] = Field(default=[])
+    negation_negate_with_rules: list[NegationDefaultWithRule] = Field(default=[])
+    post_load_callbacks: list[Callable[[HConfig], None]] = Field(default=[])
 
     def idempotent_for(
         self,
