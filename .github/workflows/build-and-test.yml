@@ -31,4 +31,4 @@ jobs:
       run: |
         poetry install --no-interaction --no-root
         poetry run python scripts/build.py lint
-        poetry run python scripts/build.py pytest
+        poetry run python scripts/build.py pytest --coverage
