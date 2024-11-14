@@ -78,13 +78,13 @@ class HConfigBase(ABC):  # noqa: PLR0904
 
         # if child does not exist
         if text not in self:
-            new_item = self._get_child(text)
+            new_item = self._instantiate_child(text)
             self.children.append(new_item)
             self.children_dict[text] = new_item
             return new_item
         # if child does exist and is allowed to be installed as a duplicate
         if self._duplicate_child_allowed_check() or force_duplicate:
-            new_item = self._get_child(text)
+            new_item = self._instantiate_child(text)
             self.children.append(new_item)
             return new_item
 
@@ -361,7 +361,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
             future_config.add_deep_copy_of(self_child)
 
     @abstractmethod
-    def _get_child(self, text: str) -> HConfigChild:
+    def _instantiate_child(self, text: str) -> HConfigChild:
         pass
 
     @abstractmethod

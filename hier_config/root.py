@@ -81,7 +81,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         """Returns True if there are children or is an instance of HConfig."""
         return True
 
-    def _get_child(self, text: str) -> HConfigChild:
+    def _instantiate_child(self, text: str) -> HConfigChild:
         return HConfigChild(self, text)
 
     @property
