@@ -1,5 +1,5 @@
 from hier_config import WorkflowRemediation, get_hconfig_fast_load
-from hier_config.model import Platform
+from hier_config.models import Platform
 
 
 def test_merge_with_undo() -> None:

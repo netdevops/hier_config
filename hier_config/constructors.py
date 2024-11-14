@@ -8,7 +8,7 @@ from typing import Union
 from hier_config.platforms.driver_base import HConfigDriverBase
 
 from .child import HConfigChild
-from .model import Dump, Platform
+from .models import Dump, Platform
 from .platforms.arista_eos.driver import HConfigDriverAristaEOS
 from .platforms.arista_eos.view import HConfigViewAristaEOS
 from .platforms.cisco_ios.driver import HConfigDriverCiscoIOS

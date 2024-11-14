@@ -6,9 +6,9 @@ from .constructors import (
     get_hconfig_from_dump,
     get_hconfig_view,
 )
-from .model import Platform
+from .models import Platform
 from .root import HConfig
-from .workflow import WorkflowRemediation
+from .workflows import WorkflowRemediation
 
 __all__ = (
     "HConfig",

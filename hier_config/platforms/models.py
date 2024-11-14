@@ -3,7 +3,7 @@ from typing import Optional
 
 from pydantic import NonNegativeInt, PositiveInt
 
-from hier_config.model import BaseModel
+from hier_config.models import BaseModel
 
 
 class NACHostMode(str, Enum):

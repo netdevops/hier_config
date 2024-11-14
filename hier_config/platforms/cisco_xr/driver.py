@@ -2,7 +2,7 @@ from collections.abc import Iterable
 from typing import Optional
 
 from hier_config.child import HConfigChild
-from hier_config.model import (
+from hier_config.models import (
     IdempotentCommandsRule,
     IndentAdjustRule,
     MatchRule,

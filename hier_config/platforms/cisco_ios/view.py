@@ -5,7 +5,7 @@ from typing import Optional
 
 from hier_config.child import HConfigChild
 from hier_config.platforms.functions import expand_range
-from hier_config.platforms.model import (
+from hier_config.platforms.models import (
     InterfaceDot1qMode,
     InterfaceDuplex,
     NACHostMode,

@@ -3,8 +3,8 @@ from ipaddress import IPv4Address, IPv4Interface
 from typing import Optional
 
 from hier_config.child import HConfigChild
-from hier_config.model import Platform
-from hier_config.platforms.model import (
+from hier_config.models import Platform
+from hier_config.platforms.models import (
     InterfaceDot1qMode,
     InterfaceDuplex,
     NACHostMode,

@@ -1,4 +1,6 @@
-from hier_config.model import (
+from pydantic import Field
+
+from hier_config.models import (
     IdempotentCommandsRule,
     MatchRule,
     NegationDefaultWhenRule,

@@ -1,5 +1,5 @@
 from hier_config import get_hconfig_driver
-from hier_config.model import Platform
+from hier_config.models import Platform
 from hier_config.platforms.arista_eos.driver import HConfigDriverAristaEOS
 from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
 from hier_config.platforms.cisco_nxos.driver import HConfigDriverCiscoNXOS

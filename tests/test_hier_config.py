@@ -9,7 +9,7 @@ from hier_config import (
     get_hconfig_fast_load,
     get_hconfig_from_dump,
 )
-from hier_config.model import Instance, MatchRule, Platform
+from hier_config.models import Instance, MatchRule, Platform
 
 
 def test_bool(platform_a: Platform) -> None:

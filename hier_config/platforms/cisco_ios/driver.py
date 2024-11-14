@@ -1,7 +1,9 @@
 from collections.abc import Callable
 from logging import getLogger
 
-from hier_config.model import (
+from pydantic import Field
+
+from hier_config.models import (
     IdempotentCommandsRule,
     MatchRule,
     NegationDefaultWithRule,

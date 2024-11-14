@@ -6,7 +6,7 @@ from re import search
 from typing import TYPE_CHECKING, Any, Optional, Union
 
 from .base import HConfigBase
-from .model import Instance, MatchRule, SetLikeOfStr
+from .models import Instance, MatchRule, SetLikeOfStr
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator

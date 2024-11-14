@@ -5,7 +5,7 @@ from typing import Optional
 from pydantic import PositiveInt
 
 from hier_config.child import HConfigChild
-from hier_config.model import (
+from hier_config.models import (
     BaseModel,
     FullTextSubRule,
     IdempotentCommandsAvoidRule,

@@ -4,7 +4,7 @@ from hier_config import (
     WorkflowRemediation,
     get_hconfig,
 )
-from hier_config.model import Platform, TagRule
+from hier_config.models import Platform, TagRule
 
 
 @pytest.fixture(name="wfr")

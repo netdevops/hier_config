@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
 
     from .child import HConfigChild
-    from .model import MatchRule, SetLikeOfStr
+    from .models import MatchRule, SetLikeOfStr
     from .platforms.driver_base import HConfigDriverBase
     from .root import HConfig
 

@@ -2,7 +2,7 @@ from collections.abc import Iterable
 from logging import getLogger
 from typing import Optional
 
-from .model import TagRule
+from .models import TagRule
 from .root import HConfig
 
 logger = getLogger(__name__)

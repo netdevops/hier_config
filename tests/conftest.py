@@ -4,7 +4,7 @@ import pytest
 import yaml
 from pydantic import TypeAdapter
 
-from hier_config.model import Platform, TagRule
+from hier_config.models import Platform, TagRule
 
 
 @pytest.fixture(scope="module")

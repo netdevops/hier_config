@@ -1,6 +1,6 @@
 from hier_config import get_hconfig_fast_load
 from hier_config.constructors import get_hconfig
-from hier_config.model import Platform
+from hier_config.models import Platform
 
 
 def test_logging_console_emergencies_scenario_1() -> None:

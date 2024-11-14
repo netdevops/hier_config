@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Optional, Union
 
 from .base import HConfigBase
 from .child import HConfigChild
-from .model import Dump, DumpLine
+from .models import Dump, DumpLine
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
