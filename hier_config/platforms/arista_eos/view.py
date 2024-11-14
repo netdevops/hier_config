@@ -3,7 +3,6 @@ from ipaddress import IPv4Address, IPv4Interface
 from typing import Optional
 
 from hier_config.child import HConfigChild
-from hier_config.models import Platform
 from hier_config.platforms.models import (
     InterfaceDot1qMode,
     InterfaceDuplex,
@@ -113,10 +112,6 @@ class ConfigViewInterfaceAristaEOS(ConfigViewInterfaceBase):  # noqa: PLR0904
         raise NotImplementedError
 
     @property
-    def platform(self) -> Platform:
-        return Platform.ARISTA_EOS
-
-    @property
     def poe(self) -> bool:
         raise NotImplementedError
 
@@ -186,10 +181,6 @@ class HConfigViewAristaEOS(HConfigViewBase):
     @property
     def location(self) -> str:
         raise NotImplementedError
-
-    @property
-    def platform(self) -> Platform:
-        return Platform.ARISTA_EOS
 
     @property
     def stack_members(self) -> Iterable[StackMember]:

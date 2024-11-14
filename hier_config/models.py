@@ -108,5 +108,4 @@ class Platform(str, Enum):
 
 
 class Dump(BaseModel):
-    driver_platform: Platform
     lines: tuple[DumpLine, ...]

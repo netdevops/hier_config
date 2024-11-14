@@ -1,5 +1,4 @@
 from hier_config.child import HConfigChild
-from hier_config.models import Platform
 from hier_config.platforms.driver_base import HConfigDriverBase
 
 
@@ -15,10 +14,6 @@ class HConfigDriverJuniperJUNOS(HConfigDriverBase):  # pylint: disable=too-many-
             raise ValueError(message)
 
         return child
-
-    @property
-    def platform(self) -> Platform:
-        return Platform.JUNIPER_JUNOS
 
     @property
     def declaration_prefix(self) -> str:

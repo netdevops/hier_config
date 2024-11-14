@@ -11,7 +11,6 @@ from hier_config.models import (
     OrderingRule,
     ParentAllowsDuplicateChildRule,
     PerLineSubRule,
-    Platform,
     SectionalExitingRule,
     SectionalOverwriteNoNegateRule,
     SectionalOverwriteRule,
@@ -310,7 +309,3 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
                         return other_child
 
         return super().idempotent_for(config, other_children)
-
-    @property
-    def platform(self) -> Platform:
-        return Platform.CISCO_XR

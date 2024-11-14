@@ -34,7 +34,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         return "\n".join(str(c) for c in sorted(self.children))
 
     def __repr__(self) -> str:
-        return f"HConfig(driver={self.driver.platform}, lines={self.dump_simple()})"
+        return f"HConfig(driver={self.driver.__class__.__name__}, lines={self.dump_simple()})"
 
     def __hash__(self) -> int:
         return hash(*self.children)
@@ -132,7 +132,6 @@ class HConfig(HConfigBase):  # noqa: PLR0904
     def dump(self) -> Dump:
         """Dump loaded HConfig data."""
         return Dump(
-            driver_platform=self.driver.platform,
             lines=tuple(
                 DumpLine(
                     depth=c.depth(),

@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 from collections.abc import Callable, Iterable
 from typing import Optional
 
@@ -16,7 +16,6 @@ from hier_config.models import (
     OrderingRule,
     ParentAllowsDuplicateChildRule,
     PerLineSubRule,
-    Platform,
     SectionalExitingRule,
     SectionalOverwriteNoNegateRule,
     SectionalOverwriteRule,
@@ -68,10 +67,6 @@ class HConfigDriverBase(ABC, BaseModel):  # pylint: disable=too-many-instance-at
                 return with_rule.use
         return None
 
-    @property
-    @abstractmethod
-    def platform(self) -> Platform:
-        pass
 
     def swap_negation(self, child: HConfigChild) -> HConfigChild:
         """Swap negation of a `child.text`."""

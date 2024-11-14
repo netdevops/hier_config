@@ -69,7 +69,7 @@ def test_dump_and_load_from_dump_and_compare(platform_a: Platform) -> None:
     b2.new_in_config = True
 
     dump = hier_pre_dump.dump()
-    hier_post_dump = get_hconfig_from_dump(dump)
+    hier_post_dump = get_hconfig_from_dump(hier_pre_dump.driver, dump)
 
     assert hier_pre_dump == hier_post_dump
 

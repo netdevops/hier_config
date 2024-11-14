@@ -55,19 +55,19 @@ def get_hconfig_driver(platform: Platform) -> HConfigDriverBase:  # noqa: PLR091
 
 
 def get_hconfig_view(config: HConfig) -> HConfigViewBase:
-    platform = config.driver.platform
-    if platform == Platform.ARISTA_EOS:
+    driver = config.driver
+    if isinstance(driver, HConfigDriverAristaEOS):
         return HConfigViewAristaEOS(config)
-    if platform == Platform.CISCO_IOS:
+    if isinstance(driver, HConfigDriverCiscoIOS):
         return HConfigViewCiscoIOS(config)
-    if platform == Platform.CISCO_NXOS:
+    if isinstance(driver, HConfigDriverCiscoNXOS):
         return HConfigViewCiscoNXOS(config)
-    if platform == Platform.CISCO_XR:
+    if isinstance(driver, HConfigDriverCiscoIOSXR):
         return HConfigViewCiscoIOSXR(config)
-    if platform == Platform.HP_PROCURVE:
+    if isinstance(driver, HConfigDriverHPProcurve):
         return HConfigViewHPProcurve(config)
 
-    message = f"Unsupported platform: {config.driver.platform}"
+    message = f"Unsupported platform: {config.driver.__class__.__name__}"
     raise ValueError(message)
 
 
@@ -93,9 +93,11 @@ def get_hconfig(
     return config
 
 
-def get_hconfig_from_dump(dump: Dump) -> HConfig:
+def get_hconfig_from_dump(
+    platform_or_driver: Union[Platform, HConfigDriverBase], dump: Dump
+) -> HConfig:
     """Load an HConfig dump."""
-    config = get_hconfig(dump.driver_platform)
+    config = get_hconfig(_get_driver(platform_or_driver))
     last_item: Union[HConfig, HConfigChild] = config
     for item in dump.lines:
         # parent is the root
@@ -209,7 +211,7 @@ def _config_from_string_lines_end_of_banner_test(
 
 
 def _load_from_string_lines(config: HConfig, config_text: str) -> None:  # noqa: C901
-    if config.driver.platform == Platform.JUNIPER_JUNOS:
+    if isinstance(config.driver, HConfigDriverJuniperJUNOS):
         config_text = _convert_to_set_commands(config_text)
 
     current_section: Union[HConfig, HConfigChild] = config

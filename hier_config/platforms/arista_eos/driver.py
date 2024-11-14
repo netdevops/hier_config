@@ -5,7 +5,6 @@ from hier_config.models import (
     MatchRule,
     NegationDefaultWhenRule,
     PerLineSubRule,
-    Platform,
     SectionalExitingRule,
 )
 from hier_config.platforms.driver_base import HConfigDriverBase
@@ -235,7 +234,3 @@ class HConfigDriverAristaEOS(HConfigDriverBase):
             ),
         ]
     )
-
-    @property
-    def platform(self) -> Platform:
-        return Platform.ARISTA_EOS

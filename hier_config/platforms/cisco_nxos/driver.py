@@ -7,7 +7,6 @@ from hier_config.models import (
     NegationDefaultWhenRule,
     NegationDefaultWithRule,
     PerLineSubRule,
-    Platform,
 )
 from hier_config.platforms.driver_base import HConfigDriverBase
 
@@ -415,7 +414,3 @@ class HConfigDriverCiscoNXOS(HConfigDriverBase):
             ),
         ]
     )
-
-    @property
-    def platform(self) -> Platform:
-        return Platform.CISCO_NXOS

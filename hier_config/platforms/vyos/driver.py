@@ -1,5 +1,4 @@
 from hier_config.child import HConfigChild
-from hier_config.models import Platform
 from hier_config.platforms.driver_base import HConfigDriverBase
 
 
@@ -20,7 +19,3 @@ class HConfigDriverVYOS(HConfigDriverBase):  # pylint: disable=too-many-instance
     @property
     def negation_prefix(self) -> str:
         return "delete "
-
-    @property
-    def platform(self) -> Platform:
-        return Platform.VYOS

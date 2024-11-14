@@ -11,7 +11,6 @@ from hier_config.models import (
     NegationDefaultWithRule,
     OrderingRule,
     PerLineSubRule,
-    Platform,
 )
 from hier_config.platforms.driver_base import HConfigDriverBase
 from hier_config.platforms.hp_procurve.functions import hp_procurve_expand_range
@@ -326,7 +325,3 @@ class HConfigDriverHPProcurve(HConfigDriverBase):
             words = config.text.split()
             return " ".join([prepend] + words[:end_index] + [append]).strip()
         return None
-
-    @property
-    def platform(self) -> Platform:
-        return Platform.HP_PROCURVE

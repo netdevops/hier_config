@@ -9,7 +9,6 @@ from hier_config.models import (
     NegationDefaultWithRule,
     OrderingRule,
     PerLineSubRule,
-    Platform,
     SectionalExitingRule,
 )
 from hier_config.platforms.driver_base import HConfigDriverBase
@@ -190,7 +189,3 @@ class HConfigDriverCiscoIOS(HConfigDriverBase):
             _add_acl_sequence_numbers,
         ]
     )
-
-    @property
-    def platform(self) -> Platform:
-        return Platform.CISCO_IOS
