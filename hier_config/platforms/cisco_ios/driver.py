@@ -18,46 +18,6 @@ from hier_config.root import HConfig
 logger = getLogger(__name__)
 
 
-def _rm_10g_interfaces(config: HConfig) -> None:
-    """Remove dummy 10g interfaces.
-
-    On 3850s with 4x1g modules, TenGigabitEthernet interfaces appear in the config alongside
-    GigabitEthernet with the same numbering.
-    """
-    for interface in tuple(
-        config.get_children(re_search=r"^interface (?:Ten)?GigabitEthernet\d/1/[1-4]$"),
-    ):
-        length = len(interface.children)
-        # An interface with no children is a dummy interface and can be removed
-        if length == 0:
-            logger.debug("deleting dummy interface %s", interface.text.split()[1])
-            interface.delete()
-        # A TenGigabit interface that matches a Gigabit interface number (e.g. 1/1/2) and
-        # has 1 or fewer children (e.g. shutdown) is a dummy interface and can be removed.
-        elif length == 1 and "TenGigabitEthernet" in interface.text:
-            if (
-                other := config.children_dict.get(
-                    interface.text.replace("TenGigabitEthernet", "GigabitEthernet"),
-                )
-            ) and other.children:
-                logger.debug(
-                    "deleting dummy interface %s",
-                    interface.text.split()[1],
-                )
-                interface.delete()
-
-    # Sometime 10g interfaces show up in the 0 Slot on ports greater than 48 even
-    # though they are on a module. These can be removed if they have no children.
-    for interface in tuple(
-        config.get_children(
-            re_search=r"^interface TenGigabitEthernet\d/0/(49|5[0-6])$"
-        ),
-    ):
-        if not interface.children:
-            logger.debug("deleting dummy interface %s", interface.text.split()[1])
-            interface.delete()
-
-
 def _rm_ipv6_acl_sequence_numbers(config: HConfig) -> None:
     """If there are sequence numbers in the IPv6 ACL, remove them."""
     for acl in config.get_children(startswith="ipv6 access-list "):
@@ -228,7 +188,6 @@ class HConfigDriverCiscoIOS(HConfigDriverBase):
             _rm_ipv6_acl_sequence_numbers,
             _remove_ipv4_acl_remarks,
             _add_acl_sequence_numbers,
-            _rm_10g_interfaces,
         ]
     )
 
