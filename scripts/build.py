@@ -39,7 +39,7 @@ def lint(*, fix: bool = False) -> None:
 
 
 @app.command()
-def all_code_checks(*, fix: bool = False) -> None:
+def lint_and_test(*, fix: bool = False) -> None:
     """Run all code fixs in order of importance - returns the first non-zero exit code or zero."""
     _run_commands_threaded(
         (
@@ -53,12 +53,6 @@ def all_code_checks(*, fix: bool = False) -> None:
             _flynt_command(fix=fix),
         ),
     )
-
-
-@app.command()
-def checks(*, fix: bool = False) -> None:
-    """Short for 'all-code-checks'."""
-    all_code_checks(fix=fix)
 
 
 @app.command()
