@@ -36,7 +36,7 @@ class ConfigViewInterfaceBase:  # noqa: PLR0904
     @property
     @abstractmethod
     def description(self) -> str:
-        """Description of the interface."""
+        """Determine the interface's description."""
 
     @property
     def dot1q_mode(self) -> Optional[InterfaceDot1qMode]:
@@ -77,12 +77,12 @@ class ConfigViewInterfaceBase:  # noqa: PLR0904
     @property
     @abstractmethod
     def is_bundle(self) -> bool:
-        """Determine if the interface is bundle."""
+        """Determine if the interface is a bundle."""
 
     @property
     @abstractmethod
     def is_loopback(self) -> bool:
-        """Determine if the interface is loopback."""
+        """Determine if the interface is a loopback."""
 
     @property
     def is_subinterface(self) -> bool:
@@ -102,7 +102,7 @@ class ConfigViewInterfaceBase:  # noqa: PLR0904
     @property
     @abstractmethod
     def nac_control_direction_in(self) -> bool:
-        """Determine if the interface has NAC control direction in configured."""
+        """Determine if the interface has NAC 'control direction in' configured."""
 
     @property
     @abstractmethod

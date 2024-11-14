@@ -67,7 +67,6 @@ class HConfigDriverBase(ABC, BaseModel):  # pylint: disable=too-many-instance-at
                 return with_rule.use
         return None
 
-
     def swap_negation(self, child: HConfigChild) -> HConfigChild:
         """Swap negation of a `child.text`."""
         if child.text.startswith(self.negation_prefix):

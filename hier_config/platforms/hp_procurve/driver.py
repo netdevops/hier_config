@@ -18,7 +18,9 @@ from hier_config.root import HConfig
 
 
 def _fixup_hp_procurve_aaa_port_access_fixup(config: HConfig) -> None:
-    """Aaa port-access authenticator 1/15-1/20,1/26-1/40,2/14-2/20,2/25-2/28,2/30-2/44,3/8-3/44,4/1-4/2,4/8-4/44,5/1-5/2,5/8-5/15,5/17-5/28,5/30-5/44
+    """Expands the interface ranges present in aaa port-access commands.
+
+    aaa port-access authenticator 1/15-1/20,1/26-1/40,2/14-2/20,2/25-2/28,2/30-2/44,3/8-3/44,4/1-4/2,4/8-4/44,5/1-5/2,5/8-5/15,5/17-5/28,5/30-5/44
     aaa port-access mac-based 1/15-1/20,1/26-1/40,2/14-2/20,2/25-2/28,2/30-2/44,3/8-3/44,4/1-4/2,4/8-4/44,5/1-5/2,5/8-5/28,5/30-5/44.
 
     to
@@ -40,7 +42,8 @@ def _fixup_hp_procurve_aaa_port_access_fixup(config: HConfig) -> None:
 
 
 def _fixup_hp_procurve_vlan(config: HConfig) -> None:
-    """Move native/tagged vlan config to the interface config for easier modeling and remediation
+    """Move native/tagged vlan config to the interface config for easier modeling and remediation.
+
     vlan 1
        no untagged 1/2-1/22,1/26-1/44,2/2-2/21,2/26-2/44
     vlan 80
