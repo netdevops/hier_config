@@ -95,17 +95,8 @@ disable = [
 ]
 
 
-[tool.pytest.ini_options]
-# Ignore certain warnings and turn all others into errors
-#filterwarnings = [
-#    "error",
-#    "ignore::cryptography.utils.CryptographyDeprecationWarning",
-#    'ignore::DeprecationWarning:',
-#]
-
 [tool.mypy]
 strict = true
-#ignore_missing_imports = false
 pretty = true
 show_column_numbers = true
 show_error_codes = true
@@ -161,10 +152,3 @@ parametrize-values-type = "tuple"
 
 [tool.ruff.lint.per-file-ignores]
 "**/tests/*" = ["PLC2701", "S101"]
-
-[tool.refurb]
-# "FURB122" Replace `for line in lines: f.write(line)` with `f.writelines(lines)`
-# "FURB125" Return is redundant here
-# "FURB184" Assignment statement should be chained
-#ignore = [122, 125, 184]
-
