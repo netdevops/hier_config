@@ -112,7 +112,7 @@ With the tags loaded, you can create a targeted remediation based on those tags 
 import yaml
 from pydantic import TypeAdapter
 from hier_config import WorkflowRemediation, get_hconfig
-from hier_config.model import Platform, TagRule
+from hier_config.models import Platform, TagRule
 
 # Load the running and generated configurations from files
 with open("./tests/fixtures/running_config.conf") as f:
@@ -126,7 +126,7 @@ with open("./tests/fixtures/tag_rules_ios.yml") as f:
     tags = yaml.safe_load(f)
 
 # Validate and format tags using the TagRule model
-tags = TypeAdapter(tuple[TagRule, ...]).validate_python(tags)
+tag_rules = TypeAdapter(tuple[TagRule, ...]).validate_python(tags)
 
 # Initialize a WorkflowRemediation object with the running and intended configurations
 wfr = WorkflowRemediation(
@@ -135,10 +135,7 @@ wfr = WorkflowRemediation(
 )
 
 # Apply the tag rules to filter remediation steps by tags
-wfr.apply_remediation_tag_rules(tags)
-
-# Generate the remediation steps
-wfr.remediation_config
+wfr.apply_remediation_tag_rules(tag_rules)
 
 # Display remediation steps filtered to include only the "ntp" tag
 print(wfr.remediation_config_filtered_text(include_tags={"ntp"}, exclude_tags={}))

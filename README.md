@@ -1,6 +1,6 @@
 # Hierarchical Configuration
 
-Welcome to the Hierarchical Configuration documentation site. Hierarchical Configuration, also known as `hier_config`, is a Python library designed to take a running configuration from a network device, compare it to its intended configuration, and build the remediation steps necessary to bring a device into compliance with its intended configuration.
+Hierarchical Configuration, also known as `hier_config`, is a Python library designed to query and compare network devices configurations. Among other capabilities, it can compare the running config to an intended configuration to determine the commands necessary to bring a device into compliance with its intended configuration.
 
 Hierarchical Configuration has been used extensively on:
 
@@ -22,12 +22,5 @@ The code documentation can be found at: https://hier-config.readthedocs.io/en/la
 Installation
 ============
 
-Hierarchical Configuration can be installed directly from github or with pip:
-
-### Github
-1. [Install Poetry](https://python-poetry.org/docs/#installation)
-2. Clone the Repository: `git clone git@github.com:netdevops/hier_config.git`
-3. Install `hier_config`: `cd hier_config; poetry install`
-
 ### Pip
-6. Install from PyPi: `pip install hier-config`
+Install from PyPi: `pip install hier-config`
