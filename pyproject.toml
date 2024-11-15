@@ -79,6 +79,7 @@ load-plugins = [
     "pylint_pydantic",
 ]
 disable = [
+    "consider-alternative-union-syntax",
     "duplicate-code",  # Enable this at some point in the future
     "fixme",  # Covered by ruff FIX002
     "import-outside-toplevel", # Covered by ruff PLC0415
