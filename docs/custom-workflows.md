@@ -7,9 +7,7 @@ In some scenarios, configuration remediations may require handling beyond the st
 1. Import and Configuration Loading
 
 ```python
-import os
-from hier_config import WorkflowRemediation, get_hconfig
-from hier_config.models import Platform
+from hier_config import WorkflowRemediation, get_hconfig, Platform
 ```
 Necessary modules are imported, including the `WorkflowRemediation` class for handling remediation
 

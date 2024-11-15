@@ -7,8 +7,7 @@ Hier Config is a Python library that assists with remediating network configurat
 To use `WorkflowRemediation`, you’ll import it along with `get_hconfig` (for generating configuration objects) and `Platform` (for specifying the operating system driver).
 
 ```python
->>> from hier_config import WorkflowRemediation, get_hconfig
->>> from hier_config.model import Platform
+>>> from hier_config import WorkflowRemediation, get_hconfig, Platform
 >>> from hier_config.utils import load_device_config
 >>>
 ```

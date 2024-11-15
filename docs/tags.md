@@ -109,8 +109,7 @@ With the tags loaded, you can create a targeted remediation based on those tags 
 #!/usr/bin/env python3
 
 # Import necessary libraries
-from hier_config import WorkflowRemediation, get_hconfig
-from hier_config.models import Platform
+from hier_config import WorkflowRemediation, get_hconfig, Platform
 from hier_config.utils import load_device_config, load_hier_config_tags
 
 # Load the running and generated configurations from files

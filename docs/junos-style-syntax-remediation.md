@@ -25,8 +25,7 @@ set interfaces irb unit 3 family inet description "switch_mgmt_10.0.4.0/24"
 
 
 $ python3
->>> from hier_config import WorkflowRemediation, get_hconfig
->>> from hier_config.model import Platform
+>>> from hier_config import WorkflowRemediation, get_hconfig, Platform
 >>> from hier_config.utils import load_device_config
 >>>
 >>> running_config_text = load_device_config("./tests/fixtures/running_config_flat_junos.conf")
@@ -119,8 +118,7 @@ interfaces {
 }
 
 $ python3
->>> from hier_config import WorkflowRemediation, get_hconfig
->>> from hier_config.model import Platform
+>>> from hier_config import WorkflowRemediation, get_hconfig, Platform
 >>> from hier_config.utils import load_device_config
 >>>
 >>> running_config_text = load_device_config("./tests/fixtures/running_config_junos.conf")

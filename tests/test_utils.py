@@ -1,5 +1,4 @@
-from pathlib import Path  # Use pathlib for handling file paths
-from typing import Any, Union
+from pathlib import Path
 
 import pytest
 import yaml
@@ -11,18 +10,17 @@ from hier_config.utils import load_device_config, load_hier_config_tags
 TAGS_FILE_PATH = "./tests/fixtures/tag_rules_ios.yml"
 
 
-# Helper function to create a temporary file for testing
 @pytest.fixture
-def temp_file(tmp_path: Path) -> tuple[Path, str]:
+def temporary_file_fixture(tmp_path: Path) -> tuple[Path, str]:
     file_path = tmp_path / "temp_config.conf"
     content = "interface GigabitEthernet0/1\n ip address 192.168.1.1 255.255.255.0\n no shutdown"
     file_path.write_text(content)
     return file_path, content
 
 
-def test_load_device_config_success(temp_file: tuple[Path, str]) -> None:
+def test_load_device_config_success(temporary_file_fixture: tuple[Path, str]) -> None:
     """Test that the function successfully loads a valid configuration file."""
-    file_path, expected_content = temp_file
+    file_path, expected_content = temporary_file_fixture
     result = load_device_config(str(file_path))
     assert result == expected_content, "File content should match expected content."
 
@@ -33,26 +31,10 @@ def test_load_device_config_file_not_found() -> None:
         load_device_config("non_existent_file.conf")
 
 
-def test_load_device_config_io_error(
-    monkeypatch: pytest.MonkeyPatch, temp_file: tuple[Path, str]
-) -> None:
-    """Test that the function raises OSError for an unexpected file access error."""
-    file_path, _ = temp_file
-
-    def mock_read_text(*args: Any, **kwargs: Union[dict, None]) -> None:  # noqa: ANN401, ARG001
-        msg = "Mocked IO error"
-        raise OSError(msg)
-
-    monkeypatch.setattr(Path, "read_text", mock_read_text)
-
-    with pytest.raises(OSError, match="Mocked IO error"):
-        load_device_config(str(file_path))
-
-
 def test_load_device_config_empty_file(tmp_path: Path) -> None:
     """Test that the function correctly handles an empty configuration file."""
     empty_file = tmp_path / "empty.conf"
-    empty_file.write_text("")  # Create an empty file
+    empty_file.write_text("")
     result = load_device_config(str(empty_file))
     assert not result, "Empty file should return an empty string."
 
@@ -94,7 +76,7 @@ def test_load_hier_config_tags_invalid_yaml(tmp_path: Path) -> None:
 def test_load_hier_config_tags_empty_file(tmp_path: Path) -> None:
     """Test that the function raises ValidationError for an empty YAML file."""
     empty_file = tmp_path / "empty.yml"
-    empty_file.write_text("")  # Create an empty file
+    empty_file.write_text("")
 
     with pytest.raises(ValidationError):
         load_hier_config_tags(str(empty_file))

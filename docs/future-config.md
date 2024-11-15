@@ -25,10 +25,8 @@ Currently, this algorithm does not account for:
 - and likely others
 
 ```bash
->>> from hier_config import get_hconfig
->>> from hier_config.model import Platform
+>>> from hier_config import get_hconfig, Platform
 >>> from hier_config.utils import load_device_config
->>> from pprint import pprint
 >>>
 
 >>> running_config_text = load_device_config("./tests/fixtures/running_config.conf")

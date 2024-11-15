@@ -7,8 +7,7 @@ This feature is particularly useful when comparing configurations from two netwo
 Currently, the algorithm does not account for duplicate child entries (e.g., multiple `endif` statements in an IOS-XR route-policy) or enforce command order in sections where it may be critical, such as Access Control Lists (ACLs). For accurate ordering in ACLs, sequence numbers should be used if command order is important.
 
 ```bash
->>> from hier_config import get_hconfig
->>> from hier_config.model import Platform
+>>> from hier_config import get_hconfig, Platform
 >>> from pprint import pprint
 >>>
 >>> running_config_text = load_device_config("./tests/fixtures/running_config.conf")
