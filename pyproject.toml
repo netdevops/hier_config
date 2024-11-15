@@ -79,11 +79,7 @@ load-plugins = [
     "pylint_pydantic",
 ]
 disable = [
-    "broad-exception-caught",  # Covered by ruff BLE001
-    "bad-dunder-name",  # Covered by ruff PLW3201
-    "consider-alternative-union-syntax",  # covered by Ruff's UP007
     "duplicate-code",  # Enable this at some point in the future
-    "eq-without-hash", # Covered by ruff PLW1641
     "fixme",  # Covered by ruff FIX002
     "import-outside-toplevel", # Covered by ruff PLC0415
     "line-too-long",  # Whatever ruff format determines the line should look like is fine
@@ -92,15 +88,10 @@ disable = [
     "missing-module-docstring",
     "protected-access",  # Covered by ruff SLF001
     "redefined-loop-name",  # Covered by ruff PLW2901
-    "too-few-public-methods",
     "too-many-arguments",  # Covered by ruff PLR0913
-    "too-many-branches",  # Covered by ruff PLR0912
     "too-many-return-statements",  # Covered by ruff PLR0911
-    "too-many-statements",  # Covered by ruff PLR0915
-    "unused-variable",  # Covered by ruff F841
     "too-many-locals",  # Coverred by ruff PLR0914
     "too-many-public-methods",  # Coverred by ruff PLR0904
-    "unused-argument",  # Covered by ruff ARG002
 ]
 
 
