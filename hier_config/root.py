@@ -112,7 +112,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         """Add child instances of HConfigChild deeply."""
         base: Union[HConfig, HConfigChild] = self
         for line in lines:
-            base = base.add_child(line)
+            base = base.children.get(line) or base.add_child(line)
         if isinstance(base, HConfig):
             message = "base was an HConfig object for some reason."
             raise TypeError(message)

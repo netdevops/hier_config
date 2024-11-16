@@ -116,7 +116,7 @@ def get_hconfig_from_dump(
         # has a parent somewhere closer to the root but not the root
         else:
             parent = next(islice(last_item.lineage(), item.depth - 2, item.depth - 1))
-        obj = parent.add_child(item.text, force_duplicate=True)
+        obj = parent.add_child(item.text)
         obj.tags = frozenset(item.tags)
         obj.comments = set(item.comments)
         obj.new_in_config = item.new_in_config
@@ -184,7 +184,7 @@ def _analyze_indent(
     if indent > most_recent_item.real_indent_level:
         current_section = most_recent_item
 
-    most_recent_item = current_section.add_child(line, raise_on_duplicate=True)
+    most_recent_item = current_section.add_child(line)
     most_recent_item.real_indent_level = indent
 
     return most_recent_item, current_section
@@ -242,7 +242,6 @@ def _load_from_string_lines(config: HConfig, config_text: str) -> None:  # noqa:
                 in_banner = False
                 most_recent_item = config.add_child(
                     "\n".join(temp_banner),
-                    raise_on_duplicate=True,
                 )
                 most_recent_item.real_indent_level = 0
                 current_section = config

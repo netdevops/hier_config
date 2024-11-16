@@ -26,7 +26,7 @@ def _remove_ipv4_acl_remarks(config: HConfig) -> None:
     for acl in config.get_children(startswith="ip access-list "):
         for entry in tuple(acl.children):
             if entry.text.startswith("remark"):
-                acl.children.remove(entry)
+                entry.delete()
 
 
 def _add_acl_sequence_numbers(config: HConfig) -> None:

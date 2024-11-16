@@ -54,7 +54,7 @@ class ConfigViewInterfaceCiscoIOS(ConfigViewInterfaceBase):  # noqa: PLR0904
     @property
     def has_nac(self) -> bool:
         return any(
-            line in self.config.children_dict
+            line in self.config.children
             for line in (
                 "authentication port-control auto",
                 "mab",
@@ -100,7 +100,7 @@ class ConfigViewInterfaceCiscoIOS(ConfigViewInterfaceBase):  # noqa: PLR0904
     @property
     def nac_control_direction_in(self) -> bool:
         """Determine if the interface has NAC control direction in configured."""
-        return "authentication control-direction in" in self.config.children_dict
+        return "authentication control-direction in" in self.config.children
 
     @property
     def nac_host_mode(self) -> Optional[NACHostMode]:

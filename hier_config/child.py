@@ -108,7 +108,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         is instantiated to rebuild the children dictionary.
         """
         self._text = value.strip()
-        self.parent.rebuild_children_dict()
+        self.parent.children.rebuild_mapping()
 
     @property
     def text_without_negation(self) -> str:
@@ -169,7 +169,6 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         :param new_parent: HConfigChild object -> type list
         """
         new_parent.children.append(self)
-        new_parent.rebuild_children_dict()
         self.delete()
 
     def lineage(self) -> Iterator[HConfigChild]:
@@ -217,7 +216,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
 
     def delete(self) -> None:
         """Delete the current object from its parent."""
-        self.parent.delete_child(self)
+        self.parent.children.delete(self)
 
     def tags_add(self, tag: Union[str, Iterable[str]]) -> None:
         """Add a tag to self._tags on all leaf nodes."""
@@ -322,11 +321,11 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         """Deletes delta.child[self.text], adds a deep copy of self to delta."""
         if other.children != self.children:
             if negate:
-                delta.delete_child_by_text(self.text)
+                delta.children.delete(self.text)
                 deleted = delta.add_child(self.text).negate()
                 deleted.comments.add("dropping section")
             if self.children:
-                delta.delete_child_by_text(self.text)
+                delta.children.delete(self.text)
                 new_item = delta.add_deep_copy_of(self)
                 new_item.comments.add("re-create section")
 

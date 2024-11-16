@@ -5,6 +5,7 @@ from itertools import chain
 from logging import getLogger
 from typing import TYPE_CHECKING, Optional, Union
 
+from .children import Children
 from .exceptions import DuplicateChildError
 
 if TYPE_CHECKING:
@@ -19,20 +20,16 @@ logger = getLogger(__name__)
 
 
 class HConfigBase(ABC):  # noqa: PLR0904
-    __slots__ = ("children", "children_dict")
+    __slots__ = ("children",)
 
     def __init__(self) -> None:
-        self.children: list[HConfigChild] = []
-        self.children_dict: dict[str, HConfigChild] = {}
+        self.children = Children()
 
     def __len__(self) -> int:
         return len(tuple(self.all_children()))
 
     def __bool__(self) -> bool:
         return True
-
-    def __contains__(self, item: str) -> bool:
-        return item in self.children_dict
 
     @abstractmethod
     def __hash__(self) -> int:
@@ -67,32 +64,23 @@ class HConfigBase(ABC):  # noqa: PLR0904
     def add_child(
         self,
         text: str,
-        *,
-        raise_on_duplicate: bool = False,
-        force_duplicate: bool = False,
     ) -> HConfigChild:
         """Add a child instance of HConfigChild."""
         if not text:
             message = "text was empty"
             raise ValueError(message)
 
-        # if child does not exist
-        if text not in self:
-            new_item = self._instantiate_child(text)
-            self.children.append(new_item)
-            self.children_dict[text] = new_item
-            return new_item
-        # if child does exist and is allowed to be installed as a duplicate
-        if self._is_duplicate_child_allowed() or force_duplicate:
-            new_item = self._instantiate_child(text)
-            self.children.append(new_item)
-            return new_item
-
-        # If the child is already present and the parent does not allow for it
-        if raise_on_duplicate:
+        if text in self.children:
+            if self._is_duplicate_child_allowed():
+                new_child = self._instantiate_child(text)
+                self.children.append(new_child, update_mapping="disabled")
+                return new_child
             message = f"Found a duplicate section: {(*self.path(), text)}"
             raise DuplicateChildError(message)
-        return self.children_dict[text]
+
+        new_child = self._instantiate_child(text)
+        self.children.append(new_child, update_mapping="fast")
+        return new_child
 
     def path(self) -> Iterator[str]:  # noqa: PLR6301
         yield from ()
@@ -109,19 +97,6 @@ class HConfigBase(ABC):  # noqa: PLR0904
             new_child.add_deep_copy_of(child, merged=merged)
 
         return new_child
-
-    def delete_child_by_text(self, text: str) -> None:
-        """Delete all children with the provided text."""
-        if text in self.children_dict:
-            self.children[:] = [c for c in self.children if c.text != text]
-            self.rebuild_children_dict()
-
-    def delete_child(self, child: HConfigChild) -> None:
-        """Delete a child from self.children and self.children_dict."""
-        old_len = len(self.children)
-        self.children = [c for c in self.children if c is not child]
-        if old_len != len(self.children):
-            self.rebuild_children_dict()
 
     def all_children_sorted(self) -> Iterator[HConfigChild]:
         """Recursively find and yield all children sorted at each hierarchy."""
@@ -197,7 +172,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
             isinstance(equals, str)
             and startswith is endswith is contains is re_search is None
         ):
-            if child := self.children_dict.get(equals):
+            if child := self.children.get(equals):
                 yield child
                 children_slice = slice(self.children.index(child) + 1, None)
             else:
@@ -208,13 +183,13 @@ class HConfigBase(ABC):  # noqa: PLR0904
             and equals is endswith is contains is re_search is None
         ):
             duplicates_allowed = None
-            for child_text, child in self.children_dict.items():
-                if child_text.startswith(startswith):
+            for index, child in enumerate(self.children):
+                if child.text.startswith(startswith):
                     yield child
                     if duplicates_allowed is None:
                         duplicates_allowed = self._is_duplicate_child_allowed()
                     if duplicates_allowed:
-                        children_slice = slice(self.children.index(child) + 1, None)
+                        children_slice = slice(index + 1, None)
                         break
             else:
                 return
@@ -247,17 +222,6 @@ class HConfigBase(ABC):  # noqa: PLR0904
 
         return new_child
 
-    def rebuild_children_dict(self) -> None:
-        """Rebuild self.children_dict."""
-        self.children_dict = {}
-        for child in self.children:
-            self.children_dict.setdefault(child.text, child)
-
-    def delete_all_children(self) -> None:
-        """Delete all children."""
-        self.children.clear()
-        self.rebuild_children_dict()
-
     def unified_diff(self, target: Union[HConfig, HConfigChild]) -> Iterator[str]:
         """In its current state, this algorithm does not consider duplicate child differences.
         e.g. two instances `endif` in an IOS-XR route-policy. It also does not respect the
@@ -269,7 +233,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
         # if a self child is missing from the target "- self_child.text"
         for self_child in self.children:
             self_iter = iter((f"{self_child.indentation}{self_child.text}",))
-            if target_child := target.children_dict.get(self_child.text, None):
+            if target_child := target.children.get(self_child.text, None):
                 found = self_child.unified_diff(target_child)
                 if peek := next(found, None):
                     yield from chain(self_iter, (peek,), found)
@@ -281,7 +245,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
                 )
         # if a target child is missing from self "+ target_child.text"
         for target_child in target.children:
-            if target_child.text not in self.children_dict:
+            if target_child.text not in self.children:
                 yield f"{target_child.indentation}+ {target_child.text}"
                 yield from (
                     f"{c.indentation}+ {c.text}"
@@ -460,7 +424,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
         # Also, find out if another command in self.children will overwrite
         # i.e. be idempotent
         for self_child in self.children:
-            if self_child.text in target:
+            if self_child.text in target.children:
                 continue
             if self_child.is_idempotent_command(target.children):
                 continue

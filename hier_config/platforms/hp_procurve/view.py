@@ -73,7 +73,7 @@ class ConfigViewInterfaceHPProcurve(  # noqa: PLR0904 pylint: disable=abstract-m
     def has_nac(self) -> bool:
         """Determine if the interface has NAC configured."""
         return any(
-            line in self.config.parent.children_dict
+            line in self.config.parent.children
             for line in (
                 f"aaa port-access authenticator {self.name}",
                 f"aaa port-access mac-based {self.name}",
@@ -121,7 +121,7 @@ class ConfigViewInterfaceHPProcurve(  # noqa: PLR0904 pylint: disable=abstract-m
         """Determine if the interface has NAC control direction in configured."""
         return (
             f"aaa port-access {self.name} controlled-direction in"
-            in self.config.parent.children_dict
+            in self.config.parent.children
         )
 
     @property

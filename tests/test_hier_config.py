@@ -75,15 +75,13 @@ def test_dump_and_load_from_dump_and_compare(platform_a: Platform) -> None:
 
 
 def test_add_ancestor_copy_of(platform_a: Platform) -> None:
-    hier1 = get_hconfig(platform_a)
-    interface = hier1.add_child("interface Vlan2")
-    interface.add_children(
-        ("description switch-mgmt-192.168.1.0/24", "ip address 192.168.1.0/24"),
-    )
-    hier1.add_ancestor_copy_of(interface)
+    source_config = get_hconfig(platform_a)
+    ipv4_address = source_config.add_children_deep(("interface Vlan2", "ip address 192.168.1.0/24"))
+    destination_config = get_hconfig(platform_a)
+    destination_config.add_ancestor_copy_of(ipv4_address)
 
-    assert len(tuple(hier1.all_children())) == 3
-    assert isinstance(hier1.all_children(), types.GeneratorType)
+    assert len(tuple(destination_config.all_children())) == 2
+    assert isinstance(destination_config.all_children(), types.GeneratorType)
 
 
 def test_depth(platform_a: Platform) -> None:
@@ -206,7 +204,7 @@ def test_move(platform_a: Platform, platform_b: Platform) -> None:
 def test_del_child_by_text(platform_a: Platform) -> None:
     hier = get_hconfig(platform_a)
     hier.add_child("interface Vlan2")
-    hier.delete_child_by_text("interface Vlan2")
+    hier.children.delete("interface Vlan2")
 
     assert not tuple(hier.all_children())
 
@@ -219,7 +217,7 @@ def test_del_child(platform_a: Platform) -> None:
 
     child_to_delete = hier1.get_child(startswith="interface")
     assert child_to_delete is not None
-    hier1.delete_child(child_to_delete)
+    hier1.children.delete(child_to_delete)
 
     assert not tuple(hier1.all_children())
 
@@ -231,7 +229,7 @@ def test_rebuild_children_dict(platform_a: Platform) -> None:
         ("description switch-mgmt-192.168.1.0/24", "ip address 192.168.1.0/24"),
     )
     delta_a = hier1
-    hier1.rebuild_children_dict()
+    hier1.children.rebuild_mapping()
     delta_b = hier1
 
     assert tuple(delta_a.all_children()) == tuple(delta_b.all_children())
@@ -414,8 +412,8 @@ def test_config_to_get_to2(platform_a: Platform) -> None:
         generated_config_hier,
         delta,
     )
-    assert "do not add me" not in delta
-    assert "add me" in delta
+    assert "do not add me" not in delta.children
+    assert "add me" in delta.children
 
 
 def test_add_shallow_copy_of(platform_a: Platform, platform_b: Platform) -> None:
@@ -507,15 +505,15 @@ def test_difference1(platform_a: Platform) -> None:
     )
 
     assert len(difference_children) == 6
-    assert "c" in difference
-    assert "d" in difference
+    assert "c" in difference.children
+    assert "d" in difference.children
     difference_a = difference.get_child(equals="a")
     assert isinstance(difference_a, HConfigChild)
-    assert "a4" in difference_a
-    assert "a5" in difference_a
+    assert "a4" in difference_a.children
+    assert "a5" in difference_a.children
     difference_d = difference.get_child(equals="d")
     assert isinstance(difference_d, HConfigChild)
-    assert "d1" in difference_d
+    assert "d1" in difference_d.children
 
 
 def test_difference2() -> None:
