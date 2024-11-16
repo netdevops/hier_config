@@ -1,8 +1,0 @@
-[MESSAGES CONTROL]
-
-disable=invalid-name,
-        missing-docstring,
-        # remove cyclic-import once https://github.com/PyCQA/pylint/issues/3525 is closed
-        cyclic-import,
-        unsubscriptable-object,
-        use-a-generator,

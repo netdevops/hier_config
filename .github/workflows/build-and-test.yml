@@ -1,19 +1,22 @@
-name: hier_config build and test 
+name: hier_config build and test
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
   pull_request:
-    branches: [ master ]
+    branches: [master]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8, 3.9, 3.11]
-
+        python-version:
+        - "3.9"
+        - "3.10"
+        - "3.11"
+        - "3.12"
+        # - "3.13"  ModuleNotFoundError: No module named 'pipes'
     steps:
     - uses: actions/checkout@v2
     - name: Set up Python ${{ matrix.python-version }}
@@ -21,11 +24,11 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install poetry
-      uses: snok/install-poetry@v1.2.1
+      uses: snok/install-poetry@v1
+      with:
+        version: 1.5.1
     - name: Run tests
       run: |
         poetry install --no-interaction --no-root
-        poetry run mypy hier_config
-        poetry run pylint --rcfile=pylintrc hier_config
-        poetry run flake8 .
-        poetry run pytest
+        poetry run python scripts/build.py lint
+        poetry run python scripts/build.py pytest --coverage

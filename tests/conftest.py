@@ -1,73 +1,79 @@
-from os import path
+from pathlib import Path
 
-import yaml
 import pytest
+import yaml
+from pydantic import TypeAdapter
+
+from hier_config.models import Platform, TagRule
 
 
 @pytest.fixture(scope="module")
-def generated_config_junos():
-    return open(f"{_fixture_dir()}/generated_config_junos.conf").read()
+def generated_config() -> str:
+    return _fixture_file_read("generated_config.conf")
 
 
 @pytest.fixture(scope="module")
-def running_config_junos():
-    return open(f"{_fixture_dir()}/running_config_junos.conf").read()
+def running_config() -> str:
+    return _fixture_file_read("running_config.conf")
 
 
 @pytest.fixture(scope="module")
-def generated_config_flat_junos():
-    return open(f"{_fixture_dir()}/generated_config_flat_junos.conf").read()
+def remediation_config_with_safe_tags() -> str:
+    return _fixture_file_read("remediation_config_with_safe_tags.conf")
 
 
 @pytest.fixture(scope="module")
-def running_config_flat_junos():
-    return open(f"{_fixture_dir()}/running_config_flat_junos.conf").read()
+def remediation_config_without_tags() -> str:
+    return _fixture_file_read("remediation_config_without_tags.conf")
 
 
 @pytest.fixture(scope="module")
-def remediation_config_flat_junos():
-    return open(f"{_fixture_dir()}/remediation_config_flat_junos.conf").read()
+def platform_a() -> Platform:
+    return Platform.CISCO_IOS
 
 
 @pytest.fixture(scope="module")
-def options_junos():
-    return yaml.safe_load(open(f"{_fixture_dir()}/options_junos.yml").read())
+def platform_b() -> Platform:
+    return Platform.CISCO_IOS
 
 
 @pytest.fixture(scope="module")
-def generated_config():
-    return open(f"{_fixture_dir()}/generated_config.conf").read()
+def tag_rules_ios() -> tuple[TagRule, ...]:
+    return TypeAdapter(tuple[TagRule, ...]).validate_python(
+        yaml.safe_load(_fixture_file_read("tag_rules_ios.yml"))
+    )
 
 
 @pytest.fixture(scope="module")
-def running_config():
-    return open(f"{_fixture_dir()}/running_config.conf").read()
+def generated_config_junos() -> str:
+    return _fixture_file_read("generated_config_junos.conf")
 
 
 @pytest.fixture(scope="module")
-def remediation_config_with_safe_tags():
-    return open(f"{_fixture_dir()}/remediation_config_with_safe_tags.conf").read()
+def running_config_junos() -> str:
+    return _fixture_file_read("running_config_junos.conf")
 
 
 @pytest.fixture(scope="module")
-def remediation_config_without_tags():
-    return open(f"{_fixture_dir()}/remediation_config_without_tags.conf").read()
+def generated_config_flat_junos() -> str:
+    return _fixture_file_read("generated_config_flat_junos.conf")
 
 
 @pytest.fixture(scope="module")
-def options_ios():
-    return yaml.safe_load(open(f"{_fixture_dir()}/options_ios.yml").read())
+def running_config_flat_junos() -> str:
+    return _fixture_file_read("running_config_flat_junos.conf")
 
 
 @pytest.fixture(scope="module")
-def tags_ios():
-    return yaml.safe_load(open(f"{_fixture_dir()}/tags_ios.yml").read())
+def remediation_config_flat_junos() -> str:
+    return _fixture_file_read("remediation_config_flat_junos.conf")
 
 
-@pytest.fixture(scope="module")
-def options_negate_with_undo():
-    return yaml.safe_load(open(f"{_fixture_dir()}/options_negate_with_undo.yml").read())
-
-
-def _fixture_dir():
-    return path.join(path.dirname(path.realpath(__file__)), "fixtures")
+def _fixture_file_read(filename: str) -> str:
+    return str(
+        Path(__file__)
+        .resolve()
+        .parent.joinpath("fixtures")
+        .joinpath(filename)
+        .read_text(encoding="utf8"),
+    )

@@ -1,7 +1,10 @@
 version: 2
+build:
+  os: ubuntu-lts-latest
+  tools:
+    python: "3.10"
 mkdocs:
   configuration: mkdocs.yml
 python:
-  version: 3.9
   install:
     - requirements: docs/requirements.txt

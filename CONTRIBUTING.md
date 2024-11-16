@@ -27,16 +27,16 @@ Create a branch
 git checkout -b YOUR-BRANCH
 ```
 
-Make sure tests pass:
+Make sure linters, type-checkers, and tests pass:
 
 ```
-pytest
+python scripts/build.py lint-and-test
 ```
 
-Make your change. Add tests for your change. Make the tests pass:
+Make your change. Add tests for your change. Make the linters, type-checkers, and tests pass:
 
 ```
-pytest
+python scripts/build.py lint-and-test
 ```
 
 Push to your fork and submit a pull request.

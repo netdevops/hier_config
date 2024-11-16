@@ -1,0 +1,9 @@
+extends: default
+
+rules:
+  indentation:
+    spaces: 2
+    indent-sequences: consistent
+  document-start:
+    present: false
+  line-length: false
