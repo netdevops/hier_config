@@ -28,7 +28,7 @@ class MatchRule(BaseModel):
 
 
 class TagRule(BaseModel):
-    match_rules: tuple[MatchRule, ...]
+    lineage: tuple[MatchRule, ...]
     apply_tags: frozenset[str]
 
 
