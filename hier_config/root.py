@@ -193,7 +193,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
     def set_order_weight(self) -> HConfig:
         """Sets self.order integer on all children."""
         for child in self.all_children():
-            for rule in self.driver.ordering_rules:
+            for rule in self.driver.rules.ordering:
                 if child.lineage_test(rule.lineage):
                     child.order_weight = rule.weight
         return self

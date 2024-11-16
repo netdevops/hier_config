@@ -58,7 +58,7 @@ class WorkflowRemediation:
         self.running_config = running_config
         self.generated_config = generated_config
 
-        if running_config.driver != generated_config.driver:
+        if running_config.driver.__class__ is not generated_config.driver.__class__:
             message = "The running and generated configs must use the same driver."
             raise ValueError(message)
 
@@ -123,9 +123,7 @@ class WorkflowRemediation:
 
         """
         for tag_rule in tag_rules:
-            for child in self.remediation_config.get_children_deep(
-                tag_rule.match_rules
-            ):
+            for child in self.remediation_config.get_children_deep(tag_rule.lineage):
                 child.tags_add(tag_rule.apply_tags)
 
     def remediation_config_filtered_text(

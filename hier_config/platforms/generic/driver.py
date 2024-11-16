@@ -1,5 +1,7 @@
-from hier_config.platforms.driver_base import HConfigDriverBase
+from hier_config.platforms.driver_base import HConfigDriverBase, HConfigDriverRules
 
 
 class HConfigDriverGeneric(HConfigDriverBase):
-    pass
+    @staticmethod
+    def _instantiate_rules() -> HConfigDriverRules:
+        return HConfigDriverRules()

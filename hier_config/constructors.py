@@ -79,7 +79,7 @@ def get_hconfig(
         config_raw = config_raw.read_text(encoding="utf8")
 
     config = HConfig(_get_driver(platform_or_driver))
-    for rule in config.driver.full_text_sub_rules:
+    for rule in config.driver.rules.full_text_sub:
         config_raw = sub(rule.search, rule.replace, config_raw)
 
     _load_from_string_lines(config, config_raw)
@@ -87,7 +87,7 @@ def get_hconfig(
     for child in tuple(config.all_children()):
         child.delete_sectional_exit()
 
-    for callback in config.driver.post_load_callbacks:
+    for callback in config.driver.rules.post_load_callbacks:
         callback(config)
 
     return config
@@ -192,7 +192,7 @@ def _adjust_indent(
     indent_adjust: int,
     end_indent_adjust: list[str],
 ) -> tuple[int, list[str]]:
-    for expression in options.indent_adjust_rules:
+    for expression in options.rules.indent_adjust:
         if search(expression.start_expression, line):
             return indent_adjust + 1, [*end_indent_adjust, expression.end_expression]
     return indent_adjust, end_indent_adjust
@@ -263,7 +263,7 @@ def _load_from_string_lines(config: HConfig, config_text: str) -> None:  # noqa:
 
         actual_indent = len(line) - len(line.lstrip())
         line = " " * actual_indent + " ".join(line.split())  # noqa: PLW2901
-        for rule in config.driver.per_line_sub_rules:
+        for rule in config.driver.rules.per_line_sub:
             line = sub(rule.search, rule.replace, line)  # noqa: PLW2901
         line = line.rstrip()  # noqa: PLW2901
 

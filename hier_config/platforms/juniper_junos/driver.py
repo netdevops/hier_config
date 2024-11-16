@@ -1,5 +1,5 @@
 from hier_config.child import HConfigChild
-from hier_config.platforms.driver_base import HConfigDriverBase
+from hier_config.platforms.driver_base import HConfigDriverBase, HConfigDriverRules
 
 
 class HConfigDriverJuniperJUNOS(HConfigDriverBase):  # pylint: disable=too-many-instance-attributes
@@ -22,3 +22,7 @@ class HConfigDriverJuniperJUNOS(HConfigDriverBase):  # pylint: disable=too-many-
     @property
     def negation_prefix(self) -> str:
         return "delete "
+
+    @staticmethod
+    def _instantiate_rules() -> HConfigDriverRules:
+        return HConfigDriverRules()

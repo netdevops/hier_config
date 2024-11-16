@@ -1,7 +1,4 @@
-from collections.abc import Callable
 from logging import getLogger
-
-from pydantic import Field
 
 from hier_config.models import (
     IdempotentCommandsRule,
@@ -11,7 +8,7 @@ from hier_config.models import (
     PerLineSubRule,
     SectionalExitingRule,
 )
-from hier_config.platforms.driver_base import HConfigDriverBase
+from hier_config.platforms.driver_base import HConfigDriverBase, HConfigDriverRules
 from hier_config.root import HConfig
 
 logger = getLogger(__name__)
@@ -46,146 +43,138 @@ def _add_acl_sequence_numbers(config: HConfig) -> None:
 
 
 class HConfigDriverCiscoIOS(HConfigDriverBase):
-    negation_negate_with_rules: list[NegationDefaultWithRule] = Field(
-        default=[
-            NegationDefaultWithRule(
-                lineage=(MatchRule(startswith="logging console "),),
-                use="logging console debugging",
-            ),
-        ]
-    )
-    sectional_exiting_rules: list[SectionalExitingRule] = Field(
-        default=[
-            SectionalExitingRule(
-                lineage=(
-                    MatchRule(startswith="router bgp"),
-                    MatchRule(startswith="template peer-policy"),
+    @staticmethod
+    def _instantiate_rules() -> HConfigDriverRules:
+        return HConfigDriverRules(
+            negation_negate_with=[
+                NegationDefaultWithRule(
+                    lineage=(MatchRule(startswith="logging console "),),
+                    use="logging console debugging",
                 ),
-                exit_text="exit-peer-policy",
-            ),
-            SectionalExitingRule(
-                lineage=(
-                    MatchRule(startswith="router bgp"),
-                    MatchRule(startswith="template peer-session"),
+            ],
+            sectional_exiting=[
+                SectionalExitingRule(
+                    lineage=(
+                        MatchRule(startswith="router bgp"),
+                        MatchRule(startswith="template peer-policy"),
+                    ),
+                    exit_text="exit-peer-policy",
                 ),
-                exit_text="exit-peer-session",
-            ),
-            SectionalExitingRule(
-                lineage=(
-                    MatchRule(startswith="router bgp"),
-                    MatchRule(startswith="address-family"),
+                SectionalExitingRule(
+                    lineage=(
+                        MatchRule(startswith="router bgp"),
+                        MatchRule(startswith="template peer-session"),
+                    ),
+                    exit_text="exit-peer-session",
                 ),
-                exit_text="exit-address-family",
-            ),
-        ]
-    )
-    ordering_rules: list[OrderingRule] = Field(
-        default=[
-            OrderingRule(
-                lineage=(
-                    MatchRule(startswith="interface"),
-                    MatchRule(startswith="switchport mode "),
+                SectionalExitingRule(
+                    lineage=(
+                        MatchRule(startswith="router bgp"),
+                        MatchRule(startswith="address-family"),
+                    ),
+                    exit_text="exit-address-family",
                 ),
-                weight=-10,
-            ),
-            OrderingRule(
-                lineage=(MatchRule(startswith="no vlan filter"),),
-                weight=200,
-            ),
-            OrderingRule(
-                lineage=(
-                    MatchRule(startswith="interface"),
-                    MatchRule(startswith="no shutdown"),
+            ],
+            ordering=[
+                OrderingRule(
+                    lineage=(
+                        MatchRule(startswith="interface"),
+                        MatchRule(startswith="switchport mode "),
+                    ),
+                    weight=-10,
                 ),
-                weight=200,
-            ),
-            OrderingRule(
-                lineage=(
-                    MatchRule(startswith="aaa group server tacacs+ "),
-                    MatchRule(startswith="no server "),
+                OrderingRule(
+                    lineage=(MatchRule(startswith="no vlan filter"),),
+                    weight=200,
                 ),
-                weight=10,
-            ),
-            OrderingRule(
-                lineage=(MatchRule(startswith="no tacacs-server "),),
-                weight=10,
-            ),
-        ]
-    )
-    per_line_sub_rules: list[PerLineSubRule] = Field(
-        default=[
-            PerLineSubRule(search="^Building configuration.*", replace=""),
-            PerLineSubRule(search="^Current configuration.*", replace=""),
-            PerLineSubRule(search="^! Last configuration change.*", replace=""),
-            PerLineSubRule(search="^! NVRAM config last updated.*", replace=""),
-            PerLineSubRule(search="^ntp clock-period .*", replace=""),
-            PerLineSubRule(search="^version.*", replace=""),
-            PerLineSubRule(search="^ logging event link-status$", replace=""),
-            PerLineSubRule(search="^ logging event subif-link-status$", replace=""),
-            PerLineSubRule(search="^\\s*ipv6 unreachables disable$", replace=""),
-            PerLineSubRule(search="^end$", replace=""),
-            PerLineSubRule(search="^\\s*[#!].*", replace=""),
-            PerLineSubRule(search="^ no ip address", replace=""),
-            PerLineSubRule(search="^ exit-peer-policy", replace=""),
-            PerLineSubRule(search="^ exit-peer-session", replace=""),
-            PerLineSubRule(search="^ exit-address-family", replace=""),
-            PerLineSubRule(
-                search="^crypto key generate rsa general-keys.*$", replace=""
-            ),
-        ]
-    )
-    idempotent_commands_rules: list[IdempotentCommandsRule] = Field(
-        default=[
-            IdempotentCommandsRule(
-                lineage=(
-                    MatchRule(startswith="vlan"),
-                    MatchRule(startswith="name"),
+                OrderingRule(
+                    lineage=(
+                        MatchRule(startswith="interface"),
+                        MatchRule(startswith="no shutdown"),
+                    ),
+                    weight=200,
                 ),
-            ),
-            IdempotentCommandsRule(
-                lineage=(
-                    MatchRule(startswith="interface "),
-                    MatchRule(startswith="description "),
+                OrderingRule(
+                    lineage=(
+                        MatchRule(startswith="aaa group server tacacs+ "),
+                        MatchRule(startswith="no server "),
+                    ),
+                    weight=10,
                 ),
-            ),
-            IdempotentCommandsRule(
-                lineage=(
-                    MatchRule(startswith="interface "),
-                    MatchRule(startswith="ip address "),
+                OrderingRule(
+                    lineage=(MatchRule(startswith="no tacacs-server "),),
+                    weight=10,
                 ),
-            ),
-            IdempotentCommandsRule(
-                lineage=(
-                    MatchRule(startswith="interface "),
-                    MatchRule(startswith="switchport mode "),
+            ],
+            per_line_sub=[
+                PerLineSubRule(search="^Building configuration.*", replace=""),
+                PerLineSubRule(search="^Current configuration.*", replace=""),
+                PerLineSubRule(search="^! Last configuration change.*", replace=""),
+                PerLineSubRule(search="^! NVRAM config last updated.*", replace=""),
+                PerLineSubRule(search="^ntp clock-period .*", replace=""),
+                PerLineSubRule(search="^version.*", replace=""),
+                PerLineSubRule(search="^ logging event link-status$", replace=""),
+                PerLineSubRule(search="^ logging event subif-link-status$", replace=""),
+                PerLineSubRule(search="^\\s*ipv6 unreachables disable$", replace=""),
+                PerLineSubRule(search="^end$", replace=""),
+                PerLineSubRule(search="^\\s*[#!].*", replace=""),
+                PerLineSubRule(search="^ no ip address", replace=""),
+                PerLineSubRule(search="^ exit-peer-policy", replace=""),
+                PerLineSubRule(search="^ exit-peer-session", replace=""),
+                PerLineSubRule(search="^ exit-address-family", replace=""),
+                PerLineSubRule(
+                    search="^crypto key generate rsa general-keys.*$", replace=""
                 ),
-            ),
-            IdempotentCommandsRule(
-                lineage=(
-                    MatchRule(startswith="interface "),
-                    MatchRule(startswith="authentication host-mode "),
-                ),
-            ),
-            IdempotentCommandsRule(
-                lineage=(
-                    MatchRule(startswith="interface "),
-                    MatchRule(
-                        startswith="authentication event server dead action authorize vlan ",
+            ],
+            idempotent_commands=[
+                IdempotentCommandsRule(
+                    lineage=(
+                        MatchRule(startswith="vlan"),
+                        MatchRule(startswith="name"),
                     ),
                 ),
-            ),
-            IdempotentCommandsRule(
-                lineage=(MatchRule(startswith="errdisable recovery interval "),),
-            ),
-            IdempotentCommandsRule(
-                lineage=(MatchRule(re_search=r"^(no )?logging console.*"),),
-            ),
-        ]
-    )
-    post_load_callbacks: list[Callable[[HConfig], None]] = Field(
-        default=[
-            _rm_ipv6_acl_sequence_numbers,
-            _remove_ipv4_acl_remarks,
-            _add_acl_sequence_numbers,
-        ]
-    )
+                IdempotentCommandsRule(
+                    lineage=(
+                        MatchRule(startswith="interface "),
+                        MatchRule(startswith="description "),
+                    ),
+                ),
+                IdempotentCommandsRule(
+                    lineage=(
+                        MatchRule(startswith="interface "),
+                        MatchRule(startswith="ip address "),
+                    ),
+                ),
+                IdempotentCommandsRule(
+                    lineage=(
+                        MatchRule(startswith="interface "),
+                        MatchRule(startswith="switchport mode "),
+                    ),
+                ),
+                IdempotentCommandsRule(
+                    lineage=(
+                        MatchRule(startswith="interface "),
+                        MatchRule(startswith="authentication host-mode "),
+                    ),
+                ),
+                IdempotentCommandsRule(
+                    lineage=(
+                        MatchRule(startswith="interface "),
+                        MatchRule(
+                            startswith="authentication event server dead action authorize vlan ",
+                        ),
+                    ),
+                ),
+                IdempotentCommandsRule(
+                    lineage=(MatchRule(startswith="errdisable recovery interval "),),
+                ),
+                IdempotentCommandsRule(
+                    lineage=(MatchRule(re_search=r"^(no )?logging console.*"),),
+                ),
+            ],
+            post_load_callbacks=[
+                _rm_ipv6_acl_sequence_numbers,
+                _remove_ipv4_acl_remarks,
+                _add_acl_sequence_numbers,
+            ],
+        )

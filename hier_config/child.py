@@ -125,11 +125,11 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
             yield from child.lines(sectional_exiting=sectional_exiting)
 
         if sectional_exiting and (exit_text := self.sectional_exit):
-            yield " " * self.driver.indentation * self.depth() + exit_text
+            yield " " * self.driver.rules.indentation * self.depth() + exit_text
 
     @property
     def sectional_exit(self) -> Optional[str]:
-        for rule in self.driver.sectional_exiting_rules:
+        for rule in self.driver.rules.sectional_exiting:
             if self.lineage_test(rule.lineage):
                 if exit_text := rule.exit_text:
                     return exit_text
@@ -213,7 +213,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
 
     @property
     def indentation(self) -> str:
-        return " " * self.driver.indentation * (self.depth() - 1)
+        return " " * self.driver.rules.indentation * (self.depth() - 1)
 
     def delete(self) -> None:
         """Delete the current object from its parent."""
@@ -253,7 +253,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
     def negation_default_when_check(self, config: HConfigChild) -> bool:
         return any(
             config.lineage_test(rule.lineage)
-            for rule in self.driver.negation_default_when_rules
+            for rule in self.driver.rules.negation_default_when
         )
 
     @property
@@ -289,7 +289,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
     def is_idempotent_command(self, other_children: Iterable[HConfigChild]) -> bool:
         """Determine if self.text is an idempotent change."""
         # Avoid list commands from matching as idempotent
-        for rule in self.driver.idempotent_commands_avoid_rules:
+        for rule in self.driver.rules.idempotent_commands_avoid:
             if self.lineage_test(rule.lineage):
                 return False
 
@@ -302,14 +302,14 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         """
         return any(
             self.lineage_test(rule.lineage)
-            for rule in self.driver.sectional_overwrite_no_negate_rules
+            for rule in self.driver.rules.sectional_overwrite_no_negate
         )
 
     def sectional_overwrite_check(self) -> bool:
         """Determines if self.text matches a sectional overwrite rule."""
         return any(
             self.lineage_test(rule.lineage)
-            for rule in self.driver.sectional_overwrite_rules
+            for rule in self.driver.rules.sectional_overwrite
         )
 
     def overwrite_with(
@@ -459,5 +459,5 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         """Determine if duplicate(identical text) children are allowed under the parent."""
         return any(
             self.lineage_test(rule.lineage)
-            for rule in self.driver.parent_allows_duplicate_child_rules
+            for rule in self.driver.rules.parent_allows_duplicate_child
         )
