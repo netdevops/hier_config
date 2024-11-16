@@ -8,6 +8,7 @@ nav:
 - Home: index.md
 - Install: install.md
 - Getting Started: getting-started.md
+- Config View: config-view.md
 - Drivers: drivers.md
 - Custom Workflows: custom-workflows.md
 - Future Config: future-config.md
