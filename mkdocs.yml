@@ -1,5 +1,5 @@
 site_name: Hierarchical Configuration
-site_url: https://hier_config.readthedocs.io/
+site_url: https://hier-config.readthedocs.io/
 repo_url: https://github.com/netdevops/hier_config
 theme:
   name: readthedocs
