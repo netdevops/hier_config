@@ -20,6 +20,7 @@ def temporary_file_fixture(tmp_path: Path) -> tuple[Path, str]:
 
 def test_load_device_config_success(temporary_file_fixture: tuple[Path, str]) -> None:
     """Test that the function successfully loads a valid configuration file."""
+    # pylint: disable=redefined-outer-name
     file_path, expected_content = temporary_file_fixture
     result = load_device_config(str(file_path))
     assert result == expected_content, "File content should match expected content."
