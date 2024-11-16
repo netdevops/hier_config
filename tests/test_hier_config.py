@@ -275,10 +275,6 @@ def test_add_deep_copy_of(platform_a: Platform, platform_b: Platform) -> None:
     assert isinstance(hier2.all_children(), types.GeneratorType)
 
 
-def test_lineage() -> None:
-    """Covered by test_path."""
-
-
 def test_path(platform_a: Platform) -> None:
     config_aaa = get_hconfig(platform_a).add_children_deep(("a", "aa", "aaa"))
     assert tuple(config_aaa.path()) == ("a", "aa", "aaa")
@@ -353,10 +349,6 @@ def test_set_order_weight(platform_a: Platform) -> None:
     assert child.order_weight == 200
 
 
-def test_to_tag_spec() -> None:
-    pass
-
-
 def test_tags(platform_a: Platform) -> None:
     interface = get_hconfig(platform_a).add_child("interface Vlan2")
     ip_address = interface.add_child("ip address 192.168.1.1/24")
@@ -393,10 +385,6 @@ def test_remove_tags(platform_a: Platform) -> None:
     assert "test_tag" not in ip_address.tags
 
 
-def test_with_tags() -> None:
-    pass
-
-
 def test_negate(platform_a: Platform) -> None:
     interface = get_hconfig(platform_a).add_child("interface Vlan2")
     interface.negate()
@@ -428,18 +416,6 @@ def test_config_to_get_to2(platform_a: Platform) -> None:
     )
     assert "do not add me" not in delta
     assert "add me" in delta
-
-
-def test_sectional_overwrite_no_negate_check() -> None:
-    pass
-
-
-def test_sectional_overwrite_check() -> None:
-    pass
-
-
-def test_overwrite_with() -> None:
-    pass
 
 
 def test_add_shallow_copy_of(platform_a: Platform, platform_b: Platform) -> None:
@@ -496,10 +472,6 @@ def test_line_inclusion_test(platform_a: Platform) -> None:
     assert not ip_address_ab.line_inclusion_test(frozenset(), frozenset(("a",)))
     assert ip_address_ab.line_inclusion_test(frozenset(("a",)), frozenset())
     assert not ip_address_ab.line_inclusion_test(frozenset(), frozenset())
-
-
-def test_lineage_test() -> None:
-    pass
 
 
 def test_future_config(platform_a: Platform) -> None:

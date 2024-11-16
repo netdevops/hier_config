@@ -123,7 +123,9 @@ class WorkflowRemediation:
 
         """
         for tag_rule in tag_rules:
-            for child in self.remediation_config.get_children_deep(tag_rule.lineage):
+            for child in self.remediation_config.get_children_deep(
+                tag_rule.match_rules
+            ):
                 child.tags_add(tag_rule.apply_tags)
 
     def remediation_config_filtered_text(

@@ -55,6 +55,10 @@ def get_hconfig_driver(platform: Platform) -> HConfigDriverBase:  # noqa: PLR091
 
 
 def get_hconfig_view(config: HConfig) -> HConfigViewBase:
+    """Instantiates the appropriate HConfigView.
+
+    If you implement your own HConfigView, you will likely need to create a function like this one locally.
+    """
     driver = config.driver
     if isinstance(driver, HConfigDriverAristaEOS):
         return HConfigViewAristaEOS(config)

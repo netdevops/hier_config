@@ -83,7 +83,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
             self.children_dict[text] = new_item
             return new_item
         # if child does exist and is allowed to be installed as a duplicate
-        if self._duplicate_child_allowed_check() or force_duplicate:
+        if self._is_duplicate_child_allowed() or force_duplicate:
             new_item = self._instantiate_child(text)
             self.children.append(new_item)
             return new_item
@@ -212,7 +212,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
                 if child_text.startswith(startswith):
                     yield child
                     if duplicates_allowed is None:
-                        duplicates_allowed = self._duplicate_child_allowed_check()
+                        duplicates_allowed = self._is_duplicate_child_allowed()
                     if duplicates_allowed:
                         children_slice = slice(self.children.index(child) + 1, None)
                         break
@@ -220,7 +220,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
                 return
 
         for child in self.children[children_slice]:
-            if child.matches(
+            if child.is_match(
                 equals=equals,
                 startswith=startswith,
                 endswith=endswith,
@@ -295,9 +295,9 @@ class HConfigBase(ABC):  # noqa: PLR0904
         config_children_ignore: set[str] = set()
         for self_child in self.children:
             # Is the command effectively negating a command in self.children?
-            if (
-                negation_text := self.root.driver.negation_negate_with_check(self_child)
-            ) and (config_child := config.get_child(equals=negation_text)):
+            if (negation_text := self.root.driver.negate_with(self_child)) and (
+                config_child := config.get_child(equals=negation_text)
+            ):
                 negated_or_recursed.add(self_child.text)
                 config_children_ignore.add(config_child.text)
         return negated_or_recursed, config_children_ignore
@@ -320,8 +320,8 @@ class HConfigBase(ABC):  # noqa: PLR0904
             # sectional_overwrite
             # sectional_overwrite_no_negate
             if (
-                config_child.sectional_overwrite_check()
-                or config_child.sectional_overwrite_no_negate_check()
+                config_child.use_sectional_overwrite()
+                or config_child.use_sectional_overwrite_without_negation()
             ):
                 future_config.add_deep_copy_of(config_child)
             # Idempotent commands
@@ -365,7 +365,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
         pass
 
     @abstractmethod
-    def _duplicate_child_allowed_check(self) -> bool:
+    def _is_duplicate_child_allowed(self) -> bool:
         pass
 
     def _with_tags(
@@ -487,9 +487,9 @@ class HConfigBase(ABC):  # noqa: PLR0904
                 if not subtree.children:
                     subtree.delete()
                 # Do we need to rewrite the child and its children as well?
-                elif self_child.sectional_overwrite_check():
+                elif self_child.use_sectional_overwrite():
                     target_child.overwrite_with(self_child, delta)
-                elif self_child.sectional_overwrite_no_negate_check():
+                elif self_child.use_sectional_overwrite_without_negation():
                     target_child.overwrite_with(self_child, delta, negate=False)
             # the child is absent, add it
             else:

@@ -158,8 +158,8 @@ class HConfigDriverHPProcurve(HConfigDriverBase):
                     return other_child
         return None
 
-    def negation_negate_with_check(self, config: HConfigChild) -> Optional[str]:
-        result = super().negation_negate_with_check(config)
+    def negate_with(self, config: HConfigChild) -> Optional[str]:
+        result = super().negate_with(config)
         if isinstance(result, str):
             return result
 
@@ -214,16 +214,16 @@ class HConfigDriverHPProcurve(HConfigDriverBase):
     @staticmethod
     def _instantiate_rules() -> HConfigDriverRules:
         return HConfigDriverRules(
-            negation_negate_with=[
+            negate_with=[
                 NegationDefaultWithRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface "),
                         MatchRule(equals="disable"),
                     ),
                     use="enable",
                 ),
                 NegationDefaultWithRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface "),
                         MatchRule(startswith="name "),
                     ),
@@ -237,23 +237,25 @@ class HConfigDriverHPProcurve(HConfigDriverBase):
             ],
             idempotent_commands=[
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(
                             startswith="aaa authentication port-access eap-radius"
                         ),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="aaa accounting update periodic "),),
+                    match_rules=(
+                        MatchRule(startswith="aaa accounting update periodic "),
+                    ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface "),
                         MatchRule(startswith="untagged vlan "),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface "),
                         MatchRule(startswith="name "),
                     ),
@@ -262,7 +264,7 @@ class HConfigDriverHPProcurve(HConfigDriverBase):
             ordering=[
                 # no aaa port-access {{ interface_name }} auth-priority  -- needs to happen before auth-order
                 OrderingRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(re_search=r"^no aaa port-access \S+ auth-priority"),
                     ),
                     weight=-10,
@@ -270,34 +272,34 @@ class HConfigDriverHPProcurve(HConfigDriverBase):
                 # `no aaa port-access authenticator 5/43` needs to come before other similar commands
                 # e.g. `no aaa port-access authenticator 5/43 client-limit`
                 OrderingRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(re_search=r"^no aaa port-access authenticator \S+$"),
                     ),
                     weight=-10,
                 ),
                 # `aaa server-group radius "ise" host 172.16.1.1` should be defined after reference
                 OrderingRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(re_search=r"^aaa server-group radius \S+ host "),
                     ),
                     weight=10,
                 ),
                 # Need to add vlans before removing to prevent accidentally adding untagged vlan 1
                 OrderingRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface "),
                         MatchRule(startswith=("no tagged vlan ", "no untagged vlan ")),
                     ),
                     weight=10,
                 ),
                 OrderingRule(
-                    lineage=(MatchRule(startswith="no tacacs-server "),),
+                    match_rules=(MatchRule(startswith="no tacacs-server "),),
                     weight=10,
                 ),
                 # In case a server is a member of a group, `no radius-server host 172.16.1.1 dyn-authorization` cannot
                 # be used before adding another server to that group
                 OrderingRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(
                             re_search=r"^no radius-server host \S+ dyn-authorization$"
                         ),
@@ -306,14 +308,14 @@ class HConfigDriverHPProcurve(HConfigDriverBase):
                 ),
                 # Cannot use `no aaa server-group radius "ise" host 172.16.1.1` after removing that host
                 OrderingRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(re_search=r"^no aaa server-group radius \S+ host "),
                     ),
                     weight=20,
                 ),
                 # `no radius-server host 172.16.1.1` should be called last (cannot leave a server group empty)
                 OrderingRule(
-                    lineage=(MatchRule(re_search=r"^no radius-server host \S+$"),),
+                    match_rules=(MatchRule(re_search=r"^no radius-server host \S+$"),),
                     weight=30,
                 ),
             ],

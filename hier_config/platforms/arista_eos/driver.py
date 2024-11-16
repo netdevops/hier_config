@@ -14,21 +14,21 @@ class HConfigDriverAristaEOS(HConfigDriverBase):
         return HConfigDriverRules(
             sectional_exiting=[
                 SectionalExitingRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router bgp"),
                         MatchRule(startswith="template peer-policy"),
                     ),
                     exit_text="exit-peer-policy",
                 ),
                 SectionalExitingRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router bgp"),
                         MatchRule(startswith="template peer-session"),
                     ),
                     exit_text="exit-peer-session",
                 ),
                 SectionalExitingRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router bgp"),
                         MatchRule(startswith="address-family"),
                     ),
@@ -54,19 +54,19 @@ class HConfigDriverAristaEOS(HConfigDriverBase):
             ],
             idempotent_commands=[
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="hostname"),),
+                    match_rules=(MatchRule(startswith="hostname"),),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="logging source-interface"),),
+                    match_rules=(MatchRule(startswith="logging source-interface"),),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(startswith="ip address"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="line vty"),
                         MatchRule(
                             startswith="transport input",
@@ -74,7 +74,7 @@ class HConfigDriverAristaEOS(HConfigDriverBase):
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="line vty"),
                         MatchRule(
                             startswith="access-class",
@@ -82,7 +82,7 @@ class HConfigDriverAristaEOS(HConfigDriverBase):
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="line vty"),
                         MatchRule(
                             startswith="ipv6 access-class",
@@ -90,7 +90,7 @@ class HConfigDriverAristaEOS(HConfigDriverBase):
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(
                             re_search="standby \\d+ (priority|authentication md5)",
@@ -98,130 +98,134 @@ class HConfigDriverAristaEOS(HConfigDriverBase):
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router bgp"),
                         MatchRule(startswith="bgp router-id"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router ospf"),
                         MatchRule(startswith="router-id"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router ospf"),
                         MatchRule(startswith="max-lsa"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router ospf"),
                         MatchRule(startswith="maximum-paths"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="ipv6 router ospf"),
                         MatchRule(startswith="router-id"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router ospf"),
                         MatchRule(startswith="log-adjacency-changes"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="ipv6 router ospf"),
                         MatchRule(startswith="log-adjacency-changes"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router bgp"),
                         MatchRule(re_search="neighbor \\S+ description"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="snmp-server community"),),
+                    match_rules=(MatchRule(startswith="snmp-server community"),),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="snmp-server location"),),
+                    match_rules=(MatchRule(startswith="snmp-server location"),),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(equals="line con 0"),
                         MatchRule(startswith="exec-timeout"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(startswith="ip ospf message-digest-key"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="logging buffered"),),
+                    match_rules=(MatchRule(startswith="logging buffered"),),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="tacacs-server key"),),
+                    match_rules=(MatchRule(startswith="tacacs-server key"),),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="logging facility"),),
+                    match_rules=(MatchRule(startswith="logging facility"),),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="vlan internal allocation policy"),),
+                    match_rules=(
+                        MatchRule(startswith="vlan internal allocation policy"),
+                    ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="username admin"),),
+                    match_rules=(MatchRule(startswith="username admin"),),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="snmp-server user"),),
+                    match_rules=(MatchRule(startswith="snmp-server user"),),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="banner"),),
+                    match_rules=(MatchRule(startswith="banner"),),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="ntp source"),),
+                    match_rules=(MatchRule(startswith="ntp source"),),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="management"),
                         MatchRule(startswith="idle-timeout"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(
                             startswith="aaa authentication enable default group tacacs+"
                         ),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(equals="control-plane"),
                         MatchRule(equals="ip access-group CPP in"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(startswith="mtu"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="snmp-server source-interface"),),
+                    match_rules=(MatchRule(startswith="snmp-server source-interface"),),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="ip tftp client source-interface"),),
+                    match_rules=(
+                        MatchRule(startswith="ip tftp client source-interface"),
+                    ),
                 ),
             ],
             negation_default_when=[
                 NegationDefaultWhenRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(equals="logging event link-status"),
                     ),

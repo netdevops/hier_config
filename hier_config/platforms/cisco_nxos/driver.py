@@ -27,7 +27,7 @@ class HConfigDriverCiscoNXOS(HConfigDriverBase):
             ],
             idempotent_commands_avoid=[
                 IdempotentCommandsAvoidRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(re_search="ip address.*secondary"),
                     ),
@@ -35,97 +35,101 @@ class HConfigDriverCiscoNXOS(HConfigDriverBase):
             ],
             idempotent_commands=[
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="power redundancy-mode"),),
+                    match_rules=(MatchRule(startswith="power redundancy-mode"),),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="cli alias name wr "),)
+                    match_rules=(MatchRule(startswith="cli alias name wr "),)
                 ),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="aaa authentication login console"),),
+                    match_rules=(
+                        MatchRule(startswith="aaa authentication login console"),
+                    ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="port-channel load-balance"),),
-                ),
-                IdempotentCommandsRule(lineage=(MatchRule(startswith="hostname "),)),
-                IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="ip tftp source-interface"),),
+                    match_rules=(MatchRule(startswith="port-channel load-balance"),),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="ip telnet source-interface"),),
+                    match_rules=(MatchRule(startswith="hostname "),)
                 ),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="ip tacacs source-interface"),),
+                    match_rules=(MatchRule(startswith="ip tftp source-interface"),),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="logging source-interface"),),
+                    match_rules=(MatchRule(startswith="ip telnet source-interface"),),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(MatchRule(startswith="ip tacacs source-interface"),),
+                ),
+                IdempotentCommandsRule(
+                    match_rules=(MatchRule(startswith="logging source-interface"),),
+                ),
+                IdempotentCommandsRule(
+                    match_rules=(
                         MatchRule(startswith="hardware access-list tcam region ifacl"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="hardware access-list tcam region vacl"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="hardware access-list tcam region qos"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="hardware access-list tcam region racl"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(
                             startswith="hardware access-list tcam region ipv6-racl"
                         ),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(
                             startswith="hardware access-list tcam region e-ipv6-racl"
                         ),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="hardware access-list tcam region l3qos"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router ospf"),
                         MatchRule(startswith="vrf"),
                         MatchRule(startswith="maximum-paths"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router ospf"),
                         MatchRule(startswith="vrf"),
                         MatchRule(startswith="log-adjacency-changes"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router ospf"),
                         MatchRule(startswith="maximum-paths"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router ospf"),
                         MatchRule(startswith="log-adjacency-changes"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router bgp"),
                         MatchRule(startswith="vrf"),
                         MatchRule(startswith="address-family"),
@@ -133,14 +137,14 @@ class HConfigDriverCiscoNXOS(HConfigDriverBase):
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router bgp"),
                         MatchRule(startswith="address-family"),
                         MatchRule(startswith="maximum-paths"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router bgp"),
                         MatchRule(startswith="template"),
                         MatchRule(startswith="address-family"),
@@ -148,124 +152,124 @@ class HConfigDriverCiscoNXOS(HConfigDriverBase):
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(re_search="^hsrp \\d+"),
                         MatchRule(startswith="ip"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(re_search="^hsrp \\d+"),
                         MatchRule(startswith="priority"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(re_search="^hsrp \\d+"),
                         MatchRule(startswith="authentication md5 key-string"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(startswith="ip address"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(startswith="duplex"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(startswith="speed"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(startswith="switchport mode"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(startswith="switchport access vlan"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(startswith="switchport trunk native vlan"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(startswith="switchport trunk allowed vlan"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(startswith="udld port"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(startswith="ip ospf cost"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(startswith="ipv6 link-local"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(startswith="ospfv3 cost"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(startswith="mtu"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(equals="line console"),
                         MatchRule(startswith="exec-timeout"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="line vty"),
                         MatchRule(startswith="transport input"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="line vty"),
                         MatchRule(startswith="ipv6 access-class"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="line vty"),
                         MatchRule(startswith="access-class"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router bgp"),
                         MatchRule(
                             startswith="bgp router-id",
@@ -273,7 +277,7 @@ class HConfigDriverCiscoNXOS(HConfigDriverBase):
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router bgp"),
                         MatchRule(
                             re_search="neighbor \\S+ description",
@@ -281,50 +285,50 @@ class HConfigDriverCiscoNXOS(HConfigDriverBase):
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router ospf"),
                         MatchRule(startswith="router-id"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router ospf"),
                         MatchRule(startswith="log-adjacency-changes"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="ipv6 router ospf"),
                         MatchRule(startswith="router-id"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="ipv6 router ospf"),
                         MatchRule(startswith="log-adjacency-changes"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="mac address-table aging-time"),),
+                    match_rules=(MatchRule(startswith="mac address-table aging-time"),),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="snmp-server community"),),
+                    match_rules=(MatchRule(startswith="snmp-server community"),),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="snmp-server location"),)
+                    match_rules=(MatchRule(startswith="snmp-server location"),)
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="vpc domain"),
                         MatchRule(startswith="role priority"),
                     ),
                 ),
-                IdempotentCommandsRule(lineage=(MatchRule(startswith="banner"),)),
+                IdempotentCommandsRule(match_rules=(MatchRule(startswith="banner"),)),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="username admin password 5"),),
+                    match_rules=(MatchRule(startswith="username admin password 5"),),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(
                             equals="policy-map type control-plane copp-system-policy"
                         ),
@@ -333,7 +337,7 @@ class HConfigDriverCiscoNXOS(HConfigDriverBase):
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router bgp"),
                         MatchRule(startswith="vrf"),
                         MatchRule(startswith="neighbor"),
@@ -342,7 +346,7 @@ class HConfigDriverCiscoNXOS(HConfigDriverBase):
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router bgp"),
                         MatchRule(startswith="vrf"),
                         MatchRule(startswith="neighbor"),
@@ -352,7 +356,7 @@ class HConfigDriverCiscoNXOS(HConfigDriverBase):
             ],
             negation_default_when=[
                 NegationDefaultWhenRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(
                             startswith="ip ospf bfd",
@@ -361,7 +365,7 @@ class HConfigDriverCiscoNXOS(HConfigDriverBase):
                     ),
                 ),
                 NegationDefaultWhenRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router bgp"),
                         MatchRule(startswith="neighbor"),
                         MatchRule(startswith="address-family"),
@@ -369,21 +373,21 @@ class HConfigDriverCiscoNXOS(HConfigDriverBase):
                     ),
                 ),
                 NegationDefaultWhenRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(contains="ip ospf passive-interface"),
                     ),
                 ),
                 NegationDefaultWhenRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(contains="ospfv3 passive-interface"),
                     ),
                 ),
             ],
-            negation_negate_with=[
+            negate_with=[
                 NegationDefaultWithRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router bgp"),
                         MatchRule(startswith="address-family"),
                         MatchRule(startswith="maximum-paths ibgp"),
@@ -391,7 +395,7 @@ class HConfigDriverCiscoNXOS(HConfigDriverBase):
                     use="default maximum-paths ibgp",
                 ),
                 NegationDefaultWithRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router bgp"),
                         MatchRule(startswith="vrf"),
                         MatchRule(startswith="address-family"),
@@ -400,7 +404,7 @@ class HConfigDriverCiscoNXOS(HConfigDriverBase):
                     use="default maximum-paths ibgp",
                 ),
                 NegationDefaultWithRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(equals="line vty"),
                         MatchRule(startswith="session-limit"),
                     ),

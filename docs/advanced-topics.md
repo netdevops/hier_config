@@ -5,7 +5,7 @@
 MatchRules, written in YAML, help users identify either highly specific sections or more generalized lines within a configuration. For instance, if you want to target interface descriptions, you could set up MatchRules as follows:
 
 ```yaml
-- lineage:
+- match_rules:
   - startswith: interface
   - startswith: description
 ```
@@ -15,7 +15,7 @@ This setup directs hier_config to search for configuration lines that begin with
 With MatchRules, you can specify the level of detail needed, whether focusing on general configuration lines or diving into specific subsections. For example, to check for the presence or absence of HTTP, SSH, SNMP, and logging commands in a configuration, you could use a single rule as follows:
 
 ```yaml
-- lineage:
+- match_rules:
   - startswith:
     - ip ssh
     - no ip ssh
@@ -32,7 +32,7 @@ This rule will look for configuration lines that start with any of the listed ke
 To check whether BGP IPv4 AFIs (Address Family Identifiers) are activated, you can use the following rule:
 
 ```yaml
-- lineage:
+- match_rules:
   - startswith: router bgp
   - startswith: address-family ipv4
   - endswith: activate
@@ -50,10 +50,10 @@ These options allow you to target configuration lines with precision based on th
 You can also combine the previous examples into a single set of MatchRules, like this:
 
 ```yaml
-- lineage:
+- match_rules:
   - startswith: interface
   - startswith: description
-- lineage:
+- match_rules:
   - startswith:
     - ip ssh
     - no ip ssh
@@ -63,7 +63,7 @@ You can also combine the previous examples into a single set of MatchRules, like
     - no snmp-server
     - logging
     - no logging
-- lineage:
+- match_rules:
   - startswith: router bgp
   - startswith: address-family ipv4
   - endswith: activate
@@ -94,7 +94,7 @@ ntp server time.nist.gov
 You can create a MatchRule to tag this specific remediation with "ntp" as follows:
 
 ```yaml
-- lineage:
+- match_rules:
   - startswith:
     - ip name-server
     - no ip name-server

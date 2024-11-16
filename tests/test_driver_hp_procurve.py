@@ -3,7 +3,7 @@ from hier_config.constructors import get_hconfig
 from hier_config.models import Platform
 
 
-def test_negation_negate_with() -> None:
+def test_negate_with() -> None:
     platform = Platform.HP_PROCURVE
     running_config = get_hconfig_fast_load(
         platform,

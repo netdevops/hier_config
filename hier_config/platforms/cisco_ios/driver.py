@@ -46,29 +46,29 @@ class HConfigDriverCiscoIOS(HConfigDriverBase):
     @staticmethod
     def _instantiate_rules() -> HConfigDriverRules:
         return HConfigDriverRules(
-            negation_negate_with=[
+            negate_with=[
                 NegationDefaultWithRule(
-                    lineage=(MatchRule(startswith="logging console "),),
+                    match_rules=(MatchRule(startswith="logging console "),),
                     use="logging console debugging",
                 ),
             ],
             sectional_exiting=[
                 SectionalExitingRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router bgp"),
                         MatchRule(startswith="template peer-policy"),
                     ),
                     exit_text="exit-peer-policy",
                 ),
                 SectionalExitingRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router bgp"),
                         MatchRule(startswith="template peer-session"),
                     ),
                     exit_text="exit-peer-session",
                 ),
                 SectionalExitingRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router bgp"),
                         MatchRule(startswith="address-family"),
                     ),
@@ -77,32 +77,32 @@ class HConfigDriverCiscoIOS(HConfigDriverBase):
             ],
             ordering=[
                 OrderingRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(startswith="switchport mode "),
                     ),
                     weight=-10,
                 ),
                 OrderingRule(
-                    lineage=(MatchRule(startswith="no vlan filter"),),
+                    match_rules=(MatchRule(startswith="no vlan filter"),),
                     weight=200,
                 ),
                 OrderingRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(startswith="no shutdown"),
                     ),
                     weight=200,
                 ),
                 OrderingRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="aaa group server tacacs+ "),
                         MatchRule(startswith="no server "),
                     ),
                     weight=10,
                 ),
                 OrderingRule(
-                    lineage=(MatchRule(startswith="no tacacs-server "),),
+                    match_rules=(MatchRule(startswith="no tacacs-server "),),
                     weight=10,
                 ),
             ],
@@ -128,37 +128,37 @@ class HConfigDriverCiscoIOS(HConfigDriverBase):
             ],
             idempotent_commands=[
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="vlan"),
                         MatchRule(startswith="name"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface "),
                         MatchRule(startswith="description "),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface "),
                         MatchRule(startswith="ip address "),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface "),
                         MatchRule(startswith="switchport mode "),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface "),
                         MatchRule(startswith="authentication host-mode "),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface "),
                         MatchRule(
                             startswith="authentication event server dead action authorize vlan ",
@@ -166,10 +166,12 @@ class HConfigDriverCiscoIOS(HConfigDriverBase):
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="errdisable recovery interval "),),
+                    match_rules=(
+                        MatchRule(startswith="errdisable recovery interval "),
+                    ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(re_search=r"^(no )?logging console.*"),),
+                    match_rules=(MatchRule(re_search=r"^(no )?logging console.*"),),
                 ),
             ],
             post_load_callbacks=[

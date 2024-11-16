@@ -130,7 +130,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
     @property
     def sectional_exit(self) -> Optional[str]:
         for rule in self.driver.rules.sectional_exiting:
-            if self.lineage_test(rule.lineage):
+            if self.is_lineage_match(rule.match_rules):
                 if exit_text := rule.exit_text:
                     return exit_text
                 return None
@@ -241,18 +241,18 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
 
     def negate(self) -> HConfigChild:
         """Negate self.text."""
-        if negate_with := self.driver.negation_negate_with_check(self):
+        if negate_with := self.driver.negate_with(self):
             self.text = negate_with
             return self
 
-        if self.negation_default_when_check(self):
+        if self.use_default_for_negation(self):
             return self._default()
 
         return self.driver.swap_negation(self)
 
-    def negation_default_when_check(self, config: HConfigChild) -> bool:
+    def use_default_for_negation(self, config: HConfigChild) -> bool:
         return any(
-            config.lineage_test(rule.lineage)
+            config.is_lineage_match(rule.match_rules)
             for rule in self.driver.rules.negation_default_when
         )
 
@@ -290,25 +290,25 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         """Determine if self.text is an idempotent change."""
         # Avoid list commands from matching as idempotent
         for rule in self.driver.rules.idempotent_commands_avoid:
-            if self.lineage_test(rule.lineage):
+            if self.is_lineage_match(rule.match_rules):
                 return False
 
         # Idempotent command identification
         return bool(self.driver.idempotent_for(self, other_children))
 
-    def sectional_overwrite_no_negate_check(self) -> bool:
+    def use_sectional_overwrite_without_negation(self) -> bool:
         """Check self's text to see if negation should be handled by
         overwriting the section without first negating it.
         """
         return any(
-            self.lineage_test(rule.lineage)
+            self.is_lineage_match(rule.match_rules)
             for rule in self.driver.rules.sectional_overwrite_no_negate
         )
 
-    def sectional_overwrite_check(self) -> bool:
+    def use_sectional_overwrite(self) -> bool:
         """Determines if self.text matches a sectional overwrite rule."""
         return any(
-            self.lineage_test(rule.lineage)
+            self.is_lineage_match(rule.match_rules)
             for rule in self.driver.rules.sectional_overwrite
         )
 
@@ -374,12 +374,12 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
                 if peek := next(included_children, None):
                     yield from chain(self_iter, (peek,), included_children)
 
-    def lineage_test(self, rules: tuple[MatchRule, ...]) -> bool:
+    def is_lineage_match(self, rules: tuple[MatchRule, ...]) -> bool:
         """A generic test against a lineage of HConfigChild objects."""
         lineage = tuple(self.lineage())
 
         return len(rules) == len(lineage) and all(
-            child.matches(
+            child.is_match(
                 equals=rule.equals,
                 startswith=rule.startswith,
                 endswith=rule.endswith,
@@ -390,7 +390,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
             for (child, rule) in zip(reversed(lineage), reversed(rules))
         )
 
-    def matches(  # noqa: PLR0911
+    def is_match(  # noqa: PLR0911
         self,
         *,
         equals: Union[str, SetLikeOfStr, None] = None,
@@ -455,9 +455,9 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
     def _instantiate_child(self, text: str) -> HConfigChild:
         return HConfigChild(self, text)
 
-    def _duplicate_child_allowed_check(self) -> bool:
+    def _is_duplicate_child_allowed(self) -> bool:
         """Determine if duplicate(identical text) children are allowed under the parent."""
         return any(
-            self.lineage_test(rule.lineage)
+            self.is_lineage_match(rule.match_rules)
             for rule in self.driver.rules.parent_allows_duplicate_child
         )

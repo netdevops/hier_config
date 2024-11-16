@@ -16,7 +16,7 @@ logger = getLogger(__name__)
 
 # Refactoring ideas:
 # - What if children were moved into its own class? e.g. child.children.add()
-# - Cases of children.index() could be replaced with an identity based version.
+# - Cases of children.index() could be replaced with an identity based approach.
 
 
 class HConfig(HConfigBase):  # noqa: PLR0904
@@ -194,7 +194,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         """Sets self.order integer on all children."""
         for child in self.all_children():
             for rule in self.driver.rules.ordering:
-                if child.lineage_test(rule.lineage):
+                if child.is_lineage_match(rule.match_rules):
                     child.order_weight = rule.weight
         return self
 
@@ -234,6 +234,6 @@ class HConfig(HConfigBase):  # noqa: PLR0904
             new_instance.add_deep_copy_of(child)
         return new_instance
 
-    def _duplicate_child_allowed_check(self) -> bool:  # noqa: PLR6301
+    def _is_duplicate_child_allowed(self) -> bool:  # noqa: PLR6301
         """Determine if duplicate(identical text) children are allowed under the parent."""
         return False

@@ -1,23 +1,23 @@
-- lineage:
+- match_rules:
   - equals:
     - no ip http secure-server
     - no ip http server
     - vlan
     - no vlan
   apply_tags: [safe]
-- lineage:
+- match_rules:
   - startswith: interface Vlan
   - startswith:
     - description
   apply_tags: [safe]
-- lineage:
+- match_rules:
   - startswith:
     - ip access-list
     - no ip access-list
     - access-list
     - no access-list
   apply_tags: [manual]
-- lineage:
+- match_rules:
   - startswith: interface Vlan
   - startswith:
     - ip address

@@ -38,69 +38,69 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
         return HConfigDriverRules(
             sectional_exiting=[
                 SectionalExitingRule(
-                    lineage=(MatchRule(startswith="route-policy"),),
+                    match_rules=(MatchRule(startswith="route-policy"),),
                     exit_text="end-policy",
                 ),
                 SectionalExitingRule(
-                    lineage=(MatchRule(startswith="prefix-set"),),
+                    match_rules=(MatchRule(startswith="prefix-set"),),
                     exit_text="end-set",
                 ),
                 SectionalExitingRule(
-                    lineage=(MatchRule(startswith="policy-map"),),
+                    match_rules=(MatchRule(startswith="policy-map"),),
                     exit_text="end-policy-map",
                 ),
                 SectionalExitingRule(
-                    lineage=(MatchRule(startswith="class-map"),),
+                    match_rules=(MatchRule(startswith="class-map"),),
                     exit_text="end-class-map",
                 ),
                 SectionalExitingRule(
-                    lineage=(MatchRule(startswith="community-set"),),
+                    match_rules=(MatchRule(startswith="community-set"),),
                     exit_text="end-set",
                 ),
                 SectionalExitingRule(
-                    lineage=(MatchRule(startswith="extcommunity-set"),),
+                    match_rules=(MatchRule(startswith="extcommunity-set"),),
                     exit_text="end-set",
                 ),
                 SectionalExitingRule(
-                    lineage=(MatchRule(startswith="template"),),
+                    match_rules=(MatchRule(startswith="template"),),
                     exit_text="end-template",
                 ),
                 SectionalExitingRule(
-                    lineage=(MatchRule(startswith="interface"),),
+                    match_rules=(MatchRule(startswith="interface"),),
                     exit_text="root",
                 ),
                 SectionalExitingRule(
-                    lineage=(MatchRule(startswith="router bgp"),),
+                    match_rules=(MatchRule(startswith="router bgp"),),
                     exit_text="root",
                 ),
             ],
             sectional_overwrite=[
-                SectionalOverwriteRule(lineage=(MatchRule(startswith="template"),)),
+                SectionalOverwriteRule(match_rules=(MatchRule(startswith="template"),)),
             ],
             sectional_overwrite_no_negate=[
                 SectionalOverwriteNoNegateRule(
-                    lineage=(MatchRule(startswith="as-path-set"),)
+                    match_rules=(MatchRule(startswith="as-path-set"),)
                 ),
                 SectionalOverwriteNoNegateRule(
-                    lineage=(MatchRule(startswith="prefix-set"),)
+                    match_rules=(MatchRule(startswith="prefix-set"),)
                 ),
                 SectionalOverwriteNoNegateRule(
-                    lineage=(MatchRule(startswith="route-policy"),)
+                    match_rules=(MatchRule(startswith="route-policy"),)
                 ),
                 SectionalOverwriteNoNegateRule(
-                    lineage=(MatchRule(startswith="extcommunity-set"),),
+                    match_rules=(MatchRule(startswith="extcommunity-set"),),
                 ),
                 SectionalOverwriteNoNegateRule(
-                    lineage=(MatchRule(startswith="community-set"),),
+                    match_rules=(MatchRule(startswith="community-set"),),
                 ),
             ],
             ordering=[
                 OrderingRule(
-                    lineage=(MatchRule(startswith="vrf "),),
+                    match_rules=(MatchRule(startswith="vrf "),),
                     weight=-200,
                 ),
                 OrderingRule(
-                    lineage=(MatchRule(startswith="no vrf "),),
+                    match_rules=(MatchRule(startswith="no vrf "),),
                     weight=200,
                 ),
             ],
@@ -112,7 +112,7 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
             ],
             parent_allows_duplicate_child=[
                 ParentAllowsDuplicateChildRule(
-                    lineage=(MatchRule(startswith="route-policy"),)
+                    match_rules=(MatchRule(startswith="route-policy"),)
                 ),
             ],
             per_line_sub=[
@@ -130,7 +130,7 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
             ],
             idempotent_commands=[
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router bgp"),
                         MatchRule(startswith="vrf"),
                         MatchRule(startswith="address-family"),
@@ -138,13 +138,13 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router bgp"),
                         MatchRule(startswith="bgp router-id"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router bgp"),
                         MatchRule(startswith="neighbor-group"),
                         MatchRule(startswith="address-family"),
@@ -152,7 +152,7 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router bgp"),
                         MatchRule(startswith="vrf"),
                         MatchRule(startswith="neighbor"),
@@ -161,7 +161,7 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router bgp"),
                         MatchRule(startswith="vrf"),
                         MatchRule(startswith="neighbor"),
@@ -170,7 +170,7 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router bgp"),
                         MatchRule(startswith="vrf"),
                         MatchRule(startswith="neighbor"),
@@ -178,7 +178,7 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router bgp"),
                         MatchRule(startswith="vrf"),
                         MatchRule(startswith="neighbor"),
@@ -186,21 +186,21 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router bgp"),
                         MatchRule(startswith="neighbor"),
                         MatchRule(startswith="description"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router bgp"),
                         MatchRule(startswith="neighbor"),
                         MatchRule(startswith="password"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router ospf"),
                         MatchRule(startswith="area"),
                         MatchRule(startswith="interface"),
@@ -208,91 +208,91 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router ospf"),
                         MatchRule(startswith="router-id"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router ospf"),
                         MatchRule(startswith="area"),
                         MatchRule(startswith="message-digest-key"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="router ospf"),
                         MatchRule(startswith="max-metric router-lsa"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(equals="l2vpn"),
                         MatchRule(startswith="router-id"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(re_search="logging \\d+.\\d+.\\d+.\\d+ vrf MGMT"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(equals="line default"),
                         MatchRule(startswith="access-class ingress"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(equals="line default"),
                         MatchRule(startswith="transport input"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="hostname"),),
+                    match_rules=(MatchRule(startswith="hostname"),),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="logging source-interface"),),
+                    match_rules=(MatchRule(startswith="logging source-interface"),),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(startswith="ipv4 address"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="snmp-server community"),),
+                    match_rules=(MatchRule(startswith="snmp-server community"),),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="snmp-server location"),),
+                    match_rules=(MatchRule(startswith="snmp-server location"),),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(equals="line console"),
                         MatchRule(startswith="exec-timeout"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(equals="mpls ldp"),
                         MatchRule(startswith="session protection duration"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(equals="mpls ldp"),
                         MatchRule(startswith="igp sync delay"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(
+                    match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(startswith="mtu"),
                     ),
                 ),
                 IdempotentCommandsRule(
-                    lineage=(MatchRule(startswith="banner"),),
+                    match_rules=(MatchRule(startswith="banner"),),
                 ),
             ],
         )

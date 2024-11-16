@@ -28,25 +28,25 @@ class MatchRule(BaseModel):
 
 
 class TagRule(BaseModel):
-    lineage: tuple[MatchRule, ...]
+    match_rules: tuple[MatchRule, ...]
     apply_tags: frozenset[str]
 
 
 class SectionalExitingRule(BaseModel):
-    lineage: tuple[MatchRule, ...]
+    match_rules: tuple[MatchRule, ...]
     exit_text: str
 
 
 class SectionalOverwriteRule(BaseModel):
-    lineage: tuple[MatchRule, ...]
+    match_rules: tuple[MatchRule, ...]
 
 
 class SectionalOverwriteNoNegateRule(BaseModel):
-    lineage: tuple[MatchRule, ...]
+    match_rules: tuple[MatchRule, ...]
 
 
 class OrderingRule(BaseModel):
-    lineage: tuple[MatchRule, ...]
+    match_rules: tuple[MatchRule, ...]
     weight: int
 
 
@@ -56,7 +56,7 @@ class IndentAdjustRule(BaseModel):
 
 
 class ParentAllowsDuplicateChildRule(BaseModel):
-    lineage: tuple[MatchRule, ...]
+    match_rules: tuple[MatchRule, ...]
 
 
 class FullTextSubRule(BaseModel):
@@ -70,11 +70,11 @@ class PerLineSubRule(BaseModel):
 
 
 class IdempotentCommandsRule(BaseModel):
-    lineage: tuple[MatchRule, ...]
+    match_rules: tuple[MatchRule, ...]
 
 
 class IdempotentCommandsAvoidRule(BaseModel):
-    lineage: tuple[MatchRule, ...]
+    match_rules: tuple[MatchRule, ...]
 
 
 class Instance(BaseModel):
@@ -84,11 +84,11 @@ class Instance(BaseModel):
 
 
 class NegationDefaultWhenRule(BaseModel):
-    lineage: tuple[MatchRule, ...]
+    match_rules: tuple[MatchRule, ...]
 
 
 class NegationDefaultWithRule(BaseModel):
-    lineage: tuple[MatchRule, ...]
+    match_rules: tuple[MatchRule, ...]
     use: str
 
 

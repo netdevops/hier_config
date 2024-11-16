@@ -24,24 +24,26 @@ from hier_config.root import HConfig
 
 
 class HConfigDriverRules(BaseModel):  # pylint: disable=too-many-instance-attributes
+    full_text_sub: list[FullTextSubRule] = Field(default_factory=list)
+    idempotent_commands: list[IdempotentCommandsRule] = Field(default_factory=list)
+    idempotent_commands_avoid: list[IdempotentCommandsAvoidRule] = Field(
+        default_factory=list
+    )
+    indent_adjust: list[IndentAdjustRule] = Field(default_factory=list)
     indentation: PositiveInt = 2
-    sectional_exiting: list[SectionalExitingRule] = Field(default=[])
-    sectional_overwrite: list[SectionalOverwriteRule] = Field(default=[])
-    sectional_overwrite_no_negate: list[SectionalOverwriteNoNegateRule] = Field(
-        default=[]
-    )
-    ordering: list[OrderingRule] = Field(default=[])
-    indent_adjust: list[IndentAdjustRule] = Field(default=[])
+    negation_default_when: list[NegationDefaultWhenRule] = Field(default_factory=list)
+    negate_with: list[NegationDefaultWithRule] = Field(default_factory=list)
+    ordering: list[OrderingRule] = Field(default_factory=list)
     parent_allows_duplicate_child: list[ParentAllowsDuplicateChildRule] = Field(
-        default=[]
+        default_factory=list
     )
-    full_text_sub: list[FullTextSubRule] = Field(default=[])
-    per_line_sub: list[PerLineSubRule] = Field(default=[])
-    idempotent_commands_avoid: list[IdempotentCommandsAvoidRule] = Field(default=[])
-    idempotent_commands: list[IdempotentCommandsRule] = Field(default=[])
-    negation_default_when: list[NegationDefaultWhenRule] = Field(default=[])
-    negation_negate_with: list[NegationDefaultWithRule] = Field(default=[])
-    post_load_callbacks: list[Callable[[HConfig], None]] = Field(default=[])
+    per_line_sub: list[PerLineSubRule] = Field(default_factory=list)
+    post_load_callbacks: list[Callable[[HConfig], None]] = Field(default_factory=list)
+    sectional_exiting: list[SectionalExitingRule] = Field(default_factory=list)
+    sectional_overwrite: list[SectionalOverwriteRule] = Field(default_factory=list)
+    sectional_overwrite_no_negate: list[SectionalOverwriteNoNegateRule] = Field(
+        default_factory=list
+    )
 
 
 class HConfigDriverBase(ABC):
@@ -58,15 +60,15 @@ class HConfigDriverBase(ABC):
         other_children: Iterable[HConfigChild],
     ) -> Optional[HConfigChild]:
         for rule in self.rules.idempotent_commands:
-            if config.lineage_test(rule.lineage):
+            if config.is_lineage_match(rule.match_rules):
                 for other_child in other_children:
-                    if other_child.lineage_test(rule.lineage):
+                    if other_child.is_lineage_match(rule.match_rules):
                         return other_child
         return None
 
-    def negation_negate_with_check(self, config: HConfigChild) -> Optional[str]:
-        for with_rule in self.rules.negation_negate_with:
-            if config.lineage_test(with_rule.lineage):
+    def negate_with(self, config: HConfigChild) -> Optional[str]:
+        for with_rule in self.rules.negate_with:
+            if config.is_lineage_match(with_rule.match_rules):
                 return with_rule.use
         return None
 
