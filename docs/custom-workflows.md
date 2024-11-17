@@ -178,3 +178,44 @@ wfr.remediation_config.delete_child(invalid_remediation)
 ```python
 wfr.remediation_config.merge(custom_remediation)
 ```
+
+### Output of Updated Remediation
+
+```python
+print(wfr.remediation_config)
+```
+
+Output:
+
+```
+vlan 3
+  name switch_mgmt_10.0.3.0/24
+  exit
+vlan 4
+  name switch_mgmt_10.0.4.0/24
+  exit
+interface Vlan2
+  mtu 9000
+  ip access-group TEST in
+  no shutdown
+  exit
+interface Vlan3
+  description switch_mgmt_10.0.3.0/24
+  ip address 10.0.3.1 255.255.0.0
+  exit
+interface Vlan4
+  mtu 9000
+  description switch_mgmt_10.0.4.0/24
+  ip address 10.0.4.1 255.255.0.0
+  ip access-group TEST in
+  no shutdown
+  exit
+ip access-list resequence TEST 10 10
+ip access-list extended TEST
+  1 permit ip any any
+  no 10
+  10 permit ip 10.0.1.0 0.0.0.255 any
+  20 permit ip 10.0.0.0 0.0.0.7 any
+  no 1
+  exit
+```
