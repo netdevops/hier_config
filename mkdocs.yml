@@ -12,6 +12,6 @@ nav:
 - Drivers: drivers.md
 - Custom Workflows: custom-workflows.md
 - Future Config: future-config.md
-- JunOS Style Syntax Remediation: junos-style-sytax-remediation.md
+- JunOS Style Syntax Remediation: junos-style-syntax-remediation.md
 - Unified Diff: unified-diff.md
 - Working with Tags: tags.md
