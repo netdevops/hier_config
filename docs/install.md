@@ -1,11 +1,11 @@
 # Install hier_config
 
-> Hierarchical Configuration requires a minimum Python version of 3.8.
+> Hierarchical Configuration requires a minimum Python version of 3.9.
 
 Hierarchical Configuration can be installed directly from GitHub or with pip:
 
 ## Pip
-1. Install from [PyPI](https://pypi.org/project/hier-config/): `pip install hier-config`
+1. Install from PyPI: `pip install hier-config`
 
 ## Github
 1. [Install Poetry](https://python-poetry.org/docs/#installation)

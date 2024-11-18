@@ -1,4 +1,4 @@
-# Advanced Topics
+# Working with Tags
 
 ## MatchRules
 
@@ -109,24 +109,15 @@ With the tags loaded, you can create a targeted remediation based on those tags 
 #!/usr/bin/env python3
 
 # Import necessary libraries
-import yaml
-from pydantic import TypeAdapter
-from hier_config import WorkflowRemediation, get_hconfig
-from hier_config.models import Platform, TagRule
+from hier_config import WorkflowRemediation, get_hconfig, Platform
+from hier_config.utils import load_device_config, load_hier_config_tags
 
 # Load the running and generated configurations from files
-with open("./tests/fixtures/running_config.conf") as f:
-    running_config = f.read()
-
-with open("./tests/fixtures/generated_config.conf") as f:
-    generated_config = f.read()
+running_config = load_device_config("./tests/fixtures/running_config.conf")
+generated_config = load_device_config("./tests/fixtures/generated_config.conf")
 
 # Load tag rules from a file
-with open("./tests/fixtures/tag_rules_ios.yml") as f:
-    tags = yaml.safe_load(f)
-
-# Validate and format tags using the TagRule model
-tag_rules = TypeAdapter(tuple[TagRule, ...]).validate_python(tags)
+tags = load_hier_config_tags("./tests/fixtures/tag_rules_ios.yml")
 
 # Initialize a WorkflowRemediation object with the running and intended configurations
 wfr = WorkflowRemediation(
@@ -135,7 +126,10 @@ wfr = WorkflowRemediation(
 )
 
 # Apply the tag rules to filter remediation steps by tags
-wfr.apply_remediation_tag_rules(tag_rules)
+wfr.apply_remediation_tag_rules(tags)
+
+# Generate the remediation steps
+wfr.remediation_config
 
 # Display remediation steps filtered to include only the "ntp" tag
 print(wfr.remediation_config_filtered_text(include_tags={"ntp"}, exclude_tags={}))
@@ -149,9 +143,3 @@ ip name-server 1.1.1.1
 ip name-server 8.8.8.8
 ntp server time.nist.gov
 ```
-
-## Drivers
-
-## Custom hier_config Workflows
-
-Coming soon...
