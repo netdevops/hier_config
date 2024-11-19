@@ -103,7 +103,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         """Add child instances of HConfigChild deeply."""
         base: Union[HConfig, HConfigChild] = self
         for line in lines:
-            base = base.children.get(line) or base.add_child(line)
+            base = base.add_child(line, return_if_present=True)
         if isinstance(base, HConfig):
             message = "base was an HConfig object for some reason."
             raise TypeError(message)
@@ -151,7 +151,6 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         """Figures out what commands need to be executed to transition from self to target.
         self is the source data structure(i.e. the running_config),
         target is the destination(i.e. generated_config).
-
         """
         if delta is None:
             delta = HConfig(self.driver)
