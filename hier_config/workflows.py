@@ -81,7 +81,7 @@ class WorkflowRemediation:
             return self._remediation_config
 
         remediation_config = self.running_config.config_to_get_to(
-            self.generated_config, HConfig(self.running_config.driver)
+            self.generated_config
         ).set_order_weight()
 
         self._remediation_config = remediation_config
