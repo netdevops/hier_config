@@ -15,7 +15,6 @@ if TYPE_CHECKING:
 logger = getLogger(__name__)
 
 # Refactoring ideas:
-# - What if children were moved into its own class? e.g. child.children.add()
 # - Cases of children.index() could be replaced with an identity based approach.
 
 
