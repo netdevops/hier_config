@@ -73,23 +73,12 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         if not isinstance(other, HConfigChild):
             return NotImplemented
 
-        if (
-            self.text != other.text
-            or self.tags != other.tags
-            or self.comments != other.comments
-        ):
+        # We are intentionally not including the
+        # comments, facts, instances, new_in_config, order_weight attributes.
+        if self.text != other.text or self.tags != other.tags:
             return False
 
-        if len(self.children) != len(other.children):
-            return False
-
-        return all(
-            self_child == other_child
-            for self_child, other_child in zip(
-                sorted(self.children),
-                sorted(other.children),
-            )
-        )
+        return self.children == other.children
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)

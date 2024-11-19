@@ -43,16 +43,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         if not isinstance(other, HConfig):
             return NotImplemented
 
-        if len(self.children) != len(other.children):
-            return False
-
-        return all(
-            self_child == other_child
-            for self_child, other_child in zip(
-                sorted(self.children),
-                sorted(other.children),
-            )
-        )
+        return self.children == other.children
 
     @property
     def driver(self) -> HConfigDriverBase:

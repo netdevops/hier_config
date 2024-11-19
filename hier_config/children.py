@@ -41,7 +41,39 @@ class Children:
         return iter(self._children)
 
     def __len__(self) -> int:
-        return len(self._children)
+        return len(self.data)
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Children):
+            return NotImplemented
+
+        self_len = len(self.data)
+        other_len = len(other.data)
+        # Superfast succeed method for no children
+        if self_len == other_len == 0:
+            return True
+
+        # Superfast fail method
+        if self_len != other_len:
+            return False
+
+        # Fast fail method
+        if self.mapping.keys() != other.mapping.keys():
+            return False
+
+        # Slower full comparison
+        return all(
+            self_child == other_child
+            for self_child, other_child in zip(
+                sorted(self.data),
+                sorted(other.data),
+            )
+        )
+
+    def __hash__(self) -> int:
+        return hash(
+            (*self.data,),
+        )
 
     def append(
         self,
