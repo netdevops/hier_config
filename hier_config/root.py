@@ -141,12 +141,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
 
     def difference(self, target: HConfig) -> HConfig:
         """Creates a new HConfig object with the config from self that is not in target."""
-        delta = HConfig(self.driver)
-        difference = self._difference(target, delta)
-        # Makes mypy happy
-        if not isinstance(difference, HConfig):
-            raise TypeError
-        return difference
+        return self._difference(target, HConfig(self.driver))
 
     def config_to_get_to(
         self,
@@ -161,12 +156,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         if delta is None:
             delta = HConfig(self.driver)
 
-        root_config = self._config_to_get_to(target, delta)
-        # Makes mypy happy
-        if not isinstance(root_config, HConfig):
-            raise TypeError
-
-        return root_config
+        return self._config_to_get_to(target, delta)
 
     def add_ancestor_copy_of(
         self,
@@ -202,12 +192,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
 
     def with_tags(self, tags: Iterable[str]) -> HConfig:
         """Returns a new instance recursively containing children that only have a subset of tags."""
-        new_instance = HConfig(self.driver)
-        result = self._with_tags(frozenset(tags), new_instance)
-        # Makes mypy happy
-        if not isinstance(result, HConfig):
-            raise TypeError
-        return new_instance
+        return self._with_tags(frozenset(tags), HConfig(self.driver))
 
     def all_children_sorted_by_tags(
         self,

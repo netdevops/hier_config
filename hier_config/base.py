@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from itertools import chain
 from logging import getLogger
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional, Union, overload
 
 from .children import Children
 from .exceptions import DuplicateChildError
@@ -337,6 +337,20 @@ class HConfigBase(ABC):  # noqa: PLR0904
     def _is_duplicate_child_allowed(self) -> bool:
         pass
 
+    @overload
+    def _with_tags(
+        self,
+        tags: frozenset[str],
+        new_instance: HConfig,
+    ) -> HConfig: ...
+
+    @overload
+    def _with_tags(
+        self,
+        tags: frozenset[str],
+        new_instance: HConfigChild,
+    ) -> HConfigChild: ...
+
     def _with_tags(
         self,
         tags: frozenset[str],
@@ -349,6 +363,20 @@ class HConfigBase(ABC):  # noqa: PLR0904
                 child._with_tags(tags, new_instance=new_child)  # noqa: SLF001
 
         return new_instance
+
+    @overload
+    def _config_to_get_to(
+        self,
+        target: HConfig,
+        delta: HConfig,
+    ) -> HConfig: ...
+
+    @overload
+    def _config_to_get_to(
+        self,
+        target: HConfigChild,
+        delta: HConfigChild,
+    ) -> HConfigChild: ...
 
     def _config_to_get_to(
         self,
@@ -371,6 +399,26 @@ class HConfigBase(ABC):  # noqa: PLR0904
         if words[0].isdecimal():
             words.pop(0)
         return " ".join(words)
+
+    @overload
+    def _difference(
+        self,
+        target: Union[HConfig, HConfigChild],
+        delta: HConfig,
+        target_acl_children: Optional[dict[str, HConfigChild]] = None,
+        *,
+        in_acl: bool = False,
+    ) -> HConfig: ...
+
+    @overload
+    def _difference(
+        self,
+        target: Union[HConfig, HConfigChild],
+        delta: HConfigChild,
+        target_acl_children: Optional[dict[str, HConfigChild]] = None,
+        *,
+        in_acl: bool = False,
+    ) -> HConfigChild: ...
 
     def _difference(
         self,
