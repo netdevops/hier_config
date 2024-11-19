@@ -64,17 +64,22 @@ class HConfigBase(ABC):  # noqa: PLR0904
     def add_child(
         self,
         text: str,
+        *,
+        return_if_present: bool = False,
+        check_if_present: bool = True,
     ) -> HConfigChild:
         """Add a child instance of HConfigChild."""
         if not text:
             message = "text was empty"
             raise ValueError(message)
 
-        if text in self.children:
+        if check_if_present and (child := self.children.get(text)):
             if self._is_duplicate_child_allowed():
                 new_child = self._instantiate_child(text)
                 self.children.append(new_child, update_mapping="disabled")
                 return new_child
+            if return_if_present:
+                return child
             message = f"Found a duplicate section: {(*self.path(), text)}"
             raise DuplicateChildError(message)
 
