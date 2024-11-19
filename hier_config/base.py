@@ -5,7 +5,7 @@ from itertools import chain
 from logging import getLogger
 from typing import TYPE_CHECKING, Optional, Union, overload
 
-from .children import Children
+from .children import HConfigChildren
 from .exceptions import DuplicateChildError
 
 if TYPE_CHECKING:
@@ -23,7 +23,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
     __slots__ = ("children",)
 
     def __init__(self) -> None:
-        self.children = Children()
+        self.children = HConfigChildren()
 
     def __len__(self) -> int:
         return len(tuple(self.all_children()))

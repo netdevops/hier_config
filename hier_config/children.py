@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 _D = TypeVar("_D")
 
 
-class Children:
+class HConfigChildren:
     def __init__(self) -> None:
         self.data: list[HConfigChild] = []
         self.mapping: dict[str, HConfigChild] = {}
@@ -44,7 +44,7 @@ class Children:
         return len(self.data)
 
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Children):
+        if not isinstance(other, HConfigChildren):
             return NotImplemented
 
         self_len = len(self.data)
