@@ -302,20 +302,26 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
 
     def overwrite_with(
         self,
-        other: HConfigChild,
+        target: HConfigChild,
         delta: Union[HConfig, HConfigChild],
         *,
         negate: bool = True,
     ) -> None:
         """Deletes delta.child[self.text], adds a deep copy of self to delta."""
-        if other.children != self.children:
+        if self.children != target.children:
             if negate:
+                if negated := delta.children.get(self.text):
+                    negated.negate()
+                else:
+                    negated = delta.add_child(
+                        self.text, check_if_present=False
+                    ).negate()
+
+                negated.comments.add("dropping section")
+            else:
                 delta.children.delete(self.text)
-                deleted = delta.add_child(self.text).negate()
-                deleted.comments.add("dropping section")
             if self.children:
-                delta.children.delete(self.text)
-                new_item = delta.add_deep_copy_of(self)
+                new_item = delta.add_deep_copy_of(target)
                 new_item.comments.add("re-create section")
 
     def line_inclusion_test(
