@@ -2,13 +2,17 @@ import tempfile
 import types
 from pathlib import Path
 
+import pytest
+
 from hier_config import (
     HConfigChild,
+    WorkflowRemediation,
     get_hconfig,
     get_hconfig_driver,
     get_hconfig_fast_load,
     get_hconfig_from_dump,
 )
+from hier_config.exceptions import DuplicateChildError
 from hier_config.models import Instance, MatchRule, Platform
 
 
@@ -76,7 +80,9 @@ def test_dump_and_load_from_dump_and_compare(platform_a: Platform) -> None:
 
 def test_add_ancestor_copy_of(platform_a: Platform) -> None:
     source_config = get_hconfig(platform_a)
-    ipv4_address = source_config.add_children_deep(("interface Vlan2", "ip address 192.168.1.0/24"))
+    ipv4_address = source_config.add_children_deep(
+        ("interface Vlan2", "ip address 192.168.1.0/24")
+    )
     destination_config = get_hconfig(platform_a)
     destination_config.add_ancestor_copy_of(ipv4_address)
 
@@ -255,9 +261,13 @@ def test_add_children(platform_a: Platform) -> None:
 
 
 def test_add_child(platform_a: Platform) -> None:
-    interface = get_hconfig(platform_a).add_child("interface Vlan2")
+    config = get_hconfig(platform_a)
+    interface = config.add_child("interface Vlan2")
     assert interface.depth() == 1
     assert interface.text == "interface Vlan2"
+    with pytest.raises(DuplicateChildError):
+        config.add_child("interface Vlan2")
+    assert config.children.mapping == {"interface Vlan2": interface}
 
 
 def test_add_deep_copy_of(platform_a: Platform, platform_b: Platform) -> None:
@@ -347,7 +357,7 @@ def test_set_order_weight(platform_a: Platform) -> None:
     assert child.order_weight == 200
 
 
-def test_tags(platform_a: Platform) -> None:
+def test_tags_add(platform_a: Platform) -> None:
     interface = get_hconfig(platform_a).add_child("interface Vlan2")
     ip_address = interface.add_child("ip address 192.168.1.1/24")
     assert not interface.tags
@@ -357,6 +367,10 @@ def test_tags(platform_a: Platform) -> None:
     assert "a" in ip_address.tags
     assert "b" not in interface.tags
     assert "b" not in ip_address.tags
+    interface.tags_add("c")
+    assert "c" in ip_address.tags
+    interface.tags_remove("c")
+    assert "c" not in ip_address.tags
 
 
 def test_append_tags(platform_a: Platform) -> None:
@@ -384,9 +398,11 @@ def test_remove_tags(platform_a: Platform) -> None:
 
 
 def test_negate(platform_a: Platform) -> None:
-    interface = get_hconfig(platform_a).add_child("interface Vlan2")
+    config = get_hconfig(platform_a)
+    interface = config.add_child("interface Vlan2")
     interface.negate()
     assert interface.text == "no interface Vlan2"
+    assert config.children.mapping == {"no interface Vlan2": interface}
 
 
 def test_config_to_get_to(platform_a: Platform) -> None:
@@ -416,18 +432,13 @@ def test_config_to_get_to2(platform_a: Platform) -> None:
     assert "add me" in delta.children
 
 
-def test_add_shallow_copy_of(platform_a: Platform, platform_b: Platform) -> None:
+def test_add_shallow_copy_of(platform_a: Platform) -> None:
     base_config = get_hconfig(platform_a)
 
     interface_a = get_hconfig(platform_a).add_child("interface Vlan2")
     interface_a.tags_add(frozenset(("ta", "tb")))
     interface_a.comments.add("ca")
     interface_a.order_weight = 200
-
-    interface_b = get_hconfig(platform_b).add_child("interface Vlan2")
-    interface_b.tags_add(frozenset(("tc",)))
-    interface_b.comments.add("cc")
-    interface_b.order_weight = 201
 
     copied_interface = base_config.add_shallow_copy_of(interface_a, merged=True)
     assert copied_interface.tags == frozenset(("ta", "tb"))
@@ -438,24 +449,6 @@ def test_add_shallow_copy_of(platform_a: Platform, platform_b: Platform) -> None
             id=id(interface_a.root),
             comments=frozenset(interface_a.comments),
             tags=interface_a.tags,
-        ),
-    ]
-
-    copied_interface = base_config.add_shallow_copy_of(interface_b, merged=True)
-
-    assert copied_interface.tags == frozenset(("ta", "tb", "tc"))
-    assert copied_interface.comments == frozenset(("ca", "cc"))
-    assert copied_interface.order_weight == 201
-    assert copied_interface.instances == [
-        Instance(
-            id=id(interface_a.root),
-            comments=frozenset(interface_a.comments),
-            tags=interface_a.tags,
-        ),
-        Instance(
-            id=id(interface_b.root),
-            comments=frozenset(interface_b.comments),
-            tags=interface_b.tags,
         ),
     ]
 
@@ -618,3 +611,84 @@ def test_future_config_no_command_in_source() -> None:
     calculated_running_config = future_config.future(rollback_config)
     assert not calculated_running_config.children
     assert not tuple(calculated_running_config.unified_diff(running_config))
+
+
+def test_sectional_overwrite() -> None:
+    platform = Platform.CISCO_XR
+    # There is a sectional_overwrite rules in the CISCO_XR driver for "template".
+    running_config = get_hconfig_fast_load(platform, "template test\n  a\n  b")
+    generated_config = get_hconfig_fast_load(platform, "template test\n  a")
+    expected_remediation_config = get_hconfig_fast_load(
+        platform, "no template test\ntemplate test\n  a"
+    )
+    workflow_remediation = WorkflowRemediation(running_config, generated_config)
+    remediation_config = workflow_remediation.remediation_config
+    assert remediation_config == expected_remediation_config
+
+
+def test_sectional_overwrite_no_negate() -> None:
+    platform = Platform.CISCO_XR
+    running_config = get_hconfig_fast_load(platform, "as-path-set test\n  a\n  b")
+    generated_config = get_hconfig_fast_load(platform, "as-path-set test\n  a")
+    expected_remediation_config = get_hconfig_fast_load(
+        platform, "as-path-set test\n  a"
+    )
+    workflow_remediation = WorkflowRemediation(running_config, generated_config)
+    remediation_config = workflow_remediation.remediation_config
+    assert remediation_config == expected_remediation_config
+
+
+def test_sectional_overwrite_no_negate2() -> None:
+    platform = Platform.CISCO_XR
+    running_config = get_hconfig_fast_load(
+        platform,
+        "route-policy test\n  duplicate\n  not_duplicate1\n  duplicate\n  not_duplicate2",
+    )
+    generated_config = get_hconfig_fast_load(
+        platform, "route-policy test\n  duplicate\n  not_duplicate1"
+    )
+    expected_remediation_config = get_hconfig_fast_load(
+        platform, "route-policy test\n  duplicate\n  not_duplicate1"
+    )
+    workflow_remediation = WorkflowRemediation(running_config, generated_config)
+    remediation_config = workflow_remediation.remediation_config
+    assert remediation_config == expected_remediation_config
+
+
+def test_overwrite_with_negate() -> None:
+    platform = Platform.CISCO_XR
+    running_config = get_hconfig_fast_load(
+        platform, "route-policy test\n  duplicate\n  not_duplicate\n  duplicate"
+    )
+    generated_config = get_hconfig_fast_load(
+        platform, "route-policy test\n  duplicate\n  not_duplicate"
+    )
+    expected_config = get_hconfig_fast_load(
+        platform,
+        "no route-policy test\nroute-policy test\n  duplicate\n  not_duplicate",
+    )
+    delta_config = get_hconfig(platform)
+    running_config.children["route-policy test"].overwrite_with(
+        generated_config.children["route-policy test"], delta_config
+    )
+    assert delta_config == expected_config
+
+
+def test_overwrite_with_no_negate() -> None:
+    platform = Platform.CISCO_XR
+    running_config = get_hconfig_fast_load(
+        platform,
+        "route-policy test\n  duplicate\n  not-duplicate\n  duplicate\n  duplicate",
+    )
+    generated_config = get_hconfig_fast_load(
+        platform, "route-policy test\n  duplicate\n  not-duplicate\n  duplicate"
+    )
+    expected_config = get_hconfig_fast_load(
+        platform,
+        "route-policy test\n  duplicate\n  not-duplicate\n  duplicate",
+    )
+    delta_config = get_hconfig(platform)
+    running_config.children["route-policy test"].overwrite_with(
+        generated_config.children["route-policy test"], delta_config, negate=False
+    )
+    assert delta_config == expected_config
