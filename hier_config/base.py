@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from itertools import chain
 from logging import getLogger
-from typing import TYPE_CHECKING, Optional, Union, overload
+from typing import TYPE_CHECKING, Optional, TypeVar, Union
 
 from .children import HConfigChildren
 from .exceptions import DuplicateChildError
@@ -15,6 +15,10 @@ if TYPE_CHECKING:
     from .models import MatchRule, SetLikeOfStr
     from .platforms.driver_base import HConfigDriverBase
     from .root import HConfig
+
+    _HConfigRootOrChildT = TypeVar(
+        "_HConfigRootOrChildT", bound=Union[HConfig, HConfigChild]
+    )
 
 logger = getLogger(__name__)
 
@@ -337,25 +341,11 @@ class HConfigBase(ABC):  # noqa: PLR0904
     def _is_duplicate_child_allowed(self) -> bool:
         pass
 
-    @overload
     def _with_tags(
         self,
         tags: frozenset[str],
-        new_instance: HConfig,
-    ) -> HConfig: ...
-
-    @overload
-    def _with_tags(
-        self,
-        tags: frozenset[str],
-        new_instance: HConfigChild,
-    ) -> HConfigChild: ...
-
-    def _with_tags(
-        self,
-        tags: frozenset[str],
-        new_instance: Union[HConfig, HConfigChild],
-    ) -> Union[HConfig, HConfigChild]:
+        new_instance: _HConfigRootOrChildT,
+    ) -> _HConfigRootOrChildT:
         """Adds children recursively that have a subset of tags."""
         for child in self.children:
             if tags.issubset(child.tags):
@@ -364,25 +354,11 @@ class HConfigBase(ABC):  # noqa: PLR0904
 
         return new_instance
 
-    @overload
     def _config_to_get_to(
         self,
-        target: HConfig,
-        delta: HConfig,
-    ) -> HConfig: ...
-
-    @overload
-    def _config_to_get_to(
-        self,
-        target: HConfigChild,
-        delta: HConfigChild,
-    ) -> HConfigChild: ...
-
-    def _config_to_get_to(
-        self,
-        target: Union[HConfig, HConfigChild],
-        delta: Union[HConfig, HConfigChild],
-    ) -> Union[HConfig, HConfigChild]:
+        target: _HConfigRootOrChildT,
+        delta: _HConfigRootOrChildT,
+    ) -> _HConfigRootOrChildT:
         """Figures out what commands need to be executed to transition from self to target.
         self is the source data structure(i.e. the running_config),
         target is the destination(i.e. generated_config).
@@ -400,34 +376,14 @@ class HConfigBase(ABC):  # noqa: PLR0904
             words.pop(0)
         return " ".join(words)
 
-    @overload
     def _difference(
         self,
         target: Union[HConfig, HConfigChild],
-        delta: HConfig,
+        delta: _HConfigRootOrChildT,
         target_acl_children: Optional[dict[str, HConfigChild]] = None,
         *,
         in_acl: bool = False,
-    ) -> HConfig: ...
-
-    @overload
-    def _difference(
-        self,
-        target: Union[HConfig, HConfigChild],
-        delta: HConfigChild,
-        target_acl_children: Optional[dict[str, HConfigChild]] = None,
-        *,
-        in_acl: bool = False,
-    ) -> HConfigChild: ...
-
-    def _difference(
-        self,
-        target: Union[HConfig, HConfigChild],
-        delta: Union[HConfig, HConfigChild],
-        target_acl_children: Optional[dict[str, HConfigChild]] = None,
-        *,
-        in_acl: bool = False,
-    ) -> Union[HConfig, HConfigChild]:
+    ) -> _HConfigRootOrChildT:
         acl_sw_matches = tuple(f"ip{x} access-list " for x in ("", "v4", "v6"))
 
         for self_child in self.children:
