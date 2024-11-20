@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, Optional, TypeVar, Union, overload
+from typing import TYPE_CHECKING, Optional, TypeVar, Union, overload
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -79,13 +79,11 @@ class HConfigChildren:
         self,
         child: HConfigChild,
         *,
-        update_mapping: Literal["normal", "fast", "disabled"] = "normal",
+        update_mapping: bool = True,
     ) -> HConfigChild:
         self.data.append(child)
-        if update_mapping == "normal":
-            self.rebuild_mapping()
-        elif update_mapping == "fast":
-            self.mapping[child.text] = child
+        if update_mapping:
+            self.mapping.setdefault(child.text, child)
 
         return child
 
@@ -109,7 +107,8 @@ class HConfigChildren:
     def extend(self, children: Iterable[HConfigChild]) -> None:
         """Add child instances of HConfigChild."""
         self.data.extend(children)
-        self.rebuild_mapping()
+        for child in children:
+            self.mapping.setdefault(child.text, child)
 
     def get(
         self, key: str, default: Optional[_D] = None

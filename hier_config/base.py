@@ -80,7 +80,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
         if check_if_present and (child := self.children.get(text)):
             if self._is_duplicate_child_allowed():
                 new_child = self._instantiate_child(text)
-                self.children.append(new_child, update_mapping="disabled")
+                self.children.append(new_child, update_mapping=False)
                 return new_child
             if return_if_present:
                 return child
@@ -88,7 +88,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
             raise DuplicateChildError(message)
 
         new_child = self._instantiate_child(text)
-        self.children.append(new_child, update_mapping="fast")
+        self.children.append(new_child)
         return new_child
 
     def path(self) -> Iterator[str]:  # noqa: PLR6301
