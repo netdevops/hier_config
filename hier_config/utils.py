@@ -1,23 +1,21 @@
 from pathlib import Path
+from typing import Union
 
 import yaml
 from pydantic import TypeAdapter
 
-from typing import List, Dict, Any, Union, Tuple
-
-from hier_config import get_hconfig_driver, Platform
-from hier_config.platforms.driver_base import HConfigDriverBase
-
+from hier_config import Platform, get_hconfig_driver
 from hier_config.models import (
-    TagRule,
+    HierConfigMapping,
+    IdempotentCommandsRule,
     MatchRule,
     NegationDefaultWithRule,
-    SectionalExitingRule,
     OrderingRule,
     PerLineSubRule,
-    IdempotentCommandsRule,
-    HierConfigMapping,
+    SectionalExitingRule,
+    TagRule,
 )
+from hier_config.platforms.driver_base import HConfigDriverBase
 
 
 def _load_file_contents(file_path: str) -> str:
@@ -109,8 +107,7 @@ def hconfig_v3_platform_v2_os_mapper(platform: Platform) -> str:
 
 
 def load_hconfig_v2_options(v2_options: dict, platform: Platform) -> HConfigDriverBase:
-    """
-    Load Hier Config v2 options to v3 driver format.
+    """Load Hier Config v2 options to v3 driver format.
 
     Args:
         v2_options (dict): The v2 options dictionary.
@@ -118,6 +115,7 @@ def load_hconfig_v2_options(v2_options: dict, platform: Platform) -> HConfigDriv
 
     Returns:
         HConfigDriverBase: A v3 driver instance with the migrated rules.
+
     """
     driver = get_hconfig_driver(platform)
 
@@ -174,8 +172,7 @@ def load_hconfig_v2_options(v2_options: dict, platform: Platform) -> HConfigDriv
 def load_hconfig_v2_options_from_file(
     options_file: str, platform: Platform
 ) -> HConfigDriverBase:
-    """
-    Load Hier Config v2 options file to v3 driver format.
+    """Load Hier Config v2 options file to v3 driver format.
 
     Args:
         options_file (str): The v2 options file.
@@ -183,16 +180,16 @@ def load_hconfig_v2_options_from_file(
 
     Returns:
         HConfigDriverBase: A v3 driver instance with the migrated rules.
+
     """
     hconfig_options = yaml.safe_load(_load_file_contents(file_path=options_file))
     return load_hconfig_v2_options(v2_options=hconfig_options, platform=platform)
 
 
 def load_hconfig_v2_tags(
-    v2_tags: List[Dict[str, Union[List[Dict[str, List[str]]], str]]],
-) -> Tuple[TagRule]:
-    """
-    Convert v2-style tags into v3-style TagRule Pydantic objects for Hier Config.
+    v2_tags: list[dict[str, Union[list[dict[str, list[str]]], str]]],
+) -> tuple[TagRule]:
+    """Convert v2-style tags into v3-style TagRule Pydantic objects for Hier Config.
 
     Args:
         v2_tags (List[Dict[str, Union[List[Dict[str, List[str]]], str]]]):
@@ -202,8 +199,9 @@ def load_hconfig_v2_tags(
 
     Returns:
         Tuple[TagRule]: A tuple of TagRule Pydantic objects representing v3-style tags.
+
     """
-    v3_tags: List[TagRule] = []
+    v3_tags: list[TagRule] = []
 
     for v2_tag in v2_tags:
         if "lineage" in v2_tag and "add_tags" in v2_tag:
@@ -212,7 +210,7 @@ def load_hconfig_v2_tags(
             tags = v2_tag["add_tags"]
 
             # Convert to MatchRule objects
-            match_rules: List[MatchRule] = []
+            match_rules: list[MatchRule] = []
             for rule in lineage_rules:
                 if "startswith" in rule:
                     match_rules.append(MatchRule(startswith=tuple(rule["startswith"])))
@@ -234,12 +232,12 @@ def load_hconfig_v2_tags(
     return tuple(v3_tags)
 
 
-def load_hconfig_v2_tags_from_file(tags_file: str) -> Tuple[TagRule]:
-    """
-    Convert v2-style tags into v3-style TagRule Pydantic objects for Hier Config.
+def load_hconfig_v2_tags_from_file(tags_file: str) -> tuple[TagRule]:
+    """Convert v2-style tags into v3-style TagRule Pydantic objects for Hier Config.
 
     Returns:
         Tuple[TagRule]: A tuple of TagRule Pydantic objects representing v3-style tags.
+
     """
     v2_tags = yaml.safe_load(_load_file_contents(file_path=tags_file))
     return load_hconfig_v2_tags(v2_tags=v2_tags)

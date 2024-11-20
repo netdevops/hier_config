@@ -1,29 +1,22 @@
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 import yaml
-
-from unittest.mock import patch, MagicMock, mock_open
 from pydantic import ValidationError
 
-from hier_config import get_hconfig_driver, Platform
-from hier_config.platforms.driver_base import HConfigDriverBase
+from hier_config import Platform
 from hier_config.models import (
-    TagRule,
     MatchRule,
-    OrderingRule,
-    PerLineSubRule,
-    SectionalExitingRule,
-    IdempotentCommandsRule,
-    NegationDefaultWithRule,
+    TagRule,
 )
 from hier_config.utils import (
     hconfig_v2_os_v3_platform_mapper,
     hconfig_v3_platform_v2_os_mapper,
     load_device_config,
-    load_hier_config_tags,
     load_hconfig_v2_options,
     load_hconfig_v2_tags,
+    load_hier_config_tags,
 )
 
 TAGS_FILE_PATH = "./tests/fixtures/tag_rules_ios.yml"
@@ -173,7 +166,7 @@ def test_load_hconfig_v2_options(mock_driver) -> None:
     assert driver.rules.idempotent_commands[0].match_rules[0].startswith == "interface"
 
 
-def test_load_hconfig_v2_tags_valid_input():
+def test_load_hconfig_v2_tags_valid_input() -> None:
     v2_tags = [
         {
             "lineage": [
@@ -206,7 +199,7 @@ def test_load_hconfig_v2_tags_valid_input():
     assert result == expected_output
 
 
-def test_load_hconfig_v2_tags_empty_input():
+def test_load_hconfig_v2_tags_empty_input() -> None:
     v2_tags = []
 
     expected_output = ()
@@ -215,7 +208,7 @@ def test_load_hconfig_v2_tags_empty_input():
     assert result == expected_output
 
 
-def test_load_hconfig_v2_tags_multiple_lineage_fields():
+def test_load_hconfig_v2_tags_multiple_lineage_fields() -> None:
     v2_tags = [
         {
             "lineage": [
@@ -239,7 +232,7 @@ def test_load_hconfig_v2_tags_multiple_lineage_fields():
     assert result == expected_output
 
 
-def test_load_hconfig_v2_tags_empty_lineage():
+def test_load_hconfig_v2_tags_empty_lineage() -> None:
     v2_tags = [
         {
             "lineage": [],
