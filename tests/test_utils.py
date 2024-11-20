@@ -2,17 +2,41 @@ from pathlib import Path
 
 import pytest
 import yaml
+
+from unittest.mock import patch, MagicMock, mock_open
 from pydantic import ValidationError
 
-from hier_config.models import Platform, TagRule
+from hier_config import get_hconfig_driver, Platform
+from hier_config.platforms.driver_base import HConfigDriverBase
+from hier_config.models import (
+    TagRule,
+    MatchRule,
+    OrderingRule,
+    PerLineSubRule,
+    SectionalExitingRule,
+    IdempotentCommandsRule,
+    NegationDefaultWithRule,
+)
 from hier_config.utils import (
     hconfig_v2_os_v3_platform_mapper,
     hconfig_v3_platform_v2_os_mapper,
     load_device_config,
     load_hier_config_tags,
+    load_hconfig_v2_options,
+    load_hconfig_v2_tags,
 )
 
 TAGS_FILE_PATH = "./tests/fixtures/tag_rules_ios.yml"
+# Mock data for v2 options
+V2_OPTIONS = {
+    "negation": "no",
+    "ordering": [{"lineage": [{"startswith": "ntp"}], "order": 700}],
+    "per_line_sub": [{"search": "^!.*Generated.*$", "replace": ""}],
+    "sectional_exiting": [
+        {"lineage": [{"startswith": "router bgp"}], "exit_text": "exit"}
+    ],
+    "idempotent_commands": [{"lineage": [{"startswith": "interface"}]}],
+}
 
 
 @pytest.fixture
@@ -21,6 +45,20 @@ def temporary_file_fixture(tmp_path: Path) -> tuple[Path, str]:
     content = "interface GigabitEthernet0/1\n ip address 192.168.1.1 255.255.255.0\n no shutdown"
     file_path.write_text(content)
     return file_path, content
+
+
+@pytest.fixture
+def mock_driver():
+    # Mock the get_hconfig_driver to return a MagicMock for the driver
+    with patch("hier_config.get_hconfig_driver") as mock_get_driver:
+        mock_driver = MagicMock()
+        mock_driver.rules.negate_with = []
+        mock_driver.rules.ordering = []
+        mock_driver.rules.per_line_sub = []
+        mock_driver.rules.sectional_exiting = []
+        mock_driver.rules.idempotent_commands = []
+        mock_get_driver.return_value = mock_driver
+        yield mock_driver
 
 
 def test_load_device_config_success(temporary_file_fixture: tuple[Path, str]) -> None:
@@ -104,3 +142,112 @@ def test_hconfig_v3_platform_v2_os_mapper() -> None:
     assert hconfig_v3_platform_v2_os_mapper(Platform.CISCO_IOS) == "ios"
     assert hconfig_v3_platform_v2_os_mapper(Platform.CISCO_NXOS) == "nxos"
     assert hconfig_v3_platform_v2_os_mapper(Platform.JUNIPER_JUNOS) == "junos"
+
+
+def test_load_hconfig_v2_options(mock_driver) -> None:
+    platform = Platform.GENERIC
+
+    driver = load_hconfig_v2_options(V2_OPTIONS, platform)
+
+    # Assert negation rule
+    assert len(driver.rules.negate_with) == 1
+    assert driver.rules.negate_with[0].use == "no"
+
+    # Assert ordering rule
+    assert len(driver.rules.ordering) == 1
+    assert driver.rules.ordering[0].match_rules[0].startswith == "ntp"
+    assert driver.rules.ordering[0].weight == 700
+
+    # Assert per-line substitution
+    assert len(driver.rules.per_line_sub) == 1
+    assert driver.rules.per_line_sub[0].search == "^!.*Generated.*$"
+    assert driver.rules.per_line_sub[0].replace == ""
+
+    # Assert sectional exiting
+    assert len(driver.rules.sectional_exiting) == 1
+    assert driver.rules.sectional_exiting[0].match_rules[0].startswith == "router bgp"
+    assert driver.rules.sectional_exiting[0].exit_text == "exit"
+
+    # Assert idempotent commands
+    assert len(driver.rules.idempotent_commands) == 1
+    assert driver.rules.idempotent_commands[0].match_rules[0].startswith == "interface"
+
+
+def test_load_hconfig_v2_tags_valid_input():
+    v2_tags = [
+        {
+            "lineage": [
+                {"startswith": ["ip name-server", "no ip name-server", "ntp", "no ntp"]}
+            ],
+            "add_tags": "ntp",
+        },
+        {
+            "lineage": [{"startswith": ["router bgp", "address-family ipv4"]}],
+            "add_tags": "bgp",
+        },
+    ]
+
+    expected_output = (
+        TagRule(
+            match_rules=(
+                MatchRule(
+                    startswith=("ip name-server", "no ip name-server", "ntp", "no ntp")
+                ),
+            ),
+            apply_tags=frozenset(["ntp"]),
+        ),
+        TagRule(
+            match_rules=(MatchRule(startswith=("router bgp", "address-family ipv4")),),
+            apply_tags=frozenset(["bgp"]),
+        ),
+    )
+
+    result = load_hconfig_v2_tags(v2_tags)
+    assert result == expected_output
+
+
+def test_load_hconfig_v2_tags_empty_input():
+    v2_tags = []
+
+    expected_output = ()
+
+    result = load_hconfig_v2_tags(v2_tags)
+    assert result == expected_output
+
+
+def test_load_hconfig_v2_tags_multiple_lineage_fields():
+    v2_tags = [
+        {
+            "lineage": [
+                {"startswith": ["ip name-server"], "endswith": ["version 2"]},
+            ],
+            "add_tags": "ntp",
+        }
+    ]
+
+    expected_output = (
+        TagRule(
+            match_rules=(
+                MatchRule(startswith=("ip name-server",)),
+                MatchRule(endswith=("version 2",)),
+            ),
+            apply_tags=frozenset(["ntp"]),
+        ),
+    )
+
+    result = load_hconfig_v2_tags(v2_tags)
+    assert result == expected_output
+
+
+def test_load_hconfig_v2_tags_empty_lineage():
+    v2_tags = [
+        {
+            "lineage": [],
+            "add_tags": "empty",
+        }
+    ]
+
+    expected_output = (TagRule(match_rules=(), apply_tags=frozenset(["empty"])),)
+
+    result = load_hconfig_v2_tags(v2_tags)
+    assert result == expected_output
