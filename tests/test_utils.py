@@ -109,7 +109,9 @@ def test_hconfig_v3_platform_v2_os_mapper() -> None:
     assert hconfig_v3_platform_v2_os_mapper(Platform.GENERIC) == "generic"
 
 
-def test_load_hconfig_v2_options(platform_generic: Platform, v2_options: dict[str, Any]) -> None:
+def test_load_hconfig_v2_options(
+    platform_generic: Platform, v2_options: dict[str, Any]
+) -> None:
     # pylint: disable=redefined-outer-name, unused-argument
     platform = platform_generic
 
@@ -127,7 +129,7 @@ def test_load_hconfig_v2_options(platform_generic: Platform, v2_options: dict[st
     # Assert per-line substitution
     assert len(driver.rules.per_line_sub) == 1
     assert driver.rules.per_line_sub[0].search == "^!.*Generated.*$"
-    assert driver.rules.per_line_sub[0].replace == ""
+    assert not driver.rules.per_line_sub[0].replace
 
     # Assert sectional exiting
     assert len(driver.rules.sectional_exiting) == 1
