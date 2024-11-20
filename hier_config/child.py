@@ -307,7 +307,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         *,
         negate: bool = True,
     ) -> None:
-        """Deletes delta.child[self.text], adds a deep copy of self to delta."""
+        """Deletes delta.child[self.text], adds a deep copy of target to delta."""
         if self.children != target.children:
             if negate:
                 if negated := delta.children.get(self.text):
