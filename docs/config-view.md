@@ -34,6 +34,42 @@ The framework uses a combination of abstract base classes (e.g., `ConfigViewInte
 | `vlan_ids`                  | `frozenset[int]`              | Set of VLAN IDs configured.                                                 |
 | `vlans`                     | `Iterable[Vlan]`              | Yields VLAN objects, including ID and name.                                 |
 
+## Available Config Interface Views
+
+| **Property/Method**           | **Type**                       | **Description**                                                                                   |
+|-------------------------------|--------------------------------|---------------------------------------------------------------------------------------------------|
+| `bundle_id`                   | `Optional[str]`               | Retrieves the bundle ID of the interface.                                                        |
+| `bundle_member_interfaces`    | `Iterable[str]`               | Lists the member interfaces of a bundle.                                                         |
+| `bundle_name`                 | `Optional[str]`               | Retrieves the name of the bundle to which the interface belongs.                                  |
+| `description`                 | `str`                         | Returns the description of the interface.                                                        |
+| `dot1q_mode`                  | `Optional[InterfaceDot1qMode]`| Determines the 802.1Q mode based on VLAN tagging configuration.                                   |
+| `duplex`                      | `InterfaceDuplex`             | Determines the duplex mode of the interface.                                                     |
+| `enabled`                     | `bool`                        | Checks if the interface is enabled.                                                              |
+| `has_nac`                     | `bool`                        | Determines if NAC (Network Admission Control) is configured on the interface.                    |
+| `ipv4_interface`              | `Optional[IPv4Interface]`     | Retrieves the first configured IPv4 address and prefix.                                          |
+| `ipv4_interfaces`             | `Iterable[IPv4Interface]`     | Lists all IPv4 addresses and prefixes configured on the interface.                               |
+| `is_bundle`                   | `bool`                        | Indicates whether the interface is part of a bundle.                                             |
+| `is_loopback`                 | `bool`                        | Checks if the interface is a loopback.                                                           |
+| `is_subinterface`             | `bool`                        | Indicates if the interface is a subinterface.                                                    |
+| `is_svi`                      | `bool`                        | Checks if the interface is a switched virtual interface (SVI).                                   |
+| `module_number`               | `Optional[int]`               | Retrieves the module number of the interface.                                                    |
+| `nac_control_direction_in`    | `bool`                        | Determines if NAC is configured with "control direction in".                                      |
+| `nac_host_mode`               | `Optional[NACHostMode]`       | Retrieves the NAC host mode configuration.                                                       |
+| `nac_mab_first`               | `bool`                        | Checks if NAC is configured for MAB (MAC Authentication Bypass) first.                           |
+| `nac_max_dot1x_clients`       | `int`                         | Retrieves the maximum number of Dot1x clients allowed on the interface.                          |
+| `nac_max_mab_clients`         | `int`                         | Retrieves the maximum number of MAB clients allowed on the interface.                            |
+| `name`                        | `str`                         | Returns the name of the interface.                                                               |
+| `native_vlan`                 | `Optional[int]`               | Retrieves the native VLAN of the interface.                                                      |
+| `number`                      | `str`                         | Extracts the numeric portion of the interface name.                                              |
+| `parent_name`                 | `Optional[str]`               | Retrieves the name of the parent bundle interface.                                               |
+| `poe`                         | `bool`                        | Indicates if Power over Ethernet (PoE) is enabled on the interface.                              |
+| `port_number`                 | `int`                         | Retrieves the port number of the interface.                                                      |
+| `speed`                       | `Optional[tuple[int, ...]]`   | Lists the static speeds at which the interface can operate, in Mbps.                             |
+| `subinterface_number`         | `Optional[int]`               | Retrieves the subinterface number.                                                               |
+| `tagged_all`                  | `bool`                        | Checks if all VLANs are tagged on the interface.                                                 |
+| `tagged_vlans`                | `tuple[int, ...]`             | Lists the VLANs that are tagged on the interface.                                                |
+| `vrf`                         | `str`                         | Retrieves the VRF (Virtual Routing and Forwarding) associated with the interface.                |
+
 ## Example: Cisco IOS Config View
 
 ### Step 1: Parse Configuration
@@ -87,4 +123,83 @@ for interface_view in config_view.interface_views:
 for vlan in config_view.vlans:
     print(f"VLAN {vlan.id}: {vlan.name}")
 
+```
+
+## Example: Cisco IOS Config Interface View
+
+### Step 1: Parse Configuration
+
+Assume we have a Cisco IOS configuration file as a string.
+
+```python
+from hier_config import Platform, get_hconfig
+
+
+raw_config = """
+interface GigabitEthernet0/1
+ description Uplink to Switch
+ switchport access vlan 10
+ switchport mode access
+ ip address 192.168.1.1 255.255.255.0
+ shutdown
+!
+interface GigabitEthernet0/2
+ switchport trunk allowed vlan 20,30,40
+ switchport mode trunk
+!
+"""
+
+hconfig = get_hconfig(Platform.CISCO_IOS, raw_config)
+```
+
+### Step 2: Create Config View and Access Interface Views
+
+```python
+from hier_config.platforms.cisco_ios.view import HConfigViewCiscoIOS
+
+config_view = HConfigViewCiscoIOS(hconfig)
+```
+
+### Step 3: Access Interface Details
+
+Access properties and methods to interact with individual interface configurations programmatically:
+
+**Retrieve Interface Properties**
+
+#### Loop through all interface views and display their properties
+
+```python
+for interface_view in config_view.interface_views:
+    print(f"Interface Name: {interface_view.name}")
+    print(f"Description: {interface_view.description}")
+    print(f"Enabled: {interface_view.enabled}")
+    print(f"Dot1Q Mode: {interface_view.dot1q_mode}")
+    print(f"Native VLAN: {interface_view.native_vlan}")
+    print(f"Tagged VLANs: {interface_view.tagged_vlans}")
+    print(f"IP Address: {interface_view.ipv4_interface}")
+    print(f"Is Subinterface: {interface_view.is_subinterface}")
+    print("-" * 40)
+```
+
+**Example Output:**
+
+```
+Interface Name: GigabitEthernet0/1
+Description: Uplink to Switch
+Enabled: False
+Dot1Q Mode: InterfaceDot1qMode.ACCESS
+Native VLAN: 10
+Tagged VLANs: ()
+IP Address: 192.168.1.1/24
+Is Subinterface: False
+----------------------------------------
+Interface Name: GigabitEthernet0/2
+Description: None
+Enabled: True
+Dot1Q Mode: InterfaceDot1qMode.TAGGED
+Native VLAN: None
+Tagged VLANs: (20, 30, 40)
+IP Address: None
+Is Subinterface: False
+----------------------------------------
 ```
