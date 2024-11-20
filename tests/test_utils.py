@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Any
+from typing import Any, Union
 
 import pytest
 import yaml
@@ -208,7 +208,7 @@ def test_load_hconfig_v2_tags_multiple_lineage_fields() -> None:
 
 
 def test_load_hconfig_v2_tags_empty_lineage() -> None:
-    v2_tags: list[dict[str, str | list[str]]] = [
+    v2_tags: list[dict[str, Union[str, list[str]]]] = [
         {
             "lineage": [],
             "add_tags": "empty",
