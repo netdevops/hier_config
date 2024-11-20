@@ -41,7 +41,7 @@ def temporary_file_fixture(tmp_path: Path) -> tuple[Path, str]:
 
 
 @pytest.fixture
-def mock_driver():
+def mock_driver_fixture():
     # Mock the get_hconfig_driver to return a MagicMock for the driver
     with patch("hier_config.get_hconfig_driver") as mock_get_driver:
         mock_driver = MagicMock()
@@ -137,7 +137,8 @@ def test_hconfig_v3_platform_v2_os_mapper() -> None:
     assert hconfig_v3_platform_v2_os_mapper(Platform.JUNIPER_JUNOS) == "junos"
 
 
-def test_load_hconfig_v2_options(mock_driver) -> None:
+def test_load_hconfig_v2_options(mock_driver_fixture) -> None:
+    # pylint: disable=redefined-outer-name, unused-argument
     platform = Platform.GENERIC
 
     driver = load_hconfig_v2_options(V2_OPTIONS, platform)

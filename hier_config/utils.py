@@ -72,14 +72,14 @@ def hconfig_v2_os_v3_platform_mapper(os_name: str) -> Platform:
 
     Example:
         >>> hconfig_v2_os_v3_platform_mapper("CISCO_IOS")
-        <Platform.CISCO_IOS: 'cisco_ios'>
+        <Platform.CISCO_IOS: 'ios'>
 
     """
     try:
         return HierConfigMapping[os_name].value
-    except KeyError:
+    except KeyError as exc:
         msg = f"Unsupported v2 OS: {os_name}"
-        raise ValueError(msg)
+        raise ValueError(msg) from exc
 
 
 def hconfig_v3_platform_v2_os_mapper(platform: Platform) -> str:
