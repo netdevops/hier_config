@@ -15,7 +15,6 @@ if TYPE_CHECKING:
 logger = getLogger(__name__)
 
 # Refactoring ideas:
-# - What if children were moved into its own class? e.g. child.children.add()
 # - Cases of children.index() could be replaced with an identity based approach.
 
 
@@ -43,16 +42,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         if not isinstance(other, HConfig):
             return NotImplemented
 
-        if len(self.children) != len(other.children):
-            return False
-
-        return all(
-            self_child == other_child
-            for self_child, other_child in zip(
-                sorted(self.children),
-                sorted(other.children),
-            )
-        )
+        return self.children == other.children
 
     @property
     def driver(self) -> HConfigDriverBase:
@@ -112,7 +102,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         """Add child instances of HConfigChild deeply."""
         base: Union[HConfig, HConfigChild] = self
         for line in lines:
-            base = base.add_child(line)
+            base = base.add_child(line, return_if_present=True)
         if isinstance(base, HConfig):
             message = "base was an HConfig object for some reason."
             raise TypeError(message)
@@ -150,12 +140,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
 
     def difference(self, target: HConfig) -> HConfig:
         """Creates a new HConfig object with the config from self that is not in target."""
-        delta = HConfig(self.driver)
-        difference = self._difference(target, delta)
-        # Makes mypy happy
-        if not isinstance(difference, HConfig):
-            raise TypeError
-        return difference
+        return self._difference(target, HConfig(self.driver))
 
     def config_to_get_to(
         self,
@@ -165,17 +150,11 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         """Figures out what commands need to be executed to transition from self to target.
         self is the source data structure(i.e. the running_config),
         target is the destination(i.e. generated_config).
-
         """
         if delta is None:
             delta = HConfig(self.driver)
 
-        root_config = self._config_to_get_to(target, delta)
-        # Makes mypy happy
-        if not isinstance(root_config, HConfig):
-            raise TypeError
-
-        return root_config
+        return self._config_to_get_to(target, delta)
 
     def add_ancestor_copy_of(
         self,
@@ -211,12 +190,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
 
     def with_tags(self, tags: Iterable[str]) -> HConfig:
         """Returns a new instance recursively containing children that only have a subset of tags."""
-        new_instance = HConfig(self.driver)
-        result = self._with_tags(frozenset(tags), new_instance)
-        # Makes mypy happy
-        if not isinstance(result, HConfig):
-            raise TypeError
-        return new_instance
+        return self._with_tags(frozenset(tags), HConfig(self.driver))
 
     def all_children_sorted_by_tags(
         self,

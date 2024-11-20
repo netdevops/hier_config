@@ -73,23 +73,12 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         if not isinstance(other, HConfigChild):
             return NotImplemented
 
-        if (
-            self.text != other.text
-            or self.tags != other.tags
-            or self.comments != other.comments
-        ):
+        # We are intentionally not including the
+        # comments, facts, instances, new_in_config, order_weight attributes.
+        if self.text != other.text or self.tags != other.tags:
             return False
 
-        if len(self.children) != len(other.children):
-            return False
-
-        return all(
-            self_child == other_child
-            for self_child, other_child in zip(
-                sorted(self.children),
-                sorted(other.children),
-            )
-        )
+        return self.children == other.children
 
     def __ne__(self, other: object) -> bool:
         return not self.__eq__(other)
@@ -108,7 +97,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         is instantiated to rebuild the children dictionary.
         """
         self._text = value.strip()
-        self.parent.rebuild_children_dict()
+        self.parent.children.rebuild_mapping()
 
     @property
     def text_without_negation(self) -> str:
@@ -169,7 +158,6 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         :param new_parent: HConfigChild object -> type list
         """
         new_parent.children.append(self)
-        new_parent.rebuild_children_dict()
         self.delete()
 
     def lineage(self) -> Iterator[HConfigChild]:
@@ -217,7 +205,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
 
     def delete(self) -> None:
         """Delete the current object from its parent."""
-        self.parent.delete_child(self)
+        self.parent.children.delete(self)
 
     def tags_add(self, tag: Union[str, Iterable[str]]) -> None:
         """Add a tag to self._tags on all leaf nodes."""
@@ -314,20 +302,26 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
 
     def overwrite_with(
         self,
-        other: HConfigChild,
+        target: HConfigChild,
         delta: Union[HConfig, HConfigChild],
         *,
         negate: bool = True,
     ) -> None:
-        """Deletes delta.child[self.text], adds a deep copy of self to delta."""
-        if other.children != self.children:
+        """Deletes delta.child[self.text], adds a deep copy of target to delta."""
+        if self.children != target.children:
             if negate:
-                delta.delete_child_by_text(self.text)
-                deleted = delta.add_child(self.text).negate()
-                deleted.comments.add("dropping section")
+                if negated := delta.children.get(self.text):
+                    negated.negate()
+                else:
+                    negated = delta.add_child(
+                        self.text, check_if_present=False
+                    ).negate()
+
+                negated.comments.add("dropping section")
+            else:
+                delta.children.delete(self.text)
             if self.children:
-                delta.delete_child_by_text(self.text)
-                new_item = delta.add_deep_copy_of(self)
+                new_item = delta.add_deep_copy_of(target)
                 new_item.comments.add("re-create section")
 
     def line_inclusion_test(
