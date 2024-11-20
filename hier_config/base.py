@@ -378,7 +378,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
 
     def _difference(
         self,
-        target: Union[HConfig, HConfigChild],
+        target: _HConfigRootOrChildT,
         delta: _HConfigRootOrChildT,
         target_acl_children: Optional[dict[str, HConfigChild]] = None,
         *,
