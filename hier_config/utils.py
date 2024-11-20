@@ -214,13 +214,13 @@ def load_hconfig_v2_tags(
             match_rules: list[MatchRule] = []
             for rule in lineage_rules:
                 if startswith := rule.get("startswith"):
-                    match_rules.append(MatchRule(startswith=tuple(startswith)))
+                    match_rules.append(MatchRule(startswith=startswith))
                 if endswith := rule.get("endswith"):
-                    match_rules.append(MatchRule(endswith=tuple(endswith)))
+                    match_rules.append(MatchRule(endswith=endswith))
                 if contains := rule.get("contains"):
-                    match_rules.append(MatchRule(contains=tuple(contains)))
+                    match_rules.append(MatchRule(contains=contains))
                 if equals := rule.get("equals"):
-                    match_rules.append(MatchRule(equals=tuple(equals)))
+                    match_rules.append(MatchRule(equals=equals))
                 if re_search := rule.get("re_search"):
                     match_rules.append(MatchRule(re_search=re_search))
 
