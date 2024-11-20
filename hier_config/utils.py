@@ -1,12 +1,11 @@
 from pathlib import Path
-from typing import Union
+from typing import Any, Union
 
 import yaml
 from pydantic import TypeAdapter
 
 from hier_config import Platform, get_hconfig_driver
 from hier_config.models import (
-    HierConfigMapping,
     IdempotentCommandsRule,
     MatchRule,
     NegationDefaultWithRule,
@@ -16,6 +15,16 @@ from hier_config.models import (
     TagRule,
 )
 from hier_config.platforms.driver_base import HConfigDriverBase
+
+hconfig_mapping = {
+    "ios": Platform.CISCO_IOS,
+    "iosxe": Platform.CISCO_IOS,
+    "iosxr": Platform.CISCO_XR,
+    "nxos": Platform.CISCO_NXOS,
+    "eos": Platform.ARISTA_EOS,
+    "junos": Platform.JUNIPER_JUNOS,
+    "vyos": Platform.VYOS,
+}
 
 
 def _load_file_contents(file_path: str) -> str:
@@ -67,19 +76,12 @@ def hconfig_v2_os_v3_platform_mapper(os_name: str) -> Platform:
     Returns:
         Platform: The corresponding Platform enumeration for Hier Config v3.
 
-    Raises:
-        ValueError: If the provided OS name is not supported in v2.
-
     Example:
         >>> hconfig_v2_os_v3_platform_mapper("CISCO_IOS")
         <Platform.CISCO_IOS: 'ios'>
 
     """
-    try:
-        return HierConfigMapping[os_name].value
-    except KeyError as exc:
-        msg = f"Unsupported v2 OS: {os_name}"
-        raise ValueError(msg) from exc
+    return hconfig_mapping.get(os_name, Platform.GENERIC)
 
 
 def hconfig_v3_platform_v2_os_mapper(platform: Platform) -> str:
@@ -91,22 +93,21 @@ def hconfig_v3_platform_v2_os_mapper(platform: Platform) -> str:
     Returns:
         str: The corresponding OS name for Hier Config v2.
 
-    Raises:
-        ValueError: If the provided Platform is not supported in v3.
-
     Example:
         >>> hconfig_v3_platform_v2_os_mapper(Platform.CISCO_IOS)
         "ios"
 
     """
-    for os_name, plat in HierConfigMapping.__members__.items():
-        if plat.value == platform:
+    for os_name, plat in hconfig_mapping.items():
+        if plat == platform:
             return os_name
-    msg = f"Unsupported v3 Platform: {platform}"
-    raise ValueError(msg)
+
+    return "generic"
 
 
-def load_hconfig_v2_options(v2_options: dict, platform: Platform) -> HConfigDriverBase:
+def load_hconfig_v2_options(
+    v2_options: dict[str, Any], platform: Platform
+) -> HConfigDriverBase:
     """Load Hier Config v2 options to v3 driver format.
 
     Args:
@@ -187,12 +188,12 @@ def load_hconfig_v2_options_from_file(
 
 
 def load_hconfig_v2_tags(
-    v2_tags: list[dict[str, Union[list[dict[str, list[str]]], str]]],
-) -> tuple[TagRule]:
+    v2_tags: list[dict[str, Any]],
+) -> Union[tuple[TagRule], tuple[TagRule, ...]]:
     """Convert v2-style tags into v3-style TagRule Pydantic objects for Hier Config.
 
     Args:
-        v2_tags (List[Dict[str, Union[List[Dict[str, List[str]]], str]]]):
+        v2_tags (list):
             A list of dictionaries representing v2-style tags. Each dictionary contains:
             - `lineage`: A list of dictionaries with rules (e.g., `startswith`, `endswith`).
             - `add_tags`: A string representing the tag to add.
@@ -232,7 +233,9 @@ def load_hconfig_v2_tags(
     return tuple(v3_tags)
 
 
-def load_hconfig_v2_tags_from_file(tags_file: str) -> tuple[TagRule]:
+def load_hconfig_v2_tags_from_file(
+    tags_file: str,
+) -> Union[tuple[TagRule], tuple[TagRule, ...]]:
     """Convert v2-style tags into v3-style TagRule Pydantic objects for Hier Config.
 
     Returns:

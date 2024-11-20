@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Any
 
 import pytest
 import yaml
@@ -38,6 +39,11 @@ def platform_b() -> Platform:
 
 
 @pytest.fixture(scope="module")
+def platform_generic() -> Platform:
+    return Platform.GENERIC
+
+
+@pytest.fixture(scope="module")
 def tag_rules_ios() -> tuple[TagRule, ...]:
     return TypeAdapter(tuple[TagRule, ...]).validate_python(
         yaml.safe_load(_fixture_file_read("tag_rules_ios.yml"))
@@ -67,6 +73,24 @@ def running_config_flat_junos() -> str:
 @pytest.fixture(scope="module")
 def remediation_config_flat_junos() -> str:
     return _fixture_file_read("remediation_config_flat_junos.conf")
+
+
+@pytest.fixture(scope="module")
+def tags_file_path() -> str:
+    return "./tests/fixtures/tag_rules_ios.yml"
+
+
+@pytest.fixture(scope="module")
+def v2_options() -> dict[str, Any]:
+    return {
+        "negation": "no",
+        "ordering": [{"lineage": [{"startswith": "ntp"}], "order": 700}],
+        "per_line_sub": [{"search": "^!.*Generated.*$", "replace": ""}],
+        "sectional_exiting": [
+            {"lineage": [{"startswith": "router bgp"}], "exit_text": "exit"}
+        ],
+        "idempotent_commands": [{"lineage": [{"startswith": "interface"}]}],
+    }
 
 
 def _fixture_file_read(filename: str) -> str:

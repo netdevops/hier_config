@@ -1,5 +1,5 @@
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from typing import Any
 
 import pytest
 import yaml
@@ -19,18 +19,6 @@ from hier_config.utils import (
     load_hier_config_tags,
 )
 
-TAGS_FILE_PATH = "./tests/fixtures/tag_rules_ios.yml"
-# Mock data for v2 options
-V2_OPTIONS = {
-    "negation": "no",
-    "ordering": [{"lineage": [{"startswith": "ntp"}], "order": 700}],
-    "per_line_sub": [{"search": "^!.*Generated.*$", "replace": ""}],
-    "sectional_exiting": [
-        {"lineage": [{"startswith": "router bgp"}], "exit_text": "exit"}
-    ],
-    "idempotent_commands": [{"lineage": [{"startswith": "interface"}]}],
-}
-
 
 @pytest.fixture
 def temporary_file_fixture(tmp_path: Path) -> tuple[Path, str]:
@@ -38,20 +26,6 @@ def temporary_file_fixture(tmp_path: Path) -> tuple[Path, str]:
     content = "interface GigabitEthernet0/1\n ip address 192.168.1.1 255.255.255.0\n no shutdown"
     file_path.write_text(content)
     return file_path, content
-
-
-@pytest.fixture
-def mock_driver_fixture():
-    # Mock the get_hconfig_driver to return a MagicMock for the driver
-    with patch("hier_config.get_hconfig_driver") as mock_get_driver:
-        mock_driver = MagicMock()
-        mock_driver.rules.negate_with = []
-        mock_driver.rules.ordering = []
-        mock_driver.rules.per_line_sub = []
-        mock_driver.rules.sectional_exiting = []
-        mock_driver.rules.idempotent_commands = []
-        mock_get_driver.return_value = mock_driver
-        yield mock_driver
 
 
 def test_load_device_config_success(temporary_file_fixture: tuple[Path, str]) -> None:
@@ -76,9 +50,9 @@ def test_load_device_config_empty_file(tmp_path: Path) -> None:
     assert not result, "Empty file should return an empty string."
 
 
-def test_load_hier_config_tags_success() -> None:
+def test_load_hier_config_tags_success(tags_file_path: str) -> None:
     """Test that valid tags from the tag_rules_ios.yml file load and validate successfully."""
-    result = load_hier_config_tags(TAGS_FILE_PATH)
+    result = load_hier_config_tags(tags_file_path)
 
     assert isinstance(result, tuple), "Result should be a tuple of TagRule objects."
     assert len(result) == 4, "There should be four TagRule objects."
@@ -124,10 +98,7 @@ def test_hconfig_v2_os_v3_platform_mapper() -> None:
     assert hconfig_v2_os_v3_platform_mapper("ios") == Platform.CISCO_IOS
     assert hconfig_v2_os_v3_platform_mapper("nxos") == Platform.CISCO_NXOS
     assert hconfig_v2_os_v3_platform_mapper("junos") == Platform.JUNIPER_JUNOS
-
-    # Invalid mapping
-    with pytest.raises(ValueError, match="Unsupported v2 OS: UNKNOWN_OS"):
-        hconfig_v2_os_v3_platform_mapper("UNKNOWN_OS")
+    assert hconfig_v2_os_v3_platform_mapper("invalid") == Platform.GENERIC
 
 
 def test_hconfig_v3_platform_v2_os_mapper() -> None:
@@ -135,13 +106,14 @@ def test_hconfig_v3_platform_v2_os_mapper() -> None:
     assert hconfig_v3_platform_v2_os_mapper(Platform.CISCO_IOS) == "ios"
     assert hconfig_v3_platform_v2_os_mapper(Platform.CISCO_NXOS) == "nxos"
     assert hconfig_v3_platform_v2_os_mapper(Platform.JUNIPER_JUNOS) == "junos"
+    assert hconfig_v3_platform_v2_os_mapper(Platform.GENERIC) == "generic"
 
 
-def test_load_hconfig_v2_options(mock_driver_fixture) -> None:
+def test_load_hconfig_v2_options(platform_generic: Platform, v2_options: dict[str, Any]) -> None:
     # pylint: disable=redefined-outer-name, unused-argument
-    platform = Platform.GENERIC
+    platform = platform_generic
 
-    driver = load_hconfig_v2_options(V2_OPTIONS, platform)
+    driver = load_hconfig_v2_options(v2_options, platform)
 
     # Assert negation rule
     assert len(driver.rules.negate_with) == 1
@@ -201,7 +173,7 @@ def test_load_hconfig_v2_tags_valid_input() -> None:
 
 
 def test_load_hconfig_v2_tags_empty_input() -> None:
-    v2_tags = []
+    v2_tags: list[dict[str, Any]] = []
 
     expected_output = ()
 
