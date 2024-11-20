@@ -449,9 +449,9 @@ class HConfigBase(ABC):  # noqa: PLR0904
         target: Union[HConfig, HConfigChild],
         delta: Union[HConfig, HConfigChild],
     ) -> None:
-        # find what would need to be added to source_config to get to self
+        # Find what would need to be added to source_config to get to self
         for target_child in target.children:
-            # if the child exist, recurse into its children
+            # If the child exist, recurse into its children
             if self_child := self.children.get(target_child.text):
                 # Do we need to rewrite the child and its children as well?
                 if self_child.use_sectional_overwrite():
@@ -460,20 +460,19 @@ class HConfigBase(ABC):  # noqa: PLR0904
                 if self_child.use_sectional_overwrite_without_negation():
                     self_child.overwrite_with(target_child, delta, negate=False)
                     continue
-                # This creates a new HConfigChild object just in case there are some delta children
-                # Not very efficient, think of a way to not do this
+                # This creates a new HConfigChild object just in case there are some delta children.
+                # This is not very efficient, think of a way to not do this.
                 subtree = self._instantiate_child(target_child.text)
                 self_child._config_to_get_to(target_child, subtree)  # noqa: SLF001
-                if not subtree.children:
-                    continue
-                delta.children.append(subtree)
-            # the child is absent, add it
+                if subtree.children:
+                    delta.children.append(subtree)
+            # The child is absent, add it.
             else:
                 # If the target_child is already in the delta, that means it was negated in the target config
                 if target_child.text in delta.children:
                     continue
                 new_item = delta.add_deep_copy_of(target_child)
-                # mark the new item and all of its children as new_in_config
+                # Mark the new item and all of its children as new_in_config.
                 new_item.new_in_config = True
                 for child in new_item.all_children():
                     child.new_in_config = True
