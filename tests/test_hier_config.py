@@ -267,7 +267,7 @@ def test_add_child(platform_a: Platform) -> None:
     assert interface.text == "interface Vlan2"
     with pytest.raises(DuplicateChildError):
         config.add_child("interface Vlan2")
-    assert config.children.mapping == {"interface Vlan2": interface}
+    assert config.children.get("interface Vlan2") is interface
 
 
 def test_add_deep_copy_of(platform_a: Platform, platform_b: Platform) -> None:
@@ -402,7 +402,7 @@ def test_negate(platform_a: Platform) -> None:
     interface = config.add_child("interface Vlan2")
     interface.negate()
     assert interface.text == "no interface Vlan2"
-    assert config.children.mapping == {"no interface Vlan2": interface}
+    assert config.children.get("no interface Vlan2") is interface
 
 
 def test_config_to_get_to(platform_a: Platform) -> None:
