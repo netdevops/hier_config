@@ -107,5 +107,17 @@ class Platform(str, Enum):
     VYOS = auto()
 
 
+class HierConfigMapping(Enum):
+    """Map Hier Config V2 OS names to V3 Platforms."""
+
+    ios = Platform.CISCO_IOS
+    iosxe = Platform.CISCO_IOS
+    iosxr = Platform.CISCO_XR
+    nxos = Platform.CISCO_NXOS
+    eos = Platform.ARISTA_EOS
+    junos = Platform.JUNIPER_JUNOS
+    vyos = Platform.VYOS
+
+
 class Dump(BaseModel):
     lines: tuple[DumpLine, ...]

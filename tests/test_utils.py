@@ -4,8 +4,13 @@ import pytest
 import yaml
 from pydantic import ValidationError
 
-from hier_config.models import TagRule
-from hier_config.utils import load_device_config, load_hier_config_tags
+from hier_config.models import Platform, TagRule
+from hier_config.utils import (
+    hconfig_v2_os_v3_platform_mapper,
+    hconfig_v3_platform_v2_os_mapper,
+    load_device_config,
+    load_hier_config_tags,
+)
 
 TAGS_FILE_PATH = "./tests/fixtures/tag_rules_ios.yml"
 
@@ -81,3 +86,21 @@ def test_load_hier_config_tags_empty_file(tmp_path: Path) -> None:
 
     with pytest.raises(ValidationError):
         load_hier_config_tags(str(empty_file))
+
+
+def test_hconfig_v2_os_v3_platform_mapper() -> None:
+    # Valid mappings
+    assert hconfig_v2_os_v3_platform_mapper("ios") == Platform.CISCO_IOS
+    assert hconfig_v2_os_v3_platform_mapper("nxos") == Platform.CISCO_NXOS
+    assert hconfig_v2_os_v3_platform_mapper("junos") == Platform.JUNIPER_JUNOS
+
+    # Invalid mapping
+    with pytest.raises(ValueError, match="Unsupported v2 OS: UNKNOWN_OS"):
+        hconfig_v2_os_v3_platform_mapper("UNKNOWN_OS")
+
+
+def test_hconfig_v3_platform_v2_os_mapper() -> None:
+    # Valid mappings
+    assert hconfig_v3_platform_v2_os_mapper(Platform.CISCO_IOS) == "ios"
+    assert hconfig_v3_platform_v2_os_mapper(Platform.CISCO_NXOS) == "nxos"
+    assert hconfig_v3_platform_v2_os_mapper(Platform.JUNIPER_JUNOS) == "junos"
