@@ -18,6 +18,7 @@ Reads a network device's configuration file and loads its contents into memory.
 from hier_config.utils import load_device_config
 
 device_config = load_device_config("path/to/device_config.txt")
+
 print(device_config)
 ```
 
@@ -39,6 +40,7 @@ Parses a YAML file containing configuration tags and converts them into a format
 from hier_config.utils import load_hier_config_tags
 
 tag_rules = load_hier_config_tags("path/to/tag_rules.yml")
+
 print(tag_rules)
 ```
 
@@ -66,7 +68,8 @@ Maps a Hier Config v2 OS name to a v3 Platform enumeration.
 ```python
 from hier_config.utils import hconfig_v2_os_v3_platform_mapper
 
-platform = hconfig_v2_os_v3_platform_mapper("CISCO_IOS")
+platform = hconfig_v2_os_v3_platform_mapper("ios")
+
 print(platform)  # Output: <Platform.CISCO_IOS: '2'>
 ```
 
@@ -111,6 +114,7 @@ Loads v2-style configuration options into a v3-compatible driver.
 ```python
 from hier_config import Platform
 from hier_config.utils import load_hconfig_v2_options
+
 v2_options = {
     "negation": "no",
     "ordering": [{"lineage": [{"startswith": "ntp"}], "order": 700}],
@@ -122,6 +126,7 @@ v2_options = {
 }
 platform = Platform.CISCO_IOS
 driver = load_hconfig_v2_options(v2_options, platform)
+
 print(driver)
 ```
 
@@ -175,6 +180,7 @@ v3_tags = load_hconfig_v2_tags([
         "add_tags": "ntp"
     }
 ])
+
 print(v3_tags) # Output: (TagRule(match_rules=(MatchRule(equals=None, startswith=('ip name-server', 'ntp'), endswith=None, contains=None, re_search=None),), apply_tags=frozenset({'ntp'})),)
 ```
 
@@ -195,5 +201,6 @@ Loads a v2-style tag rules file and converts the tags into a tuple of TagRule Py
 from hier_config.utils import load_hconfig_v2_tags_from_file
 
 v3_tags = load_hconfig_v2_tags_from_file("path/to/v2_tags.yml")
+
 print(v3_tags)
 ```
