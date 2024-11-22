@@ -27,8 +27,8 @@ hconfig_mapping = {
 }
 
 
-def _load_file_contents(file_path: str) -> str:
-    """Private function that loads the contents of a file into memory.
+def read_text_from_file(file_path: str) -> str:
+    """Function that loads the contents of a file into memory.
 
     Args:
         file_path (str): The path to the configuration file.
@@ -38,19 +38,6 @@ def _load_file_contents(file_path: str) -> str:
 
     """
     return Path(file_path).read_text(encoding="utf-8")
-
-
-def load_device_config(file_path: str) -> str:
-    """Reads a device configuration file and loads its contents into memory.
-
-    Args:
-        file_path (str): The path to the configuration file.
-
-    Returns:
-        str: The configuration file contents as a string.
-
-    """
-    return _load_file_contents(file_path=file_path)
 
 
 def load_hier_config_tags(tags_file: str) -> tuple[TagRule, ...]:
@@ -63,7 +50,7 @@ def load_hier_config_tags(tags_file: str) -> tuple[TagRule, ...]:
         Tuple[TagRule, ...]: A tuple of validated TagRule objects.
 
     """
-    tags_data = yaml.safe_load(_load_file_contents(file_path=tags_file))
+    tags_data = yaml.safe_load(read_text_from_file(file_path=tags_file))
     return TypeAdapter(tuple[TagRule, ...]).validate_python(tags_data)
 
 
@@ -183,7 +170,7 @@ def load_hconfig_v2_options_from_file(
         HConfigDriverBase: A v3 driver instance with the migrated rules.
 
     """
-    hconfig_options = yaml.safe_load(_load_file_contents(file_path=options_file))
+    hconfig_options = yaml.safe_load(read_text_from_file(file_path=options_file))
     return load_hconfig_v2_options(v2_options=hconfig_options, platform=platform)
 
 
@@ -242,5 +229,5 @@ def load_hconfig_v2_tags_from_file(
         Tuple[TagRule]: A tuple of TagRule Pydantic objects representing v3-style tags.
 
     """
-    v2_tags = yaml.safe_load(_load_file_contents(file_path=tags_file))
+    v2_tags = yaml.safe_load(read_text_from_file(file_path=tags_file))
     return load_hconfig_v2_tags(v2_tags=v2_tags)

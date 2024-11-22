@@ -1,9 +1,9 @@
 # Utilities
 
-## load_device_config
+## read_text_from_file
 
 **Description**:
-Reads a network device's configuration file and loads its contents into memory.
+Reads the contents of a file and loads its contents into memory.
 
 **Arguments**:
 
@@ -11,14 +11,13 @@ Reads a network device's configuration file and loads its contents into memory.
 
 **Returns**:
 
-    `str`: The contents of the configuration file as a string.
+    `str`: The contents of the file as a string.
 
 **Example**:
 ```python
-from hier_config.utils import load_device_config
+from hier_config.utils import read_text_from_file
 
-device_config = load_device_config("path/to/device_config.txt")
-
+device_config = read_text_from_file("path/to/device_config.txt")
 print(device_config)
 ```
 

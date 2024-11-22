@@ -26,11 +26,11 @@ Currently, this algorithm does not account for:
 
 ```bash
 >>> from hier_config import get_hconfig, Platform
->>> from hier_config.utils import load_device_config
+>>> from hier_config.utils import read_text_from_file
 >>>
 
->>> running_config_text = load_device_config("./tests/fixtures/running_config.conf")
->>> generated_config_text = load_device_config("./tests/fixtures/remediation_config_without_tags.conf")
+>>> running_config_text = read_text_from_file("./tests/fixtures/running_config.conf")
+>>> generated_config_text = read_text_from_file("./tests/fixtures/remediation_config_without_tags.conf")
 >>>
 >>> running_config = get_hconfig(Platform.CISCO_IOS, running_config_text)
 >>> remediation_config = get_hconfig(Platform.CISCO_IOS, remediation_config_text)

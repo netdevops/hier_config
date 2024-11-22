@@ -13,10 +13,10 @@ from hier_config.models import (
 from hier_config.utils import (
     hconfig_v2_os_v3_platform_mapper,
     hconfig_v3_platform_v2_os_mapper,
-    load_device_config,
     load_hconfig_v2_options,
     load_hconfig_v2_tags,
     load_hier_config_tags,
+    read_text_from_file,
 )
 
 
@@ -28,25 +28,25 @@ def temporary_file_fixture(tmp_path: Path) -> tuple[Path, str]:
     return file_path, content
 
 
-def test_load_device_config_success(temporary_file_fixture: tuple[Path, str]) -> None:
+def test_read_text_from_file_success(temporary_file_fixture: tuple[Path, str]) -> None:
     """Test that the function successfully loads a valid configuration file."""
     # pylint: disable=redefined-outer-name
     file_path, expected_content = temporary_file_fixture
-    result = load_device_config(str(file_path))
+    result = read_text_from_file(str(file_path))
     assert result == expected_content, "File content should match expected content."
 
 
-def test_load_device_config_file_not_found() -> None:
+def test_read_text_from_file_file_not_found() -> None:
     """Test that the function raises FileNotFoundError when the file does not exist."""
     with pytest.raises(FileNotFoundError):
-        load_device_config("non_existent_file.conf")
+        read_text_from_file("non_existent_file.conf")
 
 
-def test_load_device_config_empty_file(tmp_path: Path) -> None:
+def test_read_text_from_file_empty_file(tmp_path: Path) -> None:
     """Test that the function correctly handles an empty configuration file."""
     empty_file = tmp_path / "empty.conf"
     empty_file.write_text("")
-    result = load_device_config(str(empty_file))
+    result = read_text_from_file(str(empty_file))
     assert not result, "Empty file should return an empty string."
 
 
