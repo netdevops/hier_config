@@ -118,23 +118,62 @@ def test_load_hconfig_v2_options(
     driver = load_hconfig_v2_options(v2_options, platform)
 
     # Assert negation rule
-    assert len(driver.rules.negate_with) == 1
-    assert driver.rules.negate_with[0].use == "no"
+    # assert len(driver.rules.negate_with) == 1
+    # assert driver.rules.negate_with[0].use == "no"
+
+    # Assert sectional overwrite
+    assert len(driver.rules.sectional_overwrite) == 1
+    assert driver.rules.sectional_overwrite[0].match_rules[0].startswith == "template"
+
+    # Assert sectional overwrite no negate
+    assert len(driver.rules.sectional_overwrite_no_negate) == 1
+    assert (
+        driver.rules.sectional_overwrite_no_negate[0].match_rules[0].startswith
+        == "as-path-set"
+    )
 
     # Assert ordering rule
     assert len(driver.rules.ordering) == 1
     assert driver.rules.ordering[0].match_rules[0].startswith == "ntp"
-    assert driver.rules.ordering[0].weight == 700
+    assert driver.rules.ordering[0].weight == 200
+
+    # Assert indent adjust
+    assert len(driver.rules.indent_adjust) == 1
+    assert driver.rules.indent_adjust[0].start_expression == "^\\s*template"
+    assert driver.rules.indent_adjust[0].end_expression == "^\\s*end-template"
+
+    # Assert parent_allows_duplicate_child
+    assert len(driver.rules.parent_allows_duplicate_child) == 1
+    assert (
+        driver.rules.parent_allows_duplicate_child[0].match_rules[0].startswith
+        == "route-policy"
+    )
+
+    # Assert sectional exiting
+    assert len(driver.rules.sectional_exiting) == 1
+    assert driver.rules.sectional_exiting[0].match_rules[0].startswith == "router bgp"
+    assert driver.rules.sectional_exiting[0].exit_text == "exit"
 
     # Assert per-line substitution
     assert len(driver.rules.per_line_sub) == 1
     assert driver.rules.per_line_sub[0].search == "^!.*Generated.*$"
     assert not driver.rules.per_line_sub[0].replace
 
-    # Assert sectional exiting
-    assert len(driver.rules.sectional_exiting) == 1
-    assert driver.rules.sectional_exiting[0].match_rules[0].startswith == "router bgp"
-    assert driver.rules.sectional_exiting[0].exit_text == "exit"
+    # Assert full-text substitution
+    assert len(driver.rules.full_text_sub) == 1
+    assert driver.rules.full_text_sub[0].search == "banner motd # replace me #"
+    assert not driver.rules.full_text_sub[0].replace
+
+    # Assert idempotent commands avoid (blacklist)
+    assert len(driver.rules.idempotent_commands_avoid) == 1
+    assert (
+        driver.rules.idempotent_commands_avoid[0].match_rules[0].startswith
+        == "interface"
+    )
+    assert (
+        driver.rules.idempotent_commands_avoid[0].match_rules[1].re_search
+        == "ip address.*secondary"
+    )
 
     # Assert idempotent commands
     assert len(driver.rules.idempotent_commands) == 1

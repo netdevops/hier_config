@@ -6,13 +6,19 @@ from pydantic import TypeAdapter
 
 from hier_config import Platform, get_hconfig_driver
 from hier_config.models import (
+    FullTextSubRule,
+    IdempotentCommandsAvoidRule,
     IdempotentCommandsRule,
+    IndentAdjustRule,
     MatchRule,
-    NegationDefaultWithRule,
     OrderingRule,
+    ParentAllowsDuplicateChildRule,
     PerLineSubRule,
     SectionalExitingRule,
+    SectionalOverwriteNoNegateRule,
+    SectionalOverwriteRule,
     TagRule,
+    NegationDefaultWhenRule,
 )
 from hier_config.platforms.driver_base import HConfigDriverBase
 
@@ -25,6 +31,21 @@ hconfig_mapping = {
     "junos": Platform.JUNIPER_JUNOS,
     "vyos": Platform.VYOS,
 }
+
+
+def set_match_rule(lineage: dict[str, Any]) -> Union[MatchRule, None]:
+    if startswith := lineage.get("startswith"):
+        return MatchRule(startswith=startswith)
+    if endswith := lineage.get("endswith"):
+        return MatchRule(endswith=endswith)
+    if contains := lineage.get("contains"):
+        return MatchRule(contains=contains)
+    if equals := lineage.get("equals"):
+        return MatchRule(equals=equals)
+    if re_search := lineage.get("re_search"):
+        return MatchRule(re_search=re_search)
+
+    return None
 
 
 def read_text_from_file(file_path: str) -> str:
@@ -107,52 +128,109 @@ def load_hconfig_v2_options(
     """
     driver = get_hconfig_driver(platform)
 
-    # Map v2 options to v3 driver rules
-    if "negation" in v2_options:
-        driver.rules.negate_with.append(
-            NegationDefaultWithRule(
-                match_rules=(MatchRule(startswith=""),),  # Adjust match logic if needed
-                use=v2_options["negation"],
+    # negation
+    # "negation": "no",
+
+    # sectional_overwrite
+    for rule in v2_options.get("sectional_overwrite", ()):
+        lineage_rules = rule.get("lineage")
+        match_rules = [set_match_rule(lineage=lineage) for lineage in lineage_rules]
+
+        driver.rules.sectional_overwrite.append(
+            SectionalOverwriteRule(match_rules=match_rules)
+        )
+
+    # sectional_overwrite_no_negate
+    for rule in v2_options.get("sectional_overwrite_no_negate", ()):
+        lineage_rules = rule.get("lineage")
+        match_rules = [set_match_rule(lineage=lineage) for lineage in lineage_rules]
+
+        driver.rules.sectional_overwrite_no_negate.append(
+            SectionalOverwriteNoNegateRule(match_rules=match_rules)
+        )
+
+    # ordering
+    for rule in v2_options.get("ordering", ()):
+        lineage_rules = rule.get("lineage")
+        match_rules = [set_match_rule(lineage=lineage) for lineage in lineage_rules]
+        weight = rule.get("order", 500) - 500
+
+        driver.rules.ordering.append(
+            OrderingRule(match_rules=tuple(match_rules), weight=weight),
+        )
+
+    # indent_adjust
+    for rule in v2_options.get("indent_adjust", ()):
+        start_expression = rule.get("start_expression")
+        end_expression = rule.get("end_expression")
+
+        driver.rules.indent_adjust.append(
+            IndentAdjustRule(
+                start_expression=start_expression, end_expression=end_expression
             )
         )
 
-    if "ordering" in v2_options:
-        for order in v2_options["ordering"]:
-            driver.rules.ordering.append(
-                OrderingRule(
-                    match_rules=(
-                        MatchRule(startswith=order["lineage"][0]["startswith"]),
-                    ),
-                    weight=order.get("order", 500),
-                )
-            )
+    # parent_allows_duplicate_child
+    for rule in v2_options.get("parent_allows_duplicate_child", ()):
+        lineage_rules = rule.get("lineage")
+        match_rules = [set_match_rule(lineage=lineage) for lineage in lineage_rules]
 
-    if "per_line_sub" in v2_options:
-        for sub in v2_options["per_line_sub"]:
-            driver.rules.per_line_sub.append(
-                PerLineSubRule(search=sub["search"], replace=sub["replace"])
-            )
+        driver.rules.parent_allows_duplicate_child.append(
+            ParentAllowsDuplicateChildRule(match_rules=match_rules)
+        )
 
-    if "sectional_exiting" in v2_options:
-        for section in v2_options["sectional_exiting"]:
-            driver.rules.sectional_exiting.append(
-                SectionalExitingRule(
-                    match_rules=(
-                        MatchRule(startswith=section["lineage"][0]["startswith"]),
-                    ),
-                    exit_text=section["exit_text"],
-                )
-            )
+    # sectional_exiting
+    for rule in v2_options.get("sectional_exiting", ()):
+        lineage_rules = rule.get("lineage")
+        match_rules = [set_match_rule(lineage=lineage) for lineage in lineage_rules]
+        exit_text = rule.get("exit_text", "")
 
-    if "idempotent_commands" in v2_options:
-        for command in v2_options["idempotent_commands"]:
-            driver.rules.idempotent_commands.append(
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith=command["lineage"][0]["startswith"]),
-                    )
-                )
+        driver.rules.sectional_exiting.append(
+            SectionalExitingRule(match_rules=tuple(match_rules), exit_text=exit_text),
+        )
+
+    # full_text_sub
+    for rule in v2_options.get("full_text_sub", ()):
+        driver.rules.full_text_sub.append(
+            FullTextSubRule(
+                search=rule.get("search", ""), replace=rule.get("replace", "")
             )
+        )
+
+    # per_line_sub
+    for rule in v2_options.get("per_line_sub", ()):
+        driver.rules.per_line_sub.append(
+            PerLineSubRule(
+                search=rule.get("search", ""), replace=rule.get("replace", "")
+            )
+        )
+
+    # idempotent_commands_blacklist -> idempotent_commands_avoid
+    for rule in v2_options.get("idempotent_commands_blacklist", ()):
+        lineage_rules = rule.get("lineage")
+        match_rules = [set_match_rule(lineage=lineage) for lineage in lineage_rules]
+
+        driver.rules.idempotent_commands_avoid.append(
+            IdempotentCommandsAvoidRule(match_rules=match_rules)
+        )
+
+    # idempotent_commands
+    for rule in v2_options.get("idempotent_commands", ()):
+        lineage_rules = rule.get("lineage")
+        match_rules = [set_match_rule(lineage=lineage) for lineage in lineage_rules]
+
+        driver.rules.idempotent_commands.append(
+            IdempotentCommandsRule(match_rules=match_rules)
+        )
+
+    # negation_default_when
+    for rule in v2_options.get("negation_default_when", ()):
+        lineage_rules = rule.get("lineage")
+        match_rules = [set_match_rule(lineage=lineage) for lineage in lineage_rules]
+
+        driver.rules.negation_default_when.append(
+            NegationDefaultWhenRule(match_rules=match_rules)
+        )
 
     return driver
 

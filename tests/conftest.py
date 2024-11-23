@@ -84,10 +84,27 @@ def tags_file_path() -> str:
 def v2_options() -> dict[str, Any]:
     return {
         "negation": "no",
+        "sectional_overwrite": [{"lineage": [{"startswith": "template"}]}],
+        "sectional_overwrite_no_negate": [{"lineage": [{"startswith": "as-path-set"}]}],
         "ordering": [{"lineage": [{"startswith": "ntp"}], "order": 700}],
-        "per_line_sub": [{"search": "^!.*Generated.*$", "replace": ""}],
+        "indent_adjust": [
+            {"start_expression": "^\\s*template", "end_expression": "^\\s*end-template"}
+        ],
+        "parent_allows_duplicate_child": [
+            {"lineage": [{"startswith": "route-policy"}]}
+        ],
         "sectional_exiting": [
             {"lineage": [{"startswith": "router bgp"}], "exit_text": "exit"}
+        ],
+        "full_text_sub": [{"search": "banner motd # replace me #", "replace": ""}],
+        "per_line_sub": [{"search": "^!.*Generated.*$", "replace": ""}],
+        "idempotent_commands_blacklist": [
+            {
+                "lineage": [
+                    {"startswith": "interface"},
+                    {"re_search": "ip address.*secondary"},
+                ]
+            }
         ],
         "idempotent_commands": [{"lineage": [{"startswith": "interface"}]}],
     }
