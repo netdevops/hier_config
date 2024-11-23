@@ -1,6 +1,6 @@
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Optional, Union
-from collections.abc import Callable
 
 import yaml
 from pydantic import TypeAdapter
@@ -34,7 +34,7 @@ hconfig_mapping = {
 }
 
 
-def set_match_rule(lineage: dict[str, Any]) -> Union[MatchRule, None]:
+def set_match_rule(lineage: dict[str, Any]) -> Optional[MatchRule]:
     if startswith := lineage.get("startswith"):
         return MatchRule(startswith=startswith)
     if endswith := lineage.get("endswith"):
@@ -134,15 +134,15 @@ def load_hconfig_v2_options(
         rule_class: type[Any],
         append_to: Callable[[Any], None],
         lineage_key: str = "lineage",
-        extra_args: Optional[dict[str, Any]] = None,
     ) -> None:
         """Helper to process rules."""
-        extra_args = extra_args or {}
         for rule in v2_options.get(key, ()):
             match_rules = [
-                set_match_rule(lineage) for lineage in rule.get(lineage_key, [])
+                match_rule
+                for lineage in rule.get(lineage_key, [])
+                if (match_rule := set_match_rule(lineage)) is not None
             ]
-            append_to(rule_class(match_rules=match_rules, **extra_args))
+            append_to(rule_class(match_rules=match_rules))
 
     # negation
 
@@ -163,11 +163,15 @@ def load_hconfig_v2_options(
     # ordering
     for rule in v2_options.get("ordering", ()):
         lineage_rules = rule.get("lineage")
-        match_rules = [set_match_rule(lineage=lineage) for lineage in lineage_rules]
+        match_rules = tuple(
+            match_rule
+            for lineage in lineage_rules
+            if (match_rule := set_match_rule(lineage)) is not None
+        )
         weight = rule.get("order", 500) - 500
 
         driver.rules.ordering.append(
-            OrderingRule(match_rules=tuple(match_rules), weight=weight),
+            OrderingRule(match_rules=match_rules, weight=weight),
         )
 
     # indent_adjust
@@ -191,11 +195,15 @@ def load_hconfig_v2_options(
     # sectional_exiting
     for rule in v2_options.get("sectional_exiting", ()):
         lineage_rules = rule.get("lineage")
-        match_rules = [set_match_rule(lineage=lineage) for lineage in lineage_rules]
+        match_rules = tuple(
+            match_rule
+            for lineage in lineage_rules
+            if (match_rule := set_match_rule(lineage)) is not None
+        )
         exit_text = rule.get("exit_text", "")
 
         driver.rules.sectional_exiting.append(
-            SectionalExitingRule(match_rules=tuple(match_rules), exit_text=exit_text),
+            SectionalExitingRule(match_rules=match_rules, exit_text=exit_text),
         )
 
     # full_text_sub
