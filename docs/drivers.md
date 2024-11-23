@@ -497,11 +497,11 @@ class CustomPlatform(str, Enum):
 ```python
 from .custom_platform import CustomPlatform
 from hier_config import get_hconfig
-from hier_config.utils import load_device_config
+from hier_config.utils import read_text_from_file
 
 # Load running and intended configurations from files
-running_config_text = load_device_config("./tests/fixtures/running_config.conf")
-generated_config_text = load_device_config("./tests/fixtures/remediation_config.conf")
+running_config_text = read_text_from_file("./tests/fixtures/running_config.conf")
+generated_config_text = read_text_from_file("./tests/fixtures/remediation_config.conf")
 
 # Create HConfig objects for running and intended configurations
 running_config = get_hconfig(CustomPlatform.CUSTOM_DRIVER, running_config_text)

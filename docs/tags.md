@@ -110,11 +110,11 @@ With the tags loaded, you can create a targeted remediation based on those tags 
 
 # Import necessary libraries
 from hier_config import WorkflowRemediation, get_hconfig, Platform
-from hier_config.utils import load_device_config, load_hier_config_tags
+from hier_config.utils import read_text_from_file, load_hier_config_tags
 
 # Load the running and generated configurations from files
-running_config = load_device_config("./tests/fixtures/running_config.conf")
-generated_config = load_device_config("./tests/fixtures/generated_config.conf")
+running_config = read_text_from_file("./tests/fixtures/running_config.conf")
+generated_config = read_text_from_file("./tests/fixtures/generated_config.conf")
 
 # Load tag rules from a file
 tags = load_hier_config_tags("./tests/fixtures/tag_rules_ios.yml")

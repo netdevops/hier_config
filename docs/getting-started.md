@@ -8,7 +8,7 @@ To use `WorkflowRemediation`, you’ll import it along with `get_hconfig` (for g
 
 ```python
 >>> from hier_config import WorkflowRemediation, get_hconfig, Platform
->>> from hier_config.utils import load_device_config
+>>> from hier_config.utils import read_text_from_file
 >>>
 ```
 
@@ -20,8 +20,8 @@ Use `get_hconfig` to create HConfig objects for both the running and intended co
 
 ```python
 # Define running and intended configurations as strings
->>> running_config_text = load_device_config("./tests/fixtures/running_config.conf")
->>> generated_config_text = load_device_config("./tests/fixtures/remediation_config.conf")
+>>> running_config_text = read_text_from_file("./tests/fixtures/running_config.conf")
+>>> generated_config_text = read_text_from_file("./tests/fixtures/remediation_config.conf")
 >>>
 
 # Create HConfig objects for running and intended configurations
