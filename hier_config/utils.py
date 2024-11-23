@@ -115,18 +115,28 @@ def hconfig_v3_platform_v2_os_mapper(platform: Platform) -> str:
 
 
 def load_hconfig_v2_options(
-    v2_options: dict[str, Any], platform: Platform
+    v2_options: Union[dict[str, Any], str], platform: Platform
 ) -> HConfigDriverBase:
-    """Load Hier Config v2 options to v3 driver format.
+    """Load Hier Config v2 options to v3 driver format from either a dictionary or a file.
 
     Args:
-        v2_options (dict): The v2 options dictionary.
+        v2_options (Union[dict, str]): Either a dictionary containing v2 options or
+            a file path to a YAML file containing the v2 options.
         platform (Platform): The Hier Config v3 Platform enum for the target platform.
 
     Returns:
         HConfigDriverBase: A v3 driver instance with the migrated rules.
 
     """
+    # Load options from a file if a string is provided
+    if isinstance(v2_options, str):
+        v2_options = yaml.safe_load(read_text_from_file(file_path=v2_options))
+
+    # Ensure v2_options is a dictionary
+    if not isinstance(v2_options, dict):
+        msg = "v2_options must be a dictionary or a valid file path."
+        raise TypeError(msg)
+
     driver = get_hconfig_driver(platform)
 
     def process_rules(
@@ -264,20 +274,32 @@ def load_hconfig_v2_options_from_file(
 
 
 def load_hconfig_v2_tags(
-    v2_tags: list[dict[str, Any]],
-) -> Union[tuple[TagRule], tuple[TagRule, ...]]:
+    v2_tags: Union[list[dict[str, Any]], str],
+) -> Union[tuple["TagRule"], tuple["TagRule", ...]]:
     """Convert v2-style tags into v3-style TagRule Pydantic objects for Hier Config.
 
     Args:
-        v2_tags (list):
-            A list of dictionaries representing v2-style tags. Each dictionary contains:
-            - `lineage`: A list of dictionaries with rules (e.g., `startswith`, `endswith`).
-            - `add_tags`: A string representing the tag to add.
+        v2_tags (Union[list[dict[str, Any]], str]):
+            Either a list of dictionaries representing v2-style tags or a file path
+            to a YAML file containing the v2-style tags.
+            - If a list is provided, each dictionary should contain:
+              - `lineage`: A list of dictionaries with rules (e.g., `startswith`, `endswith`).
+              - `add_tags`: A string representing the tag to add.
+            - If a file path is provided, it will be read and parsed as YAML.
 
     Returns:
         Tuple[TagRule]: A tuple of TagRule Pydantic objects representing v3-style tags.
 
     """
+    # Load tags from a file if a string is provided
+    if isinstance(v2_tags, str):
+        v2_tags = yaml.safe_load(read_text_from_file(file_path=v2_tags))
+
+    # Ensure v2_tags is a list
+    if not isinstance(v2_tags, list):
+        msg = "v2_tags must be a list of dictionaries or a valid file path."
+        raise TypeError(msg)
+
     v3_tags: list[TagRule] = []
 
     for v2_tag in v2_tags:
@@ -298,16 +320,3 @@ def load_hconfig_v2_tags(
             v3_tags.append(v3_tag)
 
     return tuple(v3_tags)
-
-
-def load_hconfig_v2_tags_from_file(
-    tags_file: str,
-) -> Union[tuple[TagRule], tuple[TagRule, ...]]:
-    """Convert v2-style tags into v3-style TagRule Pydantic objects for Hier Config.
-
-    Returns:
-        Tuple[TagRule]: A tuple of TagRule Pydantic objects representing v3-style tags.
-
-    """
-    v2_tags = yaml.safe_load(read_text_from_file(file_path=tags_file))
-    return load_hconfig_v2_tags(v2_tags=v2_tags)

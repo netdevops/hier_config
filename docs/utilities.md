@@ -109,7 +109,7 @@ Loads v2-style configuration options into a v3-compatible driver.
 
     `HConfigDriverBase`: Hier Config Platform Driver.
 
-**Example**:
+**Example loading options from a dictionary**:
 ```python
 from hier_config import Platform
 from hier_config.utils import load_hconfig_v2_options
@@ -135,26 +135,13 @@ print(driver.rules)
 full_text_sub=[] idempotent_commands=[IdempotentCommandsRule(match_rules=(MatchRule(equals=None, startswith='vlan', endswith=None, contains=None, re_search=None), MatchRule(equals=None, startswith='name', endswith=None, contains=None, re_search=None))), IdempotentCommandsRule(match_rules=(MatchRule(equals=None, startswith='interface ', endswith=None, contains=None, re_search=None), MatchRule(equals=None, startswith='description ', endswith=None, contains=None, re_search=None))), IdempotentCommandsRule(match_rules=(MatchRule(equals=None, startswith='interface ', endswith=None, contains=None, re_search=None), MatchRule(equals=None, startswith='ip address ', endswith=None, contains=None, re_search=None))), IdempotentCommandsRule(match_rules=(MatchRule(equals=None, startswith='interface ', endswith=None, contains=None, re_search=None), MatchRule(equals=None, startswith='switchport mode ', endswith=None, contains=None, re_search=None))), IdempotentCommandsRule(match_rules=(MatchRule(equals=None, startswith='interface ', endswith=None, contains=None, re_search=None), MatchRule(equals=None, startswith='authentication host-mode ', endswith=None, contains=None, re_search=None))), IdempotentCommandsRule(match_rules=(MatchRule(equals=None, startswith='interface ', endswith=None, contains=None, re_search=None), MatchRule(equals=None, startswith='authentication event server dead action authorize vlan ', endswith=None, contains=None, re_search=None))), IdempotentCommandsRule(match_rules=(MatchRule(equals=None, startswith='errdisable recovery interval ', endswith=None, contains=None, re_search=None),)), IdempotentCommandsRule(match_rules=(MatchRule(equals=None, startswith=None, endswith=None, contains=None, re_search='^(no )?logging console.*'),)), IdempotentCommandsRule(match_rules=(MatchRule(equals=None, startswith='interface', endswith=None, contains=None, re_search=None),))] idempotent_commands_avoid=[] indent_adjust=[] indentation=2 negation_default_when=[] negate_with=[NegationDefaultWithRule(match_rules=(MatchRule(equals=None, startswith='logging console ', endswith=None, contains=None, re_search=None),), use='logging console debugging'), NegationDefaultWithRule(match_rules=(MatchRule(equals=None, startswith='', endswith=None, contains=None, re_search=None),), use='no')] ordering=[OrderingRule(match_rules=(MatchRule(equals=None, startswith='interface', endswith=None, contains=None, re_search=None), MatchRule(equals=None, startswith='switchport mode ', endswith=None, contains=None, re_search=None)), weight=-10), OrderingRule(match_rules=(MatchRule(equals=None, startswith='no vlan filter', endswith=None, contains=None, re_search=None),), weight=200), OrderingRule(match_rules=(MatchRule(equals=None, startswith='interface', endswith=None, contains=None, re_search=None), MatchRule(equals=None, startswith='no shutdown', endswith=None, contains=None, re_search=None)), weight=200), OrderingRule(match_rules=(MatchRule(equals=None, startswith='aaa group server tacacs+ ', endswith=None, contains=None, re_search=None), MatchRule(equals=None, startswith='no server ', endswith=None, contains=None, re_search=None)), weight=10), OrderingRule(match_rules=(MatchRule(equals=None, startswith='no tacacs-server ', endswith=None, contains=None, re_search=None),), weight=10), OrderingRule(match_rules=(MatchRule(equals=None, startswith='ntp', endswith=None, contains=None, re_search=None),), weight=700)] parent_allows_duplicate_child=[] per_line_sub=[PerLineSubRule(search='^Building configuration.*', replace=''), PerLineSubRule(search='^Current configuration.*', replace=''), PerLineSubRule(search='^! Last configuration change.*', replace=''), PerLineSubRule(search='^! NVRAM config last updated.*', replace=''), PerLineSubRule(search='^ntp clock-period .*', replace=''), PerLineSubRule(search='^version.*', replace=''), PerLineSubRule(search='^ logging event link-status$', replace=''), PerLineSubRule(search='^ logging event subif-link-status$', replace=''), PerLineSubRule(search='^\\s*ipv6 unreachables disable$', replace=''), PerLineSubRule(search='^end$', replace=''), PerLineSubRule(search='^\\s*[#!].*', replace=''), PerLineSubRule(search='^ no ip address', replace=''), PerLineSubRule(search='^ exit-peer-policy', replace=''), PerLineSubRule(search='^ exit-peer-session', replace=''), PerLineSubRule(search='^ exit-address-family', replace=''), PerLineSubRule(search='^crypto key generate rsa general-keys.*$', replace=''), PerLineSubRule(search='^!.*Generated.*$', replace='')] post_load_callbacks=[<function _rm_ipv6_acl_sequence_numbers at 0x110e24e00>, <function _remove_ipv4_acl_remarks at 0x110e24ea0>, <function _add_acl_sequence_numbers at 0x110e24f40>] sectional_exiting=[SectionalExitingRule(match_rules=(MatchRule(equals=None, startswith='router bgp', endswith=None, contains=None, re_search=None), MatchRule(equals=None, startswith='template peer-policy', endswith=None, contains=None, re_search=None)), exit_text='exit-peer-policy'), SectionalExitingRule(match_rules=(MatchRule(equals=None, startswith='router bgp', endswith=None, contains=None, re_search=None), MatchRule(equals=None, startswith='template peer-session', endswith=None, contains=None, re_search=None)), exit_text='exit-peer-session'), SectionalExitingRule(match_rules=(MatchRule(equals=None, startswith='router bgp', endswith=None, contains=None, re_search=None), MatchRule(equals=None, startswith='address-family', endswith=None, contains=None, re_search=None)), exit_text='exit-address-family'), SectionalExitingRule(match_rules=(MatchRule(equals=None, startswith='router bgp', endswith=None, contains=None, re_search=None),), exit_text='exit')] sectional_overwrite=[] sectional_overwrite_no_negate=[]
 ```
 
-### load_hconfig_v2_options_from_file
-**Description**:
-Loads a v2-style configuration options file and converts the options into a v3-compatible format.
-
-**Arguments**:
-
-    `file_path (str)`: The path to the YAML file containing v2 options.
-    `platform (Platform)`: A Platform enumeration from Hier Config v3.
-
-**Returns**:
-
-    `HConfigDriverBase`: Hier Config Platform Driver.
-
-**Example**:
+**Example loading options from a file**:
 ```python
 from hier_config import Platform
 from hier_config.utils import load_hconfig_v2_options_from_file
 
 platform = Platform.CISCO_IOS
-driver = load_hconfig_v2_options_from_file("/path/to/options.yml", platform)
+driver = load_hconfig_v2_options("/path/to/options.yml", platform)
 ```
 
 ### load_hconfig_v2_tags
@@ -169,7 +156,7 @@ Converts v2-style tags into a tuple of TagRule Pydantic objects compatible with 
 
     `Tuple[TagRule, ...]`: A tuple of TagRule Pydantic objects.
 
-**Example**:
+**Example loading tags from a dictionary**:
 ```python
 from hier_config.utils import load_hconfig_v2_tags
 
@@ -183,23 +170,11 @@ v3_tags = load_hconfig_v2_tags([
 print(v3_tags) # Output: (TagRule(match_rules=(MatchRule(equals=None, startswith=('ip name-server', 'ntp'), endswith=None, contains=None, re_search=None),), apply_tags=frozenset({'ntp'})),)
 ```
 
-### load_hconfig_v2_tags_from_file
-**Description**:
-Loads a v2-style tag rules file and converts the tags into a tuple of TagRule Pydantic objects compatible with Hier Config v3.
-
-**Arguments**:
-
-    `file_path (str)`: The path to the YAML file containing v2 tag rules.
-
-**Returns**:
-
-    `Tuple[TagRule, ...]`: A tuple of TagRule Pydantic objects.
-
-**Example**:
+**Example loading tags from a file**:
 ```python
 from hier_config.utils import load_hconfig_v2_tags_from_file
 
-v3_tags = load_hconfig_v2_tags_from_file("path/to/v2_tags.yml")
+v3_tags = load_hconfig_v2_tags("path/to/v2_tags.yml")
 
 print(v3_tags)
 ```

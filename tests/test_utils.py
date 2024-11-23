@@ -255,3 +255,90 @@ def test_load_hconfig_v2_tags_empty_lineage() -> None:
 
     result = load_hconfig_v2_tags(v2_tags)
     assert result == expected_output
+
+
+def test_load_hconfig_v2_options_from_file_valid(tmp_path: Path) -> None:
+    """Test loading valid v2 options from a YAML file."""
+    file_path = tmp_path / "v2_options.yml"
+    file_content = """ordering:
+  - lineage:
+      - startswith: ntp
+    order: 700
+sectional_overwrite:
+  - lineage:
+      - startswith: template
+indent_adjust:
+  - start_expression: "start expression"
+    end_expression: "end expression"
+"""
+    file_path.write_text(file_content)
+
+    platform = Platform.GENERIC
+    driver = load_hconfig_v2_options(v2_options=str(file_path), platform=platform)
+
+    assert len(driver.rules.ordering) == 1
+    assert driver.rules.ordering[0].match_rules[0].startswith == "ntp"
+    assert driver.rules.ordering[0].weight == 200
+
+    assert len(driver.rules.sectional_overwrite) == 1
+    assert driver.rules.sectional_overwrite[0].match_rules[0].startswith == "template"
+
+    assert len(driver.rules.indent_adjust) == 1
+    assert driver.rules.indent_adjust[0].start_expression == "start expression"
+    assert driver.rules.indent_adjust[0].end_expression == "end expression"
+
+
+def test_load_hconfig_v2_options_from_file_invalid_yaml(tmp_path: Path) -> None:
+    """Test loading v2 options from a file with invalid YAML syntax."""
+    file_path = tmp_path / "invalid_v2_options.yml"
+    file_content = """ordering:
+  - lineage:
+      - startswith: ntp
+    order:  # Missing value causes a syntax error
+"""
+    file_path.write_text(file_content)
+
+    platform = Platform.GENERIC
+    with pytest.raises(TypeError):
+        load_hconfig_v2_options(v2_options=str(file_path), platform=platform)
+
+
+def test_load_hconfig_v2_tags_from_file_valid(tmp_path: Path) -> None:
+    """Test loading valid v2 tags from a YAML file."""
+    file_path = tmp_path / "v2_tags.yml"
+    file_content = """- lineage:
+    - startswith: ip name-server
+  add_tags: dns
+- lineage:
+    - startswith: router bgp
+  add_tags: bgp
+"""
+    file_path.write_text(file_content)
+
+    result = load_hconfig_v2_tags(v2_tags=str(file_path))
+
+    assert len(result) == 2
+    assert result[0].apply_tags == frozenset(["dns"])
+    assert result[1].apply_tags == frozenset(["bgp"])
+
+
+def test_load_hconfig_v2_tags_from_file_invalid_yaml(tmp_path: Path) -> None:
+    """Test loading v2 tags from a file with invalid YAML syntax."""
+    file_path = tmp_path / "invalid_v2_tags.yml"
+    file_content = """- lineage:
+    - startswith: ip name-server
+  add_tags dns  # Missing colon causes a syntax error
+"""
+    file_path.write_text(file_content)
+
+    with pytest.raises(yaml.YAMLError):
+        load_hconfig_v2_tags(v2_tags=str(file_path))
+
+
+def test_load_hconfig_v2_tags_from_file_empty_file(tmp_path: Path) -> None:
+    """Test loading v2 tags from an empty file."""
+    file_path = tmp_path / "empty_v2_tags.yml"
+    file_path.write_text("")
+
+    with pytest.raises(TypeError):
+        load_hconfig_v2_tags(v2_tags=str(file_path))
