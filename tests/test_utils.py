@@ -117,10 +117,6 @@ def test_load_hconfig_v2_options(
 
     driver = load_hconfig_v2_options(v2_options, platform)
 
-    # Assert negation rule
-    # assert len(driver.rules.negate_with) == 1
-    # assert driver.rules.negate_with[0].use == "no"
-
     # Assert sectional overwrite
     assert len(driver.rules.sectional_overwrite) == 1
     assert driver.rules.sectional_overwrite[0].match_rules[0].startswith == "template"

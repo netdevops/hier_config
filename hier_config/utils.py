@@ -1,5 +1,6 @@
 from pathlib import Path
-from typing import Any, Union
+from typing import Any, Optional, Union
+from collections.abc import Callable
 
 import yaml
 from pydantic import TypeAdapter
@@ -11,6 +12,7 @@ from hier_config.models import (
     IdempotentCommandsRule,
     IndentAdjustRule,
     MatchRule,
+    NegationDefaultWhenRule,
     OrderingRule,
     ParentAllowsDuplicateChildRule,
     PerLineSubRule,
@@ -18,7 +20,6 @@ from hier_config.models import (
     SectionalOverwriteNoNegateRule,
     SectionalOverwriteRule,
     TagRule,
-    NegationDefaultWhenRule,
 )
 from hier_config.platforms.driver_base import HConfigDriverBase
 
@@ -128,26 +129,36 @@ def load_hconfig_v2_options(
     """
     driver = get_hconfig_driver(platform)
 
+    def process_rules(
+        key: str,
+        rule_class: type[Any],
+        append_to: Callable[[Any], None],
+        lineage_key: str = "lineage",
+        extra_args: Optional[dict[str, Any]] = None,
+    ) -> None:
+        """Helper to process rules."""
+        extra_args = extra_args or {}
+        for rule in v2_options.get(key, ()):
+            match_rules = [
+                set_match_rule(lineage) for lineage in rule.get(lineage_key, [])
+            ]
+            append_to(rule_class(match_rules=match_rules, **extra_args))
+
     # negation
-    # "negation": "no",
 
     # sectional_overwrite
-    for rule in v2_options.get("sectional_overwrite", ()):
-        lineage_rules = rule.get("lineage")
-        match_rules = [set_match_rule(lineage=lineage) for lineage in lineage_rules]
-
-        driver.rules.sectional_overwrite.append(
-            SectionalOverwriteRule(match_rules=match_rules)
-        )
+    process_rules(
+        "sectional_overwrite",
+        SectionalOverwriteRule,
+        driver.rules.sectional_overwrite.append,
+    )
 
     # sectional_overwrite_no_negate
-    for rule in v2_options.get("sectional_overwrite_no_negate", ()):
-        lineage_rules = rule.get("lineage")
-        match_rules = [set_match_rule(lineage=lineage) for lineage in lineage_rules]
-
-        driver.rules.sectional_overwrite_no_negate.append(
-            SectionalOverwriteNoNegateRule(match_rules=match_rules)
-        )
+    process_rules(
+        "sectional_overwrite_no_negate",
+        SectionalOverwriteNoNegateRule,
+        driver.rules.sectional_overwrite_no_negate.append,
+    )
 
     # ordering
     for rule in v2_options.get("ordering", ()):
@@ -171,13 +182,11 @@ def load_hconfig_v2_options(
         )
 
     # parent_allows_duplicate_child
-    for rule in v2_options.get("parent_allows_duplicate_child", ()):
-        lineage_rules = rule.get("lineage")
-        match_rules = [set_match_rule(lineage=lineage) for lineage in lineage_rules]
-
-        driver.rules.parent_allows_duplicate_child.append(
-            ParentAllowsDuplicateChildRule(match_rules=match_rules)
-        )
+    process_rules(
+        "parent_allows_duplicate_child",
+        ParentAllowsDuplicateChildRule,
+        driver.rules.parent_allows_duplicate_child.append,
+    )
 
     # sectional_exiting
     for rule in v2_options.get("sectional_exiting", ()):
@@ -206,31 +215,25 @@ def load_hconfig_v2_options(
         )
 
     # idempotent_commands_blacklist -> idempotent_commands_avoid
-    for rule in v2_options.get("idempotent_commands_blacklist", ()):
-        lineage_rules = rule.get("lineage")
-        match_rules = [set_match_rule(lineage=lineage) for lineage in lineage_rules]
-
-        driver.rules.idempotent_commands_avoid.append(
-            IdempotentCommandsAvoidRule(match_rules=match_rules)
-        )
+    process_rules(
+        "idempotent_commands_blacklist",
+        IdempotentCommandsAvoidRule,
+        driver.rules.idempotent_commands_avoid.append,
+    )
 
     # idempotent_commands
-    for rule in v2_options.get("idempotent_commands", ()):
-        lineage_rules = rule.get("lineage")
-        match_rules = [set_match_rule(lineage=lineage) for lineage in lineage_rules]
-
-        driver.rules.idempotent_commands.append(
-            IdempotentCommandsRule(match_rules=match_rules)
-        )
+    process_rules(
+        "idempotent_commands",
+        IdempotentCommandsRule,
+        driver.rules.idempotent_commands.append,
+    )
 
     # negation_default_when
-    for rule in v2_options.get("negation_default_when", ()):
-        lineage_rules = rule.get("lineage")
-        match_rules = [set_match_rule(lineage=lineage) for lineage in lineage_rules]
-
-        driver.rules.negation_default_when.append(
-            NegationDefaultWhenRule(match_rules=match_rules)
-        )
+    process_rules(
+        "negation_default_when",
+        NegationDefaultWhenRule,
+        driver.rules.negation_default_when.append,
+    )
 
     return driver
 
