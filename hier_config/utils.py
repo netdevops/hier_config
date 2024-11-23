@@ -287,22 +287,15 @@ def load_hconfig_v2_tags(
             tags = v2_tag["add_tags"]
 
             # Convert to MatchRule objects
-            match_rules: list[MatchRule] = []
-            for rule in lineage_rules:
-                if startswith := rule.get("startswith"):
-                    match_rules.append(MatchRule(startswith=startswith))
-                if endswith := rule.get("endswith"):
-                    match_rules.append(MatchRule(endswith=endswith))
-                if contains := rule.get("contains"):
-                    match_rules.append(MatchRule(contains=contains))
-                if equals := rule.get("equals"):
-                    match_rules.append(MatchRule(equals=equals))
-                if re_search := rule.get("re_search"):
-                    match_rules.append(MatchRule(re_search=re_search))
+            match_rules = tuple(
+                match_rule
+                for lineage in lineage_rules
+                if (match_rule := set_match_rule(lineage)) is not None
+            )
 
             # Create the TagRule object
             v3_tag = TagRule(
-                match_rules=tuple(match_rules), apply_tags=frozenset([tags])
+                match_rules=match_rules, apply_tags=frozenset([tags])
             )
             v3_tags.append(v3_tag)
 
