@@ -222,7 +222,8 @@ def test_load_hconfig_v2_tags_multiple_lineage_fields() -> None:
     v2_tags = [
         {
             "lineage": [
-                {"startswith": ["ip name-server"]}, {"endswith": ["version 2"]},
+                {"startswith": ["ip name-server"]},
+                {"endswith": ["version 2"]},
             ],
             "add_tags": "ntp",
         }

@@ -294,9 +294,7 @@ def load_hconfig_v2_tags(
             )
 
             # Create the TagRule object
-            v3_tag = TagRule(
-                match_rules=match_rules, apply_tags=frozenset([tags])
-            )
+            v3_tag = TagRule(match_rules=match_rules, apply_tags=frozenset([tags]))
             v3_tags.append(v3_tag)
 
     return tuple(v3_tags)
