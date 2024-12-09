@@ -23,7 +23,7 @@ from hier_config.models import (
 )
 from hier_config.platforms.driver_base import HConfigDriverBase
 
-hconfig_mapping = {
+HCONFIG_PLATFORM_V2_TO_V3_MAPPING = {
     "ios": Platform.CISCO_IOS,
     "iosxe": Platform.CISCO_IOS,
     "iosxr": Platform.CISCO_XR,
@@ -34,7 +34,7 @@ hconfig_mapping = {
 }
 
 
-def set_match_rule(lineage: dict[str, Any]) -> Optional[MatchRule]:
+def _set_match_rule(lineage: dict[str, Any]) -> Optional[MatchRule]:
     if startswith := lineage.get("startswith"):
         return MatchRule(startswith=startswith)
     if endswith := lineage.get("endswith"):
@@ -90,7 +90,7 @@ def hconfig_v2_os_v3_platform_mapper(os_name: str) -> Platform:
         <Platform.CISCO_IOS: 'ios'>
 
     """
-    return hconfig_mapping.get(os_name, Platform.GENERIC)
+    return HCONFIG_PLATFORM_V2_TO_V3_MAPPING.get(os_name, Platform.GENERIC)
 
 
 def hconfig_v3_platform_v2_os_mapper(platform: Platform) -> str:
@@ -107,7 +107,7 @@ def hconfig_v3_platform_v2_os_mapper(platform: Platform) -> str:
         "ios"
 
     """
-    for os_name, plat in hconfig_mapping.items():
+    for os_name, plat in HCONFIG_PLATFORM_V2_TO_V3_MAPPING.items():
         if plat == platform:
             return os_name
 
@@ -150,11 +150,9 @@ def load_hconfig_v2_options(
             match_rules = [
                 match_rule
                 for lineage in rule.get(lineage_key, [])
-                if (match_rule := set_match_rule(lineage)) is not None
+                if (match_rule := _set_match_rule(lineage)) is not None
             ]
             append_to(rule_class(match_rules=match_rules))
-
-    # negation
 
     # sectional_overwrite
     process_rules(
@@ -176,7 +174,7 @@ def load_hconfig_v2_options(
         match_rules = tuple(
             match_rule
             for lineage in lineage_rules
-            if (match_rule := set_match_rule(lineage)) is not None
+            if (match_rule := _set_match_rule(lineage)) is not None
         )
         weight = rule.get("order", 500) - 500
 
@@ -208,7 +206,7 @@ def load_hconfig_v2_options(
         match_rules = tuple(
             match_rule
             for lineage in lineage_rules
-            if (match_rule := set_match_rule(lineage)) is not None
+            if (match_rule := _set_match_rule(lineage)) is not None
         )
         exit_text = rule.get("exit_text", "")
 
@@ -312,7 +310,7 @@ def load_hconfig_v2_tags(
             match_rules = tuple(
                 match_rule
                 for lineage in lineage_rules
-                if (match_rule := set_match_rule(lineage)) is not None
+                if (match_rule := _set_match_rule(lineage)) is not None
             )
 
             # Create the TagRule object
