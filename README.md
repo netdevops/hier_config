@@ -22,5 +22,46 @@ The code documentation can be found at: https://hier-config.readthedocs.io/en/la
 Installation
 ============
 
-### Pip
-Install from PyPi: `pip install hier-config`
+### PIP
+Install from PyPi:
+
+```shell
+pip install hier-config
+```
+
+Quick Start
+===========
+
+### Step 1: Import Required Classes
+```python
+from hier_config import WorkflowRemediation, get_hconfig, Platform
+from hier_config.utils import read_text_from_file
+```
+
+### Step 2: Load Configurations
+Load the running and intended configurations as strings:
+
+```python
+running_config_text = read_text_from_file("./tests/fixtures/running_config.conf")
+generated_config_text = read_text_from_file("./tests/fixtures/generated_config.conf")
+```
+
+### Step 3: Create HConfig Objects
+Specify the device platform (e.g., `Platform.CISCO_IOS`):
+
+```python
+running_config = get_hconfig(Platform.CISCO_IOS, running_config_text)
+generated_config = get_hconfig(Platform.CISCO_IOS, generated_config_text)
+```
+
+### Step 4: Initialize WorkflowRemediation
+Compare configurations and generate remediation steps:
+
+```python
+workflow = WorkflowRemediation(running_config, generated_config)
+
+print("Remediation Configuration:")
+print(workflow.remediation_config)
+```
+
+This guide gets you started with Hier Config in minutes! For more details, visit [Hier Config Documentation Site](https://hier-config.readthedocs.io/en/latest/).

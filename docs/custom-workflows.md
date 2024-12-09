@@ -12,14 +12,14 @@ Start by importing the necessary modules and loading the running and intended co
 
 ```python
 from hier_config import WorkflowRemediation, get_hconfig, Platform
-from hier_config.utils import load_device_config
+from hier_config.utils import read_text_from_file
 ```
 
 Load the configurations from files:
 
 ```python
-running_config = load_device_config("./tests/fixtures/running_config_acl.conf")
-generated_config = load_device_config("./tests/fixtures/generated_config_acl.conf")
+running_config = read_text_from_file("./tests/fixtures/running_config_acl.conf")
+generated_config = read_text_from_file("./tests/fixtures/generated_config_acl.conf")
 ```
 
 These configurations represent the current and desired states of the device.
