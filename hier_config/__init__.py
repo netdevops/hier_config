@@ -1,3 +1,5 @@
+from importlib.metadata import version, PackageNotFoundError
+
 from .child import HConfigChild
 from .constructors import (
     get_hconfig,
@@ -21,3 +23,8 @@ __all__ = (
     "get_hconfig_from_dump",
     "get_hconfig_view",
 )
+
+try:
+    __version__ = version("hier_config")
+except PackageNotFoundError:
+    __version__ = "unknown"
