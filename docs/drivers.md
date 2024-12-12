@@ -219,14 +219,14 @@ from hier_config.models import (
     PerLineSubRule,
     IdempotentCommandsRule,
 )
-from hier_config.drivers.cisco_ios import HConfigDriverCiscoIOS
+from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
 
 
 class ExtendedHConfigDriverCiscoIOS(HConfigDriverCiscoIOS):
     @staticmethod
     def _instantiate_rules():
         # Start with the base rules
-        base_rules = super()._instantiate_rules()
+        base_rules = HConfigDriverCiscoIOS._instantiate_rules()
 
         # Extend negation rules
         base_rules.negate_with.append(
