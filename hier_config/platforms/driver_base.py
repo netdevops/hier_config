@@ -89,6 +89,7 @@ class HConfigDriverBase(ABC):
     def negation_prefix(self) -> str:
         return "no "
 
+    @staticmethod
     def config_preprocessor(self, config_text: str) -> str:
         return config_text
 
