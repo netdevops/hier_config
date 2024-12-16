@@ -22,7 +22,7 @@ class HConfigDriverVYOS(HConfigDriverBase):  # pylint: disable=too-many-instance
         return "delete "
 
     @staticmethod
-    def config_preprocessor(self, config_text: str) -> str:
+    def config_preprocessor(config_text: str) -> str:
         return convert_to_set_commands(config_text)
 
     @staticmethod
