@@ -171,7 +171,7 @@ class ConfigViewInterfaceHPProcurve(  # noqa: PLR0904 pylint: disable=abstract-m
 
     @property
     def number(self) -> str:
-        return re.sub("^[a-zA-Z-]+", "", self.name)
+        return re.sub(r"^[a-zA-Z-]+", "", self.name)
 
     @property
     def parent_name(self) -> Optional[str]:

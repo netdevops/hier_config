@@ -176,7 +176,7 @@ class ConfigViewInterfaceCiscoIOS(ConfigViewInterfaceBase):  # noqa: PLR0904
 
     @property
     def number(self) -> str:
-        return sub("^[a-zA-Z-]+", "", self.name)
+        return sub(r"^[a-zA-Z-]+", "", self.name)
 
     @property
     def parent_name(self) -> Optional[str]:
