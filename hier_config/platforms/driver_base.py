@@ -90,6 +90,10 @@ class HConfigDriverBase(ABC):
         return "no "
 
     @staticmethod
+    def config_preprocessor(config_text: str) -> str:
+        return config_text
+
+    @staticmethod
     @abstractmethod
     def _instantiate_rules() -> HConfigDriverRules:
         pass
