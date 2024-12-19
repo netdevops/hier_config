@@ -114,7 +114,8 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
             yield from child.lines(sectional_exiting=sectional_exiting)
 
         if sectional_exiting and (exit_text := self.sectional_exit):
-            yield " " * self.driver.rules.indentation * self.depth() + exit_text
+            depth = self.depth() - 1 if self.sectional_exit_text_parent_level else self.depth()
+            yield " " * self.driver.rules.indentation * depth + exit_text
 
     @property
     def sectional_exit(self) -> str | None:
@@ -128,6 +129,14 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
             return None
 
         return "exit"
+
+    @property
+    def sectional_exit_text_parent_level(self) -> Optional[bool]:
+        for rule in self.driver.rules.sectional_exiting:
+            if self.is_lineage_match(rule.match_rules):
+                return rule.exit_text_parent_level
+    
+        return None
 
     def delete_sectional_exit(self) -> None:
         try:
