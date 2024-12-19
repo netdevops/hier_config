@@ -53,7 +53,7 @@ def test_remediation_config_driver_mismatch() -> None:
     generated_config = get_hconfig(Platform.JUNIPER_JUNOS, "dummy_config")
 
     with pytest.raises(
-        ValueError, match="The running and generated configs must use the same driver."
+        ValueError, match=r"The running and generated configs must use the same driver."
     ):
         WorkflowRemediation(running_config, generated_config)
 
