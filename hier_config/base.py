@@ -79,7 +79,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
 
         if check_if_present and (child := self.children.get(text)):
             if self._is_duplicate_child_allowed():
-                new_child = self._instantiate_child(text)
+                new_child = self.instantiate_child(text)
                 self.children.append(new_child, update_mapping=False)
                 return new_child
             if return_if_present:
@@ -87,7 +87,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
             message = f"Found a duplicate section: {(*self.path(), text)}"
             raise DuplicateChildError(message)
 
-        new_child = self._instantiate_child(text)
+        new_child = self.instantiate_child(text)
         self.children.append(new_child)
         return new_child
 
@@ -334,7 +334,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
             future_config.add_deep_copy_of(self_child)
 
     @abstractmethod
-    def _instantiate_child(self, text: str) -> HConfigChild:
+    def instantiate_child(self, text: str) -> HConfigChild:
         pass
 
     @abstractmethod
@@ -462,7 +462,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
                     continue
                 # This creates a new HConfigChild object just in case there are some delta children.
                 # This is not very efficient, think of a way to not do this.
-                subtree = self._instantiate_child(target_child.text)
+                subtree = delta.instantiate_child(target_child.text)
                 self_child._config_to_get_to(target_child, subtree)  # noqa: SLF001
                 if subtree.children:
                     delta.children.append(subtree)

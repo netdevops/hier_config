@@ -692,3 +692,23 @@ def test_overwrite_with_no_negate() -> None:
         generated_config.children["route-policy test"], delta_config, negate=False
     )
     assert delta_config == expected_config
+
+
+def test_config_to_get_to_parent_identity() -> None:
+    interface_vlan2 = "interface Vlan2"
+    platform = Platform.CISCO_IOS
+    running_config_hier = get_hconfig(platform)
+    running_config_hier.add_children_deep(
+        (interface_vlan2, "ip address 192.168.1.1/24")
+    )
+    generated_config_hier = get_hconfig(platform)
+    generated_config_hier.add_child(interface_vlan2)
+    remediation_config_hier = running_config_hier.config_to_get_to(
+        generated_config_hier,
+    )
+    remediation_config_interface = remediation_config_hier.get_child(
+        equals=interface_vlan2
+    )
+    assert remediation_config_interface
+    assert id(remediation_config_interface.parent) == id(remediation_config_hier)
+    assert id(remediation_config_interface.root) == id(remediation_config_hier)
