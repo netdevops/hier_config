@@ -15,6 +15,7 @@ from itertools import chain
 
 from .base import HConfigBase
 from . import text_match
+import re
 
 if TYPE_CHECKING:
     from .root import HConfig
@@ -218,6 +219,13 @@ class HConfigChild(HConfigBase):
         for rule in self.options["negation_default_when"]:
             if self.lineage_test(rule):
                 return self._default()
+
+        if "negation_replace" in self.options.keys():
+            for rule in self.options["negation_replace"]:
+                if self.lineage_test(rule):
+                    line = re.sub(rule["search"], rule["replace"], self.text)
+                    self.text = line
+                    return self
 
         return self._swap_negation()
 
