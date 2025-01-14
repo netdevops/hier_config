@@ -2,9 +2,9 @@ name: hier_config build and test
 
 on:
   push:
-    branches: [ master ]
+    branches: [ 2.3-lts ]
   pull_request:
-    branches: [ master ]
+    branches: [ 2.3-lts ]
 
 jobs:
   build:
