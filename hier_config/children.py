@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, TypeVar, Union, overload
+from typing import TYPE_CHECKING, TypeVar, Union, overload
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -110,9 +110,7 @@ class HConfigChildren:
         for child in children:
             self._mapping.setdefault(child.text, child)
 
-    def get(
-        self, key: str, default: Optional[_D] = None
-    ) -> Union[HConfigChild, _D, None]:
+    def get(self, key: str, default: _D | None = None) -> Union[HConfigChild, _D, None]:
         return self._mapping.get(key, default)
 
     def index(self, child: HConfigChild) -> int:

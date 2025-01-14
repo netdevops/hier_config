@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from itertools import chain
 from logging import getLogger
-from typing import TYPE_CHECKING, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, TypeVar, Union
 
 from .children import HConfigChildren
 from .exceptions import DuplicateChildError
@@ -119,9 +119,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
             yield child
             yield from child.all_children()
 
-    def get_child_deep(
-        self, match_rules: tuple[MatchRule, ...]
-    ) -> Optional[HConfigChild]:
+    def get_child_deep(self, match_rules: tuple[MatchRule, ...]) -> HConfigChild | None:
         """Find the first child recursively given a tuple of MatchRules."""
         return next(self.get_children_deep(match_rules), None)
 
@@ -151,8 +149,8 @@ class HConfigBase(ABC):  # noqa: PLR0904
         startswith: Union[str, tuple[str, ...], None] = None,
         endswith: Union[str, tuple[str, ...], None] = None,
         contains: Union[str, tuple[str, ...], None] = None,
-        re_search: Optional[str] = None,
-    ) -> Optional[HConfigChild]:
+        re_search: str | None = None,
+    ) -> HConfigChild | None:
         """Find a child by text_match rule. If it is not found, return None."""
         return next(
             self.get_children(
@@ -172,7 +170,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
         startswith: Union[str, tuple[str, ...], None] = None,
         endswith: Union[str, tuple[str, ...], None] = None,
         contains: Union[str, tuple[str, ...], None] = None,
-        re_search: Optional[str] = None,
+        re_search: str | None = None,
     ) -> Iterator[HConfigChild]:
         """Find all children matching a text_match rule and return them."""
         # For isinstance(equals, str) only matches, find the first child using children_dict
@@ -380,7 +378,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
         self,
         target: _HConfigRootOrChildT,
         delta: _HConfigRootOrChildT,
-        target_acl_children: Optional[dict[str, HConfigChild]] = None,
+        target_acl_children: dict[str, HConfigChild] | None = None,
         *,
         in_acl: bool = False,
     ) -> _HConfigRootOrChildT:
