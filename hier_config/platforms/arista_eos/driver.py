@@ -146,9 +146,6 @@ class HConfigDriverAristaEOS(HConfigDriverBase):
                     ),
                 ),
                 IdempotentCommandsRule(
-                    match_rules=(MatchRule(startswith="snmp-server community"),),
-                ),
-                IdempotentCommandsRule(
                     match_rules=(MatchRule(startswith="snmp-server location"),),
                 ),
                 IdempotentCommandsRule(
