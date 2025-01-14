@@ -312,9 +312,6 @@ class HConfigDriverCiscoNXOS(HConfigDriverBase):
                     match_rules=(MatchRule(startswith="mac address-table aging-time"),),
                 ),
                 IdempotentCommandsRule(
-                    match_rules=(MatchRule(startswith="snmp-server community"),),
-                ),
-                IdempotentCommandsRule(
                     match_rules=(MatchRule(startswith="snmp-server location"),)
                 ),
                 IdempotentCommandsRule(

@@ -262,9 +262,6 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
                     ),
                 ),
                 IdempotentCommandsRule(
-                    match_rules=(MatchRule(startswith="snmp-server community"),),
-                ),
-                IdempotentCommandsRule(
                     match_rules=(MatchRule(startswith="snmp-server location"),),
                 ),
                 IdempotentCommandsRule(
