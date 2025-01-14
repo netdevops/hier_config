@@ -3,7 +3,7 @@ from __future__ import annotations
 from itertools import chain
 from logging import getLogger
 from re import search
-from typing import TYPE_CHECKING, Any, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from .base import HConfigBase
 from .models import Instance, MatchRule, SetLikeOfStr
@@ -117,7 +117,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
             yield " " * self.driver.rules.indentation * self.depth() + exit_text
 
     @property
-    def sectional_exit(self) -> str | None:
+    def sectional_exit(self) -> Optional[str]:
         for rule in self.driver.rules.sectional_exiting:
             if self.is_lineage_match(rule.match_rules):
                 if exit_text := rule.exit_text:
@@ -173,7 +173,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
     def cisco_style_text(
         self,
         style: str = "without_comments",
-        tag: str | None = None,
+        tag: Optional[str] = None,
     ) -> str:
         """Return a Cisco style formated line i.e. indentation_level + text ! comments."""
         comments: list[str] = []
@@ -391,7 +391,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         startswith: Union[str, tuple[str, ...], None] = None,
         endswith: Union[str, tuple[str, ...], None] = None,
         contains: Union[str, tuple[str, ...], None] = None,
-        re_search: str | None = None,
+        re_search: Optional[str] = None,
     ) -> bool:
         """True if `self.text` matches all the criteria.
 

@@ -57,12 +57,12 @@ def test_load_hier_config_tags_success(tags_file_path: str) -> None:
     assert isinstance(result, tuple), "Result should be a tuple of TagRule objects."
     assert len(result) == 4, "There should be four TagRule objects."
     assert isinstance(result[0], TagRule), "Each element should be a TagRule object."
-    assert result[0].apply_tags == {"safe"}, (
-        "First tag should have 'safe' as an applied tag."
-    )
-    assert result[3].apply_tags == {"manual"}, (
-        "Last tag should have 'manual' as an applied tag."
-    )
+    assert result[0].apply_tags == {
+        "safe"
+    }, "First tag should have 'safe' as an applied tag."
+    assert result[3].apply_tags == {
+        "manual"
+    }, "Last tag should have 'manual' as an applied tag."
 
 
 def test_load_hier_config_tags_file_not_found() -> None:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from logging import getLogger
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 from .base import HConfigBase
 from .child import HConfigChild
@@ -145,7 +145,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
     def config_to_get_to(
         self,
         target: HConfig,
-        delta: HConfig | None = None,
+        delta: Optional[HConfig] = None,
     ) -> HConfig:
         """Figures out what commands need to be executed to transition from self to target.
         self is the source data structure(i.e. the running_config),

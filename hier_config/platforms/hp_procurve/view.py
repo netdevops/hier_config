@@ -292,7 +292,7 @@ class HConfigViewHPProcurve(HConfigViewBase):
 
     @property
     def stack_members(self) -> Iterable[StackMember]:
-        """Stacking
+        """stacking
         member 1 type "JL123" mac-address abc123-abc123
         member 1 priority 255
         member 2 type "JL123" mac-address abc123-abc123
