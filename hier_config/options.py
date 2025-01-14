@@ -142,7 +142,6 @@ iosxe_options: dict = {
         },
         {"lineage": [{"startswith": ["hostname"]}]},
         {"lineage": [{"contains": ["source-interface", "trap-source"]}]},
-        {"lineage": [{"startswith": ["snmp-server community"]}]},
         {"lineage": [{"startswith": ["mac address-table aging-time"]}]},
         {"lineage": [{"startswith": ["aaa authentication"]}]},
         {"lineage": [{"startswith": ["aaa authorization"]}]},
@@ -301,7 +300,6 @@ iosxr_options: dict = {
         {"lineage": [{"startswith": "hostname"}]},
         {"lineage": [{"startswith": "logging source-interface"}]},
         {"lineage": [{"startswith": "interface"}, {"startswith": "ipv4 address"}]},
-        {"lineage": [{"startswith": "snmp-server community"}]},
         {"lineage": [{"startswith": "snmp-server location"}]},
         {"lineage": [{"equals": "line console"}, {"startswith": "exec-timeout"}]},
         {
@@ -463,7 +461,6 @@ nxos_options: dict = {
                 {
                     "startswith": [
                         "mac address-table aging-time",
-                        "snmp-server community",
                         "snmp-server location",
                     ]
                 }
