@@ -103,9 +103,9 @@ ip access-list extended TEST
 To avoid outages during production changes:
 
 1. **Resequence the ACL:** Adjust sequence numbers using the ip access-list resequence command.
-   * For demonstration, resequence to align 12 to 20.
-2. **Temporary Allow-All:** Add a temporary rule (1 permit ip any any) to prevent lockouts.
-2. **Cleanup:** Remove the temporary rule (no 1) after applying the changes.
+    * For demonstration, resequence to align 12 to 20.
+1. **Temporary Allow-All:** Add a temporary rule (1 permit ip any any) to prevent lockouts.
+1. **Cleanup:** Remove the temporary rule (no 1) after applying the changes.
 
 ----
 
