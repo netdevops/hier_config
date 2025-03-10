@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from itertools import chain
 from logging import getLogger
 from typing import TYPE_CHECKING, Optional, TypeVar, Union
+from natsort import natsorted
 
 from .children import HConfigChildren
 from .exceptions import DuplicateChildError
@@ -109,7 +110,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
 
     def all_children_sorted(self) -> Iterator[HConfigChild]:
         """Recursively find and yield all children sorted at each hierarchy."""
-        for child in sorted(self.children, key=lambda child: child.text):
+        for child in natsorted(self.children, key=lambda child: child.text):
             yield child
             yield from child.all_children_sorted()
 
