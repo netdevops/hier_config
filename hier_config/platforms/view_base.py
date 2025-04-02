@@ -15,8 +15,16 @@ from hier_config.root import HConfig
 
 
 class ConfigViewInterfaceBase:  # noqa: PLR0904
+    """Abstract base class for extracting structured interface data from an HConfigChild node."""
+
     def __init__(self, config: HConfigChild) -> None:
-        self.config = config
+        """Initialize the interface view.
+
+        Args:
+            config (HConfigChild): The child config object to view.
+
+        """
+        self.config: HConfigChild = config
 
     @property
     @abstractmethod
@@ -187,7 +195,7 @@ class ConfigViewInterfaceBase:  # noqa: PLR0904
 
 class HConfigViewBase(ABC):
     def __init__(self, config: HConfig) -> None:
-        self.config = config
+        self.config: HConfig = config
 
     @property
     def bundle_interface_views(self) -> Iterable[ConfigViewInterfaceBase]:
