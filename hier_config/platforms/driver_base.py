@@ -99,15 +99,6 @@ class HConfigDriverBase(ABC):
         return None
 
     def negate_with(self, config: HConfigChild) -> Optional[str]:
-        """Determine if the `config` should be negated.
-
-        Args:
-            config (HConfigChild): The child config object to check.
-
-        Returns:
-            Optional[str]: _description_
-
-        """
         """Determine if `config` should be negated.
 
         Args:
@@ -130,15 +121,6 @@ class HConfigDriverBase(ABC):
 
         Returns:
             HConfigChild: The child config object with negation swapped.
-
-        """
-        """Swap negation of a `child.text`.
-
-        Args:
-            child (HConfigChild): The child to swap negation.
-
-        Returns:
-            HConfigChild: The child with negation swapped.
 
         """
         if child.text.startswith(self.negation_prefix):
@@ -170,18 +152,6 @@ class HConfigDriverBase(ABC):
 
     @staticmethod
     def config_preprocessor(config_text: str) -> str:
-        """Preprocesses raw configuration text before parsing.
-
-        By default, returns the input unchanged. Subclasses can override
-        this to normalize, clean, or transform config text as needed.
-
-        Args:
-            config_text: The raw configuration string.
-
-        Returns:
-            str: The (optionally modified) configuration string.
-
-        """
         """Preprocess the config text.
 
         Args:

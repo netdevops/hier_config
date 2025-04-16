@@ -27,7 +27,7 @@ def expand_range(number_range_str: str) -> tuple[int, ...]:
             message: str = f"Invalid range: {number_range}"
             raise ValueError(message)
     if len(set(numbers)) != len(numbers):
-        message: str = "len(set(numbers)) must be equal to len(numbers)."
+        message = "len(set(numbers)) must be equal to len(numbers)."
         raise ValueError(message)
     return tuple(numbers)
 
@@ -58,7 +58,7 @@ def convert_to_set_commands(config_raw: str) -> str:
 
         # Strip ; from the end of the line
         if stripped_line.endswith(";"):
-            stripped_line: str = stripped_line.replace(";", "")
+            stripped_line = stripped_line.replace(";", "")
 
         # Count the number of spaces at the beginning to determine the level
         level: int = line.find(stripped_line) // 4

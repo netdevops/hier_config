@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Iterator
 from itertools import chain
 from logging import Logger, getLogger
 from re import search
@@ -89,7 +88,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         return self.children == other.children
 
     def __ne__(self, other: object) -> bool:
-        return not self.__eq__(other=other)
+        return not self.__eq__(other)
 
     @property
     def driver(self) -> HConfigDriverBase:
@@ -227,8 +226,8 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         """Yields a Cisco style formated line.
 
         Args:
-            style str: The style to use. Defaults to "without_comments".
-            tag Optional[str]: The tag to filter by. Defaults to None.
+            style: The style to use. Defaults to 'without_comments'.
+            tag: The tag to filter by. Defaults to None.
 
         Returns:
             str: Indentation + text + comments if any.
@@ -376,7 +375,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
                 if negated := delta.children.get(key=self.text):
                     negated.negate()
                 else:
-                    negated: HConfigChild = delta.add_child(
+                    negated = delta.add_child(
                         text=self.text, check_if_present=False
                     ).negate()
 
@@ -440,7 +439,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
 
     def is_lineage_match(self, rules: tuple[MatchRule, ...]) -> bool:
         """A generic test against a lineage of HConfigChild objects."""
-        lineage: tuple[HConfigBase, ...] = tuple(self.lineage())
+        lineage: tuple[HConfigChild, ...] = tuple(self.lineage())
 
         return len(rules) == len(lineage) and all(
             child.is_match(
