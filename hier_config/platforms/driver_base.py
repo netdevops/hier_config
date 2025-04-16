@@ -52,28 +52,56 @@ class HConfigDriverBase(ABC):
     """
 
     def __init__(self) -> None:
-        self.rules = self._instantiate_rules()
+        """Initialize the HConfigDriverBase class."""
+        self.rules: HConfigDriverRules = self._instantiate_rules()
 
     def idempotent_for(
         self,
         config: HConfigChild,
         other_children: Iterable[HConfigChild],
     ) -> Optional[HConfigChild]:
+        """Determine if `config` is an idempotent change.
+
+        Args:
+            config (HConfigChild): HConfigChild to check.
+            other_children (Iterable[HConfigChild]): Other HConfigChildren to check.
+
+        Returns:
+            Optional[HConfigChild]: HConfigChild that matches `config` or None.
+
+        """
         for rule in self.rules.idempotent_commands:
-            if config.is_lineage_match(rule.match_rules):
+            if config.is_lineage_match(rules=rule.match_rules):
                 for other_child in other_children:
-                    if other_child.is_lineage_match(rule.match_rules):
+                    if other_child.is_lineage_match(rules=rule.match_rules):
                         return other_child
         return None
 
     def negate_with(self, config: HConfigChild) -> Optional[str]:
+        """Determine if `config` should be negated.
+
+        Args:
+            config (HConfigChild): HConfigChild to check.
+
+        Returns:
+            Optional[str]: String to use for negation or None.
+
+        """
         for with_rule in self.rules.negate_with:
-            if config.is_lineage_match(with_rule.match_rules):
+            if config.is_lineage_match(rules=with_rule.match_rules):
                 return with_rule.use
         return None
 
     def swap_negation(self, child: HConfigChild) -> HConfigChild:
-        """Swap negation of a `child.text`."""
+        """Swap negation of a `child.text`.
+
+        Args:
+            child (HConfigChild): The child to swap negation.
+
+        Returns:
+            HConfigChild: The child with negation swapped.
+
+        """
         if child.text.startswith(self.negation_prefix):
             child.text = child.text_without_negation
         else:
@@ -83,17 +111,43 @@ class HConfigDriverBase(ABC):
 
     @property
     def declaration_prefix(self) -> str:
+        """The prefix for declarations.
+
+        Returns:
+            str: The declaration string.
+
+        """
         return ""
 
     @property
     def negation_prefix(self) -> str:
+        """The prefix for negation.
+
+        Returns:
+            str: The negation string.
+
+        """
         return "no "
 
     @staticmethod
     def config_preprocessor(config_text: str) -> str:
+        """Preprocess the config text.
+
+        Args:
+            config_text (str): The config text.
+
+        Returns:
+            str: The preprocessed config text.
+
+        """
         return config_text
 
     @staticmethod
     @abstractmethod
     def _instantiate_rules() -> HConfigDriverRules:
-        pass
+        """Abstract method to instantiate rules.
+
+        Returns:
+            HConfigDriverRules: The rules.
+
+        """
