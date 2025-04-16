@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 from itertools import chain
-from logging import getLogger
+from logging import Logger, getLogger
 from re import search
 from typing import TYPE_CHECKING, Any, Optional, Union
 
@@ -16,13 +17,13 @@ if TYPE_CHECKING:
     from .root import HConfig
 
 
-logger = getLogger(__name__)
+logger: Logger = getLogger(name=__name__)
 
 
 class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attributes
     HConfigBase,
 ):
-    __slots__ = (
+    __slots__: tuple[str, ...] = (
         "_tags",
         "_text",
         "comments",
@@ -35,8 +36,15 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
     )
 
     def __init__(self, parent: Union[HConfig, HConfigChild], text: str) -> None:
+        """Initialize the HconfigChild class.
+
+        Args:
+            parent: Either an Hconfig object of a parent HConfigChild object.
+            text: The text config line of the HConfig or HconfigChild object.
+
+        """
         super().__init__()
-        self.parent = parent
+        self.parent: HConfig | HConfigChild = parent
         self._text: str = text.strip()
         self.real_indent_level: int
         # 0 is the default. Positive weights sink while negative weights rise.
@@ -81,34 +89,70 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         return self.children == other.children
 
     def __ne__(self, other: object) -> bool:
-        return not self.__eq__(other)
+        return not self.__eq__(other=other)
 
     @property
     def driver(self) -> HConfigDriverBase:
+        """Returns the driver of the HConfig object at the base of the tree.
+
+        Returns:
+            HConfigDriverBase: The driver of the HConfig object at the base of the tree
+
+        """
         return self.root.driver
 
     @property
     def text(self) -> str:
+        """The text config of the HConfigChild object.
+
+        Returns:
+            str: Config text for the HConfigChild.
+
+        """
         return self._text
 
     @text.setter
     def text(self, value: str) -> None:
         """Used for when self.text is changed after the object
         is instantiated to rebuild the children dictionary.
+
+        Args:
+            value (str): Config text for the HConfigChild.
+
         """
         self._text = value.strip()
         self.parent.children.rebuild_mapping()
 
     @property
     def text_without_negation(self) -> str:
+        """The text config of the HConfigChild object without negation.
+
+        Returns:
+            str: Config text for the HConfigChild without negation.
+
+        """
         return self.text.removeprefix(self.driver.negation_prefix)
 
     @property
     def root(self) -> HConfig:
-        """Returns the HConfig object at the base of the tree."""
+        """Returns the HConfig object at the base of the tree.
+
+        Returns:
+            HConfig: The HConfig object at the base of the tree.
+
+        """
         return self.parent.root
 
     def lines(self, *, sectional_exiting: bool = False) -> Iterable[str]:
+        """Returns the config lines of the HConfigChild object.
+
+        Args:
+            sectional_exiting (bool, optional): Exit sectionally.
+
+        Yields:
+            Iterator[Iterable[str]]: cisco_style_text string.
+
+        """
         yield self.cisco_style_text()
         for child in sorted(self.children):
             yield from child.lines(sectional_exiting=sectional_exiting)
@@ -119,7 +163,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
     @property
     def sectional_exit(self) -> Optional[str]:
         for rule in self.driver.rules.sectional_exiting:
-            if self.is_lineage_match(rule.match_rules):
+            if self.is_lineage_match(rules=rule.match_rules):
                 if exit_text := rule.exit_text:
                     return exit_text
                 return None
@@ -131,7 +175,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
 
     def delete_sectional_exit(self) -> None:
         try:
-            potential_exit = self.children[-1]
+            potential_exit: HConfigChild = self.children[-1]
         except IndexError:
             return
 
@@ -139,7 +183,12 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
             potential_exit.delete()
 
     def depth(self) -> int:
-        """Returns the distance to the root HConfig object i.e. indent level."""
+        """Returns the distance to the root HConfig object i.e. indent level.
+
+        Returns:
+            int: Number of indents from the root HConfig object.
+
+        """
         return self.parent.depth() + 1
 
     def move(self, new_parent: Union[HConfig, HConfigChild]) -> None:
@@ -157,7 +206,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
 
         :param new_parent: HConfigChild object -> type list
         """
-        new_parent.children.append(self)
+        new_parent.children.append(child=self)
         self.delete()
 
     def lineage(self) -> Iterator[HConfigChild]:
@@ -175,13 +224,22 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         style: str = "without_comments",
         tag: Optional[str] = None,
     ) -> str:
-        """Return a Cisco style formated line i.e. indentation_level + text ! comments."""
+        """Yields a Cisco style formated line.
+
+        Args:
+            style str: The style to use. Defaults to "without_comments".
+            tag Optional[str]: The tag to filter by. Defaults to None.
+
+        Returns:
+            str: Indentation + text + comments if any.
+
+        """
         comments: list[str] = []
         if style == "without_comments":
             pass
         elif style == "merged":
             # count the number of instances that have the tag
-            instance_count = 0
+            instance_count: int = 0
             instance_comments: set[str] = set()
             for instance in self.instances:
                 if tag is None or tag in instance.tags:
@@ -189,14 +247,14 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
                     instance_comments.update(instance.comments)
 
             # should the word 'instance' be plural?
-            word = "instance" if instance_count == 1 else "instances"
+            word: str = "instance" if instance_count == 1 else "instances"
 
             comments.append(f"{instance_count} {word}")
             comments.extend(instance_comments)
         elif style == "with_comments":
             comments.extend(self.comments)
 
-        comments_str = f" !{', '.join(sorted(comments))}" if comments else ""
+        comments_str: str = f" !{', '.join(sorted(comments))}" if comments else ""
         return f"{self.indentation}{self.text}{comments_str}"
 
     @property
@@ -205,13 +263,13 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
 
     def delete(self) -> None:
         """Delete the current object from its parent."""
-        self.parent.children.delete(self)
+        self.parent.children.delete(child_or_text=self)
 
     def tags_add(self, tag: Union[str, Iterable[str]]) -> None:
         """Add a tag to self._tags on all leaf nodes."""
         if self.is_branch:
             for child in self.children:
-                child.tags_add(tag)
+                child.tags_add(tag=tag)
         elif isinstance(tag, str):
             self._tags.add(tag)
         else:
@@ -221,7 +279,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         """Remove a tag from self._tags on all leaf nodes."""
         if self.is_branch:
             for child in self.children:
-                child.tags_remove(tag)
+                child.tags_remove(tag=tag)
         elif isinstance(tag, str):
             self._tags.remove(tag)
         else:
@@ -229,18 +287,18 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
 
     def negate(self) -> HConfigChild:
         """Negate self.text."""
-        if negate_with := self.driver.negate_with(self):
+        if negate_with := self.driver.negate_with(config=self):
             self.text = negate_with
             return self
 
-        if self.use_default_for_negation(self):
+        if self.use_default_for_negation(config=self):
             return self._default()
 
-        return self.driver.swap_negation(self)
+        return self.driver.swap_negation(child=self)
 
     def use_default_for_negation(self, config: HConfigChild) -> bool:
         return any(
-            config.is_lineage_match(rule.match_rules)
+            config.is_lineage_match(rules=rule.match_rules)
             for rule in self.driver.rules.negation_default_when
         )
 
@@ -278,25 +336,30 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         """Determine if self.text is an idempotent change."""
         # Avoid list commands from matching as idempotent
         for rule in self.driver.rules.idempotent_commands_avoid:
-            if self.is_lineage_match(rule.match_rules):
+            if self.is_lineage_match(rules=rule.match_rules):
                 return False
 
         # Idempotent command identification
-        return bool(self.driver.idempotent_for(self, other_children))
+        return bool(
+            self.driver.idempotent_for(
+                config=self,
+                other_children=other_children,
+            )
+        )
 
     def use_sectional_overwrite_without_negation(self) -> bool:
         """Check self's text to see if negation should be handled by
         overwriting the section without first negating it.
         """
         return any(
-            self.is_lineage_match(rule.match_rules)
+            self.is_lineage_match(rules=rule.match_rules)
             for rule in self.driver.rules.sectional_overwrite_no_negate
         )
 
     def use_sectional_overwrite(self) -> bool:
         """Determines if self.text matches a sectional overwrite rule."""
         return any(
-            self.is_lineage_match(rule.match_rules)
+            self.is_lineage_match(rules=rule.match_rules)
             for rule in self.driver.rules.sectional_overwrite
         )
 
@@ -310,18 +373,20 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         """Deletes delta.child[self.text], adds a deep copy of target to delta."""
         if self.children != target.children:
             if negate:
-                if negated := delta.children.get(self.text):
+                if negated := delta.children.get(key=self.text):
                     negated.negate()
                 else:
-                    negated = delta.add_child(
-                        self.text, check_if_present=False
+                    negated: HConfigChild = delta.add_child(
+                        text=self.text, check_if_present=False
                     ).negate()
 
                 negated.comments.add("dropping section")
             else:
-                delta.children.delete(self.text)
+                delta.children.delete(child_or_text=self.text)
             if self.children:
-                new_item = delta.add_deep_copy_of(target)
+                new_item: HConfigChild = delta.add_deep_copy_of(
+                    child_to_add=target,
+                )
                 new_item.comments.add("re-create section")
 
     def line_inclusion_test(
@@ -356,21 +421,26 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
     ) -> Iterator[HConfigChild]:
         """Yield all children recursively that match include/exclude tags."""
         if self.is_leaf:
-            if self.line_inclusion_test(include_tags, exclude_tags):
+            if self.line_inclusion_test(
+                include_tags=include_tags,
+                exclude_tags=exclude_tags,
+            ):
                 yield self
         else:
-            self_iter = iter((self,))
+            self_iter: Iterator[HConfigChild] = iter((self,))
             for child in sorted(self.children):
-                included_children = child.all_children_sorted_by_tags(
-                    include_tags,
-                    exclude_tags,
+                included_children: Iterator[HConfigChild] = (
+                    child.all_children_sorted_by_tags(
+                        include_tags=include_tags,
+                        exclude_tags=exclude_tags,
+                    )
                 )
                 if peek := next(included_children, None):
                     yield from chain(self_iter, (peek,), included_children)
 
     def is_lineage_match(self, rules: tuple[MatchRule, ...]) -> bool:
         """A generic test against a lineage of HConfigChild objects."""
-        lineage = tuple(self.lineage())
+        lineage: tuple[HConfigBase, ...] = tuple(self.lineage())
 
         return len(rules) == len(lineage) and all(
             child.is_match(
@@ -414,7 +484,10 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
             return False
 
         # Regex filter
-        if isinstance(re_search, str) and not search(re_search, self.text):
+        if isinstance(re_search, str) and not search(
+            pattern=re_search,
+            string=self.text,
+        ):
             return False
 
         # The below filters are less commonly used
@@ -436,9 +509,9 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
 
     def add_children_deep(self, lines: Iterable[str]) -> HConfigChild:
         """Add child instances of HConfigChild deeply."""
-        base = self
+        base: HConfigChild = self
         for line in lines:
-            base = base.add_child(line)
+            base = base.add_child(text=line)
         return base
 
     def _default(self) -> HConfigChild:
@@ -447,11 +520,11 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         return self
 
     def instantiate_child(self, text: str) -> HConfigChild:
-        return HConfigChild(self, text)
+        return HConfigChild(parent=self, text=text)
 
     def _is_duplicate_child_allowed(self) -> bool:
         """Determine if duplicate(identical text) children are allowed under the parent."""
         return any(
-            self.is_lineage_match(rule.match_rules)
+            self.is_lineage_match(rules=rule.match_rules)
             for rule in self.driver.rules.parent_allows_duplicate_child
         )
