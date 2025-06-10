@@ -100,6 +100,7 @@ class Platform(str, Enum):
     CISCO_IOS = auto()
     CISCO_NXOS = auto()
     CISCO_XR = auto()
+    FORTIGATE_FORTIOS = auto()
     GENERIC = auto()  # used in cases where the specific platform is unimportant/unknown
     HP_COMWARE5 = auto()
     HP_PROCURVE = auto()

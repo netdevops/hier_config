@@ -17,6 +17,7 @@ from .platforms.cisco_nxos.driver import HConfigDriverCiscoNXOS
 from .platforms.cisco_nxos.view import HConfigViewCiscoNXOS
 from .platforms.cisco_xr.driver import HConfigDriverCiscoIOSXR
 from .platforms.cisco_xr.view import HConfigViewCiscoIOSXR
+from .platforms.fortigate_fortios.driver import HConfigDriverFortigateFortiOS
 from .platforms.generic.driver import HConfigDriverGeneric
 from .platforms.hp_comware5.driver import HConfigDriverHPComware5
 from .platforms.hp_procurve.driver import HConfigDriverHPProcurve
@@ -39,6 +40,8 @@ def get_hconfig_driver(platform: Platform) -> HConfigDriverBase:  # noqa: PLR091
         return HConfigDriverCiscoNXOS()
     if platform == Platform.CISCO_XR:
         return HConfigDriverCiscoIOSXR()
+    if platform == Platform.FORTIGATE_FORTIOS:
+        return HConfigDriverFortigateFortiOS()
     if platform == Platform.GENERIC:
         return HConfigDriverGeneric()
     if platform == Platform.HP_PROCURVE:
