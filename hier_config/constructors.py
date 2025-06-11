@@ -30,31 +30,26 @@ from .root import HConfig
 logger = getLogger(__name__)
 
 
-def get_hconfig_driver(platform: Platform) -> HConfigDriverBase:  # noqa: PLR0911
+def get_hconfig_driver(platform: Platform) -> HConfigDriverBase:
     """Create base options on an OS level."""
-    if platform == Platform.ARISTA_EOS:
-        return HConfigDriverAristaEOS()
-    if platform == Platform.CISCO_IOS:
-        return HConfigDriverCiscoIOS()
-    if platform == Platform.CISCO_NXOS:
-        return HConfigDriverCiscoNXOS()
-    if platform == Platform.CISCO_XR:
-        return HConfigDriverCiscoIOSXR()
-    if platform == Platform.FORTIGATE_FORTIOS:
-        return HConfigDriverFortigateFortiOS()
-    if platform == Platform.GENERIC:
-        return HConfigDriverGeneric()
-    if platform == Platform.HP_PROCURVE:
-        return HConfigDriverHPProcurve()
-    if platform == Platform.HP_COMWARE5:
-        return HConfigDriverHPComware5()
-    if platform == Platform.JUNIPER_JUNOS:
-        return HConfigDriverJuniperJUNOS()
-    if platform == Platform.VYOS:
-        return HConfigDriverVYOS()
+    platform_drivers = {
+        Platform.ARISTA_EOS: HConfigDriverAristaEOS,
+        Platform.CISCO_IOS: HConfigDriverCiscoIOS,
+        Platform.CISCO_NXOS: HConfigDriverCiscoNXOS,
+        Platform.CISCO_XR: HConfigDriverCiscoIOSXR,
+        Platform.FORTIGATE_FORTIOS: HConfigDriverFortigateFortiOS,
+        Platform.GENERIC: HConfigDriverGeneric,
+        Platform.HP_PROCURVE: HConfigDriverHPProcurve,
+        Platform.HP_COMWARE5: HConfigDriverHPComware5,
+        Platform.JUNIPER_JUNOS: HConfigDriverJuniperJUNOS,
+        Platform.VYOS: HConfigDriverVYOS,
+    }
 
-    message = f"Unsupported platform: {platform}"  # type: ignore[unreachable]
-    raise ValueError(message)
+    try:
+        return platform_drivers[platform]()
+    except KeyError as err:
+        message = f"Unsupported platform: {platform}"  # type: ignore[unreachable]
+        raise ValueError(message) from err
 
 
 def get_hconfig_view(config: HConfig) -> HConfigViewBase:
