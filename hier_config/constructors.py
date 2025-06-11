@@ -32,7 +32,7 @@ logger = getLogger(__name__)
 
 def get_hconfig_driver(platform: Platform) -> HConfigDriverBase:
     """Create base options on an OS level."""
-    platform_drivers = {
+    platform_drivers: dict[Platform, type[HConfigDriverBase]] = {
         Platform.ARISTA_EOS: HConfigDriverAristaEOS,
         Platform.CISCO_IOS: HConfigDriverCiscoIOS,
         Platform.CISCO_NXOS: HConfigDriverCiscoNXOS,
@@ -44,12 +44,13 @@ def get_hconfig_driver(platform: Platform) -> HConfigDriverBase:
         Platform.JUNIPER_JUNOS: HConfigDriverJuniperJUNOS,
         Platform.VYOS: HConfigDriverVYOS,
     }
+    driver_cls = platform_drivers.get(platform)
 
-    try:
-        return platform_drivers[platform]()
-    except KeyError as err:
-        message = f"Unsupported platform: {platform}"  # type: ignore[unreachable]
-        raise ValueError(message) from err
+    if driver_cls is None:
+        message = f"Unsupported platform: {platform}"
+        raise ValueError(message)
+
+    return driver_cls()
 
 
 def get_hconfig_view(config: HConfig) -> HConfigViewBase:
