@@ -29,9 +29,7 @@ class HConfigDriverFortigateFortiOS(HConfigDriverBase):
                 ),
             ],
             parent_allows_duplicate_child=[
-                ParentAllowsDuplicateChildRule(
-                    match_rules=()
-                ),
+                ParentAllowsDuplicateChildRule(match_rules=()),
             ],
         )
 
