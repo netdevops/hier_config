@@ -14,6 +14,10 @@ def test_negate_with() -> None:
             "    set status down",
             "  next",
             "end",
+            "config system dns",
+            "  set primary 192.0.2.1",
+            "  set secondary 192.0.2.2",
+            "end",
         ),
     )
     generated_config = get_hconfig_fast_load(
@@ -24,6 +28,9 @@ def test_negate_with() -> None:
             "    set status down",
             "  next",
             "end",
+            "config system dns",
+            "  set primary 192.0.2.1",
+            "end",
         ),
     )
     remediation_config = running_config.config_to_get_to(generated_config)
@@ -32,6 +39,9 @@ def test_negate_with() -> None:
         "  edit port1",
         "    unset description",
         "    next",
+        "  end",
+        "config system dns",
+        "  unset secondary",
         "  end",
     )
 
@@ -47,6 +57,10 @@ def test_idempotent_for() -> None:
             "    set status up",
             "  next",
             "end",
+            "config system dns",
+            "  set primary 192.0.2.1",
+            "  set secondary 192.0.2.2",
+            "end",
         ),
     )
     generated_config = get_hconfig_fast_load(
@@ -58,6 +72,10 @@ def test_idempotent_for() -> None:
             "    set status up",
             "  next",
             "end",
+            "config system dns",
+            "  set primary 192.0.2.1",
+            "  set secondary 192.0.2.3",
+            "end",
         ),
     )
     remediation_config = running_config.config_to_get_to(generated_config)
@@ -66,6 +84,9 @@ def test_idempotent_for() -> None:
         "  edit port1",
         "    set description 'New Description'",
         "    next",
+        "  end",
+        "config system dns",
+        "  set secondary 192.0.2.3",
         "  end",
     )
 

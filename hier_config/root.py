@@ -208,6 +208,9 @@ class HConfig(HConfigBase):  # noqa: PLR0904
             new_instance.add_deep_copy_of(child)
         return new_instance
 
-    def _is_duplicate_child_allowed(self) -> bool:  # noqa: PLR6301
+    def _is_duplicate_child_allowed(self) -> bool:
         """Determine if duplicate(identical text) children are allowed under the parent."""
-        return False
+        return any(
+            len(rule.match_rules) == 0  # Empty match_rules means root level
+            for rule in self.driver.rules.parent_allows_duplicate_child
+        )
