@@ -10,20 +10,20 @@ from hier_config.models import (
 from hier_config.platforms.driver_base import HConfigDriverBase, HConfigDriverRules
 
 
-class HConfigDriverFortigateFortiOS(HConfigDriverBase):
-    """Driver for FortiGate OS."""
+class HConfigDriverFortinetFortiOS(HConfigDriverBase):
+    """Driver for Fortinet FortiOS."""
 
     @staticmethod
     def _instantiate_rules() -> HConfigDriverRules:
         return HConfigDriverRules(
             sectional_exiting=[
                 SectionalExitingRule(
-                    match_rules=(MatchRule(startswith="config"),), exit_text="end"
+                    match_rules=(MatchRule(startswith="config "),), exit_text="end"
                 ),
                 SectionalExitingRule(
                     match_rules=(
-                        MatchRule(startswith="config"),
-                        MatchRule(startswith="edit"),
+                        MatchRule(startswith="config "),
+                        MatchRule(startswith="edit "),
                     ),
                     exit_text="next",
                 ),

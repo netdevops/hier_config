@@ -4,7 +4,7 @@ from hier_config.models import Platform
 
 
 def test_negate_with() -> None:
-    platform = Platform.FORTIGATE_FORTIOS
+    platform = Platform.FORTINET_FORTIOS
     running_config = get_hconfig_fast_load(
         platform,
         (
@@ -47,7 +47,7 @@ def test_negate_with() -> None:
 
 
 def test_idempotent_for() -> None:
-    platform = Platform.FORTIGATE_FORTIOS
+    platform = Platform.FORTINET_FORTIOS
     running_config = get_hconfig_fast_load(
         platform,
         (
@@ -92,7 +92,7 @@ def test_idempotent_for() -> None:
 
 
 def test_future() -> None:
-    platform = Platform.FORTIGATE_FORTIOS
+    platform = Platform.FORTINET_FORTIOS
     running_config = get_hconfig(platform)
     remediation_config = get_hconfig_fast_load(
         platform,
