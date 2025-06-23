@@ -33,14 +33,14 @@ class HConfigDriverFortinetFortiOS(HConfigDriverBase):
             ],
         )
 
-    def negate_with(self, config: HConfigChild) -> Optional[str]:
-        """Generate clean 'unset' command (e.g. 'unset description' instead of 'unset set description ...')."""
-        if config.text.startswith("set "):
-            parts = config.text.split()
-            if len(parts) >= 2:
-                keyword = parts[1]
-                return f"unset {keyword}"
-        return super().negate_with(config)
+    def swap_negation(self, child: HConfigChild) -> HConfigChild:
+        """Swap negation of a `self.text`."""
+        if child.text.startswith(self.negation_prefix):
+            child.text = f"{self.declaration_prefix}{child.text_without_negation}"
+        elif child.text.startswith(self.declaration_prefix):
+            child.text = f"{self.negation_prefix}{child.text.removeprefix(self.declaration_prefix).split()[0]}"
+
+        return child
 
     def idempotent_for(
         self, config: HConfigChild, other_children: Iterable[HConfigChild]
@@ -50,8 +50,8 @@ class HConfigDriverFortinetFortiOS(HConfigDriverBase):
         """
         for other_child in other_children:
             if (
-                config.text.startswith("set ")
-                and other_child.text.startswith("set ")
+                config.text.startswith(self.declaration_prefix)
+                and other_child.text.startswith(self.declaration_prefix)
                 and config.text.split()[1] == other_child.text.split()[1]
             ):
                 return other_child
