@@ -3,7 +3,7 @@ from hier_config.constructors import get_hconfig
 from hier_config.models import Platform
 
 
-def test_negate_with() -> None:
+def test_swap_negation() -> None:
     platform = Platform.FORTINET_FORTIOS
     running_config = get_hconfig_fast_load(
         platform,
