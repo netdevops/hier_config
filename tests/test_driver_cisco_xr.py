@@ -1,6 +1,6 @@
 from hier_config import get_hconfig_fast_load
 from hier_config.models import Platform
-from tests.conftest import running_config
+
 
 def test_duplicate_child() -> None:
     platform = Platform.CISCO_XR
@@ -41,4 +41,7 @@ def test_duplicate_child() -> None:
         ),
     )
     remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple(sectional_exiting=True) == "no route-policy SET_LOCAL_PREF_AND_PASS"
+    assert (
+        remediation_config.dump_simple(sectional_exiting=True)
+        == "no route-policy SET_LOCAL_PREF_AND_PASS"
+    )
