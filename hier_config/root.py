@@ -208,6 +208,6 @@ class HConfig(HConfigBase):  # noqa: PLR0904
             new_instance.add_deep_copy_of(child)
         return new_instance
 
-    def _is_duplicate_child_allowed(self) -> bool:
+    def _is_duplicate_child_allowed(self) -> bool:  # noqa: PLR6301
         """Determine if duplicate(identical text) children are allowed under the parent."""
         return False

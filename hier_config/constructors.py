@@ -142,24 +142,25 @@ def get_hconfig_fast_load(
     current_section: Union[HConfig, HConfigChild] = config
     most_recent_item: Union[HConfig, HConfigChild] = current_section
 
-    for line in lines:
-        if not (line_lstripped := line.lstrip()):
+    for original_line in lines:
+        if not (line_lstripped := original_line.lstrip()):
             continue
 
         # Apply per_line_sub rules before processing
+        processed_line = original_line
         for rule in driver.rules.per_line_sub:
-            line = sub(rule.search, rule.replace, line)
+            processed_line = sub(rule.search, rule.replace, processed_line)
 
-        if not (line_lstripped := line.lstrip()):
+        if not (line_lstripped := processed_line.lstrip()):
             continue
-        indent = len(line) - len(line_lstripped)
+        indent = len(processed_line) - len(line_lstripped)
 
         # Determine parent in hierarchy
         most_recent_item, current_section = _analyze_indent(
             most_recent_item,
             current_section,
             indent,
-            " ".join(line.split()),
+            " ".join(processed_line.split()),
         )
 
     for child in tuple(config.all_children()):
