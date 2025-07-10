@@ -145,6 +145,13 @@ def get_hconfig_fast_load(
     for line in lines:
         if not (line_lstripped := line.lstrip()):
             continue
+
+        # Apply per_line_sub rules before processing
+        for rule in driver.rules.per_line_sub:
+            line = sub(rule.search, rule.replace, line)
+
+        if not (line_lstripped := line.lstrip()):
+            continue
         indent = len(line) - len(line_lstripped)
 
         # Determine parent in hierarchy
@@ -271,7 +278,7 @@ def _load_from_string_lines(config: HConfig, config_text: str) -> None:  # noqa:
         if not line:
             continue
 
-        # Determine indentation level
+        # Determine indentation level (after per_line_sub rules are applied)
         this_indent = len(line) - len(line.lstrip()) + indent_adjust
 
         line = line.lstrip()  # noqa: PLW2901

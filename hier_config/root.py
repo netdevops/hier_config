@@ -210,8 +210,4 @@ class HConfig(HConfigBase):  # noqa: PLR0904
 
     def _is_duplicate_child_allowed(self) -> bool:
         """Determine if duplicate(identical text) children are allowed under the parent."""
-        # return any(
-        #     len(rule.match_rules) == 0  # Empty match_rules means root level
-        #     for rule in self.driver.rules.parent_allows_duplicate_child
-        # )
         return False

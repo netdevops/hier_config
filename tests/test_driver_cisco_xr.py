@@ -41,7 +41,6 @@ def test_duplicate_child() -> None:
         ),
     )
     remediation_config = running_config.config_to_get_to(generated_config)
-    assert (
-        remediation_config.dump_simple(sectional_exiting=True)
-        == "no route-policy SET_LOCAL_PREF_AND_PASS"
+    assert remediation_config.dump_simple(sectional_exiting=True) == (
+        "no route-policy SET_LOCAL_PREF_AND_PASS",
     )

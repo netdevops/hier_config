@@ -5,6 +5,7 @@ from hier_config.child import HConfigChild
 from hier_config.models import (
     MatchRule,
     ParentAllowsDuplicateChildRule,
+    PerLineSubRule,
     SectionalExitingRule,
 )
 from hier_config.platforms.driver_base import HConfigDriverBase, HConfigDriverRules
@@ -32,6 +33,10 @@ class HConfigDriverFortinetFortiOS(HConfigDriverBase):
                 ParentAllowsDuplicateChildRule(
                     match_rules=(MatchRule(startswith="config"),)
                 ),
+            ],
+            per_line_sub=[
+                PerLineSubRule(search="^end$", replace=" end"),
+                PerLineSubRule(search="^next$", replace="  next"),
             ],
         )
 
