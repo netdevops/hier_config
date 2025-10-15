@@ -37,7 +37,7 @@ def convert_to_set_commands(config_raw: str) -> str:
 
         # Strip ; from the end of the line
         if stripped_line.endswith(";"):
-            stripped_line = stripped_line.replace(";", "")
+            stripped_line = stripped_line[:-1]
 
         # Count the number of spaces at the beginning to determine the level
         level = line.find(stripped_line) // 4
