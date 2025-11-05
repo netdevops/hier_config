@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "hier-config"
-version = "3.2.2"
+version = "3.3.0"
 description = "A network configuration query and comparison library, used to build remediation configurations."
 packages = [
     { include="hier_config", from="."},
@@ -18,17 +18,17 @@ classifiers = [
     "Intended Audience :: System Administrators",
     "Intended Audience :: Telecommunications Industry",
     "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Natural Language :: English",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: System :: Networking",
 ]
 [tool.poetry.dependencies]
-python = ">=3.9.0,<4.0"
+python = ">=3.10.0,<4.0"
 pydantic = "^2.9"
 
 [tool.poetry.group.dev.dependencies]
