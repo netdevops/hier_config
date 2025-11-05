@@ -17,6 +17,7 @@ from .platforms.cisco_nxos.driver import HConfigDriverCiscoNXOS
 from .platforms.cisco_nxos.view import HConfigViewCiscoNXOS
 from .platforms.cisco_xr.driver import HConfigDriverCiscoIOSXR
 from .platforms.cisco_xr.view import HConfigViewCiscoIOSXR
+from .platforms.fortinet_fortios.driver import HConfigDriverFortinetFortiOS
 from .platforms.generic.driver import HConfigDriverGeneric
 from .platforms.hp_comware5.driver import HConfigDriverHPComware5
 from .platforms.hp_procurve.driver import HConfigDriverHPProcurve
@@ -29,29 +30,27 @@ from .root import HConfig
 logger = getLogger(__name__)
 
 
-def get_hconfig_driver(platform: Platform) -> HConfigDriverBase:  # noqa: PLR0911
+def get_hconfig_driver(platform: Platform) -> HConfigDriverBase:
     """Create base options on an OS level."""
-    if platform == Platform.ARISTA_EOS:
-        return HConfigDriverAristaEOS()
-    if platform == Platform.CISCO_IOS:
-        return HConfigDriverCiscoIOS()
-    if platform == Platform.CISCO_NXOS:
-        return HConfigDriverCiscoNXOS()
-    if platform == Platform.CISCO_XR:
-        return HConfigDriverCiscoIOSXR()
-    if platform == Platform.GENERIC:
-        return HConfigDriverGeneric()
-    if platform == Platform.HP_PROCURVE:
-        return HConfigDriverHPProcurve()
-    if platform == Platform.HP_COMWARE5:
-        return HConfigDriverHPComware5()
-    if platform == Platform.JUNIPER_JUNOS:
-        return HConfigDriverJuniperJUNOS()
-    if platform == Platform.VYOS:
-        return HConfigDriverVYOS()
+    platform_drivers: dict[Platform, type[HConfigDriverBase]] = {
+        Platform.ARISTA_EOS: HConfigDriverAristaEOS,
+        Platform.CISCO_IOS: HConfigDriverCiscoIOS,
+        Platform.CISCO_NXOS: HConfigDriverCiscoNXOS,
+        Platform.CISCO_XR: HConfigDriverCiscoIOSXR,
+        Platform.FORTINET_FORTIOS: HConfigDriverFortinetFortiOS,
+        Platform.GENERIC: HConfigDriverGeneric,
+        Platform.HP_PROCURVE: HConfigDriverHPProcurve,
+        Platform.HP_COMWARE5: HConfigDriverHPComware5,
+        Platform.JUNIPER_JUNOS: HConfigDriverJuniperJUNOS,
+        Platform.VYOS: HConfigDriverVYOS,
+    }
+    driver_cls = platform_drivers.get(platform)
 
-    message = f"Unsupported platform: {platform}"  # type: ignore[unreachable]
-    raise ValueError(message)
+    if driver_cls is None:
+        message = f"Unsupported platform: {platform}"
+        raise ValueError(message)
+
+    return driver_cls()
 
 
 def get_hconfig_view(config: HConfig) -> HConfigViewBase:
@@ -143,17 +142,25 @@ def get_hconfig_fast_load(
     current_section: Union[HConfig, HConfigChild] = config
     most_recent_item: Union[HConfig, HConfigChild] = current_section
 
-    for line in lines:
-        if not (line_lstripped := line.lstrip()):
+    for original_line in lines:
+        if not (line_lstripped := original_line.lstrip()):
             continue
-        indent = len(line) - len(line_lstripped)
+
+        # Apply per_line_sub rules before processing
+        processed_line = original_line
+        for rule in driver.rules.per_line_sub:
+            processed_line = sub(rule.search, rule.replace, processed_line)
+
+        if not (line_lstripped := processed_line.lstrip()):
+            continue
+        indent = len(processed_line) - len(line_lstripped)
 
         # Determine parent in hierarchy
         most_recent_item, current_section = _analyze_indent(
             most_recent_item,
             current_section,
             indent,
-            " ".join(line.split()),
+            " ".join(processed_line.split()),
         )
 
     for child in tuple(config.all_children()):
@@ -272,7 +279,7 @@ def _load_from_string_lines(config: HConfig, config_text: str) -> None:  # noqa:
         if not line:
             continue
 
-        # Determine indentation level
+        # Determine indentation level (after per_line_sub rules are applied)
         this_indent = len(line) - len(line.lstrip()) + indent_adjust
 
         line = line.lstrip()  # noqa: PLW2901
