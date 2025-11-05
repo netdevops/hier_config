@@ -219,7 +219,7 @@ class ConfigViewInterfaceHPProcurve(  # noqa: PLR0904 pylint: disable=abstract-m
 
 def _speed_from_speed_duplex(speed_duplex: str) -> Optional[tuple[int, ...]]:
     if speed_duplex.startswith("10"):
-        return (int(speed_duplex.split("-")[0]),)
+        return (int(speed_duplex.split("-", maxsplit=1)[0]),)
     if speed_duplex.startswith("auto-"):
         return tuple(int(s) for s in speed_duplex.replace("auto-", "").split("-"))
     return None

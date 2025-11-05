@@ -1,4 +1,4 @@
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Any, Optional, Union
 
@@ -47,6 +47,17 @@ def _set_match_rule(lineage: dict[str, Any]) -> Optional[MatchRule]:
         return MatchRule(re_search=re_search)
 
     return None
+
+
+def _collect_match_rules(
+    lineages: Iterable[dict[str, Any]],
+) -> tuple[MatchRule, ...]:
+    collected: list[MatchRule] = []
+    for lineage in lineages:
+        match_rule = _set_match_rule(lineage)
+        if match_rule is not None:
+            collected.append(match_rule)
+    return tuple(collected)
 
 
 def read_text_from_file(file_path: str) -> str:
@@ -147,11 +158,7 @@ def load_hconfig_v2_options(
     ) -> None:
         """Helper to process rules."""
         for rule in v2_options.get(key, ()):
-            match_rules = [
-                match_rule
-                for lineage in rule.get(lineage_key, [])
-                if (match_rule := _set_match_rule(lineage)) is not None
-            ]
+            match_rules = _collect_match_rules(rule.get(lineage_key, []))
             append_to(rule_class(match_rules=match_rules))
 
     # sectional_overwrite
@@ -168,14 +175,9 @@ def load_hconfig_v2_options(
         driver.rules.sectional_overwrite_no_negate.append,
     )
 
-    # ordering
     for rule in v2_options.get("ordering", ()):
-        lineage_rules = rule.get("lineage")
-        match_rules = tuple(
-            match_rule
-            for lineage in lineage_rules
-            if (match_rule := _set_match_rule(lineage)) is not None
-        )
+        lineage_rules = rule.get("lineage", [])
+        match_rules = _collect_match_rules(lineage_rules)
         weight = rule.get("order", 500) - 500
 
         driver.rules.ordering.append(
@@ -202,12 +204,8 @@ def load_hconfig_v2_options(
 
     # sectional_exiting
     for rule in v2_options.get("sectional_exiting", ()):
-        lineage_rules = rule.get("lineage")
-        match_rules = tuple(
-            match_rule
-            for lineage in lineage_rules
-            if (match_rule := _set_match_rule(lineage)) is not None
-        )
+        lineage_rules = rule.get("lineage", [])
+        match_rules = _collect_match_rules(lineage_rules)
         exit_text = rule.get("exit_text", "")
 
         driver.rules.sectional_exiting.append(
