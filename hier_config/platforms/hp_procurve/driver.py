@@ -208,7 +208,7 @@ class HConfigDriverHPProcurve(HConfigDriverBase):
     ) -> Optional[str]:
         if re.search(expression, config.text):
             words = config.text.split()
-            return " ".join([prepend] + words[:end_index] + [append]).strip()
+            return " ".join([prepend, *words[:end_index], append]).strip()
         return None
 
     @staticmethod
