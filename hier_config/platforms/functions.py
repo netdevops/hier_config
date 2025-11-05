@@ -1,14 +1,31 @@
 def expand_range(number_range_str: str) -> tuple[int, ...]:
-    """Expand ranges like 2-5,8,22-45."""
+    """Expand ranges like 2-5,8,22-45.
+
+    Args:
+        number_range_str (str): The range to expand.
+
+    Raises:
+        ValueError: The range of integers are invalid.
+            Should be of the form 2-5,8,22-45.
+        ValueError: The length of unique integers is not the same as the
+            length of all integers.
+
+    Returns:
+        tuple[int, ...]: Tuple of integers.
+
+    """
     numbers: list[int] = []
-    for number_range in number_range_str.split(","):
-        start_stop = number_range.split("-")
+    for number_range in number_range_str.split(sep=","):
+        start_stop: list[str] = number_range.split(sep="-")
         if len(start_stop) == 2:
             start = int(start_stop[0])
             stop = int(start_stop[1])
             numbers.extend(n for n in range(start, stop + 1))
-        else:
+        if len(start_stop) == 1:
             numbers.append(int(start_stop[0]))
+        else:
+            message: str = f"Invalid range: {number_range}"
+            raise ValueError(message)
     if len(set(numbers)) != len(numbers):
         message = "len(set(numbers)) must be equal to len(numbers)."
         raise ValueError(message)
@@ -24,12 +41,16 @@ def convert_to_set_commands(config_raw: str) -> str:
         config_raw (str): Configuration string
 
     """
-    lines = config_raw.split("\n")
+    lines: list[str] = config_raw.split(sep="\n")
+
+    # List of paths to the current command
     path: list[str] = []
+
+    # The list of actual configuration commands
     set_commands: list[str] = []
 
     for line in lines:
-        stripped_line = line.strip()
+        stripped_line: str = line.strip()
 
         # Skip empty lines
         if not stripped_line:
@@ -39,7 +60,7 @@ def convert_to_set_commands(config_raw: str) -> str:
         stripped_line = stripped_line.removesuffix(";")
 
         # Count the number of spaces at the beginning to determine the level
-        level = line.find(stripped_line) // 4
+        level: int = line.find(stripped_line) // 4
 
         # Adjust the current path based on the level
         path = path[:level]
@@ -52,7 +73,7 @@ def convert_to_set_commands(config_raw: str) -> str:
             set_commands.append(stripped_line)
         else:
             # It's a command line, construct the full command
-            command = f"set {' '.join(path)} {stripped_line}"
+            command: str = f"set {' '.join(path)} {stripped_line}"
             set_commands.append(command)
 
     return "\n".join(set_commands)

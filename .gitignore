@@ -109,3 +109,8 @@ venv.bak/
 
 # vscode
 .vscode/
+.qodo
+
+# undodir
+.undodir/
+*.undodir/

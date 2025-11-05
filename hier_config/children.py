@@ -12,6 +12,7 @@ _D = TypeVar("_D")
 
 class HConfigChildren:
     def __init__(self) -> None:
+        """Initialize the HConfigChildren class."""
         self._data: list[HConfigChild] = []
         self._mapping: dict[str, HConfigChild] = {}
 
@@ -81,6 +82,17 @@ class HConfigChildren:
         *,
         update_mapping: bool = True,
     ) -> HConfigChild:
+        """Add a child instance of HConfigChild.
+
+        Args:
+            child (HConfigChild): The child to add.
+            update_mapping (bool, optional): Whether to update the text to child mapping.
+                Defaults to True.
+
+        Returns:
+            HConfigChild: The child that was added.
+
+        """
         self._data.append(child)
         if update_mapping:
             self._mapping.setdefault(child.text, child)
@@ -93,19 +105,29 @@ class HConfigChildren:
         self._mapping.clear()
 
     def delete(self, child_or_text: Union[HConfigChild, str]) -> None:
-        """Delete a child from self._data and self._mapping."""
+        """Delete a child from self._data and self._mapping.
+
+        Args:
+            child_or_text (Union[HConfigChild, str]): The child or text to delete.
+
+        """
         if isinstance(child_or_text, str):
             if child_or_text in self._mapping:
                 self._data[:] = [c for c in self._data if c.text != child_or_text]
                 self.rebuild_mapping()
         else:
-            old_len = len(self._data)
+            old_len: int = len(self._data)
             self._data = [c for c in self._data if c is not child_or_text]
             if old_len != len(self._data):
                 self.rebuild_mapping()
 
     def extend(self, children: Iterable[HConfigChild]) -> None:
-        """Add child instances of HConfigChild."""
+        """Add child instances of HConfigChild and update _mapping.
+
+        Args:
+            children (Iterable[HConfigChild]): The children to add.
+
+        """
         self._data.extend(children)
         for child in children:
             self._mapping.setdefault(child.text, child)
@@ -113,13 +135,33 @@ class HConfigChildren:
     def get(
         self, key: str, default: Optional[_D] = None
     ) -> Union[HConfigChild, _D, None]:
+        """Get a child from self._mapping.
+
+        Args:
+            key (str): The config text to get.
+            default (Optional[_D], optional): Object to return if the key doesn't exist.
+                Defaults to None.
+
+        Returns:
+            Union[HConfigChild, _D, None]: HConfigChild if found, default otherwise.
+
+        """
         return self._mapping.get(key, default)
 
     def index(self, child: HConfigChild) -> int:
+        """Get the index of a child in self._data.
+
+        Args:
+            child (HConfigChild): The child to get the index of.
+
+        Returns:
+            int: The index of the child.
+
+        """
         return self._data.index(child)
 
     def rebuild_mapping(self) -> None:
-        """Rebuild self._mapping."""
+        """Rebuild self._mapping from self._data."""
         self._mapping.clear()
         for child in self._data:
             self._mapping.setdefault(child.text, child)
