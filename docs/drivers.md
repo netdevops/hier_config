@@ -126,7 +126,7 @@ In Hier Config, the rules within a driver are organized into sections, each targ
     - `search`: A string or regex to search for.
     - `replace`: The replacement text.
 
-    - **`FullTextSubRule`**:
+  - **`FullTextSubRule`**:
     - Similar to `PerLineSubRule`, but applies to the entire text rather than individual lines.
 
 ---
