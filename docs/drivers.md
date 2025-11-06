@@ -82,6 +82,7 @@ In Hier Config, the rules within a driver are organized into sections, each targ
 ---
 
 ### 1. Negation Rules
+
 **Purpose**: Define how to negate commands or reset them to a default state.
 
 - **Models**:
@@ -95,6 +96,7 @@ In Hier Config, the rules within a driver are organized into sections, each targ
 ---
 
 ### 2. Sectional Exiting
+
 **Purpose**: Manage hierarchical configuration sections by defining commands for properly exiting each section.
 
 - **Models**:
@@ -105,6 +107,7 @@ In Hier Config, the rules within a driver are organized into sections, each targ
 ---
 
 ### 3. Ordering
+
 **Purpose**: Assign weights to commands to control the order of operations during configuration application.
 
 - **Models**:
@@ -115,6 +118,7 @@ In Hier Config, the rules within a driver are organized into sections, each targ
 ---
 
 ### 4. Per-Line Substitutions
+
 **Purpose**: Modify or clean up specific lines in the configuration.
 
 - **Models**:
@@ -122,12 +126,13 @@ In Hier Config, the rules within a driver are organized into sections, each targ
     - `search`: A string or regex to search for.
     - `replace`: The replacement text.
 
-  - **`FullTextSubRule`**:
+    - **`FullTextSubRule`**:
     - Similar to `PerLineSubRule`, but applies to the entire text rather than individual lines.
 
 ---
 
 ### 5. Idempotent Commands
+
 **Purpose**: Ensure commands are not repeated unnecessarily in the configuration.
 
 - **Models**:
@@ -140,6 +145,7 @@ In Hier Config, the rules within a driver are organized into sections, each targ
 ---
 
 ### 6. Post-Processing Callbacks
+
 **Purpose**: Apply additional transformations after initial configuration processing.
 
 - **Implementation**:
@@ -148,6 +154,7 @@ In Hier Config, the rules within a driver are organized into sections, each targ
 ---
 
 ### 7. Tagging and Overwriting
+
 **Purpose**: Apply tags to configuration lines or define overwriting behavior for specific sections.
 
 - **Models**:
@@ -164,6 +171,7 @@ In Hier Config, the rules within a driver are organized into sections, each targ
 ---
 
 ### 8. Indentation Adjustments
+
 **Purpose**: Define start and end points for adjusting indentation within configurations.
 
 - **Models**:
@@ -174,6 +182,7 @@ In Hier Config, the rules within a driver are organized into sections, each targ
 ---
 
 ### 9. Match Rules
+
 **Purpose**: Provide a flexible way to define conditions for matching configuration lines.
 
 - **Models**:
@@ -187,6 +196,7 @@ In Hier Config, the rules within a driver are organized into sections, each targ
 ---
 
 ### 10. Instance Metadata
+
 **Purpose**: Manage metadata for configuration instances, such as tags and comments.
 
 - **Models**:
@@ -198,6 +208,7 @@ In Hier Config, the rules within a driver are organized into sections, each targ
 ---
 
 ### 11. Dumping Configuration
+
 **Purpose**: Represent and handle the output of processed configuration lines.
 
 - **Models**:
@@ -387,8 +398,8 @@ driver.rules.idempotent_commands.append(
 
 #### Explanation
 
-* **Dynamic Rule Extension:** You directly modify the driver.rules attributes to append new rules dynamically.
-* **Flexibility:** This approach is useful when the driver is instantiated by external code, and subclassing is not feasible.
+- **Dynamic Rule Extension:** You directly modify the driver.rules attributes to append new rules dynamically.
+- **Flexibility:** This approach is useful when the driver is instantiated by external code, and subclassing is not feasible.
 
 Both approaches allow you to extend the functionality of the Cisco IOS driver:
 
@@ -406,15 +417,17 @@ This guide walks you through the process of creating a custom driver using the `
 The `HConfigDriverBase` class provides a foundation for defining driver-specific rules and behaviors. It encapsulates configuration rules and methods for handling idempotency, negation, and more. You will extend this class to create a new driver.
 
 Key Components:
+
 1. **`HConfigDriverRules`**: A collection of rules for handling configuration logic.
-2. **Methods to Override**: Define custom behavior by overriding the `_instantiate_rules` method.
-3. **Properties**: Adjust behavior for negation and declaration prefixes.
+1. **Methods to Override**: Define custom behavior by overriding the `_instantiate_rules` method.
+1. **Properties**: Adjust behavior for negation and declaration prefixes.
 
 ---
 
 ### Steps to Create a Custom Driver
 
 #### Step 1: Subclass `HConfigDriverBase`
+
 Begin by subclassing `HConfigDriverBase` to define a new driver.
 
 ```python
@@ -472,6 +485,7 @@ class CustomHConfigDriver(HConfigDriverBase):
 ```
 
 #### Step 2: Customize Negation or Declaration Prefixes (Optional)
+
 Override the `negation_prefix` or `declaration_prefix` properties to customize their behavior.
 
 ```python
@@ -547,7 +561,7 @@ workflow = WorkflowRemediation(running_config, generated_config)
 ### Key Methods in HConfigDriverBase
 
 1. `idempotent_for`:
-   * Matches configurations against idempotent rules to prevent duplication.
+    - Matches configurations against idempotent rules to prevent duplication.
 
 ```python
 def idempotent_for(
@@ -558,29 +572,30 @@ def idempotent_for(
     ...
 ```
 
-2. `negate_with`:
-   * Provides a negation command based on rules.
+1. `negate_with`:
+    - Provides a negation command based on rules.
 
 ```python
 def negate_with(self, config: HConfigChild) -> Optional[str]:
     ...
 ```
 
-3. `swap_negation`:
-   * Toggles the negation of a command.
+1. `swap_negation`:
+    - Toggles the negation of a command.
 
 ```python
 def swap_negation(self, child: HConfigChild) -> HConfigChild:
     ...
 ```
 
-4. Properties:
-   * `negation_prefix`: Default is `"no "`.
-   * `declaration_prefix`: Default is `""`.
+1. Properties:
+    - `negation_prefix`: Default is `"no "`.
+    - `declaration_prefix`: Default is `""`.
 
 ### Example Rule Definitions
 
 #### Negation Rules
+
 Define commands that require specific negation handling:
 
 ```python
@@ -593,6 +608,7 @@ negate_with=[
 ```
 
 #### Sectional Exiting
+
 Define how to exit specific configuration sections:
 
 ```python
@@ -608,6 +624,7 @@ sectional_exiting=[
 ```
 
 #### Command Ordering
+
 Set the execution order of specific commands:
 
 ```python
@@ -620,6 +637,7 @@ ordering=[
 ```
 
 #### Per-Line Substitution
+
 Clean up unwanted lines in the configuration:
 
 ```python

@@ -26,6 +26,7 @@ post_change_2_config = post_change_1_config.future(change_2_config)
 change_2_rollback_config = post_change_2_config.config_to_get_to(post_change_1_config)
 ```
 
+
 Currently, this algorithm does not account for:
 
 - negate a numbered ACL when removing an item
@@ -34,6 +35,22 @@ Currently, this algorithm does not account for:
 - idempotent command avoid
 - idempotent_acl_check
 - and likely others
+
+## Structural Idempotency Matching
+
+Starting in version 3.3.1, Hier Config derives a structural "idempotency key" from
+each command’s lineage when evaluating [`IdempotentCommandsRule`](drivers.md).
+This prevents unrelated lines that happen to share a prefix from being treated as
+duplicates during `future()` predictions. For example, distinct BGP neighbor
+descriptions such as `neighbor 2.2.2.2 description neighbor2` and
+`neighbor 3.3.3.3 description neighbor3` now remain in the predicted future
+configuration because their identities differ within the `neighbor` hierarchy.
+
+> **Tip:** When creating driver rules, ensure your `MatchRule` definitions capture
+> the structural parts of the command that should be unique (for instance, via
+> regex capture groups or specific `startswith` clauses). This allows the
+> idempotency engine to distinguish between commands that only vary by attributes
+> such as IP address or description text.
 
 ```bash
 >>> from hier_config import get_hconfig, Platform
