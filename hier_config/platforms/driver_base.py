@@ -169,6 +169,16 @@ class HConfigDriverBase(ABC):
         config: HConfigChild,
         match_rules: tuple[MatchRule, ...],
     ) -> tuple[str, ...]:
+        """Build a structural identity for `config` that respects driver rules.
+
+        Args:
+            config: The child being evaluated for idempotency.
+            match_rules: The match rules describing the lineage signature.
+
+        Returns:
+            A tuple of string fragments representing the idempotency key.
+
+        """
         lineage = tuple(config.lineage())
         if len(lineage) != len(match_rules):
             return ()
@@ -183,6 +193,16 @@ class HConfigDriverBase(ABC):
         child: HConfigChild,
         rule: MatchRule,
     ) -> str:
+        """Derive the structural key for a single lineage component.
+
+        Args:
+            child: The lineage child contributing to the key.
+            rule: The rule governing how to match the child.
+
+        Returns:
+            A string fragment representing the component key.
+
+        """
         text = child.text
         normalized_text = text.removeprefix(self.negation_prefix)
 
@@ -202,6 +222,16 @@ class HConfigDriverBase(ABC):
     def _key_from_equals(
         equals: str | frozenset[str] | None, text: str
     ) -> list[str]:
+        """Return key fragments constrained by `equals` match rules.
+
+        Args:
+            equals: The equals constraint specified by the rule.
+            text: The original command text to fall back on for sets.
+
+        Returns:
+            A list containing zero or one key fragments.
+
+        """
         if equals is None:
             return []
         if isinstance(equals, str):
@@ -213,6 +243,16 @@ class HConfigDriverBase(ABC):
         prefix: str | tuple[str, ...] | None,
         normalized_text: str,
     ) -> list[str]:
+        """Return key fragments for `startswith` match rules.
+
+        Args:
+            prefix: The `startswith` constraint(s) to evaluate.
+            normalized_text: The command text without the negation prefix.
+
+        Returns:
+            A list containing zero or one key fragments.
+
+        """
         if prefix is None:
             return []
         matched = self._match_prefix(normalized_text, prefix)
@@ -225,6 +265,16 @@ class HConfigDriverBase(ABC):
         suffix: str | tuple[str, ...] | None,
         normalized_text: str,
     ) -> list[str]:
+        """Return key fragments for `endswith` match rules.
+
+        Args:
+            suffix: The `endswith` constraint(s) to evaluate.
+            normalized_text: The command text without the negation prefix.
+
+        Returns:
+            A list containing zero or one key fragments.
+
+        """
         if suffix is None:
             return []
         matched = self._match_suffix(normalized_text, suffix)
@@ -237,6 +287,16 @@ class HConfigDriverBase(ABC):
         contains: str | tuple[str, ...] | None,
         normalized_text: str,
     ) -> list[str]:
+        """Return key fragments for `contains` match rules.
+
+        Args:
+            contains: The `contains` constraint(s) to evaluate.
+            normalized_text: The command text without the negation prefix.
+
+        Returns:
+            A list containing zero or one key fragments.
+
+        """
         if contains is None:
             return []
         matched = self._match_contains(normalized_text, contains)
@@ -250,6 +310,17 @@ class HConfigDriverBase(ABC):
         normalized_text: str,
         original_text: str,
     ) -> list[str]:
+        """Return key fragments derived from regex match rules.
+
+        Args:
+            pattern: The regex pattern to match.
+            normalized_text: The command text without the negation prefix.
+            original_text: The command text including any negation.
+
+        Returns:
+            A list containing zero or one key fragments.
+
+        """
         if pattern is None:
             return []
 
@@ -308,6 +379,7 @@ class HConfigDriverBase(ABC):
 
     @staticmethod
     def _normalize_regex_key(pattern: str, value: str, match: Match[str]) -> str:
+        """Normalize regex matches so equivalent commands hash the same."""
         result = match.group(0)
 
         if match.re.groups:
