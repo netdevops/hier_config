@@ -8,6 +8,7 @@ Hierarchical Configuration has been used extensively on:
 - [x] Cisco IOSXR
 - [x] Cisco NXOS
 - [x] Arista EOS
+- [x] Fortinet FortiOS
 - [x] HP Procurve (Aruba AOSS)
 
 In addition to the Cisco-style syntax, hier_config offers experimental support for Juniper-style configurations using set and delete commands. This allows users to remediate Junos configurations in native syntax. However, please note that Juniper syntax support is still in an experimental phase and has not been tested extensively. Use with caution in production environments.
@@ -17,28 +18,34 @@ In addition to the Cisco-style syntax, hier_config offers experimental support f
 
 Hier Config is compatible with any NOS that utilizes a structured CLI syntax similar to Cisco IOS or Junos OS.
 
-The code documentation can be found at: https://hier-config.readthedocs.io/en/latest/
+The code documentation can be found at: [Hier Config documentation](https://hier-config.readthedocs.io/en/latest/).
 
-Installation
-============
+## Highlights
+
+- Predict the device state before deploying (`future()`) and generate accurate rollbacks that now preserve distinct structural commands—BGP neighbor descriptions, for example, no longer collapse when multiple peers share a common prefix.
+- Build remediation workflows with deterministic diffs across Cisco-style and Junos-style configuration syntaxes.
+
+## Installation
 
 ### PIP
+
 Install from PyPi:
 
 ```shell
 pip install hier-config
 ```
 
-Quick Start
-===========
+## Quick Start
 
 ### Step 1: Import Required Classes
+
 ```python
 from hier_config import WorkflowRemediation, get_hconfig, Platform
 from hier_config.utils import read_text_from_file
 ```
 
 ### Step 2: Load Configurations
+
 Load the running and intended configurations as strings:
 
 ```python
@@ -47,6 +54,7 @@ generated_config_text = read_text_from_file("./tests/fixtures/generated_config.c
 ```
 
 ### Step 3: Create HConfig Objects
+
 Specify the device platform (e.g., `Platform.CISCO_IOS`):
 
 ```python
@@ -55,6 +63,7 @@ generated_config = get_hconfig(Platform.CISCO_IOS, generated_config_text)
 ```
 
 ### Step 4: Initialize WorkflowRemediation
+
 Compare configurations and generate remediation steps:
 
 ```python
