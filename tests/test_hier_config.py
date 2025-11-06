@@ -485,6 +485,42 @@ def test_future_config(platform_a: Platform) -> None:
     )
 
 
+def test_future_preserves_bgp_neighbor_description() -> None:
+    platform = Platform.ARISTA_EOS
+    running_raw = """router bgp 1
+  neighbor 2.2.2.2 description neighbor2
+  neighbor 2.2.2.2 remote-as 2
+  !
+"""
+    change_raw = """router bgp 1
+  neighbor 3.3.3.3 description neighbor3
+  neighbor 3.3.3.3 remote-as 3
+"""
+
+    running_config = get_hconfig(platform, running_raw)
+    change_config = get_hconfig(platform, change_raw)
+
+    future_config = running_config.future(change_config)
+    expected_future = (
+        "router bgp 1",
+        "  neighbor 3.3.3.3 description neighbor3",
+        "  neighbor 3.3.3.3 remote-as 3",
+        "  neighbor 2.2.2.2 description neighbor2",
+        "  neighbor 2.2.2.2 remote-as 2",
+        "  exit",
+    )
+    assert future_config.dump_simple(sectional_exiting=True) == expected_future
+
+    rollback_config = future_config.config_to_get_to(running_config)
+    expected_rollback = (
+        "router bgp 1",
+        "  no neighbor 3.3.3.3 description neighbor3",
+        "  no neighbor 3.3.3.3 remote-as 3",
+        "  exit",
+    )
+    assert rollback_config.dump_simple(sectional_exiting=True) == expected_rollback
+
+
 def test_difference1(platform_a: Platform) -> None:
     rc = ("a", " a1", " a2", " a3", "b")
     step = ("a", " a1", " a2", " a3", " a4", " a5", "b", "c", "d", " d1")
