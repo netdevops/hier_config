@@ -170,6 +170,16 @@ class HConfigDriverBase(ABC):
         config: HConfigChild,
         match_rules: tuple[MatchRule, ...],
     ) -> tuple[str, ...]:
+        """Build a structural identity for `config` that respects driver rules.
+
+        Args:
+            config: The child being evaluated for idempotency.
+            match_rules: The match rules describing the lineage signature.
+
+        Returns:
+            A tuple of string fragments representing the idempotency key.
+
+        """
         lineage = tuple(config.lineage())
         if len(lineage) != len(match_rules):
             return ()
@@ -184,6 +194,16 @@ class HConfigDriverBase(ABC):
         child: HConfigChild,
         rule: MatchRule,
     ) -> str:
+        """Derive the structural key for a single lineage component.
+
+        Args:
+            child: The lineage child contributing to the key.
+            rule: The rule governing how to match the child.
+
+        Returns:
+            A string fragment representing the component key.
+
+        """
         text = child.text
         normalized_text = text.removeprefix(self.negation_prefix)
 
@@ -203,6 +223,16 @@ class HConfigDriverBase(ABC):
     def _key_from_equals(
         equals: Union[str, frozenset[str], None], text: str
     ) -> list[str]:
+        """Return key fragments constrained by `equals` match rules.
+
+        Args:
+            equals: The equals constraint specified by the rule.
+            text: The original command text to fall back on for sets.
+
+        Returns:
+            A list containing zero or one key fragments.
+
+        """
         if equals is None:
             return []
         if isinstance(equals, str):
@@ -214,6 +244,16 @@ class HConfigDriverBase(ABC):
         prefix: Union[str, tuple[str, ...], None],
         normalized_text: str,
     ) -> list[str]:
+        """Return key fragments for `startswith` match rules.
+
+        Args:
+            prefix: The `startswith` constraint(s) to evaluate.
+            normalized_text: The command text without the negation prefix.
+
+        Returns:
+            A list containing zero or one key fragments.
+
+        """
         if prefix is None:
             return []
         matched = self._match_prefix(normalized_text, prefix)
@@ -226,6 +266,16 @@ class HConfigDriverBase(ABC):
         suffix: Union[str, tuple[str, ...], None],
         normalized_text: str,
     ) -> list[str]:
+        """Return key fragments for `endswith` match rules.
+
+        Args:
+            suffix: The `endswith` constraint(s) to evaluate.
+            normalized_text: The command text without the negation prefix.
+
+        Returns:
+            A list containing zero or one key fragments.
+
+        """
         if suffix is None:
             return []
         matched = self._match_suffix(normalized_text, suffix)
@@ -238,6 +288,16 @@ class HConfigDriverBase(ABC):
         contains: Union[str, tuple[str, ...], None],
         normalized_text: str,
     ) -> list[str]:
+        """Return key fragments for `contains` match rules.
+
+        Args:
+            contains: The `contains` constraint(s) to evaluate.
+            normalized_text: The command text without the negation prefix.
+
+        Returns:
+            A list containing zero or one key fragments.
+
+        """
         if contains is None:
             return []
         matched = self._match_contains(normalized_text, contains)
@@ -251,6 +311,17 @@ class HConfigDriverBase(ABC):
         normalized_text: str,
         original_text: str,
     ) -> list[str]:
+        """Return key fragments derived from regex match rules.
+
+        Args:
+            pattern: The regex pattern to match.
+            normalized_text: The command text without the negation prefix.
+            original_text: The command text including any negation.
+
+        Returns:
+            A list containing zero or one key fragments.
+
+        """
         if pattern is None:
             return []
 
@@ -268,6 +339,16 @@ class HConfigDriverBase(ABC):
 
     @staticmethod
     def _match_prefix(value: str, prefix: Union[str, tuple[str, ...]]) -> Optional[str]:
+        """Return the longest prefix that matches the value, if any.
+
+        Args:
+            value: The text to evaluate.
+            prefix: One or more prefix strings.
+
+        Returns:
+            The longest matching prefix, or None if nothing matches.
+
+        """
         if isinstance(prefix, tuple):
             matches = [candidate for candidate in prefix if value.startswith(candidate)]
             if matches:
@@ -281,6 +362,16 @@ class HConfigDriverBase(ABC):
 
     @staticmethod
     def _match_suffix(value: str, suffix: Union[str, tuple[str, ...]]) -> Optional[str]:
+        """Return the longest suffix that matches the value, if any.
+
+        Args:
+            value: The text to evaluate.
+            suffix: One or more suffix strings.
+
+        Returns:
+            The longest matching suffix, or None if nothing matches.
+
+        """
         if isinstance(suffix, tuple):
             matches = [candidate for candidate in suffix if value.endswith(candidate)]
             if matches:
@@ -296,6 +387,16 @@ class HConfigDriverBase(ABC):
     def _match_contains(
         value: str, contains: Union[str, tuple[str, ...]]
     ) -> Optional[str]:
+        """Return the longest substring that matches the value, if any.
+
+        Args:
+            value: The text to evaluate.
+            contains: One or more substrings to search for.
+
+        Returns:
+            The longest matching substring, or None if nothing matches.
+
+        """
         if isinstance(contains, tuple):
             matches = [candidate for candidate in contains if candidate in value]
             if matches:
@@ -309,6 +410,7 @@ class HConfigDriverBase(ABC):
 
     @staticmethod
     def _normalize_regex_key(pattern: str, value: str, match: Match[str]) -> str:
+        """Normalize regex matches so equivalent commands hash the same."""
         result = match.group(0)
 
         if match.re.groups:

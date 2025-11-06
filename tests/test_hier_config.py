@@ -486,6 +486,12 @@ def test_future_config(platform_a: Platform) -> None:
 
 
 def test_future_preserves_bgp_neighbor_description() -> None:
+    """Validate Arista BGP neighbors keep untouched descriptions across future/rollback.
+
+    This regression asserts that applying a candidate config via ``future()`` retains
+    existing neighbor descriptions and the subsequent ``config_to_get_to`` rollback only
+    negates the new commands.
+    """
     platform = Platform.ARISTA_EOS
     running_raw = """router bgp 1
   neighbor 2.2.2.2 description neighbor2
