@@ -173,10 +173,10 @@ class HConfigDriverBase(ABC):
         if len(lineage) != len(match_rules):
             return ()
 
-        return tuple(
-            self._idempotency_component_key(child, rule)
-            for child, rule in zip(lineage, match_rules)
-        )
+        components: list[str] = []
+        for child, rule in zip(lineage, match_rules):
+            components.append(self._idempotency_component_key(child, rule))
+        return tuple(components)
 
     def _idempotency_component_key(
         self,
