@@ -111,9 +111,7 @@ class HConfigChildren:
         for child in children:
             self._mapping.setdefault(child.text, child)
 
-    def get(
-        self, key: str, default: _D | None = None
-    ) -> HConfigChild | _D | None:
+    def get(self, key: str, default: _D | None = None) -> HConfigChild | _D | None:
         return self._mapping.get(key, default)
 
     def index(self, child: HConfigChild) -> int:

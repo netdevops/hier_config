@@ -16,9 +16,7 @@ if TYPE_CHECKING:
     from .platforms.driver_base import HConfigDriverBase
     from .root import HConfig
 
-    _HConfigRootOrChildT = TypeVar(
-        "_HConfigRootOrChildT", bound=HConfig | HConfigChild
-    )
+    _HConfigRootOrChildT = TypeVar("_HConfigRootOrChildT", bound=HConfig | HConfigChild)
 
 logger = getLogger(__name__)
 
@@ -119,9 +117,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
             yield child
             yield from child.all_children()
 
-    def get_child_deep(
-        self, match_rules: tuple[MatchRule, ...]
-    ) -> HConfigChild | None:
+    def get_child_deep(self, match_rules: tuple[MatchRule, ...]) -> HConfigChild | None:
         """Find the first child recursively given a tuple of MatchRules."""
         return next(self.get_children_deep(match_rules), None)
 
@@ -261,9 +257,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
                     for c in target_child.all_children_sorted()
                 )
 
-    def _future_pre(
-        self, config: HConfig | HConfigChild
-    ) -> tuple[set[str], set[str]]:
+    def _future_pre(self, config: HConfig | HConfigChild) -> tuple[set[str], set[str]]:
         negated_or_recursed: set[str] = set()
         config_children_ignore: set[str] = set()
         for self_child in self.children:
