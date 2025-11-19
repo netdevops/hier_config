@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from ipaddress import IPv4Address, IPv4Interface
-from typing import Optional
 
 from hier_config.child import HConfigChild
 from hier_config.platforms.models import (
@@ -20,7 +19,7 @@ class ConfigViewInterfaceBase:  # noqa: PLR0904
 
     @property
     @abstractmethod
-    def bundle_id(self) -> Optional[str]:
+    def bundle_id(self) -> str | None:
         """Determine the bundle ID."""
 
     @property
@@ -30,7 +29,7 @@ class ConfigViewInterfaceBase:  # noqa: PLR0904
 
     @property
     @abstractmethod
-    def bundle_name(self) -> Optional[str]:
+    def bundle_name(self) -> str | None:
         """Determine the bundle name of a bundle member."""
 
     @property
@@ -39,7 +38,7 @@ class ConfigViewInterfaceBase:  # noqa: PLR0904
         """Determine the interface's description."""
 
     @property
-    def dot1q_mode(self) -> Optional[InterfaceDot1qMode]:
+    def dot1q_mode(self) -> InterfaceDot1qMode | None:
         """Derive the configured 802.1Q mode."""
         if self.tagged_all:
             return InterfaceDot1qMode.TAGGED_ALL
@@ -65,7 +64,7 @@ class ConfigViewInterfaceBase:  # noqa: PLR0904
         """Determine if the interface has NAC configured."""
 
     @property
-    def ipv4_interface(self) -> Optional[IPv4Interface]:
+    def ipv4_interface(self) -> IPv4Interface | None:
         """Determine the first configured IPv4Interface, address/prefix, object."""
         return next(iter(self.ipv4_interfaces), None)
 
@@ -96,7 +95,7 @@ class ConfigViewInterfaceBase:  # noqa: PLR0904
 
     @property
     @abstractmethod
-    def module_number(self) -> Optional[int]:
+    def module_number(self) -> int | None:
         """Determine the module number of the interface."""
 
     @property
@@ -106,7 +105,7 @@ class ConfigViewInterfaceBase:  # noqa: PLR0904
 
     @property
     @abstractmethod
-    def nac_host_mode(self) -> Optional[NACHostMode]:
+    def nac_host_mode(self) -> NACHostMode | None:
         """Determine the NAC host mode."""
 
     @property
@@ -131,7 +130,7 @@ class ConfigViewInterfaceBase:  # noqa: PLR0904
 
     @property
     @abstractmethod
-    def native_vlan(self) -> Optional[int]:
+    def native_vlan(self) -> int | None:
         """Determine the native VLAN."""
 
     @property
@@ -141,7 +140,7 @@ class ConfigViewInterfaceBase:  # noqa: PLR0904
 
     @property
     @abstractmethod
-    def parent_name(self) -> Optional[str]:
+    def parent_name(self) -> str | None:
         """Determine the parent bundle interface name."""
 
     @property
@@ -156,12 +155,12 @@ class ConfigViewInterfaceBase:  # noqa: PLR0904
 
     @property
     @abstractmethod
-    def speed(self) -> Optional[tuple[int, ...]]:
+    def speed(self) -> tuple[int, ...] | None:
         """Determine the statically allowed speeds the interface can operate at. In Mbps."""
 
     @property
     @abstractmethod
-    def subinterface_number(self) -> Optional[int]:
+    def subinterface_number(self) -> int | None:
         """Determine the sub-interface number."""
 
     @property
@@ -198,16 +197,16 @@ class HConfigViewBase(ABC):
     @abstractmethod
     def dot1q_mode_from_vlans(
         self,
-        untagged_vlan: Optional[int] = None,
+        untagged_vlan: int | None = None,
         tagged_vlans: tuple[int, ...] = (),
         *,
         tagged_all: bool = False,
-    ) -> Optional[InterfaceDot1qMode]:
+    ) -> InterfaceDot1qMode | None:
         pass
 
     @property
     @abstractmethod
-    def hostname(self) -> Optional[str]:
+    def hostname(self) -> str | None:
         pass
 
     @property
@@ -215,7 +214,7 @@ class HConfigViewBase(ABC):
     def interface_names_mentioned(self) -> frozenset[str]:
         """Returns a set with all the interface names mentioned in the config."""
 
-    def interface_view_by_name(self, name: str) -> Optional[ConfigViewInterfaceBase]:
+    def interface_view_by_name(self, name: str) -> ConfigViewInterfaceBase | None:
         for interface_view in self.interface_views:
             if interface_view.name == name:
                 return interface_view
@@ -238,7 +237,7 @@ class HConfigViewBase(ABC):
 
     @property
     @abstractmethod
-    def ipv4_default_gw(self) -> Optional[IPv4Address]:
+    def ipv4_default_gw(self) -> IPv4Address | None:
         pass
 
     @property

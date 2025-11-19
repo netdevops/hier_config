@@ -1,5 +1,4 @@
 from collections.abc import Iterable
-from typing import Optional
 
 from hier_config.child import HConfigChild
 from hier_config.models import (
@@ -51,7 +50,7 @@ class HConfigDriverFortinetFortiOS(HConfigDriverBase):
 
     def idempotent_for(
         self, config: HConfigChild, other_children: Iterable[HConfigChild]
-    ) -> Optional[HConfigChild]:
+    ) -> HConfigChild | None:
         """Override idempotent_for to only consider a config idempotent
         if the same command exists in the other set.
         """

@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable
-from typing import Optional
 
 from pydantic import Field, PositiveInt
 
@@ -132,7 +131,7 @@ class HConfigDriverBase(ABC):
         self,
         config: HConfigChild,
         other_children: Iterable[HConfigChild],
-    ) -> Optional[HConfigChild]:
+    ) -> HConfigChild | None:
         for rule in self.rules.idempotent_commands:
             if config.is_lineage_match(rule.match_rules):
                 for other_child in other_children:
@@ -140,7 +139,7 @@ class HConfigDriverBase(ABC):
                         return other_child
         return None
 
-    def negate_with(self, config: HConfigChild) -> Optional[str]:
+    def negate_with(self, config: HConfigChild) -> str | None:
         for with_rule in self.rules.negate_with:
             if config.is_lineage_match(with_rule.match_rules):
                 return with_rule.use
