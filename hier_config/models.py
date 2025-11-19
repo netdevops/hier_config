@@ -1,5 +1,4 @@
-from enum import Enum, auto
-from typing import Optional, Union
+from enum import StrEnum, auto
 
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import ConfigDict, NonNegativeInt, PositiveInt
@@ -20,11 +19,11 @@ class DumpLine(BaseModel):
 
 
 class MatchRule(BaseModel):
-    equals: Union[str, frozenset[str], None] = None
-    startswith: Union[str, tuple[str, ...], None] = None
-    endswith: Union[str, tuple[str, ...], None] = None
-    contains: Union[str, tuple[str, ...], None] = None
-    re_search: Optional[str] = None
+    equals: str | frozenset[str] | None = None
+    startswith: str | tuple[str, ...] | None = None
+    endswith: str | tuple[str, ...] | None = None
+    contains: str | tuple[str, ...] | None = None
+    re_search: str | None = None
 
 
 class TagRule(BaseModel):
@@ -92,10 +91,10 @@ class NegationDefaultWithRule(BaseModel):
     use: str
 
 
-SetLikeOfStr = Union[frozenset[str], set[str]]
+SetLikeOfStr = frozenset[str] | set[str]
 
 
-class Platform(str, Enum):
+class Platform(StrEnum):
     ARISTA_EOS = auto()
     CISCO_IOS = auto()
     CISCO_NXOS = auto()

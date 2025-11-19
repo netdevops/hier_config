@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from itertools import chain
 from logging import getLogger
-from typing import TYPE_CHECKING, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, TypeVar
 
 from .children import HConfigChildren
 from .exceptions import DuplicateChildError
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from .root import HConfig
 
     _HConfigRootOrChildT = TypeVar(
-        "_HConfigRootOrChildT", bound=Union[HConfig, HConfigChild]
+        "_HConfigRootOrChildT", bound=HConfig | HConfigChild
     )
 
 logger = getLogger(__name__)
@@ -121,7 +121,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
 
     def get_child_deep(
         self, match_rules: tuple[MatchRule, ...]
-    ) -> Optional[HConfigChild]:
+    ) -> HConfigChild | None:
         """Find the first child recursively given a tuple of MatchRules."""
         return next(self.get_children_deep(match_rules), None)
 
@@ -147,12 +147,12 @@ class HConfigBase(ABC):  # noqa: PLR0904
     def get_child(
         self,
         *,
-        equals: Union[str, SetLikeOfStr, None] = None,
-        startswith: Union[str, tuple[str, ...], None] = None,
-        endswith: Union[str, tuple[str, ...], None] = None,
-        contains: Union[str, tuple[str, ...], None] = None,
-        re_search: Optional[str] = None,
-    ) -> Optional[HConfigChild]:
+        equals: str | SetLikeOfStr | None = None,
+        startswith: str | tuple[str, ...] | None = None,
+        endswith: str | tuple[str, ...] | None = None,
+        contains: str | tuple[str, ...] | None = None,
+        re_search: str | None = None,
+    ) -> HConfigChild | None:
         """Find a child by text_match rule. If it is not found, return None."""
         return next(
             self.get_children(
@@ -168,11 +168,11 @@ class HConfigBase(ABC):  # noqa: PLR0904
     def get_children(
         self,
         *,
-        equals: Union[str, SetLikeOfStr, None] = None,
-        startswith: Union[str, tuple[str, ...], None] = None,
-        endswith: Union[str, tuple[str, ...], None] = None,
-        contains: Union[str, tuple[str, ...], None] = None,
-        re_search: Optional[str] = None,
+        equals: str | SetLikeOfStr | None = None,
+        startswith: str | tuple[str, ...] | None = None,
+        endswith: str | tuple[str, ...] | None = None,
+        contains: str | tuple[str, ...] | None = None,
+        re_search: str | None = None,
     ) -> Iterator[HConfigChild]:
         """Find all children matching a text_match rule and return them."""
         # For isinstance(equals, str) only matches, find the first child using children_dict
@@ -231,7 +231,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
 
         return new_child
 
-    def unified_diff(self, target: Union[HConfig, HConfigChild]) -> Iterator[str]:
+    def unified_diff(self, target: HConfig | HConfigChild) -> Iterator[str]:
         """In its current state, this algorithm does not consider duplicate child differences.
         e.g. two instances `endif` in an IOS-XR route-policy. It also does not respect the
         order of commands where it may count, such as in ACLs. In the case of ACLs, they
@@ -262,7 +262,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
                 )
 
     def _future_pre(
-        self, config: Union[HConfig, HConfigChild]
+        self, config: HConfig | HConfigChild
     ) -> tuple[set[str], set[str]]:
         negated_or_recursed: set[str] = set()
         config_children_ignore: set[str] = set()
@@ -277,8 +277,8 @@ class HConfigBase(ABC):  # noqa: PLR0904
 
     def _future(  # noqa: C901
         self,
-        config: Union[HConfig, HConfigChild],
-        future_config: Union[HConfig, HConfigChild],
+        config: HConfig | HConfigChild,
+        future_config: HConfig | HConfigChild,
     ) -> None:
         """The below cases still need to be accounted for:
         - negate a numbered ACL when removing an item
@@ -380,7 +380,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
         self,
         target: _HConfigRootOrChildT,
         delta: _HConfigRootOrChildT,
-        target_acl_children: Optional[dict[str, HConfigChild]] = None,
+        target_acl_children: dict[str, HConfigChild] | None = None,
         *,
         in_acl: bool = False,
     ) -> _HConfigRootOrChildT:
@@ -425,8 +425,8 @@ class HConfigBase(ABC):  # noqa: PLR0904
 
     def _config_to_get_to_left(
         self,
-        target: Union[HConfig, HConfigChild],
-        delta: Union[HConfig, HConfigChild],
+        target: HConfig | HConfigChild,
+        delta: HConfig | HConfigChild,
     ) -> None:
         # find self.children that are not in target.children
         # i.e. what needs to be negated or defaulted
@@ -446,8 +446,8 @@ class HConfigBase(ABC):  # noqa: PLR0904
 
     def _config_to_get_to_right(
         self,
-        target: Union[HConfig, HConfigChild],
-        delta: Union[HConfig, HConfigChild],
+        target: HConfig | HConfigChild,
+        delta: HConfig | HConfigChild,
     ) -> None:
         # Find what would need to be added to source_config to get to self
         for target_child in target.children:

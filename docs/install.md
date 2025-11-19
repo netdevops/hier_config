@@ -1,6 +1,6 @@
 # Install hier_config
 
-> Hierarchical Configuration requires a minimum Python version of 3.9.
+> Hierarchical Configuration requires a minimum Python version of 3.10.
 
 Hierarchical Configuration can be installed directly from GitHub or with pip:
 

@@ -1,6 +1,5 @@
 import re
 from collections.abc import Iterable
-from typing import Optional
 
 from hier_config.child import HConfigChild
 from hier_config.models import (
@@ -116,7 +115,7 @@ class HConfigDriverHPProcurve(HConfigDriverBase):
         self,
         config: HConfigChild,
         other_children: Iterable[HConfigChild],
-    ) -> Optional[HConfigChild]:
+    ) -> HConfigChild | None:
         if result := super().idempotent_for(config, other_children):
             return result
 
@@ -149,7 +148,7 @@ class HConfigDriverHPProcurve(HConfigDriverBase):
         end_index: int,
         config: HConfigChild,
         other_children: Iterable[HConfigChild],
-    ) -> Optional[HConfigChild]:
+    ) -> HConfigChild | None:
         if re.search(expression, config.text):
             words = config.text.split()
             startswith = " ".join(words[:end_index])
@@ -158,7 +157,7 @@ class HConfigDriverHPProcurve(HConfigDriverBase):
                     return other_child
         return None
 
-    def negate_with(self, config: HConfigChild) -> Optional[str]:
+    def negate_with(self, config: HConfigChild) -> str | None:
         result = super().negate_with(config)
         if isinstance(result, str):
             return result
@@ -205,7 +204,7 @@ class HConfigDriverHPProcurve(HConfigDriverBase):
         prepend: str,
         append: str,
         config: HConfigChild,
-    ) -> Optional[str]:
+    ) -> str | None:
         if re.search(expression, config.text):
             words = config.text.split()
             return " ".join([prepend, *words[:end_index], append]).strip()

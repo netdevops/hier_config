@@ -1,7 +1,6 @@
 from collections.abc import Iterable
 from ipaddress import AddressValueError, IPv4Address, IPv4Interface
 from re import sub
-from typing import Optional
 
 from hier_config.child import HConfigChild
 from hier_config.platforms.models import (
@@ -23,7 +22,7 @@ class ConfigViewInterfaceCiscoIOSXR(ConfigViewInterfaceBase):  # noqa: PLR0904
         return "Bundle-Ether"
 
     @property
-    def bundle_id(self) -> Optional[str]:
+    def bundle_id(self) -> str | None:
         raise NotImplementedError
 
     @property
@@ -31,7 +30,7 @@ class ConfigViewInterfaceCiscoIOSXR(ConfigViewInterfaceBase):  # noqa: PLR0904
         raise NotImplementedError
 
     @property
-    def bundle_name(self) -> Optional[str]:
+    def bundle_name(self) -> str | None:
         if self.bundle_id:
             return f"{self._bundle_prefix}{self.bundle_id}"
         return None
@@ -56,7 +55,7 @@ class ConfigViewInterfaceCiscoIOSXR(ConfigViewInterfaceBase):  # noqa: PLR0904
         raise NotImplementedError
 
     @property
-    def ipv4_interface(self) -> Optional[IPv4Interface]:
+    def ipv4_interface(self) -> IPv4Interface | None:
         return next(iter(self.ipv4_interfaces), None)
 
     @property
@@ -85,7 +84,7 @@ class ConfigViewInterfaceCiscoIOSXR(ConfigViewInterfaceBase):  # noqa: PLR0904
         return self.name.lower().startswith("vlan")
 
     @property
-    def module_number(self) -> Optional[int]:
+    def module_number(self) -> int | None:
         words = self.number.split("/", 1)
         if len(words) == 1:
             return None
@@ -97,7 +96,7 @@ class ConfigViewInterfaceCiscoIOSXR(ConfigViewInterfaceBase):  # noqa: PLR0904
         raise NotImplementedError
 
     @property
-    def nac_host_mode(self) -> Optional[NACHostMode]:
+    def nac_host_mode(self) -> NACHostMode | None:
         """Determine the NAC host mode."""
         raise NotImplementedError
 
@@ -121,7 +120,7 @@ class ConfigViewInterfaceCiscoIOSXR(ConfigViewInterfaceBase):  # noqa: PLR0904
         return self.config.text.split()[1]
 
     @property
-    def native_vlan(self) -> Optional[int]:
+    def native_vlan(self) -> int | None:
         raise NotImplementedError
 
     @property
@@ -129,7 +128,7 @@ class ConfigViewInterfaceCiscoIOSXR(ConfigViewInterfaceBase):  # noqa: PLR0904
         return sub(r"^[a-zA-Z-]+", "", self.name)
 
     @property
-    def parent_name(self) -> Optional[str]:
+    def parent_name(self) -> str | None:
         if self.is_subinterface:
             return self.name.split(".")[0]
         return None
@@ -143,11 +142,11 @@ class ConfigViewInterfaceCiscoIOSXR(ConfigViewInterfaceBase):  # noqa: PLR0904
         return int(self.name.split("/")[-1].split(".")[0])
 
     @property
-    def speed(self) -> Optional[tuple[int, ...]]:
+    def speed(self) -> tuple[int, ...] | None:
         raise NotImplementedError
 
     @property
-    def subinterface_number(self) -> Optional[int]:
+    def subinterface_number(self) -> int | None:
         return int(self.name.split(".")[0 - 1]) if self.is_subinterface else None
 
     @property
@@ -166,15 +165,15 @@ class ConfigViewInterfaceCiscoIOSXR(ConfigViewInterfaceBase):  # noqa: PLR0904
 class HConfigViewCiscoIOSXR(HConfigViewBase):
     def dot1q_mode_from_vlans(
         self,
-        untagged_vlan: Optional[int] = None,
+        untagged_vlan: int | None = None,
         tagged_vlans: tuple[int, ...] = (),
         *,
         tagged_all: bool = False,
-    ) -> Optional[InterfaceDot1qMode]:
+    ) -> InterfaceDot1qMode | None:
         raise NotImplementedError
 
     @property
-    def hostname(self) -> Optional[str]:
+    def hostname(self) -> str | None:
         if child := self.config.get_child(startswith="hostname "):
             return child.text.split()[1].lower()
         return None
@@ -193,7 +192,7 @@ class HConfigViewCiscoIOSXR(HConfigViewBase):
         return self.config.get_children(startswith="interface ")
 
     @property
-    def ipv4_default_gw(self) -> Optional[IPv4Address]:
+    def ipv4_default_gw(self) -> IPv4Address | None:
         raise NotImplementedError
 
     @property
