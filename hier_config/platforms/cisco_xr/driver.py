@@ -114,6 +114,12 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
                 ParentAllowsDuplicateChildRule(
                     match_rules=(MatchRule(startswith="route-policy"),)
                 ),
+                ParentAllowsDuplicateChildRule(
+                    match_rules=(
+                        MatchRule(startswith="router"),
+                        MatchRule(startswith="address-family"),
+                    ),
+                ),
             ],
             per_line_sub=[
                 PerLineSubRule(search="^Building configuration.*", replace=""),
