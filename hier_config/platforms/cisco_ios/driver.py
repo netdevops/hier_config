@@ -7,6 +7,7 @@ from hier_config.models import (
     OrderingRule,
     PerLineSubRule,
     SectionalExitingRule,
+    ParentAllowsDuplicateChildRule,
 )
 from hier_config.platforms.driver_base import HConfigDriverBase, HConfigDriverRules
 from hier_config.root import HConfig
@@ -104,6 +105,14 @@ class HConfigDriverCiscoIOS(HConfigDriverBase):
                 OrderingRule(
                     match_rules=(MatchRule(startswith="no tacacs-server "),),
                     weight=10,
+                ),
+            ],
+            parent_allows_duplicate_child=[
+                ParentAllowsDuplicateChildRule(
+                    match_rules=(
+                        MatchRule(startswith="router"),
+                        MatchRule(startswith="address-family"),
+                    ),
                 ),
             ],
             per_line_sub=[
