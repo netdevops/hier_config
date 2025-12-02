@@ -5,9 +5,9 @@ from hier_config.models import (
     MatchRule,
     NegationDefaultWithRule,
     OrderingRule,
+    ParentAllowsDuplicateChildRule,
     PerLineSubRule,
     SectionalExitingRule,
-    ParentAllowsDuplicateChildRule,
 )
 from hier_config.platforms.driver_base import HConfigDriverBase, HConfigDriverRules
 from hier_config.root import HConfig

@@ -47,6 +47,7 @@ def test_logging_console_emergencies_scenario_3() -> None:
 
     assert not tuple(running_config.unified_diff(running_after_rollback))
 
+
 def test_duplicate_child_router() -> None:
     platform = Platform.CISCO_IOS
     running_config = get_hconfig_fast_load(
