@@ -2,7 +2,7 @@ from hier_config import get_hconfig_fast_load
 from hier_config.models import Platform
 
 
-def test_duplicate_child() -> None:
+def test_duplicate_child_route_policy() -> None:
     platform = Platform.CISCO_XR
     running_config = get_hconfig_fast_load(
         platform,
