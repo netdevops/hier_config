@@ -179,6 +179,8 @@ wfr.remediation_config.delete_child(invalid_remediation)
 wfr.remediation_config.merge(custom_remediation)
 ```
 
+> **Note:** `merge()` is intentionally strict. If any child already exists under the same parent in the target tree, Hier Config raises `hier_config.exceptions.DuplicateChildError`. This guards against accidentally overwriting commands when combining remediation fragments. When you need to layer one configuration onto another and allow overlapping sections, use [`future()`](future-config.md) instead.
+
 ### Output of Updated Remediation
 
 ```python
@@ -187,7 +189,7 @@ print(wfr.remediation_config)
 
 Output:
 
-```
+```text
 vlan 3
   name switch_mgmt_10.0.3.0/24
   exit
