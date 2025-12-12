@@ -15,7 +15,7 @@ This feature is useful in scenarios where you need to determine the anticipated 
 `HConfig.merge()` and `HConfig.future()` both combine configuration data, but they serve different purposes:
 
 - `merge()` expects non-overlapping sections. If the same parent/child path already exists, Hier Config raises `hier_config.exceptions.DuplicateChildError` to highlight the conflict. This behavior is helpful when you are stitching together independent remediation fragments (AAA, logging, SNMP, and so on) and need deterministic, fail-fast validation.
-- `future()` mirrors how a device processes configuration input. Shared sections are merged recursively, later commands overwrite earlier leaf nodes, and the result mirrors the post-change running configuration. Use `future()` when you want to preview layered changes or intentionally override existing settings.
+- `future()` mirrors how a device processes configuration input. Shared sections are merged recursively, later commands overwrite earlier leaf nodes, and the result reflects the post-change running configuration. Use `future()` when you want to preview layered changes or intentionally override existing settings.
 
 If you receive a `DuplicateChildError` while calling `merge()`, consider whether your use case aligns better with `future()`.
 
