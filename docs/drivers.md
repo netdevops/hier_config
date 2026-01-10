@@ -35,6 +35,7 @@ The following drivers are included in Hier Config:
 - **CISCO_XR**
 - **CISCO_NXOS**
 - **GENERIC**
+- **FORTINET_FORTIOS**
 - **HP_COMWARE5**
 - **HP_PROCURVE**
 - **JUNIPER_JUNOS**
@@ -47,6 +48,31 @@ from hier_config import get_hconfig_driver, Platform
 
 # Example: Activating the CISCO_IOS driver
 driver = get_hconfig_driver(Platform.CISCO_IOS)
+```
+
+### Fortinet FortiOS Driver
+
+Fortinet firewalls model their CLI around `config` and `edit` blocks that are
+terminated with `next` and `end`. The `FORTINET_FORTIOS` driver captures those
+patterns and makes sure remediation output keeps the indentation and closure
+FortiOS expects. Highlights include:
+
+- Preserves the `set`/`unset` pairing by swapping declarations and negations
+    automatically when hier_config determines a change is required.
+- Treats sibling `config` blocks as duplicates when appropriate so that
+    multiple objects such as policies or firewall addresses can be compared in
+    a stable order.
+- Normalizes bare `next` and `end` tokens into indented versions to match the
+    format FortiOS emits on the device.
+- Overrides idempotency matching to require that the same object name exists on
+    both sides before a command is considered already present.
+
+Activate the driver with the standard helper:
+
+```python
+from hier_config import Platform, get_hconfig_driver
+
+driver = get_hconfig_driver(Platform.FORTINET_FORTIOS)
 ```
 
 ### Structure of Each Section and How Rules Are Built
