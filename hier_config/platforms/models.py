@@ -1,11 +1,11 @@
-from enum import StrEnum, auto
+from enum import Enum, auto
 
 from pydantic import NonNegativeInt, PositiveInt
 
 from hier_config.models import BaseModel
 
 
-class NACHostMode(StrEnum):
+class NACHostMode(str, Enum):
     # Ordered from the most to the least secure
     SINGLE_HOST = "single-host"
     MULTI_DOMAIN = "multi-domain"
@@ -13,7 +13,7 @@ class NACHostMode(StrEnum):
     MULTI_HOST = "multi-host"
 
 
-class InterfaceDot1qMode(StrEnum):
+class InterfaceDot1qMode(str, Enum):
     ACCESS = auto()
     TAGGED = auto()
     TAGGED_ALL = auto()
@@ -26,7 +26,7 @@ class StackMember(BaseModel):
     model: str
 
 
-class InterfaceDuplex(StrEnum):
+class InterfaceDuplex(str, Enum):
     AUTO = auto()
     FULL = auto()
     HALF = auto()

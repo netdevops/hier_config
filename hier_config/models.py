@@ -1,4 +1,4 @@
-from enum import StrEnum, auto
+from enum import Enum, auto
 
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import ConfigDict, NonNegativeInt, PositiveInt
@@ -94,7 +94,7 @@ class NegationDefaultWithRule(BaseModel):
 SetLikeOfStr = frozenset[str] | set[str]
 
 
-class Platform(StrEnum):
+class Platform(str, Enum):
     ARISTA_EOS = auto()
     CISCO_IOS = auto()
     CISCO_NXOS = auto()

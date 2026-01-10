@@ -486,9 +486,9 @@ def get_custom_hconfig_driver(platform: Union[CustomPlatform,Platform]) -> HConf
 ##### 2. Create a custom `Platform` to Include the Custom Driver
 
 ```python
-from enum import StrEnum, auto
+from enum import Enum, auto
 
-class CustomPlatform(StrEnum):
+class CustomPlatform(str, Enum):
     CUSTOM_PLATFORM = auto()
 ```
 
