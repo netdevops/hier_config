@@ -1,7 +1,6 @@
 import re
 from collections.abc import Iterable
 from ipaddress import AddressValueError, IPv4Address, IPv4Interface
-from typing import Optional
 
 from hier_config.child import HConfigChild
 from hier_config.platforms.functions import expand_range
@@ -23,7 +22,7 @@ class ConfigViewInterfaceHPProcurve(  # noqa: PLR0904 pylint: disable=abstract-m
     ConfigViewInterfaceBase,
 ):
     @property
-    def bundle_id(self) -> Optional[str]:
+    def bundle_id(self) -> str | None:
         raise NotImplementedError
 
     @property
@@ -43,7 +42,7 @@ class ConfigViewInterfaceHPProcurve(  # noqa: PLR0904 pylint: disable=abstract-m
         return hp_procurve_expand_range(bundle.text.split()[1])
 
     @property
-    def bundle_name(self) -> Optional[str]:
+    def bundle_name(self) -> str | None:
         for bundle_def in self.config.parent.get_children(startswith="trunk "):
             interface_range = bundle_def.text.split()[1]
             interfaces = hp_procurve_expand_range(interface_range)
@@ -81,7 +80,7 @@ class ConfigViewInterfaceHPProcurve(  # noqa: PLR0904 pylint: disable=abstract-m
         )
 
     @property
-    def ipv4_interface(self) -> Optional[IPv4Interface]:
+    def ipv4_interface(self) -> IPv4Interface | None:
         return next(iter(self.ipv4_interfaces), None)
 
     @property
@@ -110,7 +109,7 @@ class ConfigViewInterfaceHPProcurve(  # noqa: PLR0904 pylint: disable=abstract-m
         return self.name.lower().startswith("vlan")
 
     @property
-    def module_number(self) -> Optional[int]:
+    def module_number(self) -> int | None:
         words = self.number.split("/", 1)
         if len(words) == 1:
             return None
@@ -125,7 +124,7 @@ class ConfigViewInterfaceHPProcurve(  # noqa: PLR0904 pylint: disable=abstract-m
         )
 
     @property
-    def nac_host_mode(self) -> Optional[NACHostMode]:
+    def nac_host_mode(self) -> NACHostMode | None:
         """Determine the NAC host mode."""
         # hp_procurve does not support host mode
         return None
@@ -164,7 +163,7 @@ class ConfigViewInterfaceHPProcurve(  # noqa: PLR0904 pylint: disable=abstract-m
         return self.config.text
 
     @property
-    def native_vlan(self) -> Optional[int]:
+    def native_vlan(self) -> int | None:
         if vlan := self.config.get_child(startswith="untagged vlan "):
             return int(vlan.text.split()[2])
         return None
@@ -174,7 +173,7 @@ class ConfigViewInterfaceHPProcurve(  # noqa: PLR0904 pylint: disable=abstract-m
         return re.sub(r"^[a-zA-Z-]+", "", self.name)
 
     @property
-    def parent_name(self) -> Optional[str]:
+    def parent_name(self) -> str | None:
         if self.is_subinterface:
             return self.name.split(".")[0]
         return None
@@ -188,13 +187,13 @@ class ConfigViewInterfaceHPProcurve(  # noqa: PLR0904 pylint: disable=abstract-m
         return int(self.name.split("/")[-1].split(".")[0])
 
     @property
-    def speed(self) -> Optional[tuple[int, ...]]:
+    def speed(self) -> tuple[int, ...] | None:
         if speed := self.config.get_child(startswith="speed-duplex "):
             return _speed_from_speed_duplex(speed.text)
         return None
 
     @property
-    def subinterface_number(self) -> Optional[int]:
+    def subinterface_number(self) -> int | None:
         return int(self.name.split(".")[0 - 1]) if self.is_subinterface else None
 
     @property
@@ -217,7 +216,7 @@ class ConfigViewInterfaceHPProcurve(  # noqa: PLR0904 pylint: disable=abstract-m
         return "trk"
 
 
-def _speed_from_speed_duplex(speed_duplex: str) -> Optional[tuple[int, ...]]:
+def _speed_from_speed_duplex(speed_duplex: str) -> tuple[int, ...] | None:
     if speed_duplex.startswith("10"):
         return (int(speed_duplex.split("-", maxsplit=1)[0]),)
     if speed_duplex.startswith("auto-"):
@@ -236,15 +235,15 @@ def _duplex_from_speed_duplex(speed_duplex: str) -> InterfaceDuplex:
 class HConfigViewHPProcurve(HConfigViewBase):
     def dot1q_mode_from_vlans(
         self,
-        untagged_vlan: Optional[int] = None,
+        untagged_vlan: int | None = None,
         tagged_vlans: tuple[int, ...] = (),
         *,
         tagged_all: bool = False,
-    ) -> Optional[InterfaceDot1qMode]:
+    ) -> InterfaceDot1qMode | None:
         raise NotImplementedError
 
     @property
-    def hostname(self) -> Optional[str]:
+    def hostname(self) -> str | None:
         if child := self.config.get_child(startswith="hostname "):
             return child.text.split()[1].lower().replace('"', "")
         return None
@@ -279,7 +278,7 @@ class HConfigViewHPProcurve(HConfigViewBase):
         return self.config.get_children(startswith="interface ")
 
     @property
-    def ipv4_default_gw(self) -> Optional[IPv4Address]:
+    def ipv4_default_gw(self) -> IPv4Address | None:
         if gateway := self.config.get_child(startswith="ip default-gateway "):
             return IPv4Address(gateway.text.split()[2])
         return None

@@ -1,5 +1,4 @@
 from enum import Enum, auto
-from typing import Optional
 
 from pydantic import NonNegativeInt, PositiveInt
 
@@ -23,7 +22,7 @@ class InterfaceDot1qMode(str, Enum):
 class StackMember(BaseModel):
     id: NonNegativeInt
     priority: NonNegativeInt
-    mac_address: Optional[str]  # not defined in cisco_ios stacks
+    mac_address: str | None  # not defined in cisco_ios stacks
     model: str
 
 
@@ -35,4 +34,4 @@ class InterfaceDuplex(str, Enum):
 
 class Vlan(BaseModel):
     id: PositiveInt
-    name: Optional[str]
+    name: str | None

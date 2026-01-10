@@ -1,6 +1,6 @@
 from collections.abc import Callable, Iterable
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 import yaml
 from pydantic import TypeAdapter
@@ -34,7 +34,7 @@ HCONFIG_PLATFORM_V2_TO_V3_MAPPING = {
 }
 
 
-def _set_match_rule(lineage: dict[str, Any]) -> Optional[MatchRule]:
+def _set_match_rule(lineage: dict[str, Any]) -> MatchRule | None:
     if startswith := lineage.get("startswith"):
         return MatchRule(startswith=startswith)
     if endswith := lineage.get("endswith"):
@@ -126,7 +126,7 @@ def hconfig_v3_platform_v2_os_mapper(platform: Platform) -> str:
 
 
 def load_hconfig_v2_options(
-    v2_options: Union[dict[str, Any], str], platform: Platform
+    v2_options: dict[str, Any] | str, platform: Platform
 ) -> HConfigDriverBase:
     """Load Hier Config v2 options to v3 driver format from either a dictionary or a file.
 
@@ -270,8 +270,8 @@ def load_hconfig_v2_options_from_file(
 
 
 def load_hconfig_v2_tags(
-    v2_tags: Union[list[dict[str, Any]], str],
-) -> Union[tuple["TagRule"], tuple["TagRule", ...]]:
+    v2_tags: list[dict[str, Any]] | str,
+) -> tuple["TagRule"] | tuple["TagRule", ...]:
     """Convert v2-style tags into v3-style TagRule Pydantic objects for Hier Config.
 
     Args:

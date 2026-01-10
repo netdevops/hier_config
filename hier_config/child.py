@@ -3,7 +3,7 @@ from __future__ import annotations
 from itertools import chain
 from logging import getLogger
 from re import search
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any
 
 from .base import HConfigBase
 from .models import Instance, MatchRule, SetLikeOfStr
@@ -34,7 +34,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         "real_indent_level",
     )
 
-    def __init__(self, parent: Union[HConfig, HConfigChild], text: str) -> None:
+    def __init__(self, parent: HConfig | HConfigChild, text: str) -> None:
         super().__init__()
         self.parent = parent
         self._text: str = text.strip()
@@ -117,7 +117,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
             yield " " * self.driver.rules.indentation * self.depth() + exit_text
 
     @property
-    def sectional_exit(self) -> Optional[str]:
+    def sectional_exit(self) -> str | None:
         for rule in self.driver.rules.sectional_exiting:
             if self.is_lineage_match(rule.match_rules):
                 if exit_text := rule.exit_text:
@@ -142,7 +142,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         """Returns the distance to the root HConfig object i.e. indent level."""
         return self.parent.depth() + 1
 
-    def move(self, new_parent: Union[HConfig, HConfigChild]) -> None:
+    def move(self, new_parent: HConfig | HConfigChild) -> None:
         """Move one HConfigChild object to different HConfig parent object.
 
         .. code:: python
@@ -173,7 +173,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
     def cisco_style_text(
         self,
         style: str = "without_comments",
-        tag: Optional[str] = None,
+        tag: str | None = None,
     ) -> str:
         """Return a Cisco style formated line i.e. indentation_level + text ! comments."""
         comments: list[str] = []
@@ -207,7 +207,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         """Delete the current object from its parent."""
         self.parent.children.delete(self)
 
-    def tags_add(self, tag: Union[str, Iterable[str]]) -> None:
+    def tags_add(self, tag: str | Iterable[str]) -> None:
         """Add a tag to self._tags on all leaf nodes."""
         if self.is_branch:
             for child in self.children:
@@ -217,7 +217,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         else:
             self._tags.update(tag)
 
-    def tags_remove(self, tag: Union[str, Iterable[str]]) -> None:
+    def tags_remove(self, tag: str | Iterable[str]) -> None:
         """Remove a tag from self._tags on all leaf nodes."""
         if self.is_branch:
             for child in self.children:
@@ -303,7 +303,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
     def overwrite_with(
         self,
         target: HConfigChild,
-        delta: Union[HConfig, HConfigChild],
+        delta: HConfig | HConfigChild,
         *,
         negate: bool = True,
     ) -> None:
@@ -380,18 +380,17 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
                 contains=rule.contains,
                 re_search=rule.re_search,
             )
-            # add strict=True after 3.9 is deprecated
-            for (child, rule) in zip(reversed(lineage), reversed(rules))
+            for (child, rule) in zip(reversed(lineage), reversed(rules), strict=True)
         )
 
     def is_match(  # noqa: PLR0911
         self,
         *,
-        equals: Union[str, SetLikeOfStr, None] = None,
-        startswith: Union[str, tuple[str, ...], None] = None,
-        endswith: Union[str, tuple[str, ...], None] = None,
-        contains: Union[str, tuple[str, ...], None] = None,
-        re_search: Optional[str] = None,
+        equals: str | SetLikeOfStr | None = None,
+        startswith: str | tuple[str, ...] | None = None,
+        endswith: str | tuple[str, ...] | None = None,
+        contains: str | tuple[str, ...] | None = None,
+        re_search: str | None = None,
     ) -> bool:
         """True if `self.text` matches all the criteria.
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, TypeVar, Union, overload
+from typing import TYPE_CHECKING, TypeVar, overload
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -16,14 +16,14 @@ class HConfigChildren:
         self._mapping: dict[str, HConfigChild] = {}
 
     @overload
-    def __getitem__(self, subscript: Union[int, str]) -> HConfigChild: ...
+    def __getitem__(self, subscript: int | str) -> HConfigChild: ...
 
     @overload
     def __getitem__(self, subscript: slice) -> list[HConfigChild]: ...
 
     def __getitem__(
-        self, subscript: Union[slice, int, str]
-    ) -> Union[HConfigChild, list[HConfigChild]]:
+        self, subscript: slice | int | str
+    ) -> HConfigChild | list[HConfigChild]:
         if isinstance(subscript, slice):
             return self._data[subscript]
         if isinstance(subscript, int):
@@ -67,6 +67,7 @@ class HConfigChildren:
             for self_child, other_child in zip(
                 sorted(self._data),
                 sorted(other._data),
+                strict=False,
             )
         )
 
@@ -92,7 +93,7 @@ class HConfigChildren:
         self._data.clear()
         self._mapping.clear()
 
-    def delete(self, child_or_text: Union[HConfigChild, str]) -> None:
+    def delete(self, child_or_text: HConfigChild | str) -> None:
         """Delete a child from self._data and self._mapping."""
         if isinstance(child_or_text, str):
             if child_or_text in self._mapping:
@@ -110,9 +111,7 @@ class HConfigChildren:
         for child in children:
             self._mapping.setdefault(child.text, child)
 
-    def get(
-        self, key: str, default: Optional[_D] = None
-    ) -> Union[HConfigChild, _D, None]:
+    def get(self, key: str, default: _D | None = None) -> HConfigChild | _D | None:
         return self._mapping.get(key, default)
 
     def index(self, child: HConfigChild) -> int:

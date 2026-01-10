@@ -1,5 +1,4 @@
 from collections.abc import Iterable
-from typing import Optional
 
 from hier_config.child import HConfigChild
 from hier_config.models import (
@@ -21,7 +20,7 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
         self,
         config: HConfigChild,
         other_children: Iterable[HConfigChild],
-    ) -> Optional[HConfigChild]:
+    ) -> HConfigChild | None:
         if isinstance(config.parent, HConfigChild):
             acl = ("ipv4 access-list ", "ipv6 access-list ")
             if config.parent.text.startswith(acl):
