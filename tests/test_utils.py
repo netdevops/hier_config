@@ -6,10 +6,7 @@ import yaml
 from pydantic import ValidationError
 
 from hier_config import Platform
-from hier_config.models import (
-    MatchRule,
-    TagRule,
-)
+from hier_config.models import MatchRule, TagRule
 from hier_config.utils import (
     hconfig_v2_os_v3_platform_mapper,
     hconfig_v3_platform_v2_os_mapper,
