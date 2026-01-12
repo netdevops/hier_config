@@ -184,7 +184,7 @@ class HConfigDriverBase(ABC):
             return ()
 
         components: list[str] = []
-        for child, rule in zip(lineage, match_rules):
+        for child, rule in zip(lineage, match_rules, strict=False):
             components.append(self._idempotency_component_key(child, rule))
         return tuple(components)
 
@@ -219,9 +219,7 @@ class HConfigDriverBase(ABC):
         return ";".join(parts)
 
     @staticmethod
-    def _key_from_equals(
-        equals: str | frozenset[str] | None, text: str
-    ) -> list[str]:
+    def _key_from_equals(equals: str | frozenset[str] | None, text: str) -> list[str]:
         """Return key fragments constrained by `equals` match rules.
 
         Args:
@@ -363,9 +361,7 @@ class HConfigDriverBase(ABC):
         return None
 
     @staticmethod
-    def _match_contains(
-        value: str, contains: str | tuple[str, ...]
-    ) -> str | None:
+    def _match_contains(value: str, contains: str | tuple[str, ...]) -> str | None:
         if isinstance(contains, tuple):
             matches = [candidate for candidate in contains if candidate in value]
             if matches:
