@@ -1,4 +1,6 @@
 from hier_config import get_hconfig_driver
+from hier_config.child import HConfigChild
+from hier_config.constructors import get_hconfig
 from hier_config.models import Platform
 from hier_config.platforms.arista_eos.driver import HConfigDriverAristaEOS
 from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
@@ -19,3 +21,20 @@ def test_get_hconfig_driver() -> None:
     assert isinstance(get_hconfig_driver(Platform.HP_PROCURVE), HConfigDriverHPProcurve)
     assert isinstance(get_hconfig_driver(Platform.HP_COMWARE5), HConfigDriverHPComware5)
     assert isinstance(get_hconfig_driver(Platform.VYOS), HConfigDriverVYOS)
+
+
+def test_driver_base_properties() -> None:
+    """Test base driver properties and swap_negation."""
+    driver = get_hconfig_driver(Platform.GENERIC)
+
+    assert not driver.declaration_prefix
+    assert driver.negation_prefix == "no "
+
+    config = get_hconfig(Platform.GENERIC)
+    child = HConfigChild(config, "interface GigabitEthernet0/0")
+    result = driver.swap_negation(child)
+    assert result.text == "no interface GigabitEthernet0/0"
+
+    child2 = HConfigChild(config, "no interface GigabitEthernet0/1")
+    result2 = driver.swap_negation(child2)
+    assert result2.text == "interface GigabitEthernet0/1"

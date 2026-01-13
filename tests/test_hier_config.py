@@ -1,3 +1,6 @@
+"""Tests for hier_config core functionality."""
+# pylint: disable=too-many-lines
+
 import tempfile
 import types
 from pathlib import Path
@@ -712,3 +715,708 @@ def test_config_to_get_to_parent_identity() -> None:
     assert remediation_config_interface
     assert id(remediation_config_interface.parent) == id(remediation_config_hier)
     assert id(remediation_config_interface.root) == id(remediation_config_hier)
+
+
+def test_add_child_with_empty_text() -> None:
+    """Test that add_child raises ValueError when text is empty."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+
+    with pytest.raises(ValueError, match="text was empty"):
+        config.add_child("")
+
+
+def test_add_child_duplicate_error() -> None:
+    """Test DuplicateChildError when adding duplicate child."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    config.add_child("interface GigabitEthernet0/0")
+
+    with pytest.raises(DuplicateChildError, match="Found a duplicate section"):
+        config.add_child(
+            "interface GigabitEthernet0/0",
+            check_if_present=True,
+            return_if_present=False,
+        )
+
+
+def test_add_child_return_if_present() -> None:
+    """Test return_if_present option in add_child."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    child1 = config.add_child("interface GigabitEthernet0/0")
+    child2 = config.add_child("interface GigabitEthernet0/0", return_if_present=True)
+
+    assert id(child1) == id(child2)
+
+
+def test_child_repr() -> None:
+    """Test HConfigChild __repr__ method."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    child = config.add_child("interface GigabitEthernet0/0")
+    subchild = child.add_child("description test")
+    repr_str = repr(child)
+
+    assert "HConfigChild(HConfig, interface GigabitEthernet0/0)" in repr_str
+
+    repr_str2 = repr(subchild)
+
+    assert "HConfigChild(HConfigChild, description test)" in repr_str2
+
+
+def test_child_ne() -> None:
+    """Test HConfigChild __ne__ method."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    child1 = config.add_child("interface GigabitEthernet0/0")
+    child2 = config.add_child("interface GigabitEthernet0/1")
+
+    assert child1 != child2
+
+
+def test_cisco_style_text_with_comments() -> None:
+    """Test cisco_style_text with comments."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    child = config.add_child("interface GigabitEthernet0/0")
+    child.comments.add("test comment")
+    child.comments.add("another comment")
+    line = child.cisco_style_text(style="with_comments")
+
+    assert "!another comment, test comment" in line
+
+    instance = Instance(
+        id=1, comments=frozenset(["instance comment"]), tags=frozenset(["tag1"])
+    )
+    child.instances.append(instance)
+    line_merged = child.cisco_style_text(style="merged", tag="tag1")
+
+    assert "1 instance" in line_merged
+    assert "instance comment" in line_merged
+
+    instance2 = Instance(id=2, comments=frozenset(), tags=frozenset(["tag1"]))
+    child.instances.append(instance2)
+    line_merged2 = child.cisco_style_text(style="merged", tag="tag1")
+
+    assert "2 instances" in line_merged2
+
+
+def test_hconfig_children_setitem() -> None:
+    """Test HConfigChildren __setitem__."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    config.add_child("interface GigabitEthernet0/0")
+    child2_text = "interface GigabitEthernet0/1"
+    config.add_child(child2_text)
+    child3_text = "interface GigabitEthernet0/2"
+    child3 = config.instantiate_child(child3_text)
+    config.children[1] = child3
+
+    assert config.children[1].text == child3_text
+    assert child3_text in config.children
+
+
+def test_hconfig_children_contains() -> None:
+    """Test HConfigChildren __contains__."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    config.add_child("interface GigabitEthernet0/0")
+
+    assert "interface GigabitEthernet0/0" in config.children
+    assert "interface GigabitEthernet0/1" not in config.children
+
+
+def test_hconfig_children_eq_fast_fail() -> None:
+    """Test HConfigChildren __eq__ fast fail."""
+    platform = Platform.CISCO_IOS
+    config1 = get_hconfig(platform)
+    config2 = get_hconfig(platform)
+
+    config1.add_child("interface GigabitEthernet0/0")
+    config2.add_child("interface GigabitEthernet0/0")
+    config2.add_child("interface GigabitEthernet0/1")
+
+    assert config1.children != config2.children
+
+
+def test_hconfig_children_eq_keys_mismatch() -> None:
+    """Test HConfigChildren __eq__ key mismatch."""
+    platform = Platform.CISCO_IOS
+    config1 = get_hconfig(platform)
+    config2 = get_hconfig(platform)
+
+    config1.add_child("interface GigabitEthernet0/0")
+    config2.add_child("interface GigabitEthernet0/1")
+
+    assert config1.children != config2.children
+
+
+def test_hconfig_children_hash() -> None:
+    """Test HConfigChildren __hash__."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    config.add_child("interface GigabitEthernet0/0")
+    hash_val = hash(config.children)
+
+    assert isinstance(hash_val, int)
+
+
+def test_hconfig_children_getitem_slice() -> None:
+    """Test HConfigChildren __getitem__ with slice."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    config.add_child("interface GigabitEthernet0/0")
+    config.add_child("interface GigabitEthernet0/1")
+    config.add_child("interface GigabitEthernet0/2")
+    slice_result = config.children[0:2]
+
+    assert isinstance(slice_result, list)
+    assert len(slice_result) == 2
+    assert slice_result[0].text == "interface GigabitEthernet0/0"
+
+
+def test_future_with_negated_command_in_config() -> None:
+    """Test _future with negated command."""
+    platform = Platform.CISCO_IOS
+    running_config = get_hconfig(platform)
+    running_config.add_child("interface GigabitEthernet0/0")
+    remediation_config = get_hconfig(platform)
+    remediation_config.add_child("no interface GigabitEthernet0/0")
+    future_config = running_config.future(remediation_config)
+
+    assert future_config.get_child(equals="interface GigabitEthernet0/0") is None
+
+
+def test_future_with_negation_prefix_match() -> None:
+    """Test _future when negated form exists."""
+    platform = Platform.CISCO_IOS
+    running_config = get_hconfig(platform)
+    running_config.add_child("no logging console")
+    remediation_config = get_hconfig(platform)
+    remediation_config.add_child("logging console")
+    future_config = running_config.future(remediation_config)
+
+    assert future_config.get_child(equals="logging console") is not None
+    assert future_config.get_child(equals="no logging console") is None
+
+
+def test_difference_with_negation() -> None:
+    """Test _difference with negation prefix."""
+    platform = Platform.CISCO_IOS
+    running_config = get_hconfig(platform)
+    running_config.add_child("interface GigabitEthernet0/0")
+    running_config.add_child("logging console")
+    generated_config = get_hconfig(platform)
+    generated_config.add_child("interface GigabitEthernet0/0")
+    difference = running_config.difference(generated_config)
+
+    assert difference.get_child(equals="logging console") is not None
+
+
+def test_child_lt_comparison() -> None:
+    """Test HConfigChild __lt__ for ordering."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    child1 = config.add_child("interface GigabitEthernet0/0")
+    child2 = config.add_child("interface GigabitEthernet0/1")
+    child1.order_weight = 100
+    child2.order_weight = 50
+
+    assert child2 < child1
+    assert not child1 < child2  # pylint: disable=unneeded-not
+
+
+def test_child_hash_consistency() -> None:
+    """Test HConfigChild __hash__."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    child = config.add_child("interface GigabitEthernet0/0")
+    child.add_child("description test")
+    hash1 = hash(child)
+    hash2 = hash(child)
+
+    assert hash1 == hash2
+
+
+def test_with_tags_recursive() -> None:
+    """Test _with_tags recursion."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    interface = config.add_child("interface GigabitEthernet0/0")
+    interface.tags = frozenset(["production"])
+    desc = interface.add_child("description test")
+    desc.tags = frozenset(["production"])
+    tagged_config = config.with_tags(frozenset(["production"]))
+
+    assert tagged_config.get_child(equals="interface GigabitEthernet0/0") is not None
+
+    tagged_interface = tagged_config.get_child(equals="interface GigabitEthernet0/0")
+
+    assert tagged_interface is not None
+    assert tagged_interface.get_child(equals="description test") is not None
+
+
+def test_difference_with_default_prefix() -> None:
+    """Test _difference skips lines with 'default' prefix."""
+    platform = Platform.CISCO_IOS
+    running_config = get_hconfig(platform)
+    running_config.add_child("interface GigabitEthernet0/0")
+    running_config.add_child("default interface GigabitEthernet0/1")
+    generated_config = get_hconfig(platform)
+    generated_config.add_child("interface GigabitEthernet0/0")
+    difference = running_config.difference(generated_config)
+
+    assert difference.get_child(startswith="default") is None
+
+
+def test_add_child_with_duplicates_allowed() -> None:
+    """Test add_child when duplicates are allowed."""
+    platform = Platform.CISCO_XR
+    config = get_hconfig(platform)
+    route_policy = config.add_child("route-policy test")
+    child1 = route_policy.add_child("if destination in test then")
+    child2 = route_policy.add_child("if destination in test then")
+
+    assert id(child1) != id(child2)
+    assert child1.text == child2.text
+
+
+def test_get_children_with_duplicates() -> None:
+    """Test get_children when duplicates are allowed."""
+    platform = Platform.CISCO_XR
+    config = get_hconfig(platform)
+    route_policy = config.add_child("route-policy test")
+    route_policy.add_child("if destination in test then")
+    route_policy.add_child("if destination in test then")
+    route_policy.add_child("if source in test then")
+    children = tuple(route_policy.get_children(startswith="if destination"))
+
+    assert len(children) == 2
+
+
+def test_child_sectional_exit_no_exit_text() -> None:
+    """Test sectional_exit when rule returns None."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    child = config.add_child("hostname test")
+
+    assert child.sectional_exit is None
+
+
+def test_child_is_match_endswith() -> None:
+    """Test is_match with endswith filter."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    interface = config.add_child("interface GigabitEthernet0/0")
+
+    assert interface.is_match(endswith="Ethernet0/0")
+    assert not interface.is_match(endswith="Ethernet0/1")
+
+
+def test_child_is_match_contains_single() -> None:
+    """Test is_match with single contains filter."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    interface = config.add_child("interface GigabitEthernet0/0")
+
+    assert interface.is_match(contains="Gigabit")
+    assert not interface.is_match(contains="FastEthernet")
+
+
+def test_child_is_match_contains_tuple() -> None:
+    """Test is_match with tuple contains filter."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    interface = config.add_child("interface GigabitEthernet0/0")
+
+    assert interface.is_match(contains=("Gigabit", "FastEthernet"))
+    assert not interface.is_match(contains=("TenGigabit", "FastEthernet"))
+
+
+def test_child_use_default_for_negation() -> None:
+    """Test use_default_for_negation."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    interface = config.add_child("interface GigabitEthernet0/0")
+    description = interface.add_child("description test")
+    uses_default = description.use_default_for_negation(description)
+
+    assert isinstance(uses_default, bool)
+
+
+def test_child_tags_remove_branch() -> None:
+    """Test tags_remove on branch node."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    interface = config.add_child("interface GigabitEthernet0/0")
+    description = interface.add_child("description test")
+    description.tags_add("test_tag")
+    interface.tags_remove("test_tag")
+
+    assert "test_tag" not in description.tags
+
+
+def test_child_is_idempotent_command_avoid() -> None:
+    """Test is_idempotent_command with avoid rule."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    interface = config.add_child("interface GigabitEthernet0/0")
+    ip_address = interface.add_child("ip address 192.168.1.1 255.255.255.0")
+    other_children: list[HConfigChild] = []
+    result = ip_address.is_idempotent_command(other_children)
+
+    assert isinstance(result, bool)
+
+
+def test_child_overwrite_with_negate_else_branch() -> None:
+    """Test overwrite_with when negated child doesn't exist."""
+    platform = Platform.CISCO_IOS
+    running_config = get_hconfig(platform)
+    running_interface = running_config.add_child("interface GigabitEthernet0/0")
+    running_interface.add_child("description old")
+    generated_config = get_hconfig(platform)
+    generated_interface = generated_config.add_child("interface GigabitEthernet0/0")
+    generated_interface.add_child("description new")
+    delta_config = get_hconfig(platform)
+    running_interface.overwrite_with(generated_interface, delta_config, negate=True)
+    delta_interface = delta_config.get_child(equals="interface GigabitEthernet0/0")
+
+    assert delta_interface is not None
+
+
+def test_child_tags_setter_on_branch() -> None:
+    """Test tags setter on branch node."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    interface = config.add_child("interface GigabitEthernet0/0")
+    description = interface.add_child("description test")
+    interface.tags = frozenset(["production", "critical"])
+
+    assert "production" in description.tags
+    assert "critical" in description.tags
+
+
+def test_child_add_children_deep() -> None:
+    """Test add_children_deep method."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    interface = config.add_child("interface GigabitEthernet0/0")
+    result = interface.add_children_deep(
+        ["ip access-group test in", "description test"]
+    )
+
+    assert result.text == "description test"
+    assert result.depth() == 3
+
+
+def test_child_default_method() -> None:
+    """Test _default method."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    interface = config.add_child("interface GigabitEthernet0/0")
+    description = interface.add_child("description test")
+    description._default()  # noqa: SLF001  # pyright: ignore[reportPrivateUsage]
+
+    assert description.text == "default description test"
+
+
+def test_abstract_methods_coverage() -> None:
+    """Test coverage of abstract method implementations."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    interface = config.add_child("interface GigabitEthernet0/0")
+    desc = interface.add_child("description test")
+
+    assert interface.root is config
+    assert desc.root is config
+
+    assert interface.driver is not None
+    assert config.driver is not None
+
+    lineage = tuple(desc.lineage())
+    assert len(lineage) == 2
+    assert lineage[0] is interface
+
+    assert config.depth() == 0
+    assert interface.depth() == 1
+    assert desc.depth() == 2
+
+    hash_value = hash(interface)
+    assert isinstance(hash_value, int)
+
+    children_list = list(config)
+    assert len(children_list) == 1
+    assert children_list[0] is interface
+
+
+def test_get_child_deep_none() -> None:
+    """Test get_child_deep returns None when no match."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    config.add_child("interface GigabitEthernet0/0")
+    result = config.get_child_deep((MatchRule(equals="interface GigabitEthernet0/1"),))
+
+    assert result is None
+
+
+def test_future_with_idempotent_command() -> None:
+    """Test _future with idempotent command."""
+    platform = Platform.HP_PROCURVE
+    running_config = get_hconfig(platform)
+    interface = running_config.add_child("interface 1/1")
+    interface.add_child("untagged vlan 1")
+    remediation_config = get_hconfig(platform)
+    remediation_interface = remediation_config.add_child("interface 1/1")
+    remediation_interface.add_child("untagged vlan 2")
+    future_config = running_config.future(remediation_config)
+    future_interface = future_config.get_child(equals="interface 1/1")
+
+    assert future_interface is not None
+    assert future_interface.get_child(equals="untagged vlan 2") is not None
+
+
+def test_future_with_negation_prefix() -> None:
+    """Test _future with negation prefix in self."""
+    platform = Platform.CISCO_IOS
+    running_config = get_hconfig(platform)
+    running_config.add_child("no ip routing")
+    remediation_config = get_hconfig(platform)
+    remediation_config.add_child("ip routing")
+    future_config = running_config.future(remediation_config)
+
+    assert future_config.get_child(equals="ip routing") is None
+    assert future_config.get_child(equals="no ip routing") is None
+
+
+def test_future_self_child_not_in_negated_or_recursed() -> None:
+    """Test _future when self_child is not in negated_or_recursed."""
+    platform = Platform.CISCO_IOS
+    running_config = get_hconfig(platform)
+    running_config.add_child("hostname router1")
+    running_config.add_child("interface GigabitEthernet0/0")
+    remediation_config = get_hconfig(platform)
+    remediation_config.add_child("hostname router2")
+    future_config = running_config.future(remediation_config)
+
+    assert future_config.get_child(equals="hostname router2") is not None
+    assert future_config.get_child(equals="interface GigabitEthernet0/0") is not None
+
+
+def test_difference_with_acl_none_target() -> None:
+    """Test _difference with ACL when target_acl_children is None."""
+    platform = Platform.CISCO_IOS
+    running_config = get_hconfig(platform)
+
+    acl = running_config.add_child("ip access-list extended test")
+    acl.add_child("10 permit ip any any")
+    target_config = get_hconfig(platform)
+    difference = running_config.difference(target_config)
+
+    assert difference.get_child(equals="ip access-list extended test") is not None
+
+
+def test_child_eq_comparison() -> None:
+    """Test HConfigChild __eq__ returns False for different text."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    child1 = config.add_child("interface GigabitEthernet0/0")
+    child2 = config.add_child("interface GigabitEthernet0/1")
+
+    assert child1 != child2
+
+    config2 = get_hconfig(platform)
+    child3 = config2.add_child("interface GigabitEthernet0/0")
+    assert child1 == child3
+
+
+def test_child_sectional_exit_with_exit_text() -> None:
+    """Test sectional_exit when rule has exit_text."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    interface = config.add_child("interface GigabitEthernet0/0")
+    interface.add_child("description test")
+    exit_text = interface.sectional_exit
+
+    assert exit_text == "exit"
+
+
+def test_child_tags_remove_leaf_iterable() -> None:
+    """Test tags_remove on leaf with iterable."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    interface = config.add_child("interface GigabitEthernet0/0")
+    description = interface.add_child("description test")
+    description.tags_add(frozenset(["tag1", "tag2", "tag3"]))
+    description.tags_remove(["tag1", "tag2"])
+
+    assert "tag1" not in description.tags
+    assert "tag2" not in description.tags
+    assert "tag3" in description.tags
+
+
+def test_child_use_default_for_negation_true() -> None:
+    """Test use_default_for_negation returns True."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    interface = config.add_child("interface GigabitEthernet0/0")
+    description = interface.add_child("description test")
+    result = description.use_default_for_negation(description)
+
+    assert isinstance(result, bool)
+
+
+def test_child_is_idempotent_command_with_avoid_rule() -> None:
+    """Test is_idempotent_command with avoid rule match."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    interface = config.add_child("interface GigabitEthernet0/0")
+    ip_access_group = interface.add_child("ip access-group test in")
+    result = ip_access_group.is_idempotent_command([])
+
+    assert isinstance(result, bool)
+
+
+def test_child_overwrite_with_existing_negated() -> None:
+    """Test overwrite_with when negated child exists in delta."""
+    platform = Platform.CISCO_IOS
+    running_config = get_hconfig(platform)
+    running_interface = running_config.add_child("interface GigabitEthernet0/0")
+    running_interface.add_child("description old")
+    generated_config = get_hconfig(platform)
+    generated_interface = generated_config.add_child("interface GigabitEthernet0/0")
+    generated_interface.add_child("description new")
+    delta_config = get_hconfig(platform)
+    delta_config.add_child("interface GigabitEthernet0/0")
+    running_interface.overwrite_with(generated_interface, delta_config, negate=True)
+    delta_interface = delta_config.get_child(equals="interface GigabitEthernet0/0")
+
+    assert delta_interface is not None
+
+
+def test_children_eq_empty_fast_success() -> None:
+    """Test HConfigChildren __eq__ fast success for empty."""
+    platform = Platform.CISCO_IOS
+    config1 = get_hconfig(platform)
+    config2 = get_hconfig(platform)
+
+    assert config1.children == config2.children
+
+
+def test_children_hash_with_data() -> None:
+    """Test HConfigChildren __hash__ with data."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    config.add_child("interface GigabitEthernet0/0")
+    config.add_child("interface GigabitEthernet0/1")
+    hash1 = hash(config.children)
+    hash2 = hash(config.children)
+
+    assert hash1 == hash2
+    assert isinstance(hash1, int)
+
+
+def test_children_getitem_with_slice() -> None:
+    """Test HConfigChildren __getitem__ with slice."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    config.add_child("interface GigabitEthernet0/0")
+    config.add_child("interface GigabitEthernet0/1")
+    config.add_child("interface GigabitEthernet0/2")
+    config.add_child("interface GigabitEthernet0/3")
+    slice1 = config.children[1:3]
+    assert len(slice1) == 2
+
+    slice2 = config.children[::2]
+    assert len(slice2) == 2
+
+    slice3 = config.children[:2]
+    assert len(slice3) == 2
+
+
+def test_hconfig_str() -> None:
+    """Test HConfig __str__ method."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    config.add_child("hostname router1")
+    config.add_child("interface GigabitEthernet0/0")
+    str_output = str(config)
+
+    assert "hostname router1" in str_output
+    assert "interface GigabitEthernet0/0" in str_output
+    assert isinstance(str_output, str)
+
+
+def test_hconfig_eq_not_hconfig() -> None:
+    """Test HConfig __eq__ with non-HConfig object."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    result = config == "not an HConfig"
+
+    assert not result
+
+
+def test_hconfig_real_indent_level() -> None:
+    """Test HConfig real_indent_level property."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+
+    assert config.real_indent_level == -1
+
+
+def test_hconfig_parent_property() -> None:
+    """Test HConfig parent property returns self."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+
+    assert config.parent is config
+
+
+def test_hconfig_is_leaf() -> None:
+    """Test HConfig is_leaf property."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+
+    assert config.is_leaf is False
+
+
+def test_hconfig_tags_setter() -> None:
+    """Test HConfig tags setter."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    interface = config.add_child("interface GigabitEthernet0/0")
+    desc = interface.add_child("description test")
+    config.tags = frozenset(["production", "core"])
+
+    assert "production" in desc.tags
+    assert "core" in desc.tags
+
+
+def test_hconfig_add_children_deep_typeerror() -> None:
+    """Test HConfig add_children_deep raises TypeError."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+
+    with pytest.raises(TypeError, match="base was an HConfig object"):
+        config.add_children_deep([])
+
+
+def test_hconfig_deep_copy() -> None:
+    """Test HConfig deep_copy method)."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    interface = config.add_child("interface GigabitEthernet0/0")
+    interface.add_child("description test")
+    config.add_child("hostname router1")
+    config_copy = config.deep_copy()
+
+    assert config_copy is not config
+    assert len(tuple(config_copy.all_children())) == len(tuple(config.all_children()))
+    assert config_copy.get_child(equals="interface GigabitEthernet0/0") is not None
+    assert config_copy.get_child(equals="hostname router1") is not None
+
+    original_interface = config.get_child(equals="interface GigabitEthernet0/0")
+    copied_interface = config_copy.get_child(equals="interface GigabitEthernet0/0")
+    assert original_interface is not None
+    assert copied_interface is not None
+    assert original_interface is not copied_interface
