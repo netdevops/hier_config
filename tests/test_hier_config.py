@@ -1,3 +1,6 @@
+"""Tests for hier_config core functionality."""
+# pylint: disable=too-many-lines
+
 import tempfile
 import types
 from pathlib import Path
