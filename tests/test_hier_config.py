@@ -921,7 +921,7 @@ def test_child_lt_comparison() -> None:
     child2.order_weight = 50
 
     assert child2 < child1
-    assert child2 <= child1
+    assert not child1 < child2  # pylint: disable=unneeded-not
 
 
 def test_child_hash_consistency() -> None:
