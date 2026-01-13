@@ -8,13 +8,13 @@ from pydantic import ValidationError
 from hier_config import Platform
 from hier_config.models import MatchRule, TagRule
 from hier_config.utils import (
+    _set_match_rule,
     hconfig_v2_os_v3_platform_mapper,
     hconfig_v3_platform_v2_os_mapper,
     load_hconfig_v2_options,
     load_hconfig_v2_tags,
     load_hier_config_tags,
     read_text_from_file,
-    _set_match_rule
 )
 
 
@@ -346,7 +346,7 @@ def test_set_match_rule_endswith() -> None:
     """Test _set_match_rule with endswith."""
     lineage = {"endswith": "Ethernet0/0"}
     result = _set_match_rule(lineage)
-    
+
     assert result is not None
     assert result.endswith == "Ethernet0/0"
 
@@ -381,7 +381,9 @@ def test_set_match_rule_none() -> None:
 def test_load_hconfig_v2_options_invalid_type() -> None:
     """Test load_hconfig_v2_options with invalid type."""
 
-    with pytest.raises(TypeError, match="v2_options must be a dictionary or a valid file path"):
+    with pytest.raises(
+        TypeError, match="v2_options must be a dictionary or a valid file path"
+    ):
         load_hconfig_v2_options(v2_options=123, platform=Platform.CISCO_IOS)
 
 

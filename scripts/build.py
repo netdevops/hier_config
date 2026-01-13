@@ -108,7 +108,7 @@ def _pytest_command(
     if profile:
         command += " --profile --profile-svg"
     if coverage:
-        command += " --cov=hier_config --cov-fail-under=78 --cov-report=term-missing"
+        command += " --cov=hier_config --cov-fail-under=80 --cov-report=term-missing"
     if threaded:
         command += " -n auto"
     return command
