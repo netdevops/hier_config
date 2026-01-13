@@ -1336,3 +1336,94 @@ def test_children_getitem_with_slice() -> None:
 
     slice3 = config.children[:2]
     assert len(slice3) == 2
+
+
+def test_hconfig_str() -> None:
+    """Test HConfig __str__ method."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    config.add_child("hostname router1")
+    config.add_child("interface GigabitEthernet0/0")
+    str_output = str(config)
+
+    assert "hostname router1" in str_output
+    assert "interface GigabitEthernet0/0" in str_output
+    assert isinstance(str_output, str)
+
+
+def test_hconfig_eq_not_hconfig() -> None:
+    """Test HConfig __eq__ with non-HConfig object."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    result = config.__eq__("not an HConfig")
+
+    assert result == NotImplemented
+
+
+def test_hconfig_real_indent_level() -> None:
+    """Test HConfig real_indent_level property."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+
+    assert config.real_indent_level == -1
+
+
+def test_hconfig_parent_property() -> None:
+    """Test HConfig parent property returns self."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+
+    assert config.parent is config
+
+
+def test_hconfig_is_leaf() -> None:
+    """Test HConfig is_leaf property."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+
+    assert config.is_leaf is False
+
+
+def test_hconfig_tags_setter() -> None:
+    """Test HConfig tags setter."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    interface = config.add_child("interface GigabitEthernet0/0")
+    desc = interface.add_child("description test")
+    config.tags = frozenset(["production", "core"])
+
+    assert "production" in desc.tags
+    assert "core" in desc.tags
+
+
+def test_hconfig_add_children_deep_typeerror() -> None:
+    """Test HConfig add_children_deep raises TypeError."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+
+    try:
+        config.add_children_deep([])
+        assert False, "Should have raised TypeError"
+    except TypeError as e:
+        assert "base was an HConfig object" in str(e)
+
+
+def test_hconfig_deep_copy() -> None:
+    """Test HConfig deep_copy method)."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    interface = config.add_child("interface GigabitEthernet0/0")
+    interface.add_child("description test")
+    config.add_child("hostname router1")
+    config_copy = config.deep_copy()
+
+    assert config_copy is not config
+    assert len(tuple(config_copy.all_children())) == len(tuple(config.all_children()))
+    assert config_copy.get_child(equals="interface GigabitEthernet0/0") is not None
+    assert config_copy.get_child(equals="hostname router1") is not None
+
+    original_interface = config.get_child(equals="interface GigabitEthernet0/0")
+    copied_interface = config_copy.get_child(equals="interface GigabitEthernet0/0")
+    assert original_interface is not None
+    assert copied_interface is not None
+    assert original_interface is not copied_interface

@@ -14,6 +14,7 @@ from hier_config.utils import (
     load_hconfig_v2_tags,
     load_hier_config_tags,
     read_text_from_file,
+    _set_match_rule
 )
 
 
@@ -339,3 +340,61 @@ def test_load_hconfig_v2_tags_from_file_empty_file(tmp_path: Path) -> None:
 
     with pytest.raises(TypeError):
         load_hconfig_v2_tags(v2_tags=str(file_path))
+
+
+def test_set_match_rule_endswith() -> None:
+    """Test _set_match_rule with endswith."""
+    lineage = {"endswith": "Ethernet0/0"}
+    result = _set_match_rule(lineage)
+    
+    assert result is not None
+    assert result.endswith == "Ethernet0/0"
+
+
+def test_set_match_rule_contains() -> None:
+    """Test _set_match_rule with contains."""
+    lineage = {"contains": "GigabitEthernet"}
+    result = _set_match_rule(lineage)
+
+    assert result is not None
+    assert result.contains == "GigabitEthernet"
+
+
+def test_set_match_rule_equals() -> None:
+    """Test _set_match_rule with equals."""
+    lineage = {"equals": "interface GigabitEthernet0/0"}
+    result = _set_match_rule(lineage)
+
+    assert result is not None
+    assert result.equals == "interface GigabitEthernet0/0"
+
+
+def test_set_match_rule_none() -> None:
+    """Test _set_match_rule returns None for empty lineage."""
+
+    lineage: dict[str, Any] = {}
+    result = _set_match_rule(lineage)
+
+    assert result is None
+
+
+def test_load_hconfig_v2_options_invalid_type() -> None:
+    """Test load_hconfig_v2_options with invalid type."""
+
+    with pytest.raises(TypeError, match="v2_options must be a dictionary or a valid file path"):
+        load_hconfig_v2_options(v2_options=123, platform=Platform.CISCO_IOS)
+
+
+def test_load_hconfig_v2_tags_from_file(tmp_path: Path) -> None:
+    """Test load_hconfig_v2_tags with file path."""
+    file_path = tmp_path / "test_v2_tags.yml"
+    tags_content = """
+- lineage:
+  - startswith: interface
+  add_tags: interfaces
+"""
+    file_path.write_text(tags_content)
+    result = load_hconfig_v2_tags(v2_tags=str(file_path))
+
+    assert len(result) == 1
+    assert result[0].apply_tags == frozenset(["interfaces"])
