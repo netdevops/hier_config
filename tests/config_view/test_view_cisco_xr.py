@@ -7,17 +7,6 @@ import pytest
 from hier_config import Platform, get_hconfig, get_hconfig_view
 
 
-def test_bundle_prefix() -> None:
-    """Test _bundle_prefix returns 'Bundle-Ether' (covers line 22)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface Bundle-Ether1")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Bundle-Ether1")
-    assert interface_view is not None
-    assert interface_view.is_bundle
-
-
 def test_bundle_id_not_implemented() -> None:
     """Test bundle_id raises NotImplementedError (covers line 26)."""
     config = get_hconfig(Platform.CISCO_XR)

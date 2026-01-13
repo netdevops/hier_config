@@ -1353,7 +1353,7 @@ def test_hconfig_eq_not_hconfig() -> None:
     config = get_hconfig(platform)
     result = config == "not an HConfig"
 
-    assert result == NotImplemented
+    assert result == False
 
 
 def test_hconfig_real_indent_level() -> None:
