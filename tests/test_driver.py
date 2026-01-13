@@ -27,7 +27,7 @@ def test_driver_base_properties() -> None:
     """Test base driver properties and swap_negation."""
     driver = get_hconfig_driver(Platform.GENERIC)
 
-    assert driver.declaration_prefix == ""
+    assert not driver.declaration_prefix
     assert driver.negation_prefix == "no "
 
     config = get_hconfig(Platform.GENERIC)

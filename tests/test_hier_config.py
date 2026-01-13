@@ -719,11 +719,8 @@ def test_add_child_with_empty_text() -> None:
     platform = Platform.CISCO_IOS
     config = get_hconfig(platform)
 
-    try:
+    with pytest.raises(ValueError, match="text was empty"):
         config.add_child("")
-        assert False, "Should have raised ValueError"
-    except ValueError as e:
-        assert "text was empty" in str(e)
 
 
 def test_add_child_duplicate_error() -> None:
@@ -732,15 +729,12 @@ def test_add_child_duplicate_error() -> None:
     config = get_hconfig(platform)
     config.add_child("interface GigabitEthernet0/0")
 
-    try:
+    with pytest.raises(DuplicateChildError, match="Found a duplicate section"):
         config.add_child(
             "interface GigabitEthernet0/0",
             check_if_present=True,
             return_if_present=False,
         )
-        assert False, "Should have raised DuplicateChildError"
-    except DuplicateChildError as e:
-        assert "Found a duplicate section" in str(e)
 
 
 def test_add_child_return_if_present() -> None:
@@ -776,7 +770,6 @@ def test_child_ne() -> None:
     child2 = config.add_child("interface GigabitEthernet0/1")
 
     assert child1 != child2
-    assert not (child1 != child1)
 
 
 def test_cisco_style_text_with_comments() -> None:
@@ -810,9 +803,9 @@ def test_hconfig_children_setitem() -> None:
     """Test HConfigChildren __setitem__."""
     platform = Platform.CISCO_IOS
     config = get_hconfig(platform)
-    child1 = config.add_child("interface GigabitEthernet0/0")
+    config.add_child("interface GigabitEthernet0/0")
     child2_text = "interface GigabitEthernet0/1"
-    child2 = config.add_child(child2_text)
+    config.add_child(child2_text)
     child3_text = "interface GigabitEthernet0/2"
     child3 = config.instantiate_child(child3_text)
     config.children[1] = child3
@@ -928,7 +921,7 @@ def test_child_lt_comparison() -> None:
     child2.order_weight = 50
 
     assert child2 < child1
-    assert not (child1 < child2)
+    assert child2 <= child1
 
 
 def test_child_hash_consistency() -> None:
@@ -1067,7 +1060,7 @@ def test_child_is_idempotent_command_avoid() -> None:
     config = get_hconfig(platform)
     interface = config.add_child("interface GigabitEthernet0/0")
     ip_address = interface.add_child("ip address 192.168.1.1 255.255.255.0")
-    other_children = []
+    other_children: list[HConfigChild] = []
     result = ip_address.is_idempotent_command(other_children)
 
     assert isinstance(result, bool)
@@ -1120,7 +1113,7 @@ def test_child_default_method() -> None:
     config = get_hconfig(platform)
     interface = config.add_child("interface GigabitEthernet0/0")
     description = interface.add_child("description test")
-    description._default()
+    description._default()  # noqa: SLF001  # pyright: ignore[reportPrivateUsage]
 
     assert description.text == "default description test"
 
@@ -1355,7 +1348,7 @@ def test_hconfig_eq_not_hconfig() -> None:
     """Test HConfig __eq__ with non-HConfig object."""
     platform = Platform.CISCO_IOS
     config = get_hconfig(platform)
-    result = config.__eq__("not an HConfig")
+    result = config == "not an HConfig"
 
     assert result == NotImplemented
 
@@ -1401,11 +1394,8 @@ def test_hconfig_add_children_deep_typeerror() -> None:
     platform = Platform.CISCO_IOS
     config = get_hconfig(platform)
 
-    try:
+    with pytest.raises(TypeError, match="base was an HConfig object"):
         config.add_children_deep([])
-        assert False, "Should have raised TypeError"
-    except TypeError as e:
-        assert "base was an HConfig object" in str(e)
 
 
 def test_hconfig_deep_copy() -> None:

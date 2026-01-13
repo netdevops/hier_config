@@ -8,7 +8,7 @@ from pydantic import ValidationError
 from hier_config import Platform
 from hier_config.models import MatchRule, TagRule
 from hier_config.utils import (
-    _set_match_rule,
+    _set_match_rule,  # pyright: ignore[reportPrivateUsage]
     hconfig_v2_os_v3_platform_mapper,
     hconfig_v3_platform_v2_os_mapper,
     load_hconfig_v2_options,
@@ -371,7 +371,6 @@ def test_set_match_rule_equals() -> None:
 
 def test_set_match_rule_none() -> None:
     """Test _set_match_rule returns None for empty lineage."""
-
     lineage: dict[str, Any] = {}
     result = _set_match_rule(lineage)
 
@@ -380,11 +379,10 @@ def test_set_match_rule_none() -> None:
 
 def test_load_hconfig_v2_options_invalid_type() -> None:
     """Test load_hconfig_v2_options with invalid type."""
-
     with pytest.raises(
         TypeError, match="v2_options must be a dictionary or a valid file path"
     ):
-        load_hconfig_v2_options(v2_options=123, platform=Platform.CISCO_IOS)
+        load_hconfig_v2_options(v2_options=123, platform=Platform.CISCO_IOS)  # type: ignore[arg-type]
 
 
 def test_load_hconfig_v2_tags_from_file(tmp_path: Path) -> None:

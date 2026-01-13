@@ -85,13 +85,7 @@ def test_future() -> None:
 def test_fixup_aaa_port_access_ranges() -> None:
     """Test post-load callback that expands interface ranges in AAA port-access commands (covers lines 33-38)."""
     platform = Platform.HP_PROCURVE
-    config_text = "\n".join(
-        [
-            "aaa port-access authenticator 1/15-1/20,1/26-1/28",
-            "aaa port-access mac-based 2/14-2/16",
-            "aaa port-access authenticator 1/1",
-        ]
-    )
+    config_text = "aaa port-access authenticator 1/15-1/20,1/26-1/28\naaa port-access mac-based 2/14-2/16\naaa port-access authenticator 1/1"
     config = get_hconfig(platform, config_text)
 
     assert config.get_child(equals="aaa port-access authenticator 1/15") is not None
@@ -117,16 +111,7 @@ def test_fixup_aaa_port_access_ranges() -> None:
 def test_fixup_vlan_transformation() -> None:
     """Test post-load callback that transforms VLAN config to interface config (covers lines 63-88)."""
     platform = Platform.HP_PROCURVE
-    config_text = "\n".join(
-        [
-            "vlan 80",
-            "   untagged 2/43-2/44,3/43-3/44",
-            "   tagged 1/23,2/23,Trk1",
-            "vlan 90",
-            "   untagged 5/29",
-            "   no untagged 1/2-1/5",
-        ]
-    )
+    config_text = "vlan 80\n   untagged 2/43-2/44,3/43-3/44\n   tagged 1/23,2/23,Trk1\nvlan 90\n   untagged 5/29\n   no untagged 1/2-1/5"
     config = get_hconfig(platform, config_text)
 
     interface_2_43 = config.get_child(equals="interface 2/43")
@@ -177,14 +162,7 @@ def test_fixup_vlan_transformation() -> None:
 def test_fixup_device_profile_tagged_vlans() -> None:
     """Test post-load callback that separates device-profile tagged-vlans onto individual lines (covers lines 104-110)."""
     platform = Platform.HP_PROCURVE
-    config_text = "\n".join(
-        [
-            'device-profile name "phone"',
-            "   tagged-vlan 10,20,30",
-            'device-profile name "printer"',
-            "   tagged-vlan 40",
-        ]
-    )
+    config_text = 'device-profile name "phone"\n   tagged-vlan 10,20,30\ndevice-profile name "printer"\n   tagged-vlan 40'
     config = get_hconfig(platform, config_text)
     device_profile_phone = config.get_child(equals='device-profile name "phone"')
 

@@ -107,13 +107,7 @@ def test_duplicate_child_router() -> None:
 def test_rm_ipv6_acl_sequence_numbers() -> None:
     """Test post-load callback that removes IPv6 ACL sequence numbers (covers lines 21-23)."""
     platform = Platform.CISCO_IOS
-    config_text = "\n".join(
-        [
-            "ipv6 access-list TEST_IPV6_ACL",
-            " sequence 10 permit tcp any any eq 443",
-            " sequence 20 deny ipv6 any any",
-        ]
-    )
+    config_text = "ipv6 access-list TEST_IPV6_ACL\n sequence 10 permit tcp any any eq 443\n sequence 20 deny ipv6 any any"
     config = get_hconfig(platform, config_text)
     acl = config.get_child(equals="ipv6 access-list TEST_IPV6_ACL")
 
@@ -126,15 +120,7 @@ def test_rm_ipv6_acl_sequence_numbers() -> None:
 def test_remove_ipv4_acl_remarks() -> None:
     """Test post-load callback that removes IPv4 ACL remarks (covers line 30)."""
     platform = Platform.CISCO_IOS
-    config_text = "\n".join(
-        [
-            "ip access-list extended TEST_ACL",
-            " remark Allow HTTPS traffic",
-            " permit tcp any any eq 443",
-            " remark Block all other traffic",
-            " deny ip any any",
-        ]
-    )
+    config_text = "ip access-list extended TEST_ACL\n remark Allow HTTPS traffic\n permit tcp any any eq 443\n remark Block all other traffic\n deny ip any any"
     config = get_hconfig(platform, config_text)
     acl = config.get_child(equals="ip access-list extended TEST_ACL")
 
@@ -147,14 +133,7 @@ def test_remove_ipv4_acl_remarks() -> None:
 def test_add_acl_sequence_numbers() -> None:
     """Test post-load callback that adds sequence numbers to IPv4 ACLs (covers lines 42-43)."""
     platform = Platform.CISCO_IOS
-    config_text = "\n".join(
-        [
-            "ip access-list extended TEST_ACL",
-            " permit tcp any any eq 443",
-            " permit tcp any any eq 80",
-            " deny ip any any",
-        ]
-    )
+    config_text = "ip access-list extended TEST_ACL\n permit tcp any any eq 443\n permit tcp any any eq 80\n deny ip any any"
     config = get_hconfig(platform, config_text)
     acl = config.get_child(equals="ip access-list extended TEST_ACL")
 
