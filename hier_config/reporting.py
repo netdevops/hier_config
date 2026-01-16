@@ -342,7 +342,7 @@ class RemediationReporter:  # noqa: PLR0904
             exclude_tags=exclude_tags,
         )
 
-        filtered_changes = []
+        filtered_changes: list[HConfigChild] = []
         for child in all_changes:
             instance_count = len(child.instances)
             if instance_count >= min_devices and (
@@ -350,7 +350,8 @@ class RemediationReporter:  # noqa: PLR0904
             ):
                 filtered_changes.append(child)
 
-        return tuple(filtered_changes)
+        result: tuple[HConfigChild, ...] = tuple(filtered_changes)
+        return result
 
     def get_top_changes(
         self,
@@ -480,12 +481,13 @@ class RemediationReporter:  # noqa: PLR0904
         all_changes = self.get_all_changes()
 
         # Collect all tags if not specified
-        if tags is None:
-            all_tags = {tag for child in all_changes for tag in child.tags}
-        else:
-            all_tags = set(tags)
+        all_tags = (
+            {tag for child in all_changes for tag in child.tags}
+            if tags is None
+            else set(tags)
+        )
 
-        result = {}
+        result: dict[str, dict[str, Any]] = {}
         for tag in all_tags:
             tagged_changes = self.get_all_changes(include_tags=[tag])
 
@@ -503,7 +505,8 @@ class RemediationReporter:  # noqa: PLR0904
                 "changes": [child.text for child in tagged_changes],
             }
 
-        return result
+        final_result: dict[str, dict[str, Any]] = result
+        return final_result
 
     def summary_text(self, *, top_n: int = 10) -> str:
         """Generate a human-readable text summary.
@@ -565,10 +568,9 @@ class RemediationReporter:  # noqa: PLR0904
         groups: dict[str, list[HConfigChild]] = defaultdict(list)
 
         for child in self.get_all_changes():
-            if child.parent and hasattr(child.parent, "text"):
-                parent_text = child.parent.text
-            else:
-                parent_text = "root"
+            parent_text = (
+                child.parent.text if isinstance(child.parent, HConfigChild) else "root"
+            )
             groups[parent_text].append(child)
 
         return dict(groups)
@@ -887,19 +889,33 @@ class RemediationReporter:  # noqa: PLR0904
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
 
-        format_methods = {
-            "json": (self.to_json, "remediation_report.json"),
-            "csv": (self.to_csv, "remediation_report.csv"),
-            "markdown": (self.to_markdown, "remediation_report.md"),
-            "text": (self.to_text, "remediation_report.txt"),
-        }
+        # Map format names to file extensions
+        ext_map = {"json": "json", "csv": "csv", "markdown": "md", "text": "txt"}
 
         for fmt in formats:
-            if fmt in format_methods:
-                method, filename = format_methods[fmt]
-                file_path = output_path / filename
-                method(
-                    file_path,
+            file_ext = ext_map.get(fmt, fmt)
+            file_path_str = str(output_path / f"remediation_report.{file_ext}")
+            if fmt == "json":
+                self.to_json(
+                    file_path_str,
+                    include_tags=include_tags,
+                    exclude_tags=exclude_tags,
+                )
+            elif fmt == "csv":
+                self.to_csv(
+                    file_path_str,
+                    include_tags=include_tags,
+                    exclude_tags=exclude_tags,
+                )
+            elif fmt == "markdown":
+                self.to_markdown(
+                    file_path_str,
+                    include_tags=include_tags,
+                    exclude_tags=exclude_tags,
+                )
+            elif fmt == "text":
+                self.to_text(
+                    file_path_str,
                     include_tags=include_tags,
                     exclude_tags=exclude_tags,
                 )
