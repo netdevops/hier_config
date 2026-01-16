@@ -1,4 +1,6 @@
 """Comprehensive tests for RemediationReporter functionality."""
+# pylint: disable=redefined-outer-name  # pytest fixtures
+# pylint: disable=too-many-try-statements  # test cleanup code
 
 import json
 import tempfile
