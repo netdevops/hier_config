@@ -109,3 +109,21 @@ class Platform(str, Enum):
 
 class Dump(BaseModel):
     lines: tuple[DumpLine, ...]
+
+
+class ChangeDetail(BaseModel):
+    line: str
+    full_path: tuple[str, ...]
+    device_count: NonNegativeInt
+    device_ids: frozenset[PositiveInt]
+    tags: frozenset[str]
+    comments: frozenset[str]
+    instances: tuple[Instance, ...]
+    children: tuple["ChangeDetail", ...] = ()
+
+
+class ReportSummary(BaseModel):
+    total_devices: NonNegativeInt
+    total_unique_changes: NonNegativeInt
+    most_common_changes: tuple[tuple[str, NonNegativeInt], ...]
+    changes_by_tag: dict[str, NonNegativeInt]
