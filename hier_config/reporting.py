@@ -6,6 +6,7 @@ configurations from multiple network devices.
 
 import csv
 import json
+import operator
 import re
 from collections import Counter, defaultdict
 from collections.abc import Iterable, Sequence
@@ -107,10 +108,12 @@ class RemediationReporter:  # noqa: PLR0904
 
         Example:
             ```python
-            reporter = RemediationReporter.from_remediations([
-                device1_remediation,
-                device2_remediation,
-            ])
+            reporter = RemediationReporter.from_remediations(
+                [
+                    device1_remediation,
+                    device2_remediation,
+                ]
+            )
             ```
 
         """
@@ -140,7 +143,7 @@ class RemediationReporter:  # noqa: PLR0904
         reporter._merged_config = merged_config
 
         # Count unique device IDs from instances
-        device_ids = set()
+        device_ids: set[int] = set()
         for child in merged_config.all_children_sorted():
             device_ids.update(instance.id for instance in child.instances)
 
@@ -251,18 +254,14 @@ class RemediationReporter:  # noqa: PLR0904
         # Aggregate data
         device_ids = frozenset(instance.id for instance in relevant_instances)
         all_tags = frozenset(
-            tag_item
-            for instance in relevant_instances
-            for tag_item in instance.tags
+            tag_item for instance in relevant_instances for tag_item in instance.tags
         )
         all_comments = frozenset(
-            comment
-            for instance in relevant_instances
-            for comment in instance.comments
+            comment for instance in relevant_instances for comment in instance.comments
         )
 
         # Build path
-        path_parts = []
+        path_parts: list[str] = []
         current: HConfigChild | HConfig | None = child
         while current is not None and hasattr(current, "text"):
             if isinstance(current, HConfigChild):
@@ -346,9 +345,10 @@ class RemediationReporter:  # noqa: PLR0904
         filtered_changes = []
         for child in all_changes:
             instance_count = len(child.instances)
-            if instance_count >= min_devices:
-                if max_devices is None or instance_count <= max_devices:
-                    filtered_changes.append(child)
+            if instance_count >= min_devices and (
+                max_devices is None or instance_count <= max_devices
+            ):
+                filtered_changes.append(child)
 
         return tuple(filtered_changes)
 
@@ -383,12 +383,10 @@ class RemediationReporter:  # noqa: PLR0904
         )
 
         # Create list of (child, instance_count) pairs
-        changes_with_counts = [
-            (child, len(child.instances)) for child in all_changes
-        ]
+        changes_with_counts = [(child, len(child.instances)) for child in all_changes]
 
         # Sort by count descending and take top N
-        changes_with_counts.sort(key=lambda x: x[1], reverse=True)
+        changes_with_counts.sort(key=operator.itemgetter(1), reverse=True)
         return tuple(changes_with_counts[:n])
 
     def get_changes_matching(
@@ -398,7 +396,7 @@ class RemediationReporter:  # noqa: PLR0904
         include_tags: Iterable[str] = (),
         exclude_tags: Iterable[str] = (),
     ) -> tuple[HConfigChild, ...]:
-        """Get changes matching a regex pattern.
+        r"""Get changes matching a regex pattern.
 
         Args:
             pattern: A regex pattern to match against configuration lines.
@@ -443,7 +441,7 @@ class RemediationReporter:  # noqa: PLR0904
         changes_with_counts = [
             (child.text, len(child.instances)) for child in all_changes
         ]
-        changes_with_counts.sort(key=lambda x: x[1], reverse=True)
+        changes_with_counts.sort(key=operator.itemgetter(1), reverse=True)
         most_common = tuple(changes_with_counts[:10])
 
         # Count changes by tag
@@ -537,14 +535,13 @@ class RemediationReporter:  # noqa: PLR0904
             percentage = (
                 (count / summary.total_devices * 100) if summary.total_devices else 0
             )
-            lines.append(f"{i}. {line}")
-            lines.append(f"   {count} devices ({percentage:.1f}%)")
+            lines.extend((f"{i}. {line}", f"   {count} devices ({percentage:.1f}%)"))
 
         if summary.changes_by_tag:
             lines.extend(["", "Changes by Tag:", "-" * 50])
             for tag, count in sorted(
                 summary.changes_by_tag.items(),
-                key=lambda x: x[1],
+                key=operator.itemgetter(1),
                 reverse=True,
             ):
                 lines.append(f"  {tag}: {count} changes")
@@ -604,10 +601,7 @@ class RemediationReporter:  # noqa: PLR0904
             # Find the appropriate bin
             for i, threshold in enumerate(bins):
                 if instance_count < threshold:
-                    if i == 0:
-                        label = f"1-{threshold}"
-                    else:
-                        label = f"{bins[i - 1]}-{threshold}"
+                    label = f"1-{threshold}" if i == 0 else f"{bins[i - 1]}-{threshold}"
                     distribution[label] += 1
                     break
             else:
@@ -705,9 +699,7 @@ class RemediationReporter:  # noqa: PLR0904
                 {
                     "line": child.text,
                     "device_count": len(child.instances),
-                    "device_ids": sorted(
-                        instance.id for instance in child.instances
-                    ),
+                    "device_ids": sorted(instance.id for instance in child.instances),
                     "tags": sorted(child.tags),
                     "comments": sorted(child.comments),
                     "instances": [
@@ -775,9 +767,7 @@ class RemediationReporter:  # noqa: PLR0904
                 )
                 tags = ",".join(sorted(child.tags))
                 comments = " | ".join(sorted(child.comments))
-                device_ids = ",".join(
-                    str(instance.id) for instance in child.instances
-                )
+                device_ids = ",".join(str(instance.id) for instance in child.instances)
 
                 writer.writerow(
                     [
@@ -861,7 +851,7 @@ class RemediationReporter:  # noqa: PLR0904
             )
             for tag, count in sorted(
                 tag_dist.items(),
-                key=lambda x: x[1],
+                key=operator.itemgetter(1),
                 reverse=True,
             ):
                 lines.append(f"| {tag} | {count} |")

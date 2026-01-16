@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from hier_config import (
+    HConfig,
     MatchRule,
     Platform,
     RemediationReporter,
@@ -18,7 +19,7 @@ from hier_config.models import ChangeDetail, ReportSummary
 
 
 @pytest.fixture
-def sample_remediation_1() -> tuple:
+def sample_remediation_1() -> tuple[HConfig, str]:
     """Create a sample remediation configuration for device 1."""
     running = get_hconfig(
         Platform.CISCO_IOS,
@@ -45,7 +46,7 @@ snmp-server community public RO""",
 
 
 @pytest.fixture
-def sample_remediation_2() -> tuple:
+def sample_remediation_2() -> tuple[HConfig, str]:
     """Create a sample remediation configuration for device 2."""
     running = get_hconfig(
         Platform.CISCO_IOS,
@@ -72,7 +73,7 @@ snmp-server community public RO""",
 
 
 @pytest.fixture
-def sample_remediation_3() -> tuple:
+def sample_remediation_3() -> tuple[HConfig, str]:
     """Create a sample remediation configuration for device 3."""
     running = get_hconfig(
         Platform.CISCO_IOS,
@@ -101,7 +102,7 @@ def test_reporter_initialization() -> None:
         _ = reporter.merged_config
 
 
-def test_add_single_remediation(sample_remediation_1: tuple) -> None:
+def test_add_single_remediation(sample_remediation_1: tuple[HConfig, str]) -> None:
     """Test adding a single remediation."""
     remediation, _ = sample_remediation_1
     reporter = RemediationReporter()
@@ -112,9 +113,9 @@ def test_add_single_remediation(sample_remediation_1: tuple) -> None:
 
 
 def test_add_multiple_remediations(
-    sample_remediation_1: tuple,
-    sample_remediation_2: tuple,
-    sample_remediation_3: tuple,
+    sample_remediation_1: tuple[HConfig, str],
+    sample_remediation_2: tuple[HConfig, str],
+    sample_remediation_3: tuple[HConfig, str],
 ) -> None:
     """Test adding multiple remediations."""
     rem1, _ = sample_remediation_1
@@ -128,8 +129,8 @@ def test_add_multiple_remediations(
 
 
 def test_from_remediations(
-    sample_remediation_1: tuple,
-    sample_remediation_2: tuple,
+    sample_remediation_1: tuple[HConfig, str],
+    sample_remediation_2: tuple[HConfig, str],
 ) -> None:
     """Test creating reporter from remediations."""
     rem1, _ = sample_remediation_1
@@ -142,8 +143,8 @@ def test_from_remediations(
 
 
 def test_from_merged_config(
-    sample_remediation_1: tuple,
-    sample_remediation_2: tuple,
+    sample_remediation_1: tuple[HConfig, str],
+    sample_remediation_2: tuple[HConfig, str],
 ) -> None:
     """Test creating reporter from already merged config."""
     rem1, _ = sample_remediation_1
@@ -159,8 +160,8 @@ def test_from_merged_config(
 
 
 def test_get_all_changes(
-    sample_remediation_1: tuple,
-    sample_remediation_2: tuple,
+    sample_remediation_1: tuple[HConfig, str],
+    sample_remediation_2: tuple[HConfig, str],
 ) -> None:
     """Test getting all changes."""
     rem1, _ = sample_remediation_1
@@ -174,8 +175,8 @@ def test_get_all_changes(
 
 
 def test_get_device_count(
-    sample_remediation_1: tuple,
-    sample_remediation_2: tuple,
+    sample_remediation_1: tuple[HConfig, str],
+    sample_remediation_2: tuple[HConfig, str],
 ) -> None:
     """Test getting device count for a specific line."""
     rem1, _ = sample_remediation_1
@@ -193,8 +194,8 @@ def test_get_device_count(
 
 
 def test_get_change_detail(
-    sample_remediation_1: tuple,
-    sample_remediation_2: tuple,
+    sample_remediation_1: tuple[HConfig, str],
+    sample_remediation_2: tuple[HConfig, str],
 ) -> None:
     """Test getting detailed information about a change."""
     rem1, _ = sample_remediation_1
@@ -211,7 +212,7 @@ def test_get_change_detail(
     assert len(detail.device_ids) == 2
 
 
-def test_get_change_detail_not_found(sample_remediation_1: tuple) -> None:
+def test_get_change_detail_not_found(sample_remediation_1: tuple[HConfig, str]) -> None:
     """Test getting detail for a non-existent change."""
     rem1, _ = sample_remediation_1
 
@@ -222,9 +223,9 @@ def test_get_change_detail_not_found(sample_remediation_1: tuple) -> None:
 
 
 def test_get_changes_by_threshold(
-    sample_remediation_1: tuple,
-    sample_remediation_2: tuple,
-    sample_remediation_3: tuple,
+    sample_remediation_1: tuple[HConfig, str],
+    sample_remediation_2: tuple[HConfig, str],
+    sample_remediation_3: tuple[HConfig, str],
 ) -> None:
     """Test filtering changes by device threshold."""
     rem1, _ = sample_remediation_1
@@ -244,9 +245,9 @@ def test_get_changes_by_threshold(
 
 
 def test_get_top_changes(
-    sample_remediation_1: tuple,
-    sample_remediation_2: tuple,
-    sample_remediation_3: tuple,
+    sample_remediation_1: tuple[HConfig, str],
+    sample_remediation_2: tuple[HConfig, str],
+    sample_remediation_3: tuple[HConfig, str],
 ) -> None:
     """Test getting top N most common changes."""
     rem1, _ = sample_remediation_1
@@ -268,8 +269,8 @@ def test_get_top_changes(
 
 
 def test_get_changes_matching(
-    sample_remediation_1: tuple,
-    sample_remediation_2: tuple,
+    sample_remediation_1: tuple[HConfig, str],
+    sample_remediation_2: tuple[HConfig, str],
 ) -> None:
     """Test getting changes matching a regex pattern."""
     rem1, _ = sample_remediation_1
@@ -289,8 +290,8 @@ def test_get_changes_matching(
 
 
 def test_summary(
-    sample_remediation_1: tuple,
-    sample_remediation_2: tuple,
+    sample_remediation_1: tuple[HConfig, str],
+    sample_remediation_2: tuple[HConfig, str],
 ) -> None:
     """Test generating a summary."""
     rem1, _ = sample_remediation_1
@@ -308,8 +309,8 @@ def test_summary(
 
 
 def test_summary_text(
-    sample_remediation_1: tuple,
-    sample_remediation_2: tuple,
+    sample_remediation_1: tuple[HConfig, str],
+    sample_remediation_2: tuple[HConfig, str],
 ) -> None:
     """Test generating a text summary."""
     rem1, _ = sample_remediation_1
@@ -326,8 +327,8 @@ def test_summary_text(
 
 
 def test_apply_tag_rules(
-    sample_remediation_1: tuple,
-    sample_remediation_2: tuple,
+    sample_remediation_1: tuple[HConfig, str],
+    sample_remediation_2: tuple[HConfig, str],
 ) -> None:
     """Test applying tag rules."""
     rem1, _ = sample_remediation_1
@@ -358,8 +359,8 @@ def test_apply_tag_rules(
 
 
 def test_get_all_changes_with_tag_filters(
-    sample_remediation_1: tuple,
-    sample_remediation_2: tuple,
+    sample_remediation_1: tuple[HConfig, str],
+    sample_remediation_2: tuple[HConfig, str],
 ) -> None:
     """Test filtering changes by tags."""
     rem1, _ = sample_remediation_1
@@ -390,8 +391,8 @@ def test_get_all_changes_with_tag_filters(
 
 
 def test_summary_by_tags(
-    sample_remediation_1: tuple,
-    sample_remediation_2: tuple,
+    sample_remediation_1: tuple[HConfig, str],
+    sample_remediation_2: tuple[HConfig, str],
 ) -> None:
     """Test generating summary by tags."""
     rem1, _ = sample_remediation_1
@@ -417,8 +418,8 @@ def test_summary_by_tags(
 
 
 def test_group_by_parent(
-    sample_remediation_1: tuple,
-    sample_remediation_2: tuple,
+    sample_remediation_1: tuple[HConfig, str],
+    sample_remediation_2: tuple[HConfig, str],
 ) -> None:
     """Test grouping changes by parent."""
     rem1, _ = sample_remediation_1
@@ -436,9 +437,9 @@ def test_group_by_parent(
 
 
 def test_get_impact_distribution(
-    sample_remediation_1: tuple,
-    sample_remediation_2: tuple,
-    sample_remediation_3: tuple,
+    sample_remediation_1: tuple[HConfig, str],
+    sample_remediation_2: tuple[HConfig, str],
+    sample_remediation_3: tuple[HConfig, str],
 ) -> None:
     """Test getting impact distribution."""
     rem1, _ = sample_remediation_1
@@ -455,8 +456,8 @@ def test_get_impact_distribution(
 
 
 def test_get_tag_distribution(
-    sample_remediation_1: tuple,
-    sample_remediation_2: tuple,
+    sample_remediation_1: tuple[HConfig, str],
+    sample_remediation_2: tuple[HConfig, str],
 ) -> None:
     """Test getting tag distribution."""
     rem1, _ = sample_remediation_1
@@ -484,8 +485,8 @@ def test_get_tag_distribution(
 
 
 def test_to_text(
-    sample_remediation_1: tuple,
-    sample_remediation_2: tuple,
+    sample_remediation_1: tuple[HConfig, str],
+    sample_remediation_2: tuple[HConfig, str],
 ) -> None:
     """Test exporting to text file."""
     rem1, _ = sample_remediation_1
@@ -494,7 +495,8 @@ def test_to_text(
     reporter = RemediationReporter.from_remediations([rem1, rem2])
 
     with tempfile.NamedTemporaryFile(
-        encoding="utf-8", mode="w",
+        encoding="utf-8",
+        mode="w",
         suffix=".txt",
         delete=False,
     ) as f:
@@ -514,8 +516,8 @@ def test_to_text(
 
 
 def test_to_json(
-    sample_remediation_1: tuple,
-    sample_remediation_2: tuple,
+    sample_remediation_1: tuple[HConfig, str],
+    sample_remediation_2: tuple[HConfig, str],
 ) -> None:
     """Test exporting to JSON file."""
     rem1, _ = sample_remediation_1
@@ -524,7 +526,8 @@ def test_to_json(
     reporter = RemediationReporter.from_remediations([rem1, rem2])
 
     with tempfile.NamedTemporaryFile(
-        encoding="utf-8", mode="w",
+        encoding="utf-8",
+        mode="w",
         suffix=".json",
         delete=False,
     ) as f:
@@ -546,8 +549,8 @@ def test_to_json(
 
 
 def test_to_csv(
-    sample_remediation_1: tuple,
-    sample_remediation_2: tuple,
+    sample_remediation_1: tuple[HConfig, str],
+    sample_remediation_2: tuple[HConfig, str],
 ) -> None:
     """Test exporting to CSV file."""
     rem1, _ = sample_remediation_1
@@ -556,7 +559,8 @@ def test_to_csv(
     reporter = RemediationReporter.from_remediations([rem1, rem2])
 
     with tempfile.NamedTemporaryFile(
-        encoding="utf-8", mode="w",
+        encoding="utf-8",
+        mode="w",
         suffix=".csv",
         delete=False,
     ) as f:
@@ -575,8 +579,8 @@ def test_to_csv(
 
 
 def test_to_markdown(
-    sample_remediation_1: tuple,
-    sample_remediation_2: tuple,
+    sample_remediation_1: tuple[HConfig, str],
+    sample_remediation_2: tuple[HConfig, str],
 ) -> None:
     """Test exporting to Markdown file."""
     rem1, _ = sample_remediation_1
@@ -585,7 +589,8 @@ def test_to_markdown(
     reporter = RemediationReporter.from_remediations([rem1, rem2])
 
     with tempfile.NamedTemporaryFile(
-        encoding="utf-8", mode="w",
+        encoding="utf-8",
+        mode="w",
         suffix=".md",
         delete=False,
     ) as f:
@@ -606,8 +611,8 @@ def test_to_markdown(
 
 
 def test_export_all(
-    sample_remediation_1: tuple,
-    sample_remediation_2: tuple,
+    sample_remediation_1: tuple[HConfig, str],
+    sample_remediation_2: tuple[HConfig, str],
 ) -> None:
     """Test exporting all formats at once."""
     rem1, _ = sample_remediation_1
@@ -630,8 +635,8 @@ def test_export_all(
 
 
 def test_export_with_tag_filters(
-    sample_remediation_1: tuple,
-    sample_remediation_2: tuple,
+    sample_remediation_1: tuple[HConfig, str],
+    sample_remediation_2: tuple[HConfig, str],
 ) -> None:
     """Test exporting with tag filters."""
     rem1, _ = sample_remediation_1
@@ -649,7 +654,8 @@ def test_export_with_tag_filters(
     reporter.apply_tag_rules(tag_rules)
 
     with tempfile.NamedTemporaryFile(
-        encoding="utf-8", mode="w",
+        encoding="utf-8",
+        mode="w",
         suffix=".json",
         delete=False,
     ) as f:
