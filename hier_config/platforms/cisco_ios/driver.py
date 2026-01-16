@@ -7,7 +7,9 @@ from hier_config.models import (
     OrderingRule,
     ParentAllowsDuplicateChildRule,
     PerLineSubRule,
+    ReferencePattern,
     SectionalExitingRule,
+    UnusedObjectRule,
 )
 from hier_config.platforms.driver_base import HConfigDriverBase, HConfigDriverRules
 from hier_config.root import HConfig
@@ -187,5 +189,339 @@ class HConfigDriverCiscoIOS(HConfigDriverBase):
                 _rm_ipv6_acl_sequence_numbers,
                 _remove_ipv4_acl_remarks,
                 _add_acl_sequence_numbers,
+            ],
+            unused_object_rules=[
+                # IPv4 ACLs
+                UnusedObjectRule(
+                    object_type="ipv4-acl",
+                    definition_match=(
+                        MatchRule(startswith="ip access-list "),
+                    ),
+                    reference_patterns=(
+                        # Interface applications
+                        ReferencePattern(
+                            match_rules=(
+                                MatchRule(startswith="interface "),
+                                MatchRule(re_search=r"ip access-group "),
+                            ),
+                            extract_regex=r"ip access-group\s+(\S+)",
+                            reference_type="interface-applied",
+                        ),
+                        # VTY line applications
+                        ReferencePattern(
+                            match_rules=(
+                                MatchRule(startswith="line "),
+                                MatchRule(startswith="access-class "),
+                            ),
+                            extract_regex=r"access-class\s+(\S+)",
+                            reference_type="line-applied",
+                        ),
+                        # Class map references
+                        ReferencePattern(
+                            match_rules=(
+                                MatchRule(startswith="class-map "),
+                                MatchRule(startswith="match access-group "),
+                            ),
+                            extract_regex=r"match access-group\s+(?:name\s+)?(\S+)",
+                            reference_type="class-map-match",
+                        ),
+                        # Crypto map references
+                        ReferencePattern(
+                            match_rules=(
+                                MatchRule(startswith="crypto map "),
+                                MatchRule(startswith="match address "),
+                            ),
+                            extract_regex=r"match address\s+(\S+)",
+                            reference_type="crypto-map",
+                        ),
+                        # Route-map match references
+                        ReferencePattern(
+                            match_rules=(
+                                MatchRule(startswith="route-map "),
+                                MatchRule(startswith="match ip address "),
+                            ),
+                            extract_regex=r"match ip address\s+(\S+)",
+                            reference_type="route-map-match",
+                        ),
+                        # NAT references
+                        ReferencePattern(
+                            match_rules=(
+                                MatchRule(re_search=r"ip nat "),
+                            ),
+                            extract_regex=r"ip nat \S+.*?(?:access-list|pool)\s+(\S+)",
+                            reference_type="nat",
+                        ),
+                    ),
+                    removal_template="no ip access-list {acl_type} {name}",
+                    removal_order_weight=150,
+                    case_sensitive=False,  # IOS is case-insensitive
+                ),
+                # IPv6 ACLs
+                UnusedObjectRule(
+                    object_type="ipv6-acl",
+                    definition_match=(
+                        MatchRule(startswith="ipv6 access-list "),
+                    ),
+                    reference_patterns=(
+                        # Interface applications
+                        ReferencePattern(
+                            match_rules=(
+                                MatchRule(startswith="interface "),
+                                MatchRule(startswith="ipv6 traffic-filter "),
+                            ),
+                            extract_regex=r"ipv6 traffic-filter\s+(\S+)",
+                            reference_type="interface-applied",
+                        ),
+                        # Line applications
+                        ReferencePattern(
+                            match_rules=(
+                                MatchRule(startswith="line "),
+                                MatchRule(startswith="ipv6 access-class "),
+                            ),
+                            extract_regex=r"ipv6 access-class\s+(\S+)",
+                            reference_type="line-applied",
+                        ),
+                    ),
+                    removal_template="no ipv6 access-list {name}",
+                    removal_order_weight=150,
+                    case_sensitive=False,
+                ),
+                # Prefix lists
+                UnusedObjectRule(
+                    object_type="prefix-list",
+                    definition_match=(
+                        MatchRule(startswith="ip prefix-list "),
+                    ),
+                    reference_patterns=(
+                        # Route-map references
+                        ReferencePattern(
+                            match_rules=(
+                                MatchRule(startswith="route-map "),
+                                MatchRule(startswith="match ip address prefix-list "),
+                            ),
+                            extract_regex=r"match ip address prefix-list\s+(\S+)",
+                            reference_type="route-map-match",
+                        ),
+                        # BGP neighbor filters
+                        ReferencePattern(
+                            match_rules=(
+                                MatchRule(startswith="router bgp "),
+                                MatchRule(re_search=r"neighbor\s+\S+\s+prefix-list"),
+                            ),
+                            extract_regex=r"neighbor\s+\S+\s+prefix-list\s+(\S+)",
+                            reference_type="bgp-neighbor-filter",
+                        ),
+                        # BGP address-family neighbor filters
+                        ReferencePattern(
+                            match_rules=(
+                                MatchRule(startswith="router bgp "),
+                                MatchRule(startswith="address-family "),
+                                MatchRule(re_search=r"neighbor\s+\S+\s+prefix-list"),
+                            ),
+                            extract_regex=r"neighbor\s+\S+\s+prefix-list\s+(\S+)",
+                            reference_type="bgp-af-neighbor-filter",
+                        ),
+                    ),
+                    removal_template="no ip prefix-list {name}",
+                    removal_order_weight=140,
+                    case_sensitive=False,
+                ),
+                # IPv6 Prefix lists
+                UnusedObjectRule(
+                    object_type="ipv6-prefix-list",
+                    definition_match=(
+                        MatchRule(startswith="ipv6 prefix-list "),
+                    ),
+                    reference_patterns=(
+                        # Route-map references
+                        ReferencePattern(
+                            match_rules=(
+                                MatchRule(startswith="route-map "),
+                                MatchRule(startswith="match ipv6 address prefix-list "),
+                            ),
+                            extract_regex=r"match ipv6 address prefix-list\s+(\S+)",
+                            reference_type="route-map-match",
+                        ),
+                        # BGP neighbor filters
+                        ReferencePattern(
+                            match_rules=(
+                                MatchRule(startswith="router bgp "),
+                                MatchRule(re_search=r"neighbor\s+\S+\s+prefix-list"),
+                            ),
+                            extract_regex=r"neighbor\s+\S+\s+prefix-list\s+(\S+)",
+                            reference_type="bgp-neighbor-filter",
+                        ),
+                    ),
+                    removal_template="no ipv6 prefix-list {name}",
+                    removal_order_weight=140,
+                    case_sensitive=False,
+                ),
+                # Route maps
+                UnusedObjectRule(
+                    object_type="route-map",
+                    definition_match=(
+                        MatchRule(startswith="route-map "),
+                    ),
+                    reference_patterns=(
+                        # BGP neighbor route-maps
+                        ReferencePattern(
+                            match_rules=(
+                                MatchRule(startswith="router bgp "),
+                                MatchRule(re_search=r"neighbor\s+\S+\s+route-map"),
+                            ),
+                            extract_regex=r"neighbor\s+\S+\s+route-map\s+(\S+)",
+                            reference_type="bgp-neighbor-policy",
+                        ),
+                        # BGP address-family neighbor route-maps
+                        ReferencePattern(
+                            match_rules=(
+                                MatchRule(startswith="router bgp "),
+                                MatchRule(startswith="address-family "),
+                                MatchRule(re_search=r"neighbor\s+\S+\s+route-map"),
+                            ),
+                            extract_regex=r"neighbor\s+\S+\s+route-map\s+(\S+)",
+                            reference_type="bgp-af-neighbor-policy",
+                        ),
+                        # Redistribution in routing protocols
+                        ReferencePattern(
+                            match_rules=(
+                                MatchRule(startswith="router "),
+                                MatchRule(startswith="redistribute "),
+                            ),
+                            extract_regex=r"redistribute\s+\S+.*?route-map\s+(\S+)",
+                            reference_type="redistribution",
+                        ),
+                        # Interface policy routing
+                        ReferencePattern(
+                            match_rules=(
+                                MatchRule(startswith="interface "),
+                                MatchRule(startswith="ip policy route-map "),
+                            ),
+                            extract_regex=r"ip policy route-map\s+(\S+)",
+                            reference_type="pbr",
+                        ),
+                        # VRF import/export maps
+                        ReferencePattern(
+                            match_rules=(
+                                MatchRule(startswith="vrf definition "),
+                                MatchRule(re_search=r"(import|export).*map"),
+                            ),
+                            extract_regex=r"(?:import|export)\s+(?:ipv4|ipv6)?\s*(?:unicast)?\s*map\s+(\S+)",
+                            reference_type="vrf-policy",
+                        ),
+                    ),
+                    removal_template="no route-map {name}",
+                    removal_order_weight=130,
+                    case_sensitive=False,
+                ),
+                # Class maps
+                UnusedObjectRule(
+                    object_type="class-map",
+                    definition_match=(
+                        MatchRule(startswith="class-map "),
+                    ),
+                    reference_patterns=(
+                        # Policy map references
+                        ReferencePattern(
+                            match_rules=(
+                                MatchRule(startswith="policy-map "),
+                                MatchRule(startswith="class "),
+                            ),
+                            extract_regex=r"class\s+(?!class-default)(\S+)",
+                            reference_type="policy-map",
+                        ),
+                        # Control plane policy
+                        ReferencePattern(
+                            match_rules=(
+                                MatchRule(equals="control-plane"),
+                                MatchRule(startswith="service-policy "),
+                            ),
+                            extract_regex=r"service-policy\s+(?:input|output)\s+(\S+)",
+                            reference_type="control-plane-policy",
+                        ),
+                    ),
+                    removal_template="no class-map {match_type} {name}",
+                    removal_order_weight=120,
+                    case_sensitive=False,
+                ),
+                # Policy maps
+                UnusedObjectRule(
+                    object_type="policy-map",
+                    definition_match=(
+                        MatchRule(startswith="policy-map "),
+                    ),
+                    reference_patterns=(
+                        # Interface service policies
+                        ReferencePattern(
+                            match_rules=(
+                                MatchRule(startswith="interface "),
+                                MatchRule(startswith="service-policy "),
+                            ),
+                            extract_regex=r"service-policy\s+(?:input|output)\s+(\S+)",
+                            reference_type="interface-policy",
+                        ),
+                        # Control plane policy
+                        ReferencePattern(
+                            match_rules=(
+                                MatchRule(equals="control-plane"),
+                                MatchRule(startswith="service-policy "),
+                            ),
+                            extract_regex=r"service-policy\s+(?:input|output)\s+(\S+)",
+                            reference_type="control-plane-policy",
+                        ),
+                        # Hierarchical QoS (policy within policy)
+                        ReferencePattern(
+                            match_rules=(
+                                MatchRule(startswith="policy-map "),
+                                MatchRule(startswith="class "),
+                                MatchRule(startswith="service-policy "),
+                            ),
+                            extract_regex=r"service-policy\s+(\S+)",
+                            reference_type="hierarchical-policy",
+                        ),
+                    ),
+                    removal_template="no policy-map {name}",
+                    removal_order_weight=110,
+                    case_sensitive=False,
+                ),
+                # VRFs
+                UnusedObjectRule(
+                    object_type="vrf",
+                    definition_match=(
+                        MatchRule(startswith="vrf definition "),
+                    ),
+                    reference_patterns=(
+                        # Interface VRF membership
+                        ReferencePattern(
+                            match_rules=(
+                                MatchRule(startswith="interface "),
+                                MatchRule(startswith="vrf forwarding "),
+                            ),
+                            extract_regex=r"vrf forwarding\s+(\S+)",
+                            reference_type="interface-vrf",
+                        ),
+                        # BGP VRF instance
+                        ReferencePattern(
+                            match_rules=(
+                                MatchRule(startswith="router bgp "),
+                                MatchRule(startswith="address-family ipv4 vrf "),
+                            ),
+                            extract_regex=r"address-family ipv4 vrf\s+(\S+)",
+                            reference_type="bgp-vrf",
+                        ),
+                        # BGP IPv6 VRF instance
+                        ReferencePattern(
+                            match_rules=(
+                                MatchRule(startswith="router bgp "),
+                                MatchRule(startswith="address-family ipv6 vrf "),
+                            ),
+                            extract_regex=r"address-family ipv6 vrf\s+(\S+)",
+                            reference_type="bgp-ipv6-vrf",
+                        ),
+                    ),
+                    removal_template="no vrf definition {name}",
+                    removal_order_weight=200,  # Remove last (high impact)
+                    case_sensitive=False,
+                ),
             ],
         )

@@ -18,6 +18,7 @@ from hier_config.models import (
     SectionalExitingRule,
     SectionalOverwriteNoNegateRule,
     SectionalOverwriteRule,
+    UnusedObjectRule,
 )
 from hier_config.root import HConfig
 
@@ -78,6 +79,10 @@ def _sectional_overwrite_no_negate_rules_default() -> list[
     return []
 
 
+def _unused_object_rules_default() -> list[UnusedObjectRule]:
+    return []
+
+
 class HConfigDriverRules(BaseModel):  # pylint: disable=too-many-instance-attributes
     full_text_sub: list[FullTextSubRule] = Field(
         default_factory=_full_text_sub_rules_default
@@ -116,6 +121,9 @@ class HConfigDriverRules(BaseModel):  # pylint: disable=too-many-instance-attrib
     )
     sectional_overwrite_no_negate: list[SectionalOverwriteNoNegateRule] = Field(
         default_factory=_sectional_overwrite_no_negate_rules_default
+    )
+    unused_object_rules: list[UnusedObjectRule] = Field(
+        default_factory=_unused_object_rules_default
     )
 
 
@@ -165,6 +173,30 @@ class HConfigDriverBase(ABC):
     @staticmethod
     def config_preprocessor(config_text: str) -> str:
         return config_text
+
+    def get_unused_object_rules(self) -> list["UnusedObjectRule"]:
+        """Returns the unused object rules for this driver.
+
+        Returns:
+            List of UnusedObjectRule instances defined for this driver.
+
+        """
+        return self.rules.unused_object_rules
+
+    def find_unused_objects(self, config: "HConfig") -> "UnusedObjectAnalysis":
+        """Convenience method to find unused objects in a configuration.
+
+        Args:
+            config: The HConfig object to analyze.
+
+        Returns:
+            UnusedObjectAnalysis with all defined, referenced, and unused objects.
+
+        """
+        from hier_config.remediation import UnusedObjectRemediator
+
+        remediator = UnusedObjectRemediator(config)
+        return remediator.analyze()
 
     @staticmethod
     @abstractmethod

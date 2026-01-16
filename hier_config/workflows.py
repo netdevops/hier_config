@@ -154,3 +154,80 @@ class WorkflowRemediation:
             else self.remediation_config.all_children_sorted()
         )
         return "\n".join(c.cisco_style_text() for c in children)
+
+    def unused_object_remediation(
+        self,
+        object_types: Iterable[str] | None = None,
+    ) -> HConfig:
+        """Generates remediation configuration to remove unused objects from running_config.
+
+        This method analyzes the running configuration to identify objects (ACLs, prefix-lists,
+        route-maps, class-maps, VRFs, etc.) that are defined but not referenced anywhere in the
+        configuration, and generates commands to remove them.
+
+        Args:
+            object_types (Iterable[str] | None, optional): Specific object types to clean up.
+                If None, all unused objects will be included. Object type names are
+                platform-specific (e.g., "ipv4-acl", "prefix-list", "route-map").
+
+        Returns:
+            HConfig: Configuration with commands to remove unused objects, sorted by
+                removal order weight to ensure safe removal sequence.
+
+        Example:
+            Generate cleanup configuration for all unused objects:
+
+            ```python
+            from hier_config import WorkflowRemediation, get_hconfig
+            from hier_config.models import Platform
+
+            running_config = get_hconfig(Platform.CISCO_IOS, running_config_text)
+            generated_config = get_hconfig(Platform.CISCO_IOS, generated_config_text)
+
+            workflow = WorkflowRemediation(running_config, generated_config)
+
+            # Get cleanup for all unused objects
+            cleanup = workflow.unused_object_remediation()
+
+            # Or get cleanup for specific object types
+            acl_cleanup = workflow.unused_object_remediation(
+                object_types=["ipv4-acl", "prefix-list"]
+            )
+            ```
+
+        Notes:
+            - Removal commands are ordered by weight to ensure dependencies are handled correctly
+            - Higher weights (e.g., VRFs at 200) are removed last
+            - Lower weights (e.g., policy-maps at 110) are removed first
+            - Case sensitivity depends on platform (IOS/EOS are case-insensitive, IOS-XR is case-sensitive)
+
+        """
+        from hier_config.remediation import UnusedObjectRemediator
+
+        remediator = UnusedObjectRemediator(self.running_config)
+        analysis = remediator.analyze()
+
+        # Filter by object types if specified
+        if object_types:
+            object_types_set = set(object_types)
+            unused = {
+                k: v
+                for k, v in analysis.unused_objects.items()
+                if k in object_types_set
+            }
+        else:
+            unused = analysis.unused_objects
+
+        # Generate removal configuration
+        removal_config = HConfig(self.running_config.driver)
+        for object_type, objects in unused.items():
+            rule = next(
+                (r for r in remediator.rules if r.object_type == object_type),
+                None,
+            )
+            if rule:
+                removal_config.merge(
+                    remediator.generate_removal_config(list(objects), rule)
+                )
+
+        return removal_config.set_order_weight()
