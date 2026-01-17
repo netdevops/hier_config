@@ -414,14 +414,14 @@ class HConfigDriverCiscoNXOS(HConfigDriverBase):
                 # IPv4 ACLs (similar to IOS)
                 UnusedObjectRule(
                     object_type="ipv4-acl",
-                    definition_match=(
-                        MatchRule(startswith="ip access-list "),
-                    ),
+                    definition_match=(MatchRule(startswith="ip access-list "),),
                     reference_patterns=(
                         ReferencePattern(
                             match_rules=(
                                 MatchRule(startswith="interface "),
-                                MatchRule(re_search=r"ip (access-group|port access-group)"),
+                                MatchRule(
+                                    re_search=r"ip (access-group|port access-group)"
+                                ),
                             ),
                             extract_regex=r"ip (?:access-group|port access-group)\s+(\S+)",
                             reference_type="interface-applied",
@@ -467,9 +467,7 @@ class HConfigDriverCiscoNXOS(HConfigDriverBase):
                 # IPv6 ACLs
                 UnusedObjectRule(
                     object_type="ipv6-acl",
-                    definition_match=(
-                        MatchRule(startswith="ipv6 access-list "),
-                    ),
+                    definition_match=(MatchRule(startswith="ipv6 access-list "),),
                     reference_patterns=(
                         ReferencePattern(
                             match_rules=(
@@ -495,9 +493,7 @@ class HConfigDriverCiscoNXOS(HConfigDriverBase):
                 # Object-groups (NX-OS specific)
                 UnusedObjectRule(
                     object_type="object-group",
-                    definition_match=(
-                        MatchRule(startswith="object-group "),
-                    ),
+                    definition_match=(MatchRule(startswith="object-group "),),
                     reference_patterns=(
                         # ACL references
                         ReferencePattern(
@@ -516,9 +512,7 @@ class HConfigDriverCiscoNXOS(HConfigDriverBase):
                 # Prefix lists
                 UnusedObjectRule(
                     object_type="prefix-list",
-                    definition_match=(
-                        MatchRule(startswith="ip prefix-list "),
-                    ),
+                    definition_match=(MatchRule(startswith="ip prefix-list "),),
                     reference_patterns=(
                         ReferencePattern(
                             match_rules=(
@@ -544,9 +538,7 @@ class HConfigDriverCiscoNXOS(HConfigDriverBase):
                 # Route maps
                 UnusedObjectRule(
                     object_type="route-map",
-                    definition_match=(
-                        MatchRule(startswith="route-map "),
-                    ),
+                    definition_match=(MatchRule(startswith="route-map "),),
                     reference_patterns=(
                         ReferencePattern(
                             match_rules=(
@@ -588,9 +580,7 @@ class HConfigDriverCiscoNXOS(HConfigDriverBase):
                 # Class maps
                 UnusedObjectRule(
                     object_type="class-map",
-                    definition_match=(
-                        MatchRule(startswith="class-map "),
-                    ),
+                    definition_match=(MatchRule(startswith="class-map "),),
                     reference_patterns=(
                         ReferencePattern(
                             match_rules=(
@@ -608,9 +598,7 @@ class HConfigDriverCiscoNXOS(HConfigDriverBase):
                 # Policy maps
                 UnusedObjectRule(
                     object_type="policy-map",
-                    definition_match=(
-                        MatchRule(startswith="policy-map "),
-                    ),
+                    definition_match=(MatchRule(startswith="policy-map "),),
                     reference_patterns=(
                         ReferencePattern(
                             match_rules=(
@@ -637,9 +625,7 @@ class HConfigDriverCiscoNXOS(HConfigDriverBase):
                 # VRFs (vrf context on NX-OS)
                 UnusedObjectRule(
                     object_type="vrf",
-                    definition_match=(
-                        MatchRule(startswith="vrf context "),
-                    ),
+                    definition_match=(MatchRule(startswith="vrf context "),),
                     reference_patterns=(
                         ReferencePattern(
                             match_rules=(

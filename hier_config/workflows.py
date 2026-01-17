@@ -2,6 +2,7 @@ from collections.abc import Iterable
 from logging import getLogger
 
 from .models import TagRule
+from .remediation import UnusedObjectRemediator
 from .root import HConfig
 
 logger = getLogger(__name__)
@@ -202,8 +203,6 @@ class WorkflowRemediation:
             - Case sensitivity depends on platform (IOS/EOS are case-insensitive, IOS-XR is case-sensitive)
 
         """
-        from hier_config.remediation import UnusedObjectRemediator
-
         remediator = UnusedObjectRemediator(self.running_config)
         analysis = remediator.analyze()
 

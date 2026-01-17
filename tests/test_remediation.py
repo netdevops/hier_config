@@ -39,9 +39,7 @@ class DriverWithUnusedObjectRules(HConfigDriverGeneric):
                 ),
                 UnusedObjectRule(
                     object_type="test-route-map",
-                    definition_match=(
-                        MatchRule(startswith="route-map "),
-                    ),
+                    definition_match=(MatchRule(startswith="route-map "),),
                     reference_patterns=(
                         ReferencePattern(
                             match_rules=(
@@ -265,14 +263,6 @@ def test_extract_object_name_variations() -> None:
     config = get_hconfig(driver, "")
     remediator = UnusedObjectRemediator(config)
 
-    # Mock rule
-    rule = UnusedObjectRule(
-        object_type="test",
-        definition_match=(MatchRule(startswith=""),),
-        reference_patterns=(),
-        removal_template="",
-    )
-
     # Test various formats
     test_cases = [
         ("ip access-list extended MY_ACL", "MY_ACL"),
@@ -288,10 +278,9 @@ def test_extract_object_name_variations() -> None:
     ]
 
     for text, expected_name in test_cases:
-        extracted_name = remediator._extract_object_name(text, rule)
+        extracted_name = remediator.extract_object_name(text)
         assert extracted_name == expected_name, (
-            f"Failed to extract '{expected_name}' from '{text}', "
-            f"got '{extracted_name}'"
+            f"Failed to extract '{expected_name}' from '{text}', got '{extracted_name}'"
         )
 
 
@@ -301,26 +290,19 @@ def test_metadata_extraction() -> None:
     config = get_hconfig(driver, "")
     remediator = UnusedObjectRemediator(config)
 
-    rule = UnusedObjectRule(
-        object_type="test",
-        definition_match=(MatchRule(startswith=""),),
-        reference_patterns=(),
-        removal_template="",
-    )
-
     # Test ACL type extraction
-    metadata = remediator._extract_metadata("ip access-list extended ACL1", rule)
+    metadata = remediator.extract_metadata("ip access-list extended ACL1")
     assert metadata.get("acl_type") == "extended"
 
-    metadata = remediator._extract_metadata("ip access-list standard ACL2", rule)
+    metadata = remediator.extract_metadata("ip access-list standard ACL2")
     assert metadata.get("acl_type") == "standard"
 
     # Test class-map match type
-    metadata = remediator._extract_metadata("class-map match-any CM1", rule)
+    metadata = remediator.extract_metadata("class-map match-any CM1")
     assert metadata.get("match_type") == "match-any"
 
     # Test object-group type
-    metadata = remediator._extract_metadata("object-group ip OG1", rule)
+    metadata = remediator.extract_metadata("object-group ip OG1")
     assert metadata.get("group_type") == "ip"
 
 
@@ -339,7 +321,9 @@ def test_empty_config() -> None:
 
 def test_driver_with_no_rules() -> None:
     """Test with a driver that has no unused object rules."""
-    config = get_hconfig(Platform.GENERIC, "ip access-list extended ACL1\n permit ip any any")
+    config = get_hconfig(
+        Platform.GENERIC, "ip access-list extended ACL1\n permit ip any any"
+    )
 
     remediator = UnusedObjectRemediator(config)
     analysis = remediator.analyze()

@@ -18,6 +18,7 @@ from hier_config.models import (
     SectionalExitingRule,
     SectionalOverwriteNoNegateRule,
     SectionalOverwriteRule,
+    UnusedObjectAnalysis,
     UnusedObjectRule,
 )
 from hier_config.root import HConfig
@@ -183,7 +184,7 @@ class HConfigDriverBase(ABC):
         """
         return self.rules.unused_object_rules
 
-    def find_unused_objects(self, config: "HConfig") -> "UnusedObjectAnalysis":
+    def find_unused_objects(self, config: "HConfig") -> UnusedObjectAnalysis:  # noqa: PLR6301
         """Convenience method to find unused objects in a configuration.
 
         Args:
@@ -193,7 +194,10 @@ class HConfigDriverBase(ABC):
             UnusedObjectAnalysis with all defined, referenced, and unused objects.
 
         """
-        from hier_config.remediation import UnusedObjectRemediator
+        # Import here to avoid circular dependency
+        from hier_config.remediation import (  # noqa: PLC0415
+            UnusedObjectRemediator,
+        )
 
         remediator = UnusedObjectRemediator(config)
         return remediator.analyze()

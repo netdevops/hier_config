@@ -297,9 +297,7 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
                 # IPv4 ACLs
                 UnusedObjectRule(
                     object_type="ipv4-acl",
-                    definition_match=(
-                        MatchRule(startswith="ipv4 access-list "),
-                    ),
+                    definition_match=(MatchRule(startswith="ipv4 access-list "),),
                     reference_patterns=(
                         ReferencePattern(
                             match_rules=(
@@ -333,9 +331,7 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
                 # IPv6 ACLs
                 UnusedObjectRule(
                     object_type="ipv6-acl",
-                    definition_match=(
-                        MatchRule(startswith="ipv6 access-list "),
-                    ),
+                    definition_match=(MatchRule(startswith="ipv6 access-list "),),
                     reference_patterns=(
                         ReferencePattern(
                             match_rules=(
@@ -361,9 +357,7 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
                 # Prefix sets (IOS-XR specific)
                 UnusedObjectRule(
                     object_type="prefix-set",
-                    definition_match=(
-                        MatchRule(startswith="prefix-set "),
-                    ),
+                    definition_match=(MatchRule(startswith="prefix-set "),),
                     reference_patterns=(
                         ReferencePattern(
                             match_rules=(
@@ -399,9 +393,7 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
                 # AS Path Sets (IOS-XR specific)
                 UnusedObjectRule(
                     object_type="as-path-set",
-                    definition_match=(
-                        MatchRule(startswith="as-path-set "),
-                    ),
+                    definition_match=(MatchRule(startswith="as-path-set "),),
                     reference_patterns=(
                         ReferencePattern(
                             match_rules=(
@@ -427,9 +419,7 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
                 # Community Sets (IOS-XR specific)
                 UnusedObjectRule(
                     object_type="community-set",
-                    definition_match=(
-                        MatchRule(startswith="community-set "),
-                    ),
+                    definition_match=(MatchRule(startswith="community-set "),),
                     reference_patterns=(
                         ReferencePattern(
                             match_rules=(
@@ -463,9 +453,7 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
                 # Route policies (IOS-XR uses route-policy instead of route-map)
                 UnusedObjectRule(
                     object_type="route-policy",
-                    definition_match=(
-                        MatchRule(startswith="route-policy "),
-                    ),
+                    definition_match=(MatchRule(startswith="route-policy "),),
                     reference_patterns=(
                         ReferencePattern(
                             match_rules=(
@@ -508,9 +496,7 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
                 # Class maps
                 UnusedObjectRule(
                     object_type="class-map",
-                    definition_match=(
-                        MatchRule(startswith="class-map "),
-                    ),
+                    definition_match=(MatchRule(startswith="class-map "),),
                     reference_patterns=(
                         ReferencePattern(
                             match_rules=(
@@ -528,9 +514,7 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
                 # Policy maps
                 UnusedObjectRule(
                     object_type="policy-map",
-                    definition_match=(
-                        MatchRule(startswith="policy-map "),
-                    ),
+                    definition_match=(MatchRule(startswith="policy-map "),),
                     reference_patterns=(
                         ReferencePattern(
                             match_rules=(
@@ -557,9 +541,7 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
                 # VRFs
                 UnusedObjectRule(
                     object_type="vrf",
-                    definition_match=(
-                        MatchRule(startswith="vrf "),
-                    ),
+                    definition_match=(MatchRule(startswith="vrf "),),
                     reference_patterns=(
                         ReferencePattern(
                             match_rules=(
