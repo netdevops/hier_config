@@ -216,7 +216,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
         merged: bool = False,
     ) -> HConfigChild:
         """Add a nested copy of a child_to_add to self.children."""
-        new_child = self.add_child(child_to_add.text)
+        new_child = self.add_child(child_to_add.text, return_if_present=merged)
 
         if merged:
             new_child.instances.append(child_to_add.instance)
