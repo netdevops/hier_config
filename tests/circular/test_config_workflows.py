@@ -31,6 +31,8 @@ class TestConfigWorkflows:
             (Platform.JUNIPER_JUNOS, "junos"),
             (Platform.VYOS, "vyos"),
             (Platform.FORTINET_FORTIOS, "fortios"),
+            (Platform.HP_COMWARE5, "comware5"),
+            (Platform.HP_PROCURVE, "procurve"),
         ],
     )
     def test_circular_workflow(

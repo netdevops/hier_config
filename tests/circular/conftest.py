@@ -1,4 +1,4 @@
-"""Fixtures for future config workflow tests."""
+"""Fixtures for circular config workflow tests."""
 
 from pathlib import Path
 
@@ -189,3 +189,53 @@ def fortios_remediation_config() -> str:
 def fortios_rollback_config() -> str:
     """Load FortiOS rollback config fixture."""
     return _fixture_file_read("fortios_rollback.conf")
+
+
+# HP Comware5 fixtures
+@pytest.fixture(scope="module")
+def comware5_running_config() -> str:
+    """Load HP Comware5 running config fixture."""
+    return _fixture_file_read("comware5_running.conf")
+
+
+@pytest.fixture(scope="module")
+def comware5_generated_config() -> str:
+    """Load HP Comware5 generated config fixture."""
+    return _fixture_file_read("comware5_generated.conf")
+
+
+@pytest.fixture(scope="module")
+def comware5_remediation_config() -> str:
+    """Load HP Comware5 remediation config fixture."""
+    return _fixture_file_read("comware5_remediation.conf")
+
+
+@pytest.fixture(scope="module")
+def comware5_rollback_config() -> str:
+    """Load HP Comware5 rollback config fixture."""
+    return _fixture_file_read("comware5_rollback.conf")
+
+
+# HP Procurve fixtures
+@pytest.fixture(scope="module")
+def procurve_running_config() -> str:
+    """Load HP Procurve running config fixture."""
+    return _fixture_file_read("procurve_running.conf")
+
+
+@pytest.fixture(scope="module")
+def procurve_generated_config() -> str:
+    """Load HP Procurve generated config fixture."""
+    return _fixture_file_read("procurve_generated.conf")
+
+
+@pytest.fixture(scope="module")
+def procurve_remediation_config() -> str:
+    """Load HP Procurve remediation config fixture."""
+    return _fixture_file_read("procurve_remediation.conf")
+
+
+@pytest.fixture(scope="module")
+def procurve_rollback_config() -> str:
+    """Load HP Procurve rollback config fixture."""
+    return _fixture_file_read("procurve_rollback.conf")
