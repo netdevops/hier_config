@@ -44,3 +44,87 @@ def test_duplicate_child_route_policy() -> None:
     assert remediation_config.dump_simple(sectional_exiting=True) == (
         "no route-policy SET_LOCAL_PREF_AND_PASS",
     )
+
+
+def test_ipv4_acl_sequence_number_idempotent() -> None:
+    """Test IPv4 ACL sequence number idempotency (covers lines 25-31)."""
+    platform = Platform.CISCO_XR
+    running_config = get_hconfig_fast_load(
+        platform,
+        (
+            "ipv4 access-list TEST_ACL",
+            " 10 permit tcp any any eq 443",
+            " 20 permit tcp any any eq 80",
+            " 30 deny ipv4 any any",
+        ),
+    )
+    generated_config = get_hconfig_fast_load(
+        platform,
+        (
+            "ipv4 access-list TEST_ACL",
+            " 10 permit tcp any any eq 443",
+            " 20 permit tcp any any eq 22",
+            " 30 deny ipv4 any any",
+        ),
+    )
+    remediation_config = running_config.config_to_get_to(generated_config)
+
+    assert remediation_config.dump_simple() == (
+        "ipv4 access-list TEST_ACL",
+        "  20 permit tcp any any eq 22",
+    )
+
+
+def test_ipv6_acl_sequence_number_idempotent() -> None:
+    """Test IPv6 ACL sequence number idempotency (covers lines 25-31)."""
+    platform = Platform.CISCO_XR
+    running_config = get_hconfig_fast_load(
+        platform,
+        (
+            "ipv6 access-list TEST_IPV6_ACL",
+            " 10 permit tcp any any eq 443",
+            " 20 deny ipv6 any any",
+        ),
+    )
+    generated_config = get_hconfig_fast_load(
+        platform,
+        (
+            "ipv6 access-list TEST_IPV6_ACL",
+            " 10 permit tcp any any eq 22",
+            " 20 deny ipv6 any any",
+        ),
+    )
+    remediation_config = running_config.config_to_get_to(generated_config)
+
+    assert remediation_config.dump_simple() == (
+        "ipv6 access-list TEST_IPV6_ACL",
+        "  10 permit tcp any any eq 22",
+    )
+
+
+def test_ipv4_acl_sequence_number_addition() -> None:
+    """Test adding new IPv4 ACL entries with sequence numbers."""
+    platform = Platform.CISCO_XR
+    running_config = get_hconfig_fast_load(
+        platform,
+        (
+            "ipv4 access-list TEST_ACL",
+            " 10 permit tcp any any eq 443",
+            " 30 deny ipv4 any any",
+        ),
+    )
+    generated_config = get_hconfig_fast_load(
+        platform,
+        (
+            "ipv4 access-list TEST_ACL",
+            " 10 permit tcp any any eq 443",
+            " 20 permit tcp any any eq 22",
+            " 30 deny ipv4 any any",
+        ),
+    )
+    remediation_config = running_config.config_to_get_to(generated_config)
+
+    assert remediation_config.dump_simple() == (
+        "ipv4 access-list TEST_ACL",
+        "  20 permit tcp any any eq 22",
+    )
