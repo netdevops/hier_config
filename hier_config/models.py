@@ -133,15 +133,44 @@ class ReferencePattern(BaseModel):
 class UnusedObjectRule(BaseModel):
     """Defines how to identify and remove an unused object type.
 
+    This rule is completely user-definable and can be applied to ANY configuration
+    object type on ANY platform. Users can create custom rules for their specific
+    use cases without code changes.
+
     Attributes:
-        object_type: Identifier for the object type (e.g., "ipv4-acl", "prefix-list").
-        definition_match: MatchRules to locate object definitions.
-        reference_patterns: Patterns describing where the object can be referenced.
+        object_type: User-defined identifier for organizing results. Can be any
+            descriptive string (e.g., "ipv4-acl", "my-custom-object", "firewall-policy").
+            This is purely for categorization and has no functional restrictions.
+        definition_match: MatchRules to locate object definitions in the configuration.
+            These patterns identify where objects of this type are defined.
+        reference_patterns: Patterns describing where objects can be referenced.
+            Each pattern includes match rules to find the reference context and a
+            regex to extract the referenced object name.
         removal_template: Template string for generating removal commands.
+            Use {name} for the object name and any metadata keys from extract_metadata.
+            Example: "no ip access-list {acl_type} {name}"
         removal_order_weight: Controls the order in which unused objects are removed.
-        allow_in_comment: Whether to consider references in comments.
+            Lower weights are removed first. Use this to respect dependencies
+            (e.g., remove policy-maps before class-maps they reference).
+        allow_in_comment: Whether to consider references in comments as valid usage.
         case_sensitive: Whether object name matching is case-sensitive.
+            Set to False for platforms with case-insensitive names (e.g., Cisco IOS).
         require_exact_match: Whether to require exact name matches.
+
+    Example:
+        >>> rule = UnusedObjectRule(
+        ...     object_type="custom-firewall-policy",
+        ...     definition_match=(MatchRule(startswith="firewall policy "),),
+        ...     reference_patterns=(
+        ...         ReferencePattern(
+        ...             match_rules=(MatchRule(startswith="interface "),),
+        ...             extract_regex=r"apply-policy\s+(\S+)",
+        ...             reference_type="interface-applied",
+        ...         ),
+        ...     ),
+        ...     removal_template="no firewall policy {name}",
+        ...     removal_order_weight=100,
+        ... )
 
     """
 

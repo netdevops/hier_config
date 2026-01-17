@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable
 
@@ -183,6 +185,41 @@ class HConfigDriverBase(ABC):
 
         """
         return self.rules.unused_object_rules
+
+    def add_unused_object_rules(
+        self, rules: list["UnusedObjectRule"] | "UnusedObjectRule"
+    ) -> None:
+        r"""Add custom unused object rules to this driver instance.
+
+        This method allows extending the driver with custom unused object rules
+        without needing to subclass the driver. The rules are added to the
+        driver's existing rules.
+
+        Args:
+            rules: A single UnusedObjectRule or list of UnusedObjectRule instances
+                to add to this driver.
+
+        Example:
+            >>> from hier_config import get_hconfig
+            >>> from hier_config.models import Platform, UnusedObjectRule, MatchRule, ReferencePattern
+            >>> config = get_hconfig(Platform.CISCO_IOS, "interface GigabitEthernet0/1")
+            >>> custom_rule = UnusedObjectRule(
+            ...     object_type="my-custom-object",
+            ...     definition_match=(MatchRule(startswith="my-object "),),
+            ...     reference_patterns=(
+            ...         ReferencePattern(
+            ...             match_rules=(MatchRule(startswith="interface "),),
+            ...             extract_regex=r"apply-my-object\s+(\S+)",
+            ...             reference_type="interface-applied",
+            ...         ),
+            ...     ),
+            ...     removal_template="no my-object {name}",
+            ... )
+            >>> config.driver.add_unused_object_rules(custom_rule)
+
+        """
+        rules_to_add = [rules] if isinstance(rules, UnusedObjectRule) else rules
+        self.rules.unused_object_rules.extend(rules_to_add)
 
     def find_unused_objects(self, config: "HConfig") -> UnusedObjectAnalysis:  # noqa: PLR6301
         """Convenience method to find unused objects in a configuration.
