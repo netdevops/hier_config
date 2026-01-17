@@ -1553,11 +1553,12 @@ def test_children_eq_with_non_children_type() -> None:
     config = get_hconfig(platform)
     interface = config.add_child("interface GigabitEthernet0/0")
 
-    # Comparing children with a non-HConfigChildren type should return NotImplemented
-    result = interface.children == "not a children object"
+    # Directly call __eq__ to verify it returns NotImplemented for non-HConfigChildren types
+    # We must use __eq__ directly here to test the NotImplemented return value
+    result = interface.children.__eq__("not a children object")  # pylint: disable=unnecessary-dunder-call # noqa: PLC2801
     assert result is NotImplemented
 
-    # This allows Python to try the reverse comparison
+    # This allows Python to try the reverse comparison, which results in False
     assert interface.children != "not a children object"
 
 
