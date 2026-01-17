@@ -131,7 +131,7 @@ class ReferencePattern(BaseModel):
 
 
 class UnusedObjectRule(BaseModel):
-    """Defines how to identify and remove an unused object type.
+    r"""Defines how to identify and remove an unused object type.
 
     This rule is completely user-definable and can be applied to ANY configuration
     object type on ANY platform. Users can create custom rules for their specific

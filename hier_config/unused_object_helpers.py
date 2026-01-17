@@ -14,10 +14,10 @@ from hier_config.models import MatchRule, ReferencePattern, UnusedObjectRule
 
 try:
     import yaml
-
-    YAML_AVAILABLE = True
 except ImportError:
-    YAML_AVAILABLE = False
+    yaml = None  # type: ignore[assignment]
+
+YAML_AVAILABLE = yaml is not None
 
 
 class UnusedObjectRuleBuilder:
@@ -32,7 +32,7 @@ class UnusedObjectRuleBuilder:
         >>> builder.referenced_in(
         ...     context_match={"startswith": "interface "},
         ...     extract_regex=r"apply-custom-acl\s+(\S+)",
-        ...     reference_type="interface-applied"
+        ...     reference_type="interface-applied",
         ... )
         >>> builder.remove_with("no custom-acl {name}")
         >>> rule = builder.build()
@@ -209,7 +209,7 @@ class UnusedObjectRuleBuilder:
 
 
 def load_unused_object_rules_from_dict(data: dict[str, Any]) -> list[UnusedObjectRule]:
-    """Load unused object rules from a dictionary structure.
+    r"""Load unused object rules from a dictionary structure.
 
     Args:
         data: Dictionary containing 'rules' key with a list of rule definitions.
@@ -293,15 +293,16 @@ def load_unused_object_rules_from_yaml(file_path: str | Path) -> list[UnusedObje
 
     Raises:
         ImportError: If PyYAML is not installed.
-        FileNotFoundError: If the file doesn't exist.
 
     """
     if not YAML_AVAILABLE:
-        msg = "PyYAML is required to load YAML files. Install it with: pip install pyyaml"
+        msg = (
+            "PyYAML is required to load YAML files. Install it with: pip install pyyaml"
+        )
         raise ImportError(msg)
 
     path = Path(file_path)
-    with path.open() as f:
+    with path.open(encoding="utf-8") as f:
         data = yaml.safe_load(f)
 
     return load_unused_object_rules_from_dict(data)
@@ -316,24 +317,21 @@ def load_unused_object_rules_from_json(file_path: str | Path) -> list[UnusedObje
     Returns:
         List of UnusedObjectRule instances.
 
-    Raises:
-        FileNotFoundError: If the file doesn't exist.
-
     """
     path = Path(file_path)
-    with path.open() as f:
+    with path.open(encoding="utf-8") as f:
         data = json.load(f)
 
     return load_unused_object_rules_from_dict(data)
 
 
-def create_simple_rule(
+def create_simple_rule(  # noqa: PLR0913
     object_type: str,
     definition_pattern: str,
     reference_pattern: str,
     reference_context: str,
-    removal_template: str,
     *,
+    removal_template: str,
     case_sensitive: bool = True,
     removal_weight: int = 100,
 ) -> UnusedObjectRule:
@@ -347,9 +345,9 @@ def create_simple_rule(
         definition_pattern: String that object definitions start with.
         reference_pattern: Regex to extract object name from references.
         reference_context: String that reference lines start with.
-        removal_template: Template for removal command using {name}.
-        case_sensitive: Whether name matching is case-sensitive.
-        removal_weight: Removal order weight.
+        removal_template: Template for removal command using {name} (keyword-only).
+        case_sensitive: Whether name matching is case-sensitive (keyword-only).
+        removal_weight: Removal order weight (keyword-only).
 
     Returns:
         UnusedObjectRule configured with the specified parameters.
