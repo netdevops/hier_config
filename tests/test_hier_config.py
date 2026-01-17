@@ -1545,3 +1545,101 @@ def test_sectional_exit_text_parent_level_generic_platform() -> None:
     # Generic platform has no specific sectional_exiting rules with parent_level=True
     section = config.add_child("section test")
     assert section.sectional_exit_text_parent_level is False
+
+
+def test_children_eq_with_non_children_type() -> None:
+    """Test HConfigChildren.__eq__ with non-HConfigChildren object returns NotImplemented."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    interface = config.add_child("interface GigabitEthernet0/0")
+
+    # Comparing children with a non-HConfigChildren type should return NotImplemented
+    result = interface.children == "not a children object"
+    assert result is NotImplemented
+
+    # This allows Python to try the reverse comparison
+    assert interface.children != "not a children object"
+
+
+def test_children_clear() -> None:
+    """Test HConfigChildren.clear() method."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    interface = config.add_child("interface GigabitEthernet0/0")
+    interface.add_child("description test")
+    interface.add_child("ip address 192.0.2.1 255.255.255.0")
+
+    # Verify children exist
+    assert len(interface.children) == 2
+    assert "description test" in interface.children
+
+    # Clear all children
+    interface.children.clear()
+
+    # Verify children are gone
+    assert len(interface.children) == 0
+    assert "description test" not in interface.children
+
+
+def test_children_delete_by_child_object() -> None:
+    """Test HConfigChildren.delete() with HConfigChild object."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    interface = config.add_child("interface GigabitEthernet0/0")
+    desc = interface.add_child("description test")
+    ip_addr = interface.add_child("ip address 192.0.2.1 255.255.255.0")
+
+    # Verify both children exist
+    assert len(interface.children) == 2
+
+    # Delete by child object
+    interface.children.delete(desc)
+
+    # Verify only one child remains
+    assert len(interface.children) == 1
+    assert interface.children[0] is ip_addr
+    assert "description test" not in interface.children
+
+
+def test_children_delete_by_child_object_not_present() -> None:
+    """Test HConfigChildren.delete() with HConfigChild object that's not in the collection."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    interface = config.add_child("interface GigabitEthernet0/0")
+    interface.add_child("description test")
+
+    # Create a child that's not part of this interface
+    other_interface = config.add_child("interface GigabitEthernet0/1")
+    other_child = other_interface.add_child("description other")
+
+    # Verify interface has 1 child
+    assert len(interface.children) == 1
+
+    # Try to delete a child that's not in the collection
+    interface.children.delete(other_child)
+
+    # Verify child count hasn't changed
+    assert len(interface.children) == 1
+
+
+def test_children_extend() -> None:
+    """Test HConfigChildren.extend() method."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    interface1 = config.add_child("interface GigabitEthernet0/0")
+    interface2 = config.add_child("interface GigabitEthernet0/1")
+
+    # Add children to interface2
+    desc = interface2.add_child("description test")
+    ip_addr = interface2.add_child("ip address 192.0.2.1 255.255.255.0")
+
+    # Verify interface1 has no children
+    assert len(interface1.children) == 0
+
+    # Extend interface1's children with interface2's children
+    interface1.children.extend([desc, ip_addr])
+
+    # Verify interface1 now has 2 children
+    assert len(interface1.children) == 2
+    assert "description test" in interface1.children
+    assert "ip address 192.0.2.1 255.255.255.0" in interface1.children
