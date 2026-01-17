@@ -150,3 +150,4 @@ parametrize-values-type = "tuple"
 
 [tool.ruff.lint.per-file-ignores]
 "**/tests/*" = ["PLC2701", "S101"]
+"example_custom_unused_objects.py" = ["T201"]

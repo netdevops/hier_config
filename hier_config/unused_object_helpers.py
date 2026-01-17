@@ -251,7 +251,7 @@ def load_unused_object_rules_from_dict(data: dict[str, Any]) -> list[UnusedObjec
         ]
 
         # Parse reference patterns
-        reference_patterns = []
+        reference_patterns: list[ReferencePattern] = []
         for ref_pattern_data in rule_data["reference_patterns"]:
             match_rules = [
                 MatchRule(**match) for match in ref_pattern_data["match_rules"]
@@ -303,7 +303,7 @@ def load_unused_object_rules_from_yaml(file_path: str | Path) -> list[UnusedObje
 
     path = Path(file_path)
     with path.open(encoding="utf-8") as f:
-        data = yaml.safe_load(f)
+        data = yaml.safe_load(f)  # type: ignore[union-attr]
 
     return load_unused_object_rules_from_dict(data)
 
