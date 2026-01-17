@@ -1420,3 +1420,128 @@ def test_hconfig_deep_copy() -> None:
     assert original_interface is not None
     assert copied_interface is not None
     assert original_interface is not copied_interface
+
+
+def test_sectional_exit_text_parent_level_cisco_xr() -> None:
+    """Test sectional_exit_text_parent_level returns True for Cisco XR configs with parent-level exit text."""
+    platform = Platform.CISCO_XR
+    config = get_hconfig(platform)
+
+    # Test route-policy which has exit_text_parent_level=True
+    route_policy = config.add_child("route-policy TEST")
+    assert route_policy.sectional_exit_text_parent_level is True
+
+    # Test prefix-set which has exit_text_parent_level=True
+    prefix_set = config.add_child("prefix-set TEST")
+    assert prefix_set.sectional_exit_text_parent_level is True
+
+    # Test policy-map which has exit_text_parent_level=True
+    policy_map = config.add_child("policy-map TEST")
+    assert policy_map.sectional_exit_text_parent_level is True
+
+    # Test class-map which has exit_text_parent_level=True
+    class_map = config.add_child("class-map TEST")
+    assert class_map.sectional_exit_text_parent_level is True
+
+    # Test community-set which has exit_text_parent_level=True
+    community_set = config.add_child("community-set TEST")
+    assert community_set.sectional_exit_text_parent_level is True
+
+    # Test extcommunity-set which has exit_text_parent_level=True
+    extcommunity_set = config.add_child("extcommunity-set TEST")
+    assert extcommunity_set.sectional_exit_text_parent_level is True
+
+    # Test template which has exit_text_parent_level=True
+    template = config.add_child("template TEST")
+    assert template.sectional_exit_text_parent_level is True
+
+
+def test_sectional_exit_text_parent_level_cisco_xr_false() -> None:
+    """Test sectional_exit_text_parent_level returns False for Cisco XR configs without parent-level exit text."""
+    platform = Platform.CISCO_XR
+    config = get_hconfig(platform)
+
+    # Test interface which has exit_text_parent_level=False (default)
+    interface = config.add_child("interface GigabitEthernet0/0/0/0")
+    assert interface.sectional_exit_text_parent_level is False
+
+    # Test router bgp which has exit_text_parent_level=False (default)
+    router_bgp = config.add_child("router bgp 65000")
+    assert router_bgp.sectional_exit_text_parent_level is False
+
+
+def test_sectional_exit_text_parent_level_cisco_ios() -> None:
+    """Test sectional_exit_text_parent_level returns False for standard Cisco IOS configs."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+
+    # Cisco IOS interfaces don't have exit_text_parent_level=True
+    interface = config.add_child("interface GigabitEthernet0/0")
+    assert interface.sectional_exit_text_parent_level is False
+
+    # Cisco IOS router configurations don't have exit_text_parent_level=True
+    router = config.add_child("router ospf 1")
+    assert router.sectional_exit_text_parent_level is False
+
+    # Standard configuration sections
+    line = config.add_child("line vty 0 4")
+    assert line.sectional_exit_text_parent_level is False
+
+
+def test_sectional_exit_text_parent_level_no_match() -> None:
+    """Test sectional_exit_text_parent_level returns False when no rules match."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+
+    # A child that doesn't match any sectional_exiting rules
+    hostname = config.add_child("hostname TEST")
+    assert hostname.sectional_exit_text_parent_level is False
+
+    # A simple config line without children
+    ntp = config.add_child("ntp server 10.0.0.1")
+    assert ntp.sectional_exit_text_parent_level is False
+
+
+def test_sectional_exit_text_parent_level_with_nested_children() -> None:
+    """Test sectional_exit_text_parent_level with nested child configurations."""
+    platform = Platform.CISCO_XR
+    config = get_hconfig(platform)
+
+    # Create a route-policy with nested children
+    route_policy = config.add_child("route-policy TEST")
+    if_statement = route_policy.add_child("if destination in (192.0.2.0/24) then")
+
+    # Parent (route-policy) should have exit_text_parent_level=True
+    assert route_policy.sectional_exit_text_parent_level is True
+
+    # Nested child should not match the sectional_exiting rule for route-policy
+    assert if_statement.sectional_exit_text_parent_level is False
+
+
+def test_sectional_exit_text_parent_level_indentation_in_lines() -> None:
+    """Test that sectional_exit_text_parent_level affects indentation in lines output."""
+    platform = Platform.CISCO_XR
+    config = get_hconfig(platform)
+
+    # Create a route-policy with children - exit text should be at parent level (depth - 1)
+    route_policy = config.add_child("route-policy TEST")
+    route_policy.add_child("set local-preference 200")
+    route_policy.add_child("pass")
+
+    # Get lines with sectional_exiting=True
+    lines = list(config.lines(sectional_exiting=True))
+
+    # The last line should be "end-policy" at depth 0 (parent level)
+    # route-policy is at depth 1, so exit text at depth 0 means no indentation
+    assert lines[-1] == "end-policy"
+    assert not lines[-1].startswith(" ")
+
+
+def test_sectional_exit_text_parent_level_generic_platform() -> None:
+    """Test sectional_exit_text_parent_level with generic platform."""
+    platform = Platform.GENERIC
+    config = get_hconfig(platform)
+
+    # Generic platform has no specific sectional_exiting rules with parent_level=True
+    section = config.add_child("section test")
+    assert section.sectional_exit_text_parent_level is False
