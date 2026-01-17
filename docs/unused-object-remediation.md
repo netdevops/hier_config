@@ -4,9 +4,15 @@
 
 The unused object remediation feature automatically identifies and generates removal commands for configuration objects that are defined but not referenced anywhere in the configuration. This helps maintain clean, efficient configurations by removing unnecessary ACLs, prefix-lists, route-maps, and other objects.
 
-## Supported Object Types
+**Key Features:**
+- **Platform Agnostic**: Works with ANY platform (Cisco, Juniper, Arista, HP, FortiNet, custom platforms)
+- **Fully Extensible**: Define your own object types without modifying source code
+- **Multiple Configuration Methods**: Use Python API, YAML files, or JSON files
+- **Built-in Support**: Comes with pre-configured rules for common Cisco/Arista object types
 
-The system supports detection and removal of the following object types:
+## Built-In Object Type Support
+
+The following object types have pre-configured detection rules:
 
 ### Cisco IOS / IOS-XE / Arista EOS
 
@@ -276,7 +282,196 @@ no as-path-set UNUSED_AS
 
 ## Extending for Custom Objects
 
-To add support for new object types, extend the driver's `unused_object_rules`:
+The unused object detection system is **fully extensible** and can work with **ANY platform** and **ANY configuration object type**. You can add custom rules in multiple ways without modifying the source code.
+
+### Method 1: Add Rules Dynamically (Recommended)
+
+The easiest way to add custom unused object rules is to use the `add_unused_object_rules()` method:
+
+```python
+from hier_config import get_hconfig
+from hier_config.models import Platform, UnusedObjectRule, MatchRule, ReferencePattern
+
+# Load your configuration
+config = get_hconfig(Platform.CISCO_IOS, config_text)
+
+# Define a custom rule
+custom_rule = UnusedObjectRule(
+    object_type="my-custom-object",
+    definition_match=(
+        MatchRule(startswith="my-object "),
+    ),
+    reference_patterns=(
+        ReferencePattern(
+            match_rules=(
+                MatchRule(startswith="interface "),
+                MatchRule(startswith="apply my-object "),
+            ),
+            extract_regex=r"apply my-object\s+(\S+)",
+            reference_type="interface-applied",
+        ),
+    ),
+    removal_template="no my-object {name}",
+    removal_order_weight=100,
+    case_sensitive=False,
+)
+
+# Add the rule to the driver
+config.driver.add_unused_object_rules(custom_rule)
+
+# Now analyze with both built-in and custom rules
+analysis = config.driver.find_unused_objects(config)
+```
+
+### Method 2: Use the Builder API
+
+For a more convenient API, use the `UnusedObjectRuleBuilder`:
+
+```python
+from hier_config import get_hconfig, UnusedObjectRuleBuilder
+from hier_config.models import Platform
+
+config = get_hconfig(Platform.CISCO_IOS, config_text)
+
+# Build a rule using the fluent API
+rule = (
+    UnusedObjectRuleBuilder("my-custom-object")
+    .define_with(startswith="my-object ")
+    .referenced_in(
+        context_match=[
+            {"startswith": "interface "},
+            {"startswith": "apply my-object "},
+        ],
+        extract_regex=r"apply my-object\s+(\S+)",
+        reference_type="interface-applied",
+    )
+    .remove_with("no my-object {name}")
+    .case_insensitive()
+    .with_weight(100)
+    .build()
+)
+
+config.driver.add_unused_object_rules(rule)
+```
+
+### Method 3: Simple Rule Helper
+
+For the most common case (single definition pattern, single reference context), use `create_simple_rule`:
+
+```python
+from hier_config import get_hconfig, create_simple_rule
+from hier_config.models import Platform
+
+config = get_hconfig(Platform.CISCO_IOS, config_text)
+
+# Create a simple rule with minimal code
+rule = create_simple_rule(
+    object_type="my-acl",
+    definition_pattern="my-acl ",
+    reference_pattern=r"apply-acl\s+(\S+)",
+    reference_context="interface ",
+    removal_template="no my-acl {name}",
+    case_sensitive=False,
+)
+
+config.driver.add_unused_object_rules(rule)
+```
+
+### Method 4: Load from YAML File
+
+For externalized configuration, load rules from a YAML file:
+
+**custom_rules.yaml:**
+```yaml
+rules:
+  - object_type: "custom-firewall-policy"
+    definition_match:
+      - startswith: "firewall policy "
+    reference_patterns:
+      - match_rules:
+          - startswith: "interface "
+          - startswith: "apply-policy "
+        extract_regex: 'apply-policy\s+(\S+)'
+        reference_type: "interface-applied"
+    removal_template: "no firewall policy {name}"
+    removal_order_weight: 100
+    case_sensitive: false
+
+  - object_type: "custom-nat-pool"
+    definition_match:
+      - startswith: "nat pool "
+    reference_patterns:
+      - match_rules:
+          - re_search: "nat source "
+        extract_regex: 'pool\s+(\S+)'
+        reference_type: "nat-source"
+    removal_template: "no nat pool {name}"
+    removal_order_weight: 140
+    case_sensitive: true
+```
+
+**Python code:**
+```python
+from hier_config import get_hconfig, load_unused_object_rules_from_yaml
+from hier_config.models import Platform
+
+config = get_hconfig(Platform.CISCO_IOS, config_text)
+
+# Load rules from YAML file
+custom_rules = load_unused_object_rules_from_yaml("custom_rules.yaml")
+
+# Add all rules at once
+config.driver.add_unused_object_rules(custom_rules)
+
+# Analyze
+analysis = config.driver.find_unused_objects(config)
+```
+
+### Method 5: Load from JSON File
+
+Similarly, load rules from a JSON file:
+
+**custom_rules.json:**
+```json
+{
+  "rules": [
+    {
+      "object_type": "custom-firewall-policy",
+      "definition_match": [
+        {"startswith": "firewall policy "}
+      ],
+      "reference_patterns": [
+        {
+          "match_rules": [
+            {"startswith": "interface "},
+            {"startswith": "apply-policy "}
+          ],
+          "extract_regex": "apply-policy\\s+(\\S+)",
+          "reference_type": "interface-applied"
+        }
+      ],
+      "removal_template": "no firewall policy {name}",
+      "removal_order_weight": 100,
+      "case_sensitive": false
+    }
+  ]
+}
+```
+
+**Python code:**
+```python
+from hier_config import get_hconfig, load_unused_object_rules_from_json
+from hier_config.models import Platform
+
+config = get_hconfig(Platform.GENERIC, config_text)
+
+custom_rules = load_unused_object_rules_from_json("custom_rules.json")
+config.driver.add_unused_object_rules(custom_rules)
+```
+
+### Method 6: Subclass the Driver (Legacy)
+
+For permanent extensions, you can still subclass the driver:
 
 ```python
 from hier_config.models import UnusedObjectRule, ReferencePattern, MatchRule
@@ -310,9 +505,120 @@ class CustomIOSDriver(HConfigDriverCiscoIOS):
             ),
         ]
 
-        # Combine with base rules
         base_rules.unused_object_rules.extend(custom_rules)
         return base_rules
+```
+
+## Using with Any Platform
+
+The unused object system works with **any platform**, including those without built-in rules:
+
+```python
+from hier_config import get_hconfig, create_simple_rule
+from hier_config.models import Platform
+
+# Use with a platform that doesn't have built-in unused object rules
+config = get_hconfig(Platform.JUNIPER_JUNOS, junos_config_text)
+
+# Add custom rules for Junos firewall filters
+firewall_filter_rule = UnusedObjectRuleBuilder("junos-firewall-filter")
+    .define_with(startswith="firewall {")
+    .referenced_in(
+        context_match={"startswith": "family inet filter "},
+        extract_regex=r"family inet filter\s+(\S+)",
+        reference_type="interface-filter",
+    )
+    .remove_with("delete firewall filter {name}")
+    .build()
+
+config.driver.add_unused_object_rules(firewall_filter_rule)
+
+# Works just like built-in platforms
+analysis = config.driver.find_unused_objects(config)
+print(f"Found {analysis.total_unused} unused Junos firewall filters")
+```
+
+## Complete Example: Custom Platform with Multiple Object Types
+
+Here's a complete example for a hypothetical custom platform:
+
+```python
+from hier_config import (
+    get_hconfig,
+    UnusedObjectRuleBuilder,
+    WorkflowRemediation,
+)
+from hier_config.models import Platform
+
+# Configuration for a custom platform
+running_config_text = """
+access-list WEB_TRAFFIC
+  permit tcp any any eq 80
+  permit tcp any any eq 443
+access-list UNUSED_ACL
+  permit ip any any
+nat-pool PUBLIC_POOL
+  range 203.0.113.10 203.0.113.20
+nat-pool UNUSED_POOL
+  range 203.0.113.30 203.0.113.40
+interface eth0
+  apply-acl WEB_TRAFFIC inbound
+nat source interface eth0 pool PUBLIC_POOL
+"""
+
+# Create config using generic platform
+config = get_hconfig(Platform.GENERIC, running_config_text)
+
+# Define rules for access-lists
+acl_rule = (
+    UnusedObjectRuleBuilder("access-list")
+    .define_with(startswith="access-list ")
+    .referenced_in(
+        context_match=[
+            {"startswith": "interface "},
+            {"startswith": "apply-acl "},
+        ],
+        extract_regex=r"apply-acl\s+(\S+)",
+        reference_type="interface-applied",
+    )
+    .remove_with("no access-list {name}")
+    .with_weight(150)
+    .build()
+)
+
+# Define rules for NAT pools
+nat_pool_rule = (
+    UnusedObjectRuleBuilder("nat-pool")
+    .define_with(startswith="nat-pool ")
+    .referenced_in(
+        context_match={"re_search": r"nat source "},
+        extract_regex=r"pool\s+(\S+)",
+        reference_type="nat-applied",
+    )
+    .remove_with("no nat-pool {name}")
+    .with_weight(140)
+    .build()
+)
+
+# Add all custom rules
+config.driver.add_unused_object_rules([acl_rule, nat_pool_rule])
+
+# Analyze and generate cleanup
+analysis = config.driver.find_unused_objects(config)
+
+print(f"Total defined objects: {analysis.total_defined}")
+print(f"Total unused objects: {analysis.total_unused}")
+print("\nRemoval commands:")
+for cmd in analysis.removal_commands:
+    print(f"  {cmd}")
+
+# Output:
+# Total defined objects: 4
+# Total unused objects: 2
+#
+# Removal commands:
+#   no nat-pool UNUSED_POOL
+#   no access-list UNUSED_ACL
 ```
 
 ## Safety Considerations
