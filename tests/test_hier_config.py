@@ -13,7 +13,8 @@ from hier_config import (
     get_hconfig_from_dump,
 )
 from hier_config.exceptions import DuplicateChildError
-from hier_config.models import Instance, MatchRule, Platform
+from hier_config.models import IdempotentCommandsRule, Instance, MatchRule, Platform
+from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
 
 
 def test_bool(platform_a: Platform) -> None:
@@ -529,9 +530,6 @@ def test_future_preserves_bgp_neighbor_description() -> None:
 
 def test_idempotency_key_with_equals_string() -> None:
     """Test idempotency key generation with equals constraint as string."""
-    from hier_config.models import IdempotentCommandsRule
-    from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
-
     driver = HConfigDriverCiscoIOS()
     # Add a rule with equals as string
     driver.rules.idempotent_commands.append(
@@ -546,14 +544,12 @@ def test_idempotency_key_with_equals_string() -> None:
     child = next(iter(config.children))
 
     # Test the idempotency with equals string
-    key = driver._idempotency_key(child, (MatchRule(equals="logging console"),))
+    key = driver._idempotency_key(child, (MatchRule(equals="logging console"),))  # noqa: SLF001
     assert key == ("equals|logging console",)
 
 
 def test_idempotency_key_with_equals_frozenset() -> None:
     """Test idempotency key generation with equals constraint as frozenset."""
-    from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
-
     driver = HConfigDriverCiscoIOS()
 
     config_raw = """logging console
@@ -562,7 +558,7 @@ def test_idempotency_key_with_equals_frozenset() -> None:
     child = next(iter(config.children))
 
     # Test the idempotency with equals frozenset (should fall back to text)
-    key = driver._idempotency_key(
+    key = driver._idempotency_key(  # noqa: SLF001
         child, (MatchRule(equals=frozenset(["logging console", "other"])),)
     )
     assert key == ("equals|logging console",)
@@ -570,8 +566,6 @@ def test_idempotency_key_with_equals_frozenset() -> None:
 
 def test_idempotency_key_no_match_rules() -> None:
     """Test idempotency key falls back to text when no match rules apply."""
-    from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
-
     driver = HConfigDriverCiscoIOS()
 
     config_raw = """some command
@@ -580,14 +574,12 @@ def test_idempotency_key_no_match_rules() -> None:
     child = next(iter(config.children))
 
     # Empty MatchRule should fall back to text
-    key = driver._idempotency_key(child, (MatchRule(),))
+    key = driver._idempotency_key(child, (MatchRule(),))  # noqa: SLF001
     assert key == ("text|some command",)
 
 
 def test_idempotency_key_prefix_no_match() -> None:
     """Test idempotency key when prefix doesn't match."""
-    from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
-
     driver = HConfigDriverCiscoIOS()
 
     config_raw = """logging console
@@ -596,14 +588,12 @@ def test_idempotency_key_prefix_no_match() -> None:
     child = next(iter(config.children))
 
     # Prefix that doesn't match should fall back to text
-    key = driver._idempotency_key(child, (MatchRule(startswith="interface"),))
+    key = driver._idempotency_key(child, (MatchRule(startswith="interface"),))  # noqa: SLF001
     assert key == ("text|logging console",)
 
 
 def test_idempotency_key_suffix_no_match() -> None:
     """Test idempotency key when suffix doesn't match."""
-    from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
-
     driver = HConfigDriverCiscoIOS()
 
     config_raw = """logging console
@@ -612,14 +602,12 @@ def test_idempotency_key_suffix_no_match() -> None:
     child = next(iter(config.children))
 
     # Suffix that doesn't match should fall back to text
-    key = driver._idempotency_key(child, (MatchRule(endswith="emergency"),))
+    key = driver._idempotency_key(child, (MatchRule(endswith="emergency"),))  # noqa: SLF001
     assert key == ("text|logging console",)
 
 
 def test_idempotency_key_contains_no_match() -> None:
     """Test idempotency key when contains doesn't match."""
-    from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
-
     driver = HConfigDriverCiscoIOS()
 
     config_raw = """logging console
@@ -628,14 +616,12 @@ def test_idempotency_key_contains_no_match() -> None:
     child = next(iter(config.children))
 
     # Contains that doesn't match should fall back to text
-    key = driver._idempotency_key(child, (MatchRule(contains="interface"),))
+    key = driver._idempotency_key(child, (MatchRule(contains="interface"),))  # noqa: SLF001
     assert key == ("text|logging console",)
 
 
 def test_idempotency_key_regex_no_match() -> None:
     """Test idempotency key when regex doesn't match."""
-    from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
-
     driver = HConfigDriverCiscoIOS()
 
     config_raw = """logging console
@@ -644,14 +630,12 @@ def test_idempotency_key_regex_no_match() -> None:
     child = next(iter(config.children))
 
     # Regex that doesn't match should fall back to text
-    key = driver._idempotency_key(child, (MatchRule(re_search="^interface"),))
+    key = driver._idempotency_key(child, (MatchRule(re_search="^interface"),))  # noqa: SLF001
     assert key == ("text|logging console",)
 
 
 def test_idempotency_key_prefix_tuple_no_match() -> None:
     """Test idempotency key with tuple of prefixes that don't match."""
-    from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
-
     driver = HConfigDriverCiscoIOS()
 
     config_raw = """logging console
@@ -660,7 +644,7 @@ def test_idempotency_key_prefix_tuple_no_match() -> None:
     child = next(iter(config.children))
 
     # Tuple of prefixes that don't match should fall back to text
-    key = driver._idempotency_key(
+    key = driver._idempotency_key(  # noqa: SLF001
         child, (MatchRule(startswith=("interface", "router", "vlan")),)
     )
     assert key == ("text|logging console",)
@@ -668,8 +652,6 @@ def test_idempotency_key_prefix_tuple_no_match() -> None:
 
 def test_idempotency_key_prefix_tuple_match() -> None:
     """Test idempotency key with tuple of prefixes that match."""
-    from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
-
     driver = HConfigDriverCiscoIOS()
 
     config_raw = """logging console
@@ -678,7 +660,7 @@ def test_idempotency_key_prefix_tuple_match() -> None:
     child = next(iter(config.children))
 
     # Tuple of prefixes with one matching - should return longest match
-    key = driver._idempotency_key(
+    key = driver._idempotency_key(  # noqa: SLF001
         child, (MatchRule(startswith=("log", "logging", "logging console")),)
     )
     assert key == ("startswith|logging console",)
@@ -686,8 +668,6 @@ def test_idempotency_key_prefix_tuple_match() -> None:
 
 def test_idempotency_key_suffix_tuple_no_match() -> None:
     """Test idempotency key with tuple of suffixes that don't match."""
-    from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
-
     driver = HConfigDriverCiscoIOS()
 
     config_raw = """logging console
@@ -696,7 +676,7 @@ def test_idempotency_key_suffix_tuple_no_match() -> None:
     child = next(iter(config.children))
 
     # Tuple of suffixes that don't match should fall back to text
-    key = driver._idempotency_key(
+    key = driver._idempotency_key(  # noqa: SLF001
         child, (MatchRule(endswith=("emergency", "alert", "critical")),)
     )
     assert key == ("text|logging console",)
@@ -704,8 +684,6 @@ def test_idempotency_key_suffix_tuple_no_match() -> None:
 
 def test_idempotency_key_suffix_tuple_match() -> None:
     """Test idempotency key with tuple of suffixes that match."""
-    from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
-
     driver = HConfigDriverCiscoIOS()
 
     config_raw = """logging console
@@ -714,7 +692,7 @@ def test_idempotency_key_suffix_tuple_match() -> None:
     child = next(iter(config.children))
 
     # Tuple of suffixes with one matching - should return longest match
-    key = driver._idempotency_key(
+    key = driver._idempotency_key(  # noqa: SLF001
         child, (MatchRule(endswith=("ole", "sole", "console")),)
     )
     assert key == ("endswith|console",)
@@ -722,8 +700,6 @@ def test_idempotency_key_suffix_tuple_match() -> None:
 
 def test_idempotency_key_contains_tuple_no_match() -> None:
     """Test idempotency key with tuple of contains that don't match."""
-    from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
-
     driver = HConfigDriverCiscoIOS()
 
     config_raw = """logging console
@@ -732,7 +708,7 @@ def test_idempotency_key_contains_tuple_no_match() -> None:
     child = next(iter(config.children))
 
     # Tuple of contains that don't match should fall back to text
-    key = driver._idempotency_key(
+    key = driver._idempotency_key(  # noqa: SLF001
         child, (MatchRule(contains=("interface", "router", "vlan")),)
     )
     assert key == ("text|logging console",)
@@ -740,8 +716,6 @@ def test_idempotency_key_contains_tuple_no_match() -> None:
 
 def test_idempotency_key_contains_tuple_match() -> None:
     """Test idempotency key with tuple of contains that match."""
-    from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
-
     driver = HConfigDriverCiscoIOS()
 
     config_raw = """logging console
@@ -750,7 +724,7 @@ def test_idempotency_key_contains_tuple_match() -> None:
     child = next(iter(config.children))
 
     # Tuple of contains with matches - should return longest match
-    key = driver._idempotency_key(
+    key = driver._idempotency_key(  # noqa: SLF001
         child, (MatchRule(contains=("log", "console", "logging console")),)
     )
     assert key == ("contains|logging console",)
@@ -758,8 +732,6 @@ def test_idempotency_key_contains_tuple_match() -> None:
 
 def test_idempotency_key_regex_with_groups() -> None:
     """Test idempotency key with regex capture groups."""
-    from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
-
     driver = HConfigDriverCiscoIOS()
 
     config_raw = """router bgp 1
@@ -770,7 +742,7 @@ def test_idempotency_key_regex_with_groups() -> None:
     neighbor_child = next(iter(bgp_child.children))
 
     # Regex with capture groups should use groups
-    key = driver._idempotency_key(
+    key = driver._idempotency_key(  # noqa: SLF001
         neighbor_child,
         (
             MatchRule(startswith="router bgp"),
@@ -782,8 +754,6 @@ def test_idempotency_key_regex_with_groups() -> None:
 
 def test_idempotency_key_regex_with_empty_groups() -> None:
     """Test idempotency key with regex that has empty capture groups."""
-    from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
-
     driver = HConfigDriverCiscoIOS()
 
     config_raw = """logging console
@@ -792,7 +762,7 @@ def test_idempotency_key_regex_with_empty_groups() -> None:
     child = next(iter(config.children))
 
     # Regex with empty/None groups should fall back to match result
-    key = driver._idempotency_key(
+    key = driver._idempotency_key(  # noqa: SLF001
         child, (MatchRule(re_search=r"logging ()?(console)"),)
     )
     # Group 1 is empty, group 2 has "console", so should use groups
@@ -801,8 +771,6 @@ def test_idempotency_key_regex_with_empty_groups() -> None:
 
 def test_idempotency_key_regex_greedy_pattern() -> None:
     """Test idempotency key with greedy regex pattern (.* or .+)."""
-    from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
-
     driver = HConfigDriverCiscoIOS()
 
     config_raw = """logging console emergency
@@ -811,14 +779,12 @@ def test_idempotency_key_regex_greedy_pattern() -> None:
     child = next(iter(config.children))
 
     # Regex with .* should be trimmed
-    key = driver._idempotency_key(child, (MatchRule(re_search=r"logging console.*"),))
+    key = driver._idempotency_key(child, (MatchRule(re_search=r"logging console.*"),))  # noqa: SLF001
     assert key == ("re|logging console",)
 
 
 def test_idempotency_key_regex_greedy_pattern_with_dollar() -> None:
     """Test idempotency key with greedy regex pattern with $ anchor."""
-    from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
-
     driver = HConfigDriverCiscoIOS()
 
     config_raw = """logging console emergency
@@ -827,14 +793,12 @@ def test_idempotency_key_regex_greedy_pattern_with_dollar() -> None:
     child = next(iter(config.children))
 
     # Regex with .*$ should be trimmed
-    key = driver._idempotency_key(child, (MatchRule(re_search=r"logging console.*$"),))
+    key = driver._idempotency_key(child, (MatchRule(re_search=r"logging console.*$"),))  # noqa: SLF001
     assert key == ("re|logging console",)
 
 
 def test_idempotency_key_regex_only_greedy() -> None:
     """Test idempotency key with regex that is only greedy pattern."""
-    from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
-
     driver = HConfigDriverCiscoIOS()
 
     config_raw = """logging console
@@ -843,15 +807,13 @@ def test_idempotency_key_regex_only_greedy() -> None:
     child = next(iter(config.children))
 
     # Regex that is only .* should not trim to empty
-    key = driver._idempotency_key(child, (MatchRule(re_search=r".*"),))
+    key = driver._idempotency_key(child, (MatchRule(re_search=r".*"),))  # noqa: SLF001
     # Should use the full match result
     assert key == ("re|logging console",)
 
 
 def test_idempotency_key_lineage_mismatch() -> None:
     """Test idempotency key when lineage length doesn't match rules length."""
-    from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
-
     driver = HConfigDriverCiscoIOS()
 
     config_raw = """interface GigabitEthernet1/1
@@ -862,15 +824,13 @@ def test_idempotency_key_lineage_mismatch() -> None:
     desc_child = next(iter(interface_child.children))
 
     # Try to match with wrong number of rules (desc has 2 lineage levels, only 1 rule)
-    key = driver._idempotency_key(desc_child, (MatchRule(startswith="description"),))
+    key = driver._idempotency_key(desc_child, (MatchRule(startswith="description"),))  # noqa: SLF001
     # Should return empty tuple when lineage length != match_rules length
     assert key == ()
 
 
 def test_idempotency_key_negated_command() -> None:
     """Test idempotency key with negated command."""
-    from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
-
     driver = HConfigDriverCiscoIOS()
 
     config_raw = """no logging console
@@ -879,14 +839,12 @@ def test_idempotency_key_negated_command() -> None:
     child = next(iter(config.children))
 
     # Negated command should strip 'no ' prefix for matching
-    key = driver._idempotency_key(child, (MatchRule(startswith="logging"),))
+    key = driver._idempotency_key(child, (MatchRule(startswith="logging"),))  # noqa: SLF001
     assert key == ("startswith|logging",)
 
 
 def test_idempotency_key_regex_fallback_to_original() -> None:
     """Test idempotency key regex matching fallback to original text."""
-    from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
-
     driver = HConfigDriverCiscoIOS()
 
     config_raw = """no logging console
@@ -895,14 +853,12 @@ def test_idempotency_key_regex_fallback_to_original() -> None:
     child = next(iter(config.children))
 
     # Regex that matches original but not normalized (tests lines 328-329)
-    key = driver._idempotency_key(child, (MatchRule(re_search=r"^no logging"),))
+    key = driver._idempotency_key(child, (MatchRule(re_search=r"^no logging"),))  # noqa: SLF001
     assert "re|no logging" in key[0]
 
 
 def test_idempotency_key_suffix_single_match() -> None:
     """Test idempotency key with single suffix that matches (not tuple)."""
-    from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
-
     driver = HConfigDriverCiscoIOS()
 
     config_raw = """logging console
@@ -911,14 +867,12 @@ def test_idempotency_key_suffix_single_match() -> None:
     child = next(iter(config.children))
 
     # Single suffix that matches (tests line 359)
-    key = driver._idempotency_key(child, (MatchRule(endswith="console"),))
+    key = driver._idempotency_key(child, (MatchRule(endswith="console"),))  # noqa: SLF001
     assert key == ("endswith|console",)
 
 
 def test_idempotency_key_contains_single_match() -> None:
     """Test idempotency key with single contains that matches (not tuple)."""
-    from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
-
     driver = HConfigDriverCiscoIOS()
 
     config_raw = """logging console emergency
@@ -927,14 +881,12 @@ def test_idempotency_key_contains_single_match() -> None:
     child = next(iter(config.children))
 
     # Single contains that matches (tests line 372)
-    key = driver._idempotency_key(child, (MatchRule(contains="console"),))
+    key = driver._idempotency_key(child, (MatchRule(contains="console"),))  # noqa: SLF001
     assert key == ("contains|console",)
 
 
 def test_idempotency_key_regex_greedy_with_plus() -> None:
     """Test idempotency key with greedy regex using .+ suffix."""
-    from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
-
     driver = HConfigDriverCiscoIOS()
 
     config_raw = """interface GigabitEthernet1
@@ -944,15 +896,13 @@ def test_idempotency_key_regex_greedy_with_plus() -> None:
 
     # Regex with .+ should be trimmed similar to .*
     # Tests the .+ branch in line 389
-    key = driver._idempotency_key(child, (MatchRule(re_search=r"interface .+"),))
+    key = driver._idempotency_key(child, (MatchRule(re_search=r"interface .+"),))  # noqa: SLF001
     # Should trim to just "interface " and use that
     assert key == ("re|interface",)
 
 
 def test_idempotency_key_regex_trimmed_to_no_match() -> None:
     """Test idempotency key when trimmed regex doesn't match."""
-    from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
-
     driver = HConfigDriverCiscoIOS()
 
     config_raw = """logging console
@@ -963,7 +913,7 @@ def test_idempotency_key_regex_trimmed_to_no_match() -> None:
     # Regex "interface.*" matches nothing, but after trimming .* we get "interface"
     # which also doesn't match "logging console", so we fall back to full match result
     # This should hit the break at line 399 because trimmed_match is None
-    key = driver._idempotency_key(child, (MatchRule(re_search=r"interface.*"),))
+    key = driver._idempotency_key(child, (MatchRule(re_search=r"interface.*"),))  # noqa: SLF001
     # Since "interface.*" doesn't match "logging console", should fall back to text
     assert key == ("text|logging console",)
 
