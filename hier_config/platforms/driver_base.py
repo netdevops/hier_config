@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from collections.abc import Callable, Iterable
+from typing import TYPE_CHECKING
 
 from pydantic import Field, PositiveInt
 
-from hier_config.child import HConfigChild
 from hier_config.models import (
     BaseModel,
     FullTextSubRule,
@@ -23,7 +22,12 @@ from hier_config.models import (
     UnusedObjectAnalysis,
     UnusedObjectRule,
 )
-from hier_config.root import HConfig
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable
+
+    from hier_config.child import HConfigChild
+    from hier_config.root import HConfig
 
 
 def _full_text_sub_rules_default() -> list[FullTextSubRule]:
@@ -177,7 +181,7 @@ class HConfigDriverBase(ABC):
     def config_preprocessor(config_text: str) -> str:
         return config_text
 
-    def get_unused_object_rules(self) -> list["UnusedObjectRule"]:
+    def get_unused_object_rules(self) -> list[UnusedObjectRule]:
         """Returns the unused object rules for this driver.
 
         Returns:
@@ -187,7 +191,7 @@ class HConfigDriverBase(ABC):
         return self.rules.unused_object_rules
 
     def add_unused_object_rules(
-        self, rules: list["UnusedObjectRule"] | "UnusedObjectRule"
+        self, rules: list[UnusedObjectRule] | UnusedObjectRule
     ) -> None:
         r"""Add custom unused object rules to this driver instance.
 
@@ -201,7 +205,12 @@ class HConfigDriverBase(ABC):
 
         Example:
             >>> from hier_config import get_hconfig
-            >>> from hier_config.models import Platform, UnusedObjectRule, MatchRule, ReferencePattern
+            >>> from hier_config.models import (
+            ...     Platform,
+            ...     UnusedObjectRule,
+            ...     MatchRule,
+            ...     ReferencePattern,
+            ... )
             >>> config = get_hconfig(Platform.CISCO_IOS, "interface GigabitEthernet0/1")
             >>> custom_rule = UnusedObjectRule(
             ...     object_type="my-custom-object",
@@ -221,7 +230,7 @@ class HConfigDriverBase(ABC):
         rules_to_add = [rules] if isinstance(rules, UnusedObjectRule) else rules
         self.rules.unused_object_rules.extend(rules_to_add)
 
-    def find_unused_objects(self, config: "HConfig") -> UnusedObjectAnalysis:  # noqa: PLR6301
+    def find_unused_objects(self, config: HConfig) -> UnusedObjectAnalysis:  # noqa: PLR6301
         """Convenience method to find unused objects in a configuration.
 
         Args:
