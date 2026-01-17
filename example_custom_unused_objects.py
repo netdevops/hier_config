@@ -39,7 +39,7 @@ nat source interface eth0 pool PUBLIC_POOL
 """
 
 
-def main():
+def main() -> None:
     """Demonstrate custom unused object detection."""
     print("=" * 70)
     print("Extensible Unused Object Detection Example")
@@ -69,8 +69,8 @@ def main():
     )
 
     print(f"Created rule: {acl_rule.object_type}")
-    print(f"  - Definition pattern: startswith='access-list '")
-    print(f"  - Reference extraction: apply-acl\\s+(\\S+)")
+    print("  - Definition pattern: startswith='access-list '")
+    print("  - Reference extraction: apply-acl\\s+(\\S+)")
     print(f"  - Removal template: {acl_rule.removal_template}")
 
     print("\n2. Using create_simple_rule (simplified API):")
@@ -87,8 +87,8 @@ def main():
     )
 
     print(f"Created rule: {nat_pool_rule.object_type}")
-    print(f"  - Definition pattern: startswith='nat-pool '")
-    print(f"  - Reference extraction: pool\\s+(\\S+)")
+    print("  - Definition pattern: startswith='nat-pool '")
+    print("  - Reference extraction: pool\\s+(\\S+)")
     print(f"  - Removal template: {nat_pool_rule.removal_template}")
 
     print("\n3. Adding rules to driver:")
@@ -130,7 +130,7 @@ def main():
     else:
         print("  (no unused objects to remove)")
 
-    print("\n" + "=" * 70)
+    print(f"\n{'=' * 70}")
     print("Example completed successfully!")
     print("=" * 70)
 
