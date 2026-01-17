@@ -52,7 +52,9 @@ class TestConfigWorkflows:  # pylint: disable=too-few-public-methods
         6. Generate rollback_future (future.future(rollback)) and verify it equals running
         """
         # Load config fixtures
-        running_config_text = request.getfixturevalue(f"{fixture_prefix}_running_config")
+        running_config_text = request.getfixturevalue(
+            f"{fixture_prefix}_running_config"
+        )
         generated_config_text = request.getfixturevalue(
             f"{fixture_prefix}_generated_config"
         )
@@ -70,9 +72,9 @@ class TestConfigWorkflows:  # pylint: disable=too-few-public-methods
         loaded_running_text = "\n".join(
             line.cisco_style_text() for line in running_config.all_children_sorted()
         )
-        assert (
-            loaded_running_text.strip() == running_config_text.strip()
-        ), "Loaded running config does not match the file"
+        assert loaded_running_text.strip() == running_config_text.strip(), (
+            "Loaded running config does not match the file"
+        )
 
         # Step 2: Load generated config and assert it matches the file
         generated_config = get_hconfig(platform, generated_config_text)
@@ -81,9 +83,9 @@ class TestConfigWorkflows:  # pylint: disable=too-few-public-methods
         loaded_generated_text = "\n".join(
             line.cisco_style_text() for line in generated_config.all_children_sorted()
         )
-        assert (
-            loaded_generated_text.strip() == generated_config_text.strip()
-        ), "Loaded generated config does not match the file"
+        assert loaded_generated_text.strip() == generated_config_text.strip(), (
+            "Loaded generated config does not match the file"
+        )
 
         # Create workflow for remediation and rollback
         workflow = WorkflowRemediation(running_config, generated_config)
@@ -94,9 +96,9 @@ class TestConfigWorkflows:  # pylint: disable=too-few-public-methods
         remediation_text = "\n".join(
             line.cisco_style_text() for line in remediation_config.all_children_sorted()
         )
-        assert (
-            remediation_text.strip() == expected_remediation_text.strip()
-        ), "Generated remediation config does not match expected"
+        assert remediation_text.strip() == expected_remediation_text.strip(), (
+            "Generated remediation config does not match expected"
+        )
 
         # Step 4: Generate future config (running.future(remediation))
         # and assert it contains the generated config
@@ -130,9 +132,9 @@ class TestConfigWorkflows:  # pylint: disable=too-few-public-methods
         rollback_text = "\n".join(
             line.cisco_style_text() for line in rollback_config.all_children_sorted()
         )
-        assert (
-            rollback_text.strip() == expected_rollback_text.strip()
-        ), "Generated rollback config does not match expected"
+        assert rollback_text.strip() == expected_rollback_text.strip(), (
+            "Generated rollback config does not match expected"
+        )
 
         # Step 6: Generate rollback_future (future.future(rollback))
         # and assert it contains the running config
