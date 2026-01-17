@@ -114,3 +114,78 @@ def iosxr_remediation_config() -> str:
 def iosxr_rollback_config() -> str:
     """Load IOS-XR rollback config fixture."""
     return _fixture_file_read("iosxr_rollback.conf")
+
+
+# Juniper JunOS fixtures
+@pytest.fixture(scope="module")
+def junos_running_config() -> str:
+    """Load JunOS running config fixture."""
+    return _fixture_file_read("junos_running.conf")
+
+
+@pytest.fixture(scope="module")
+def junos_generated_config() -> str:
+    """Load JunOS generated config fixture."""
+    return _fixture_file_read("junos_generated.conf")
+
+
+@pytest.fixture(scope="module")
+def junos_remediation_config() -> str:
+    """Load JunOS remediation config fixture."""
+    return _fixture_file_read("junos_remediation.conf")
+
+
+@pytest.fixture(scope="module")
+def junos_rollback_config() -> str:
+    """Load JunOS rollback config fixture."""
+    return _fixture_file_read("junos_rollback.conf")
+
+
+# VyOS fixtures
+@pytest.fixture(scope="module")
+def vyos_running_config() -> str:
+    """Load VyOS running config fixture."""
+    return _fixture_file_read("vyos_running.conf")
+
+
+@pytest.fixture(scope="module")
+def vyos_generated_config() -> str:
+    """Load VyOS generated config fixture."""
+    return _fixture_file_read("vyos_generated.conf")
+
+
+@pytest.fixture(scope="module")
+def vyos_remediation_config() -> str:
+    """Load VyOS remediation config fixture."""
+    return _fixture_file_read("vyos_remediation.conf")
+
+
+@pytest.fixture(scope="module")
+def vyos_rollback_config() -> str:
+    """Load VyOS rollback config fixture."""
+    return _fixture_file_read("vyos_rollback.conf")
+
+
+# Fortinet FortiOS fixtures
+@pytest.fixture(scope="module")
+def fortios_running_config() -> str:
+    """Load FortiOS running config fixture."""
+    return _fixture_file_read("fortios_running.conf")
+
+
+@pytest.fixture(scope="module")
+def fortios_generated_config() -> str:
+    """Load FortiOS generated config fixture."""
+    return _fixture_file_read("fortios_generated.conf")
+
+
+@pytest.fixture(scope="module")
+def fortios_remediation_config() -> str:
+    """Load FortiOS remediation config fixture."""
+    return _fixture_file_read("fortios_remediation.conf")
+
+
+@pytest.fixture(scope="module")
+def fortios_rollback_config() -> str:
+    """Load FortiOS rollback config fixture."""
+    return _fixture_file_read("fortios_rollback.conf")
