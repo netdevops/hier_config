@@ -22,8 +22,8 @@ class TestConfigWorkflows:  # pylint: disable=too-few-public-methods
     """Test configuration workflows for different network operating systems."""
 
     @pytest.mark.parametrize(
-        "platform,fixture_prefix",
-        [
+        ("platform", "fixture_prefix"),
+        (
             (Platform.CISCO_IOS, "ios"),
             (Platform.ARISTA_EOS, "eos"),
             (Platform.CISCO_NXOS, "nxos"),
@@ -33,9 +33,9 @@ class TestConfigWorkflows:  # pylint: disable=too-few-public-methods
             (Platform.FORTINET_FORTIOS, "fortios"),
             (Platform.HP_COMWARE5, "comware5"),
             (Platform.HP_PROCURVE, "procurve"),
-        ],
+        ),
     )
-    def test_circular_workflow(  # pylint: disable=too-many-locals  # noqa: PLR0914, PLR6301
+    def test_circular_workflow(  # pylint: disable=too-many-locals  # noqa: PLR0914,PLR6301
         self,
         platform: Platform,
         fixture_prefix: str,
@@ -107,16 +107,16 @@ class TestConfigWorkflows:  # pylint: disable=too-few-public-methods
         # Note: For some platforms (JunOS, VyOS, FortiOS), the future() method may not properly
         # remove deleted sections, so we verify that all generated lines are present (subset check)
         # rather than exact equality
-        future_lines = set(
+        future_lines = {
             line.cisco_style_text()
             for line in future_config.all_children_sorted()
             if not line.cisco_style_text().strip().startswith(("no ", "delete "))
-        )
-        generated_lines = set(
+        }
+        generated_lines = {
             line.cisco_style_text()
             for line in generated_config.all_children_sorted()
             if not line.cisco_style_text().strip().startswith(("no ", "delete "))
-        )
+        }
         # Check that all generated lines are present in future (subset check)
         missing_lines = generated_lines - future_lines
         assert not missing_lines, (
@@ -143,16 +143,16 @@ class TestConfigWorkflows:  # pylint: disable=too-few-public-methods
         # Note: For some platforms (JunOS, VyOS, FortiOS), the future() method may not properly
         # remove deleted sections, so we verify that all running lines are present (subset check)
         # rather than exact equality
-        rollback_future_lines = set(
+        rollback_future_lines = {
             line.cisco_style_text()
             for line in rollback_future_config.all_children_sorted()
             if not line.cisco_style_text().strip().startswith(("no ", "delete "))
-        )
-        running_lines = set(
+        }
+        running_lines = {
             line.cisco_style_text()
             for line in running_config.all_children_sorted()
             if not line.cisco_style_text().strip().startswith(("no ", "delete "))
-        )
+        }
         # Check that all running lines are present in rollback_future (subset check)
         missing_lines = running_lines - rollback_future_lines
         assert not missing_lines, (
