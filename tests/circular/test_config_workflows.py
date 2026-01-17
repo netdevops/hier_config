@@ -18,7 +18,7 @@ from hier_config import WorkflowRemediation, get_hconfig
 from hier_config.models import Platform
 
 
-class TestConfigWorkflows:
+class TestConfigWorkflows:  # pylint: disable=too-few-public-methods
     """Test configuration workflows for different network operating systems."""
 
     @pytest.mark.parametrize(
@@ -35,7 +35,7 @@ class TestConfigWorkflows:
             (Platform.HP_PROCURVE, "procurve"),
         ],
     )
-    def test_circular_workflow(
+    def test_circular_workflow(  # pylint: disable=too-many-locals  # noqa: PLR0914, PLR6301
         self,
         platform: Platform,
         fixture_prefix: str,
