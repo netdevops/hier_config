@@ -17,10 +17,10 @@ from hier_config.models import (
     UnusedObjectReference,
     UnusedObjectRule,
 )
+from hier_config.root import HConfig
 
 if TYPE_CHECKING:
     from hier_config.models import ReferencePattern
-    from hier_config.root import HConfig
 
 logger = getLogger(__name__)
 
@@ -84,23 +84,15 @@ class UnusedObjectRemediator:
         total_unused = sum(len(unused) for unused in unused_objects.values())
 
         return UnusedObjectAnalysis(
-            defined_objects={
-                k: tuple(v) for k, v in defined_objects.items()
-            },
-            referenced_objects={
-                k: tuple(v) for k, v in referenced_objects.items()
-            },
-            unused_objects={
-                k: tuple(v) for k, v in unused_objects.items()
-            },
+            defined_objects={k: tuple(v) for k, v in defined_objects.items()},
+            referenced_objects={k: tuple(v) for k, v in referenced_objects.items()},
+            unused_objects={k: tuple(v) for k, v in unused_objects.items()},
             total_defined=total_defined,
             total_unused=total_unused,
             removal_commands=tuple(all_removal_commands),
         )
 
-    def find_definitions(
-        self, rule: UnusedObjectRule
-    ) -> list[UnusedObjectDefinition]:
+    def find_definitions(self, rule: UnusedObjectRule) -> list[UnusedObjectDefinition]:
         """Finds all definitions of a specific object type.
 
         Args:
@@ -123,13 +115,13 @@ class UnusedObjectRemediator:
                     re_search=match_rule.re_search,
                 ):
                     # Extract the object name
-                    name = self._extract_object_name(child.text, rule)
+                    name = self.extract_object_name(child.text)
                     if name:
                         # Build the lineage path
                         lineage = tuple(c.text for c in child.lineage())
 
                         # Extract any metadata (like ACL type)
-                        metadata = self._extract_metadata(child.text, rule)
+                        metadata = self.extract_metadata(child.text)
 
                         definitions.append(
                             UnusedObjectDefinition(
@@ -141,14 +133,10 @@ class UnusedObjectRemediator:
                         )
                     break
 
-        logger.debug(
-            "Found %d definitions for %s", len(definitions), rule.object_type
-        )
+        logger.debug("Found %d definitions for %s", len(definitions), rule.object_type)
         return definitions
 
-    def find_references(
-        self, rule: UnusedObjectRule
-    ) -> list[UnusedObjectReference]:
+    def find_references(self, rule: UnusedObjectRule) -> list[UnusedObjectReference]:
         """Finds all references to objects of a specific type.
 
         Args:
@@ -164,9 +152,7 @@ class UnusedObjectRemediator:
             refs = self._find_references_for_pattern(rule, ref_pattern)
             references.extend(refs)
 
-        logger.debug(
-            "Found %d references for %s", len(references), rule.object_type
-        )
+        logger.debug("Found %d references for %s", len(references), rule.object_type)
         return references
 
     def _find_references_for_pattern(
@@ -188,12 +174,10 @@ class UnusedObjectRemediator:
             # Check if this child's lineage matches the reference pattern
             if child.is_lineage_match(ref_pattern.match_rules):
                 # Extract the object name from the reference
-                name = self._extract_reference_name(
-                    child.text, ref_pattern, rule
-                )
+                name = self.extract_reference_name(child.text, ref_pattern)
                 if name:
                     # Check ignore patterns
-                    if self._should_ignore_reference(name, ref_pattern):
+                    if self.should_ignore_reference(name, ref_pattern):
                         continue
 
                     lineage = tuple(c.text for c in child.lineage())
@@ -208,8 +192,8 @@ class UnusedObjectRemediator:
 
         return references
 
+    @staticmethod
     def identify_unused(
-        self,
         definitions: list[UnusedObjectDefinition],
         references: list[UnusedObjectReference],
         rule: UnusedObjectRule,
@@ -226,7 +210,7 @@ class UnusedObjectRemediator:
 
         """
         # Build a set of referenced object names
-        referenced_names = set()
+        referenced_names: set[str] = set()
         for ref in references:
             if rule.case_sensitive:
                 referenced_names.add(ref.name)
@@ -258,13 +242,11 @@ class UnusedObjectRemediator:
             HConfig object with removal commands.
 
         """
-        from hier_config.root import HConfig
-
         removal_config = HConfig(self.driver)
 
         for obj in unused_objects:
             # Generate removal command from template
-            removal_cmd = self._format_removal_command(obj, rule)
+            removal_cmd = self.format_removal_command(obj, rule)
             if removal_cmd:
                 # Add the command to the removal config
                 child = removal_config.add_child(removal_cmd)
@@ -285,19 +267,59 @@ class UnusedObjectRemediator:
             List of removal command strings.
 
         """
-        commands = []
+        commands: list[str] = []
         for obj in unused_objects:
-            cmd = self._format_removal_command(obj, rule)
+            cmd = self.format_removal_command(obj, rule)
             if cmd:
                 commands.append(cmd)
         return commands
 
-    def _extract_object_name(self, text: str, rule: UnusedObjectRule) -> str | None:
+    @staticmethod
+    def _extract_access_list_name(parts: list[str]) -> str | None:
+        """Extract name from access-list definition."""
+        # ip access-list [standard|extended] NAME (IOS format)
+        if len(parts) >= 4 and parts[0] == "ip" and parts[1] == "access-list":
+            acl_type_set = {"standard", "extended"}
+            if parts[2] in acl_type_set:
+                return parts[3]
+        # ip access-list NAME (NX-OS format - no standard/extended keyword)
+        if len(parts) >= 3 and parts[0] == "ip" and parts[1] == "access-list":
+            return parts[2]
+        # ipv6 access-list NAME
+        if len(parts) >= 3 and parts[0] == "ipv6" and parts[1] == "access-list":
+            return parts[2]
+        return None
+
+    @staticmethod
+    def _extract_prefix_list_name(parts: list[str], text: str) -> str | None:
+        """Extract name from prefix-list definition."""
+        # ip prefix-list NAME or ipv6 prefix-list NAME or prefix-set NAME
+        if "prefix-list" in text:
+            idx = parts.index("prefix-list")
+            if len(parts) > idx + 1:
+                return parts[idx + 1]
+        if "prefix-set" in text:
+            idx = parts.index("prefix-set")
+            if len(parts) > idx + 1:
+                return parts[idx + 1]
+        return None
+
+    @staticmethod
+    def _extract_vrf_name(parts: list[str]) -> str | None:
+        """Extract name from VRF definition."""
+        # vrf definition NAME
+        if "definition" in parts:
+            idx = parts.index("definition")
+            if len(parts) > idx + 1:
+                return parts[idx + 1]
+        return None
+
+    @staticmethod
+    def extract_object_name(text: str) -> str | None:  # noqa: C901, PLR0911
         """Extracts the object name from a definition line.
 
         Args:
             text: The configuration line text.
-            rule: The unused object rule.
 
         Returns:
             The extracted object name, or None if extraction failed.
@@ -305,93 +327,63 @@ class UnusedObjectRemediator:
         """
         # Strategy: parse based on common patterns
         # For most objects, the name is the second token
-        # Examples:
-        #   "ip access-list extended NAME" -> NAME
-        #   "route-map NAME permit 10" -> NAME
-        #   "ip prefix-list NAME seq 5 permit ..." -> NAME
-        #   "class-map match-any NAME" -> NAME
-        #   "vrf definition NAME" -> NAME
-
         parts = text.split()
         if len(parts) < 2:
             return None
 
-        # Handle different object types
+        # Handle access-lists
         if "access-list" in text:
-            # ip access-list [standard|extended] NAME (IOS format)
-            if len(parts) >= 4 and parts[0] == "ip" and parts[1] == "access-list":
-                if parts[2] in ("standard", "extended"):
-                    return parts[3]
-            # ip access-list NAME (NX-OS format - no standard/extended keyword)
-            if len(parts) >= 3 and parts[0] == "ip" and parts[1] == "access-list":
-                return parts[2]
-            # ipv6 access-list NAME
-            if len(parts) >= 3 and parts[0] == "ipv6" and parts[1] == "access-list":
-                return parts[2]
+            return UnusedObjectRemediator._extract_access_list_name(parts)
 
-        elif "prefix-list" in text or "prefix-set" in text:
-            # ip prefix-list NAME
-            # ipv6 prefix-list NAME
-            # prefix-set NAME
-            if "prefix-list" in text:
-                idx = parts.index("prefix-list")
-                if len(parts) > idx + 1:
-                    return parts[idx + 1]
-            elif "prefix-set" in text:
-                idx = parts.index("prefix-set")
-                if len(parts) > idx + 1:
-                    return parts[idx + 1]
+        # Handle prefix-lists
+        if "prefix-list" in text or "prefix-set" in text:
+            return UnusedObjectRemediator._extract_prefix_list_name(parts, text)
 
-        elif text.startswith("route-map "):
-            # route-map NAME [permit|deny] [seq]
+        # Handle route-maps
+        if text.startswith("route-map "):
             return parts[1]
 
-        elif text.startswith("class-map "):
-            # class-map [match-any|match-all] NAME
-            # class-map NAME
-            if len(parts) >= 3 and parts[1] in ("match-any", "match-all"):
+        # Handle class-maps
+        if text.startswith("class-map "):
+            match_type_set = {"match-any", "match-all"}
+            if len(parts) >= 3 and parts[1] in match_type_set:
                 return parts[2]
             return parts[1]
 
-        elif text.startswith("policy-map "):
-            # policy-map NAME
+        # Handle policy-maps
+        if text.startswith("policy-map "):
             return parts[1]
 
-        elif "vrf" in text and "definition" in text:
-            # vrf definition NAME
-            idx = parts.index("definition")
-            if len(parts) > idx + 1:
-                return parts[idx + 1]
+        # Handle VRFs
+        if "vrf" in text and "definition" in text:
+            return UnusedObjectRemediator._extract_vrf_name(parts)
 
-        elif text.startswith("object-group "):
-            # object-group [ip|ipv6|...] NAME
-            if len(parts) >= 3:
-                return parts[2]
+        # Handle object-groups
+        if text.startswith("object-group ") and len(parts) >= 3:
+            return parts[2]
 
-        elif text.startswith("as-path-set "):
-            # as-path-set NAME
+        # Handle as-path-sets
+        if text.startswith("as-path-set "):
             return parts[1]
 
-        elif text.startswith("community-set "):
-            # community-set NAME
+        # Handle community-sets
+        if text.startswith("community-set "):
             return parts[1]
 
-        elif text.startswith("ipv6 general-prefix "):
-            # ipv6 general-prefix NAME ...
+        # Handle IPv6 general-prefix
+        if text.startswith("ipv6 general-prefix "):
             return parts[2]
 
         # Default: return the second token
         return parts[1] if len(parts) >= 2 else None
 
-    def _extract_reference_name(
-        self, text: str, ref_pattern: ReferencePattern, rule: UnusedObjectRule
-    ) -> str | None:
+    @staticmethod
+    def extract_reference_name(text: str, ref_pattern: ReferencePattern) -> str | None:
         """Extracts the referenced object name using the pattern's regex.
 
         Args:
             text: The configuration line text.
             ref_pattern: The reference pattern with extraction regex.
-            rule: The unused object rule.
 
         Returns:
             The extracted reference name, or None if extraction failed.
@@ -402,14 +394,12 @@ class UnusedObjectRemediator:
             return match.group(ref_pattern.capture_group)
         return None
 
-    def _extract_metadata(
-        self, text: str, rule: UnusedObjectRule
-    ) -> dict[str, str]:
+    @staticmethod
+    def extract_metadata(text: str) -> dict[str, str]:
         """Extracts metadata from the definition line.
 
         Args:
             text: The configuration line text.
-            rule: The unused object rule.
 
         Returns:
             Dictionary of metadata key-value pairs.
@@ -428,7 +418,8 @@ class UnusedObjectRemediator:
         # Extract class-map match type
         if text.startswith("class-map "):
             parts = text.split()
-            if len(parts) >= 2 and parts[1] in ("match-any", "match-all"):
+            match_type_set = {"match-any", "match-all"}
+            if len(parts) >= 2 and parts[1] in match_type_set:
                 metadata["match_type"] = parts[1]
 
         # Extract object-group type
@@ -439,8 +430,9 @@ class UnusedObjectRemediator:
 
         return metadata
 
-    def _format_removal_command(
-        self, obj: UnusedObjectDefinition, rule: UnusedObjectRule
+    @staticmethod
+    def format_removal_command(
+        obj: UnusedObjectDefinition, rule: UnusedObjectRule
     ) -> str | None:
         """Formats the removal command using the template.
 
@@ -463,17 +455,13 @@ class UnusedObjectRemediator:
 
         # Replace placeholders in template
         try:
-            result = template.format(**replacements)
-            return result
+            return template.format(**replacements)
         except KeyError as e:
-            logger.warning(
-                "Missing template variable %s for %s", e, obj.name
-            )
+            logger.warning("Missing template variable %s for %s", e, obj.name)
             return None
 
-    def _should_ignore_reference(
-        self, name: str, ref_pattern: ReferencePattern
-    ) -> bool:
+    @staticmethod
+    def should_ignore_reference(name: str, ref_pattern: ReferencePattern) -> bool:
         """Checks if a reference should be ignored.
 
         Args:
@@ -484,7 +472,7 @@ class UnusedObjectRemediator:
             True if the reference should be ignored, False otherwise.
 
         """
-        for ignore_pattern in ref_pattern.ignore_patterns:
-            if re.search(ignore_pattern, name):
-                return True
-        return False
+        return any(
+            re.search(ignore_pattern, name)
+            for ignore_pattern in ref_pattern.ignore_patterns
+        )

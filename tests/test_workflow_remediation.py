@@ -278,9 +278,7 @@ hostname TestRouter
     vrf_idx = next(
         i for i, cmd in enumerate(cleanup_commands) if "vrf definition" in cmd
     )
-    pm_idx = next(
-        i for i, cmd in enumerate(cleanup_commands) if "policy-map" in cmd
-    )
+    pm_idx = next(i for i, cmd in enumerate(cleanup_commands) if "policy-map" in cmd)
 
     # Policy-map should come before VRF
     assert pm_idx < vrf_idx

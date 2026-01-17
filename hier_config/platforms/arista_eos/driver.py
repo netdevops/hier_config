@@ -234,9 +234,7 @@ class HConfigDriverAristaEOS(HConfigDriverBase):
                 # IPv4 ACLs (EOS is similar to IOS)
                 UnusedObjectRule(
                     object_type="ipv4-acl",
-                    definition_match=(
-                        MatchRule(startswith="ip access-list "),
-                    ),
+                    definition_match=(MatchRule(startswith="ip access-list "),),
                     reference_patterns=(
                         ReferencePattern(
                             match_rules=(
@@ -278,9 +276,7 @@ class HConfigDriverAristaEOS(HConfigDriverBase):
                 # IPv6 ACLs
                 UnusedObjectRule(
                     object_type="ipv6-acl",
-                    definition_match=(
-                        MatchRule(startswith="ipv6 access-list "),
-                    ),
+                    definition_match=(MatchRule(startswith="ipv6 access-list "),),
                     reference_patterns=(
                         ReferencePattern(
                             match_rules=(
@@ -298,9 +294,7 @@ class HConfigDriverAristaEOS(HConfigDriverBase):
                 # Prefix lists
                 UnusedObjectRule(
                     object_type="prefix-list",
-                    definition_match=(
-                        MatchRule(startswith="ip prefix-list "),
-                    ),
+                    definition_match=(MatchRule(startswith="ip prefix-list "),),
                     reference_patterns=(
                         ReferencePattern(
                             match_rules=(
@@ -326,9 +320,7 @@ class HConfigDriverAristaEOS(HConfigDriverBase):
                 # IPv6 Prefix lists
                 UnusedObjectRule(
                     object_type="ipv6-prefix-list",
-                    definition_match=(
-                        MatchRule(startswith="ipv6 prefix-list "),
-                    ),
+                    definition_match=(MatchRule(startswith="ipv6 prefix-list "),),
                     reference_patterns=(
                         ReferencePattern(
                             match_rules=(
@@ -354,9 +346,7 @@ class HConfigDriverAristaEOS(HConfigDriverBase):
                 # Route maps
                 UnusedObjectRule(
                     object_type="route-map",
-                    definition_match=(
-                        MatchRule(startswith="route-map "),
-                    ),
+                    definition_match=(MatchRule(startswith="route-map "),),
                     reference_patterns=(
                         ReferencePattern(
                             match_rules=(
@@ -398,9 +388,7 @@ class HConfigDriverAristaEOS(HConfigDriverBase):
                 # Class maps
                 UnusedObjectRule(
                     object_type="class-map",
-                    definition_match=(
-                        MatchRule(startswith="class-map "),
-                    ),
+                    definition_match=(MatchRule(startswith="class-map "),),
                     reference_patterns=(
                         ReferencePattern(
                             match_rules=(
@@ -418,9 +406,7 @@ class HConfigDriverAristaEOS(HConfigDriverBase):
                 # Policy maps
                 UnusedObjectRule(
                     object_type="policy-map",
-                    definition_match=(
-                        MatchRule(startswith="policy-map "),
-                    ),
+                    definition_match=(MatchRule(startswith="policy-map "),),
                     reference_patterns=(
                         ReferencePattern(
                             match_rules=(
@@ -447,9 +433,7 @@ class HConfigDriverAristaEOS(HConfigDriverBase):
                 # VRFs (vrf instance on EOS)
                 UnusedObjectRule(
                     object_type="vrf",
-                    definition_match=(
-                        MatchRule(startswith="vrf instance "),
-                    ),
+                    definition_match=(MatchRule(startswith="vrf instance "),),
                     reference_patterns=(
                         ReferencePattern(
                             match_rules=(
@@ -475,9 +459,7 @@ class HConfigDriverAristaEOS(HConfigDriverBase):
                 # IPv6 General Prefixes (EOS-specific)
                 UnusedObjectRule(
                     object_type="ipv6-general-prefix",
-                    definition_match=(
-                        MatchRule(startswith="ipv6 general-prefix "),
-                    ),
+                    definition_match=(MatchRule(startswith="ipv6 general-prefix "),),
                     reference_patterns=(
                         ReferencePattern(
                             match_rules=(

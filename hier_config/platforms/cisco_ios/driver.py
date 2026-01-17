@@ -194,9 +194,7 @@ class HConfigDriverCiscoIOS(HConfigDriverBase):
                 # IPv4 ACLs
                 UnusedObjectRule(
                     object_type="ipv4-acl",
-                    definition_match=(
-                        MatchRule(startswith="ip access-list "),
-                    ),
+                    definition_match=(MatchRule(startswith="ip access-list "),),
                     reference_patterns=(
                         # Interface applications
                         ReferencePattern(
@@ -245,9 +243,7 @@ class HConfigDriverCiscoIOS(HConfigDriverBase):
                         ),
                         # NAT references
                         ReferencePattern(
-                            match_rules=(
-                                MatchRule(re_search=r"ip nat "),
-                            ),
+                            match_rules=(MatchRule(re_search=r"ip nat "),),
                             extract_regex=r"ip nat \S+.*?(?:access-list|pool)\s+(\S+)",
                             reference_type="nat",
                         ),
@@ -259,9 +255,7 @@ class HConfigDriverCiscoIOS(HConfigDriverBase):
                 # IPv6 ACLs
                 UnusedObjectRule(
                     object_type="ipv6-acl",
-                    definition_match=(
-                        MatchRule(startswith="ipv6 access-list "),
-                    ),
+                    definition_match=(MatchRule(startswith="ipv6 access-list "),),
                     reference_patterns=(
                         # Interface applications
                         ReferencePattern(
@@ -289,9 +283,7 @@ class HConfigDriverCiscoIOS(HConfigDriverBase):
                 # Prefix lists
                 UnusedObjectRule(
                     object_type="prefix-list",
-                    definition_match=(
-                        MatchRule(startswith="ip prefix-list "),
-                    ),
+                    definition_match=(MatchRule(startswith="ip prefix-list "),),
                     reference_patterns=(
                         # Route-map references
                         ReferencePattern(
@@ -329,9 +321,7 @@ class HConfigDriverCiscoIOS(HConfigDriverBase):
                 # IPv6 Prefix lists
                 UnusedObjectRule(
                     object_type="ipv6-prefix-list",
-                    definition_match=(
-                        MatchRule(startswith="ipv6 prefix-list "),
-                    ),
+                    definition_match=(MatchRule(startswith="ipv6 prefix-list "),),
                     reference_patterns=(
                         # Route-map references
                         ReferencePattern(
@@ -359,9 +349,7 @@ class HConfigDriverCiscoIOS(HConfigDriverBase):
                 # Route maps
                 UnusedObjectRule(
                     object_type="route-map",
-                    definition_match=(
-                        MatchRule(startswith="route-map "),
-                    ),
+                    definition_match=(MatchRule(startswith="route-map "),),
                     reference_patterns=(
                         # BGP neighbor route-maps
                         ReferencePattern(
@@ -417,9 +405,7 @@ class HConfigDriverCiscoIOS(HConfigDriverBase):
                 # Class maps
                 UnusedObjectRule(
                     object_type="class-map",
-                    definition_match=(
-                        MatchRule(startswith="class-map "),
-                    ),
+                    definition_match=(MatchRule(startswith="class-map "),),
                     reference_patterns=(
                         # Policy map references
                         ReferencePattern(
@@ -447,9 +433,7 @@ class HConfigDriverCiscoIOS(HConfigDriverBase):
                 # Policy maps
                 UnusedObjectRule(
                     object_type="policy-map",
-                    definition_match=(
-                        MatchRule(startswith="policy-map "),
-                    ),
+                    definition_match=(MatchRule(startswith="policy-map "),),
                     reference_patterns=(
                         # Interface service policies
                         ReferencePattern(
@@ -487,9 +471,7 @@ class HConfigDriverCiscoIOS(HConfigDriverBase):
                 # VRFs
                 UnusedObjectRule(
                     object_type="vrf",
-                    definition_match=(
-                        MatchRule(startswith="vrf definition "),
-                    ),
+                    definition_match=(MatchRule(startswith="vrf definition "),),
                     reference_patterns=(
                         # Interface VRF membership
                         ReferencePattern(
