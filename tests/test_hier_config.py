@@ -543,7 +543,7 @@ def test_idempotency_key_with_equals_string() -> None:
     config_raw = """logging console
 """
     config = get_hconfig(driver, config_raw)
-    child = list(config.children)[0]
+    child = next(iter(config.children))
 
     # Test the idempotency with equals string
     key = driver._idempotency_key(child, (MatchRule(equals="logging console"),))
@@ -559,7 +559,7 @@ def test_idempotency_key_with_equals_frozenset() -> None:
     config_raw = """logging console
 """
     config = get_hconfig(driver, config_raw)
-    child = list(config.children)[0]
+    child = next(iter(config.children))
 
     # Test the idempotency with equals frozenset (should fall back to text)
     key = driver._idempotency_key(
@@ -577,7 +577,7 @@ def test_idempotency_key_no_match_rules() -> None:
     config_raw = """some command
 """
     config = get_hconfig(driver, config_raw)
-    child = list(config.children)[0]
+    child = next(iter(config.children))
 
     # Empty MatchRule should fall back to text
     key = driver._idempotency_key(child, (MatchRule(),))
@@ -593,7 +593,7 @@ def test_idempotency_key_prefix_no_match() -> None:
     config_raw = """logging console
 """
     config = get_hconfig(driver, config_raw)
-    child = list(config.children)[0]
+    child = next(iter(config.children))
 
     # Prefix that doesn't match should fall back to text
     key = driver._idempotency_key(child, (MatchRule(startswith="interface"),))
@@ -609,7 +609,7 @@ def test_idempotency_key_suffix_no_match() -> None:
     config_raw = """logging console
 """
     config = get_hconfig(driver, config_raw)
-    child = list(config.children)[0]
+    child = next(iter(config.children))
 
     # Suffix that doesn't match should fall back to text
     key = driver._idempotency_key(child, (MatchRule(endswith="emergency"),))
@@ -625,7 +625,7 @@ def test_idempotency_key_contains_no_match() -> None:
     config_raw = """logging console
 """
     config = get_hconfig(driver, config_raw)
-    child = list(config.children)[0]
+    child = next(iter(config.children))
 
     # Contains that doesn't match should fall back to text
     key = driver._idempotency_key(child, (MatchRule(contains="interface"),))
@@ -641,7 +641,7 @@ def test_idempotency_key_regex_no_match() -> None:
     config_raw = """logging console
 """
     config = get_hconfig(driver, config_raw)
-    child = list(config.children)[0]
+    child = next(iter(config.children))
 
     # Regex that doesn't match should fall back to text
     key = driver._idempotency_key(child, (MatchRule(re_search="^interface"),))
@@ -657,7 +657,7 @@ def test_idempotency_key_prefix_tuple_no_match() -> None:
     config_raw = """logging console
 """
     config = get_hconfig(driver, config_raw)
-    child = list(config.children)[0]
+    child = next(iter(config.children))
 
     # Tuple of prefixes that don't match should fall back to text
     key = driver._idempotency_key(
@@ -675,7 +675,7 @@ def test_idempotency_key_prefix_tuple_match() -> None:
     config_raw = """logging console
 """
     config = get_hconfig(driver, config_raw)
-    child = list(config.children)[0]
+    child = next(iter(config.children))
 
     # Tuple of prefixes with one matching - should return longest match
     key = driver._idempotency_key(
@@ -693,7 +693,7 @@ def test_idempotency_key_suffix_tuple_no_match() -> None:
     config_raw = """logging console
 """
     config = get_hconfig(driver, config_raw)
-    child = list(config.children)[0]
+    child = next(iter(config.children))
 
     # Tuple of suffixes that don't match should fall back to text
     key = driver._idempotency_key(
@@ -711,7 +711,7 @@ def test_idempotency_key_suffix_tuple_match() -> None:
     config_raw = """logging console
 """
     config = get_hconfig(driver, config_raw)
-    child = list(config.children)[0]
+    child = next(iter(config.children))
 
     # Tuple of suffixes with one matching - should return longest match
     key = driver._idempotency_key(
@@ -729,7 +729,7 @@ def test_idempotency_key_contains_tuple_no_match() -> None:
     config_raw = """logging console
 """
     config = get_hconfig(driver, config_raw)
-    child = list(config.children)[0]
+    child = next(iter(config.children))
 
     # Tuple of contains that don't match should fall back to text
     key = driver._idempotency_key(
@@ -747,7 +747,7 @@ def test_idempotency_key_contains_tuple_match() -> None:
     config_raw = """logging console
 """
     config = get_hconfig(driver, config_raw)
-    child = list(config.children)[0]
+    child = next(iter(config.children))
 
     # Tuple of contains with matches - should return longest match
     key = driver._idempotency_key(
@@ -766,8 +766,8 @@ def test_idempotency_key_regex_with_groups() -> None:
   neighbor 10.1.1.1 description peer1
 """
     config = get_hconfig(driver, config_raw)
-    bgp_child = list(config.children)[0]
-    neighbor_child = list(bgp_child.children)[0]
+    bgp_child = next(iter(config.children))
+    neighbor_child = next(iter(bgp_child.children))
 
     # Regex with capture groups should use groups
     key = driver._idempotency_key(
@@ -789,10 +789,12 @@ def test_idempotency_key_regex_with_empty_groups() -> None:
     config_raw = """logging console
 """
     config = get_hconfig(driver, config_raw)
-    child = list(config.children)[0]
+    child = next(iter(config.children))
 
     # Regex with empty/None groups should fall back to match result
-    key = driver._idempotency_key(child, (MatchRule(re_search=r"logging ()?(console)"),))
+    key = driver._idempotency_key(
+        child, (MatchRule(re_search=r"logging ()?(console)"),)
+    )
     # Group 1 is empty, group 2 has "console", so should use groups
     assert "re|" in key[0]
 
@@ -806,7 +808,7 @@ def test_idempotency_key_regex_greedy_pattern() -> None:
     config_raw = """logging console emergency
 """
     config = get_hconfig(driver, config_raw)
-    child = list(config.children)[0]
+    child = next(iter(config.children))
 
     # Regex with .* should be trimmed
     key = driver._idempotency_key(child, (MatchRule(re_search=r"logging console.*"),))
@@ -822,7 +824,7 @@ def test_idempotency_key_regex_greedy_pattern_with_dollar() -> None:
     config_raw = """logging console emergency
 """
     config = get_hconfig(driver, config_raw)
-    child = list(config.children)[0]
+    child = next(iter(config.children))
 
     # Regex with .*$ should be trimmed
     key = driver._idempotency_key(child, (MatchRule(re_search=r"logging console.*$"),))
@@ -838,7 +840,7 @@ def test_idempotency_key_regex_only_greedy() -> None:
     config_raw = """logging console
 """
     config = get_hconfig(driver, config_raw)
-    child = list(config.children)[0]
+    child = next(iter(config.children))
 
     # Regex that is only .* should not trim to empty
     key = driver._idempotency_key(child, (MatchRule(re_search=r".*"),))
@@ -856,8 +858,8 @@ def test_idempotency_key_lineage_mismatch() -> None:
   description test
 """
     config = get_hconfig(driver, config_raw)
-    interface_child = list(config.children)[0]
-    desc_child = list(interface_child.children)[0]
+    interface_child = next(iter(config.children))
+    desc_child = next(iter(interface_child.children))
 
     # Try to match with wrong number of rules (desc has 2 lineage levels, only 1 rule)
     key = driver._idempotency_key(desc_child, (MatchRule(startswith="description"),))
@@ -874,7 +876,7 @@ def test_idempotency_key_negated_command() -> None:
     config_raw = """no logging console
 """
     config = get_hconfig(driver, config_raw)
-    child = list(config.children)[0]
+    child = next(iter(config.children))
 
     # Negated command should strip 'no ' prefix for matching
     key = driver._idempotency_key(child, (MatchRule(startswith="logging"),))
@@ -890,7 +892,7 @@ def test_idempotency_key_regex_fallback_to_original() -> None:
     config_raw = """no logging console
 """
     config = get_hconfig(driver, config_raw)
-    child = list(config.children)[0]
+    child = next(iter(config.children))
 
     # Regex that matches original but not normalized (tests lines 328-329)
     key = driver._idempotency_key(child, (MatchRule(re_search=r"^no logging"),))
@@ -906,7 +908,7 @@ def test_idempotency_key_suffix_single_match() -> None:
     config_raw = """logging console
 """
     config = get_hconfig(driver, config_raw)
-    child = list(config.children)[0]
+    child = next(iter(config.children))
 
     # Single suffix that matches (tests line 359)
     key = driver._idempotency_key(child, (MatchRule(endswith="console"),))
@@ -922,7 +924,7 @@ def test_idempotency_key_contains_single_match() -> None:
     config_raw = """logging console emergency
 """
     config = get_hconfig(driver, config_raw)
-    child = list(config.children)[0]
+    child = next(iter(config.children))
 
     # Single contains that matches (tests line 372)
     key = driver._idempotency_key(child, (MatchRule(contains="console"),))
@@ -938,7 +940,7 @@ def test_idempotency_key_regex_greedy_with_plus() -> None:
     config_raw = """interface GigabitEthernet1
 """
     config = get_hconfig(driver, config_raw)
-    child = list(config.children)[0]
+    child = next(iter(config.children))
 
     # Regex with .+ should be trimmed similar to .*
     # Tests the .+ branch in line 389
@@ -956,7 +958,7 @@ def test_idempotency_key_regex_trimmed_to_no_match() -> None:
     config_raw = """logging console
 """
     config = get_hconfig(driver, config_raw)
-    child = list(config.children)[0]
+    child = next(iter(config.children))
 
     # Regex "interface.*" matches nothing, but after trimming .* we get "interface"
     # which also doesn't match "logging console", so we fall back to full match result
