@@ -13,6 +13,7 @@ from hier_config.models import (
     IndentAdjustRule,
     MatchRule,
     NegationDefaultWhenRule,
+    NegationDefaultWithRule,
     OrderingRule,
     ParentAllowsDuplicateChildRule,
     PerLineSubRule,
@@ -125,6 +126,66 @@ def hconfig_v3_platform_v2_os_mapper(platform: Platform) -> str:
     return "generic"
 
 
+def _process_simple_rules(
+    v2_options: dict[str, Any],
+    key: str,
+    rule_class: type[Any],
+    append_to: Callable[[Any], None],
+) -> None:
+    """Process v2 rules that only need match_rules."""
+    for rule in v2_options.get(key, ()):
+        match_rules = _collect_match_rules(rule.get("lineage", []))
+        append_to(rule_class(match_rules=match_rules))
+
+
+def _process_custom_rules(
+    v2_options: dict[str, Any], driver: HConfigDriverBase
+) -> None:
+    """Process v2 rules that require custom handling."""
+    for rule in v2_options.get("ordering", ()):
+        match_rules = _collect_match_rules(rule.get("lineage", []))
+        weight = rule.get("order", 500) - 500
+        driver.rules.ordering.append(
+            OrderingRule(match_rules=match_rules, weight=weight),
+        )
+
+    for rule in v2_options.get("indent_adjust", ()):
+        driver.rules.indent_adjust.append(
+            IndentAdjustRule(
+                start_expression=rule.get("start_expression"),
+                end_expression=rule.get("end_expression"),
+            )
+        )
+
+    for rule in v2_options.get("sectional_exiting", ()):
+        match_rules = _collect_match_rules(rule.get("lineage", []))
+        driver.rules.sectional_exiting.append(
+            SectionalExitingRule(
+                match_rules=match_rules, exit_text=rule.get("exit_text", "")
+            ),
+        )
+
+    for rule in v2_options.get("full_text_sub", ()):
+        driver.rules.full_text_sub.append(
+            FullTextSubRule(
+                search=rule.get("search", ""), replace=rule.get("replace", "")
+            )
+        )
+
+    for rule in v2_options.get("per_line_sub", ()):
+        driver.rules.per_line_sub.append(
+            PerLineSubRule(
+                search=rule.get("search", ""), replace=rule.get("replace", "")
+            )
+        )
+
+    for rule in v2_options.get("negation_negate_with", ()):
+        match_rules = _collect_match_rules(rule.get("lineage", []))
+        driver.rules.negate_with.append(
+            NegationDefaultWithRule(match_rules=match_rules, use=rule.get("use", "")),
+        )
+
+
 def load_hconfig_v2_options(
     v2_options: dict[str, Any] | str, platform: Platform
 ) -> HConfigDriverBase:
@@ -139,115 +200,53 @@ def load_hconfig_v2_options(
         HConfigDriverBase: A v3 driver instance with the migrated rules.
 
     """
-    # Load options from a file if a string is provided
     if isinstance(v2_options, str):
         v2_options = yaml.safe_load(read_text_from_file(file_path=v2_options))
 
-    # Ensure v2_options is a dictionary
     if not isinstance(v2_options, dict):
         msg = "v2_options must be a dictionary or a valid file path."
         raise TypeError(msg)
 
     driver = get_hconfig_driver(platform)
 
-    def process_rules(
-        key: str,
-        rule_class: type[Any],
-        append_to: Callable[[Any], None],
-        lineage_key: str = "lineage",
-    ) -> None:
-        """Helper to process rules."""
-        for rule in v2_options.get(key, ()):
-            match_rules = _collect_match_rules(rule.get(lineage_key, []))
-            append_to(rule_class(match_rules=match_rules))
-
-    # sectional_overwrite
-    process_rules(
-        "sectional_overwrite",
-        SectionalOverwriteRule,
-        driver.rules.sectional_overwrite.append,
+    # Process simple rules that only need match_rules
+    simple_rules: tuple[tuple[str, type[Any], Callable[[Any], None]], ...] = (
+        (
+            "sectional_overwrite",
+            SectionalOverwriteRule,
+            driver.rules.sectional_overwrite.append,
+        ),
+        (
+            "sectional_overwrite_no_negate",
+            SectionalOverwriteNoNegateRule,
+            driver.rules.sectional_overwrite_no_negate.append,
+        ),
+        (
+            "parent_allows_duplicate_child",
+            ParentAllowsDuplicateChildRule,
+            driver.rules.parent_allows_duplicate_child.append,
+        ),
+        (
+            "idempotent_commands_blacklist",
+            IdempotentCommandsAvoidRule,
+            driver.rules.idempotent_commands_avoid.append,
+        ),
+        (
+            "idempotent_commands",
+            IdempotentCommandsRule,
+            driver.rules.idempotent_commands.append,
+        ),
+        (
+            "negation_default_when",
+            NegationDefaultWhenRule,
+            driver.rules.negation_default_when.append,
+        ),
     )
+    for key, rule_class, append_to in simple_rules:
+        _process_simple_rules(v2_options, key, rule_class, append_to)
 
-    # sectional_overwrite_no_negate
-    process_rules(
-        "sectional_overwrite_no_negate",
-        SectionalOverwriteNoNegateRule,
-        driver.rules.sectional_overwrite_no_negate.append,
-    )
-
-    for rule in v2_options.get("ordering", ()):
-        lineage_rules = rule.get("lineage", [])
-        match_rules = _collect_match_rules(lineage_rules)
-        weight = rule.get("order", 500) - 500
-
-        driver.rules.ordering.append(
-            OrderingRule(match_rules=match_rules, weight=weight),
-        )
-
-    # indent_adjust
-    for rule in v2_options.get("indent_adjust", ()):
-        start_expression = rule.get("start_expression")
-        end_expression = rule.get("end_expression")
-
-        driver.rules.indent_adjust.append(
-            IndentAdjustRule(
-                start_expression=start_expression, end_expression=end_expression
-            )
-        )
-
-    # parent_allows_duplicate_child
-    process_rules(
-        "parent_allows_duplicate_child",
-        ParentAllowsDuplicateChildRule,
-        driver.rules.parent_allows_duplicate_child.append,
-    )
-
-    # sectional_exiting
-    for rule in v2_options.get("sectional_exiting", ()):
-        lineage_rules = rule.get("lineage", [])
-        match_rules = _collect_match_rules(lineage_rules)
-        exit_text = rule.get("exit_text", "")
-
-        driver.rules.sectional_exiting.append(
-            SectionalExitingRule(match_rules=match_rules, exit_text=exit_text),
-        )
-
-    # full_text_sub
-    for rule in v2_options.get("full_text_sub", ()):
-        driver.rules.full_text_sub.append(
-            FullTextSubRule(
-                search=rule.get("search", ""), replace=rule.get("replace", "")
-            )
-        )
-
-    # per_line_sub
-    for rule in v2_options.get("per_line_sub", ()):
-        driver.rules.per_line_sub.append(
-            PerLineSubRule(
-                search=rule.get("search", ""), replace=rule.get("replace", "")
-            )
-        )
-
-    # idempotent_commands_blacklist -> idempotent_commands_avoid
-    process_rules(
-        "idempotent_commands_blacklist",
-        IdempotentCommandsAvoidRule,
-        driver.rules.idempotent_commands_avoid.append,
-    )
-
-    # idempotent_commands
-    process_rules(
-        "idempotent_commands",
-        IdempotentCommandsRule,
-        driver.rules.idempotent_commands.append,
-    )
-
-    # negation_default_when
-    process_rules(
-        "negation_default_when",
-        NegationDefaultWhenRule,
-        driver.rules.negation_default_when.append,
-    )
+    # Process rules that require custom handling
+    _process_custom_rules(v2_options, driver)
 
     return driver
 

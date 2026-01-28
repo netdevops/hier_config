@@ -107,6 +107,15 @@ def v2_options() -> dict[str, Any]:
             }
         ],
         "idempotent_commands": [{"lineage": [{"startswith": "interface"}]}],
+        "negation_negate_with": [
+            {
+                "lineage": [
+                    {"startswith": "interface Ethernet"},
+                    {"startswith": "spanning-tree port type"},
+                ],
+                "use": "no spanning-tree port type",
+            }
+        ],
     }
 
 

@@ -122,6 +122,15 @@ v2_options = {
         {"lineage": [{"startswith": "router bgp"}], "exit_text": "exit"}
     ],
     "idempotent_commands": [{"lineage": [{"startswith": "interface"}]}],
+    "negation_negate_with": [
+        {
+            "lineage": [
+                {"startswith": "interface Ethernet"},
+                {"startswith": "spanning-tree port type"},
+            ],
+            "use": "no spanning-tree port type",
+        }
+    ],
 }
 platform = Platform.CISCO_IOS
 driver = load_hconfig_v2_options(v2_options, platform)

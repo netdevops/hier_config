@@ -173,6 +173,15 @@ def test_load_hconfig_v2_options(
     assert len(driver.rules.idempotent_commands) == 1
     assert driver.rules.idempotent_commands[0].match_rules[0].startswith == "interface"
 
+    # Assert negation_negate_with -> negate_with
+    assert len(driver.rules.negate_with) == 1
+    assert driver.rules.negate_with[0].match_rules[0].startswith == "interface Ethernet"
+    assert (
+        driver.rules.negate_with[0].match_rules[1].startswith
+        == "spanning-tree port type"
+    )
+    assert driver.rules.negate_with[0].use == "no spanning-tree port type"
+
 
 def test_load_hconfig_v2_tags_valid_input() -> None:
     v2_tags = [
