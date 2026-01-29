@@ -39,30 +39,37 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
                 SectionalExitingRule(
                     match_rules=(MatchRule(startswith="route-policy"),),
                     exit_text="end-policy",
+                    exit_text_parent_level=True,
                 ),
                 SectionalExitingRule(
                     match_rules=(MatchRule(startswith="prefix-set"),),
                     exit_text="end-set",
+                    exit_text_parent_level=True,
                 ),
                 SectionalExitingRule(
                     match_rules=(MatchRule(startswith="policy-map"),),
                     exit_text="end-policy-map",
+                    exit_text_parent_level=True,
                 ),
                 SectionalExitingRule(
                     match_rules=(MatchRule(startswith="class-map"),),
                     exit_text="end-class-map",
+                    exit_text_parent_level=True,
                 ),
                 SectionalExitingRule(
                     match_rules=(MatchRule(startswith="community-set"),),
                     exit_text="end-set",
+                    exit_text_parent_level=True,
                 ),
                 SectionalExitingRule(
                     match_rules=(MatchRule(startswith="extcommunity-set"),),
                     exit_text="end-set",
+                    exit_text_parent_level=True,
                 ),
                 SectionalExitingRule(
                     match_rules=(MatchRule(startswith="template"),),
                     exit_text="end-template",
+                    exit_text_parent_level=True,
                 ),
                 SectionalExitingRule(
                     match_rules=(MatchRule(startswith="interface"),),

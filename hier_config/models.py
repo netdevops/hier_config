@@ -34,6 +34,7 @@ class TagRule(BaseModel):
 class SectionalExitingRule(BaseModel):
     match_rules: tuple[MatchRule, ...]
     exit_text: str
+    exit_text_parent_level: bool = False
 
 
 class SectionalOverwriteRule(BaseModel):
