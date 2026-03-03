@@ -18,7 +18,7 @@ Auto-generated reference documentation for the `hier_config` public API.
 
 ::: hier_config.HConfigChild
 
-::: hier_config.HConfigChildren
+::: hier_config.children.HConfigChildren
 
 ---
 
