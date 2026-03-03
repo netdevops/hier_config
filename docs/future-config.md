@@ -27,19 +27,46 @@ change_2_rollback_config = post_change_2_config.config_to_get_to(post_change_1_c
 ```
 
 
-Currently, this algorithm does not account for:
+## Known Limitations
 
-- negate a numbered ACL when removing an item
-- sectional exiting
-- negate with
-- idempotent command avoid
-- idempotent_acl_check
-- and likely others
+The `future()` algorithm is a best-effort simulation.  The following cases are not yet handled:
+
+1. **Negating a numbered ACL when removing a single entry.**
+   Removing one line from a numbered ACL (e.g. `no access-list 10 deny 10.0.0.0 0.255.255.255`)
+   requires the OS to track sequence numbers, which hier_config does not currently model.
+   *Workaround:* Use extended named ACLs with sequence numbers so that hier_config can
+   treat each entry independently via the ACL sequence-number stripping logic.
+
+2. **Sectional exiting.**
+   The `future()` algorithm does not emit [sectional-exit](glossary.md#sectional-exiting) tokens (e.g. `exit-peer-policy`)
+   when reconstructing the predicted configuration.  The output is structurally correct but
+   may be missing closure tokens if you render it verbatim.
+
+3. **Negate-with rules.**
+   When a command has a custom [negation string](glossary.md#negation-negate-with) defined by the driver (e.g.
+   `NegationDefaultWithRule`), the `future()` algorithm may not apply that string when
+   processing removal of that command.
+
+4. **Idempotent command avoid list.**
+   Commands matched by [`IdempotentCommandsAvoidRule`](glossary.md#idempotent-command-avoid-list) should be excluded from idempotency
+   comparisons, but `future()` does not currently consult this list.
+
+5. **ACL idempotency check.**
+   The extended ACL idempotency logic (sequence-number based matching) that drives
+   `config_to_get_to()` is not replicated in `future()`.
+
+6. **And likely others.**
+   Complex platform-specific interactions (e.g. VRF-aware BGP sections, route-policy
+   inline templates on IOS XR) may produce imperfect results.
+
+> **Tip:** If you discover a gap, please open an issue and include a minimal reproducible
+> example (running config + change config + expected future config).  Contributions that
+> extend `_future()` to cover new cases are welcome.
 
 ## Structural Idempotency Matching
 
-Starting in version 3.3.1, Hier Config derives a structural "idempotency key" from
-each command’s lineage when evaluating [`IdempotentCommandsRule`](drivers.md).
+Starting in version 3.4.0, Hier Config derives a structural "idempotency key" from
+each command’s lineage when evaluating [`IdempotentCommandsRule`](glossary.md#idempotent-command).
 This prevents unrelated lines that happen to share a prefix from being treated as
 duplicates during `future()` predictions. For example, distinct BGP neighbor
 descriptions such as `neighbor 2.2.2.2 description neighbor2` and
@@ -142,3 +169,50 @@ vlan 2
   name switch_mgmt_10.0.2.0/24
 >>>
 ```
+
+---
+
+## Unified Diff
+
+`HConfig.unified_diff()` provides output similar to `difflib.unified_diff()` but with added awareness of out-of-order lines and parent-child relationships in the hier_config tree model.
+
+This is useful when comparing configurations from two network devices (such as redundant pairs) or when validating differences between running and intended configurations.
+
+> **Note:** The unified diff algorithm shares the same limitations as `future()` regarding duplicate child entries (e.g., multiple `endif` statements in an IOS XR route-policy) and command ordering in sections where sequence matters (such as ACLs). For accurate ACL ordering, use sequence numbers.
+
+```python
+>>> from hier_config import get_hconfig, Platform
+>>> from pprint import pprint
+>>>
+>>> running_config_text = read_text_from_file("./tests/fixtures/running_config.conf")
+>>> generated_config_text = read_text_from_file("./tests/fixtures/generated_config.conf")
+>>>
+>>> running_config = get_hconfig(Platform.CISCO_IOS, running_config_text)
+>>> generated_config = get_hconfig(Platform.CISCO_IOS, generated_config_text)
+>>>
+>>> pprint(list(running_config.unified_diff(generated_config)))
+['vlan 3',
+ '  - name switch_mgmt_10.0.4.0/24',
+ '  + name switch_mgmt_10.0.3.0/24',
+ 'interface Vlan2',
+ '  - shutdown',
+ '  + mtu 9000',
+ '  + ip access-group TEST in',
+ '  + no shutdown',
+ 'interface Vlan3',
+ '  - description switch_mgmt_10.0.4.0/24',
+ '  - ip address 10.0.4.1 255.255.0.0',
+ '  + description switch_mgmt_10.0.3.0/24',
+ '  + ip address 10.0.3.1 255.255.0.0',
+ '+ vlan 4',
+ '  + name switch_mgmt_10.0.4.0/24',
+ '+ interface Vlan4',
+ '  + mtu 9000',
+ '  + description switch_mgmt_10.0.4.0/24',
+ '  + ip address 10.0.4.1 255.255.0.0',
+ '  + ip access-group TEST in',
+ '  + no shutdown']
+>>>
+```
+
+Lines prefixed with `+` are present in `generated_config` but not in `running_config`; lines prefixed with `-` are present in `running_config` but not in `generated_config`.  Parent lines without a prefix are shown as context only.

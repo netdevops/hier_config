@@ -44,6 +44,15 @@ def _add_acl_sequence_numbers(config: HConfig) -> None:
 
 
 class HConfigDriverCiscoIOS(HConfigDriverBase):
+    """Driver for Cisco IOS and IOS-XE.
+
+    Includes post-load callbacks that normalise IPv4/IPv6 ACL sequence numbers
+    and remove IPv4 ACL remarks, ensuring stable diffs across device snapshots.
+    Also handles BGP template peer-policy/peer-session sectional exiting and
+    ``logging console`` negation-with replacement.  Platform enum:
+    ``Platform.CISCO_IOS``.
+    """
+
     @staticmethod
     def _instantiate_rules() -> HConfigDriverRules:
         return HConfigDriverRules(

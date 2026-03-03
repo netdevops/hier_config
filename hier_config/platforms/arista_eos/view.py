@@ -16,6 +16,8 @@ from hier_config.platforms.view_base import (
 
 
 class ConfigViewInterfaceAristaEOS(ConfigViewInterfaceBase):  # noqa: PLR0904
+    """Interface config view for Arista EOS."""
+
     @property
     def bundle_id(self) -> str | None:
         raise NotImplementedError
@@ -144,6 +146,8 @@ class ConfigViewInterfaceAristaEOS(ConfigViewInterfaceBase):  # noqa: PLR0904
 
 
 class HConfigViewAristaEOS(HConfigViewBase):
+    """Full-tree config view for Arista EOS."""
+
     def dot1q_mode_from_vlans(
         self,
         untagged_vlan: int | None = None,

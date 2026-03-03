@@ -20,10 +20,19 @@ Hier Config is compatible with any NOS that utilizes a structured CLI syntax sim
 
 The code documentation can be found at: [Hier Config documentation](https://hier-config.readthedocs.io/en/latest/).
 
+## Why hier_config?
+
+Network devices continuously drift from their intended state — VLANs appear, ACL entries change, BGP timers shift.  hier_config solves this by parsing configuration text into a hierarchical tree and performing deterministic, line-level diffs that respect the vendor's own syntax rules.  Rather than string-matching raw text, it understands the structure of commands so that remediation output is minimal, ordered, and safe to apply.
+
 ## Highlights
 
-- Predict the device state before deploying (`future()`) and generate accurate rollbacks that now preserve distinct structural commands—BGP neighbor descriptions, for example, no longer collapse when multiple peers share a common prefix.
-- Build remediation workflows with deterministic diffs across Cisco-style and Junos-style configuration syntaxes.
+- Predict the device state before deploying with [`future()`](https://hier-config.readthedocs.io/en/latest/future-config/) and generate accurate rollbacks that preserve distinct structural commands — BGP neighbor descriptions, for example, no longer collapse when multiple peers share a common prefix.
+- Build remediation workflows with deterministic diffs across [Cisco-style and Junos-style](https://hier-config.readthedocs.io/en/latest/drivers/) configuration syntaxes.
+- Tag remediation lines and filter output with [tag-based rules](https://hier-config.readthedocs.io/en/latest/tags/) for phased or conditional deployment.
+- Aggregate and analyse changes across a fleet with [RemediationReporter](https://hier-config.readthedocs.io/en/latest/remediation-reporting/).
+- Render structured, typed interface data with the [Config View](https://hier-config.readthedocs.io/en/latest/config-view/) abstraction.
+
+See the [Architecture Overview](https://hier-config.readthedocs.io/en/latest/architecture/) for how the tree, driver, and workflow layers fit together.
 
 ## Installation
 

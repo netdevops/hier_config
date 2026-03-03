@@ -11,6 +11,14 @@ _D = TypeVar("_D")
 
 
 class HConfigChildren:
+    """Ordered collection of `HConfigChild` objects with fast text-keyed look-up.
+
+    Internally maintains both a `list` (for ordered iteration) and a `dict`
+    (for O(1) membership and retrieval by `child.text`).  When duplicate child
+    text is allowed by the driver, the mapping always points to the *first*
+    occurrence while the list preserves all entries in insertion order.
+    """
+
     def __init__(self) -> None:
         self._data: list[HConfigChild] = []
         self._mapping: dict[str, HConfigChild] = {}

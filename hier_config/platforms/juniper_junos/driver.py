@@ -4,6 +4,20 @@ from hier_config.platforms.functions import convert_to_set_commands
 
 
 class HConfigDriverJuniperJUNOS(HConfigDriverBase):  # pylint: disable=too-many-instance-attributes
+    """Driver for Juniper JunOS (experimental).
+
+    Converts hierarchical JunOS configuration into flat ``set``/``delete``
+    command syntax via a preprocessor.  Overrides ``declaration_prefix`` to
+    ``"set "`` and ``negation_prefix`` to ``"delete "`` so that
+    ``swap_negation`` correctly toggles between the two forms.
+
+    .. warning::
+        JunOS support is experimental and has not been extensively tested in
+        production environments.  Use with caution.
+
+    Platform enum: ``Platform.JUNIPER_JUNOS``.
+    """
+
     def swap_negation(self, child: HConfigChild) -> HConfigChild:
         """Swap negation of a `self.text`."""
         if child.text.startswith(self.negation_prefix):

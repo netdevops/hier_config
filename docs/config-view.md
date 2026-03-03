@@ -36,39 +36,76 @@ The framework uses a combination of abstract base classes (e.g., `ConfigViewInte
 
 ## Available Config Interface Views
 
-| **Property/Method**           | **Type**                       | **Description**                                                                                   |
-|-------------------------------|--------------------------------|---------------------------------------------------------------------------------------------------|
-| `bundle_id`                   | `Optional[str]`               | Retrieves the bundle ID of the interface.                                                        |
-| `bundle_member_interfaces`    | `Iterable[str]`               | Lists the member interfaces of a bundle.                                                         |
-| `bundle_name`                 | `Optional[str]`               | Retrieves the name of the bundle to which the interface belongs.                                  |
-| `description`                 | `str`                         | Returns the description of the interface.                                                        |
-| `dot1q_mode`                  | `Optional[InterfaceDot1qMode]`| Determines the 802.1Q mode based on VLAN tagging configuration.                                   |
-| `duplex`                      | `InterfaceDuplex`             | Determines the duplex mode of the interface.                                                     |
-| `enabled`                     | `bool`                        | Checks if the interface is enabled.                                                              |
-| `has_nac`                     | `bool`                        | Determines if NAC (Network Admission Control) is configured on the interface.                    |
-| `ipv4_interface`              | `Optional[IPv4Interface]`     | Retrieves the first configured IPv4 address and prefix.                                          |
-| `ipv4_interfaces`             | `Iterable[IPv4Interface]`     | Lists all IPv4 addresses and prefixes configured on the interface.                               |
-| `is_bundle`                   | `bool`                        | Indicates whether the interface is part of a bundle.                                             |
-| `is_loopback`                 | `bool`                        | Checks if the interface is a loopback.                                                           |
-| `is_subinterface`             | `bool`                        | Indicates if the interface is a subinterface.                                                    |
-| `is_svi`                      | `bool`                        | Checks if the interface is a switched virtual interface (SVI).                                   |
-| `module_number`               | `Optional[int]`               | Retrieves the module number of the interface.                                                    |
-| `nac_control_direction_in`    | `bool`                        | Determines if NAC is configured with "control direction in".                                      |
-| `nac_host_mode`               | `Optional[NACHostMode]`       | Retrieves the NAC host mode configuration.                                                       |
-| `nac_mab_first`               | `bool`                        | Checks if NAC is configured for MAB (MAC Authentication Bypass) first.                           |
-| `nac_max_dot1x_clients`       | `int`                         | Retrieves the maximum number of Dot1x clients allowed on the interface.                          |
-| `nac_max_mab_clients`         | `int`                         | Retrieves the maximum number of MAB clients allowed on the interface.                            |
-| `name`                        | `str`                         | Returns the name of the interface.                                                               |
-| `native_vlan`                 | `Optional[int]`               | Retrieves the native VLAN of the interface.                                                      |
-| `number`                      | `str`                         | Extracts the numeric portion of the interface name.                                              |
-| `parent_name`                 | `Optional[str]`               | Retrieves the name of the parent bundle interface.                                               |
-| `poe`                         | `bool`                        | Indicates if Power over Ethernet (PoE) is enabled on the interface.                              |
-| `port_number`                 | `int`                         | Retrieves the port number of the interface.                                                      |
-| `speed`                       | `Optional[tuple[int, ...]]`   | Lists the static speeds at which the interface can operate, in Mbps.                             |
-| `subinterface_number`         | `Optional[int]`               | Retrieves the subinterface number.                                                               |
-| `tagged_all`                  | `bool`                        | Checks if all VLANs are tagged on the interface.                                                 |
-| `tagged_vlans`                | `tuple[int, ...]`             | Lists the VLANs that are tagged on the interface.                                                |
-| `vrf`                         | `str`                         | Retrieves the VRF (Virtual Routing and Forwarding) associated with the interface.                |
+### Basic Identity
+
+| **Property** | **Type** | **Description** |
+|--------------|----------|-----------------|
+| `name` | `str` | Returns the name of the interface (e.g. `GigabitEthernet0/1`). |
+| `number` | `str` | Extracts the numeric portion of the interface name. |
+| `description` | `str` | Returns the configured description of the interface. |
+| `parent_name` | `Optional[str]` | Retrieves the name of the parent bundle interface, if any. |
+
+### Operational State
+
+| **Property** | **Type** | **Description** |
+|--------------|----------|-----------------|
+| `enabled` | `bool` | `True` if the interface is not shut down. |
+| `poe` | `bool` | `True` if Power over Ethernet (PoE) is enabled on the interface. |
+
+### IP Addressing
+
+| **Property** | **Type** | **Description** |
+|--------------|----------|-----------------|
+| `ipv4_interface` | `Optional[IPv4Interface]` | Retrieves the first configured IPv4 address and prefix. |
+| `ipv4_interfaces` | `Iterable[IPv4Interface]` | Lists all IPv4 addresses and prefixes configured on the interface. |
+| `vrf` | `str` | Retrieves the VRF (Virtual Routing and Forwarding) associated with the interface. |
+
+### VLAN and 802.1Q
+
+| **Property** | **Type** | **Description** |
+|--------------|----------|-----------------|
+| `dot1q_mode` | `Optional[InterfaceDot1qMode]` | Determines the 802.1Q mode (`ACCESS`, `TAGGED`, `TRUNK`, etc.) based on VLAN tagging configuration. |
+| `native_vlan` | `Optional[int]` | Retrieves the native VLAN of the interface. |
+| `tagged_vlans` | `tuple[int, ...]` | Lists the VLANs that are tagged on the interface. |
+| `tagged_all` | `bool` | `True` if all VLANs are tagged on the interface. |
+
+### Interface Type Flags
+
+| **Property** | **Type** | **Description** |
+|--------------|----------|-----------------|
+| `is_bundle` | `bool` | `True` if the interface is a bundle (port-channel / LAG). |
+| `is_loopback` | `bool` | `True` if the interface is a loopback. |
+| `is_subinterface` | `bool` | `True` if the interface is a subinterface (e.g. `Gi0/1.100`). |
+| `is_svi` | `bool` | `True` if the interface is a switched virtual interface (SVI / VLAN interface). |
+
+### Bundle / Port Channel
+
+| **Property** | **Type** | **Description** |
+|--------------|----------|-----------------|
+| `bundle_id` | `Optional[str]` | Retrieves the bundle ID of the interface. |
+| `bundle_name` | `Optional[str]` | Retrieves the name of the bundle to which the interface belongs. |
+| `bundle_member_interfaces` | `Iterable[str]` | Lists the member interfaces of a bundle. |
+
+### Physical Layer
+
+| **Property** | **Type** | **Description** |
+|--------------|----------|-----------------|
+| `duplex` | `InterfaceDuplex` | Determines the duplex mode of the interface (`FULL`, `HALF`, `AUTO`). |
+| `speed` | `Optional[tuple[int, ...]]` | Lists the static speeds (in Mbps) at which the interface can operate. |
+| `port_number` | `int` | Retrieves the port number of the interface. |
+| `module_number` | `Optional[int]` | Retrieves the module number of the interface. |
+| `subinterface_number` | `Optional[int]` | Retrieves the subinterface number, if applicable. |
+
+### NAC (Network Admission Control)
+
+| **Property** | **Type** | **Description** |
+|--------------|----------|-----------------|
+| `has_nac` | `bool` | `True` if NAC is configured on the interface. |
+| `nac_control_direction_in` | `bool` | `True` if NAC is configured with `control direction in`. |
+| `nac_host_mode` | `Optional[NACHostMode]` | Retrieves the NAC host mode (`SINGLE_HOST`, `MULTI_AUTH`, etc.). |
+| `nac_mab_first` | `bool` | `True` if NAC is configured to try MAB (MAC Authentication Bypass) before 802.1X. |
+| `nac_max_dot1x_clients` | `int` | Maximum number of 802.1X clients allowed on the interface. |
+| `nac_max_mab_clients` | `int` | Maximum number of MAB clients allowed on the interface. |
 
 ## Example: Cisco IOS Config View
 

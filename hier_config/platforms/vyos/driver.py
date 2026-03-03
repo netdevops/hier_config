@@ -4,6 +4,14 @@ from hier_config.platforms.functions import convert_to_set_commands
 
 
 class HConfigDriverVYOS(HConfigDriverBase):  # pylint: disable=too-many-instance-attributes
+    """Driver for VyOS (and compatible VyOS-based routers).
+
+    Like the JunOS driver, converts hierarchical VyOS configuration into flat
+    ``set``/``delete`` command syntax via a preprocessor.  Overrides
+    ``declaration_prefix`` to ``"set "`` and ``negation_prefix`` to
+    ``"delete "``.  Platform enum: ``Platform.VYOS``.
+    """
+
     def swap_negation(self, child: HConfigChild) -> HConfigChild:
         """Swap negation of a `self.text`."""
         if child.text.startswith(self.negation_prefix):

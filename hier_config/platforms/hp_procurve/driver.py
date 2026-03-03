@@ -111,6 +111,16 @@ def _fixup_hp_procurve_device_profile(config: HConfig) -> None:
 
 
 class HConfigDriverHPProcurve(HConfigDriverBase):
+    """Driver for HP ProCurve / Aruba AOSS switches.
+
+    Extends idempotency and negation-with logic to handle ProCurve-specific
+    command patterns such as ``aaa port-access``, ``radius-server``, and
+    ``tacacs-server`` with variable-length key fields.  Post-load callbacks
+    normalise VLAN membership (moving it under interface blocks), expand
+    port-access interface ranges, and split device-profile tagged-VLAN lists.
+    Platform enum: ``Platform.HP_PROCURVE``.
+    """
+
     def idempotent_for(
         self,
         config: HConfigChild,

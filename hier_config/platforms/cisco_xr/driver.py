@@ -16,6 +16,16 @@ from hier_config.platforms.driver_base import HConfigDriverBase, HConfigDriverRu
 
 
 class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-instance-attributes
+    """Driver for Cisco IOS XR.
+
+    Extends the base idempotency logic to handle XR-style ACL sequence numbers
+    (``ipv4 access-list`` / ``ipv6 access-list``).  Also configures XR-specific
+    sectional exiting (``end-policy``, ``end-set``, ``end-template``, ``root``),
+    sectional overwrite for templates, indent-adjust for inline templates, and
+    duplicate-child allowances inside ``route-policy`` blocks.
+    Platform enum: ``Platform.CISCO_XR``.
+    """
+
     def idempotent_for(
         self,
         config: HConfigChild,

@@ -17,6 +17,8 @@ from hier_config.platforms.view_base import (
 
 
 class ConfigViewInterfaceCiscoNXOS(ConfigViewInterfaceBase):  # noqa: PLR0904
+    """Interface config view for Cisco NX-OS."""
+
     @property
     def bundle_id(self) -> str | None:
         raise NotImplementedError
@@ -161,6 +163,8 @@ class ConfigViewInterfaceCiscoNXOS(ConfigViewInterfaceBase):  # noqa: PLR0904
 
 
 class HConfigViewCiscoNXOS(HConfigViewBase):
+    """Full-tree config view for Cisco NX-OS."""
+
     def dot1q_mode_from_vlans(
         self,
         untagged_vlan: int | None = None,
