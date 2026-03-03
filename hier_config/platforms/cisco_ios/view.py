@@ -18,6 +18,8 @@ from hier_config.platforms.view_base import (
 
 
 class ConfigViewInterfaceCiscoIOS(ConfigViewInterfaceBase):  # noqa: PLR0904
+    """Interface config view for Cisco IOS / IOS-XE."""
+
     @property
     def bundle_id(self) -> str | None:
         if channel_group := self.config.get_child(startswith="channel-group"):
@@ -230,6 +232,8 @@ class ConfigViewInterfaceCiscoIOS(ConfigViewInterfaceBase):  # noqa: PLR0904
 
 
 class HConfigViewCiscoIOS(HConfigViewBase):
+    """Full-tree config view for Cisco IOS / IOS-XE."""
+
     def dot1q_mode_from_vlans(
         self,
         untagged_vlan: int | None = None,

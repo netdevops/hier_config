@@ -22,6 +22,14 @@ logger = getLogger(__name__)
 class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attributes
     HConfigBase,
 ):
+    """A single node in the hierarchical configuration tree.
+
+    Each `HConfigChild` holds one configuration line (`text`), an ordered
+    collection of its own children, optional tags/comments, and a reference
+    back to its parent.  The tree is rooted at an `HConfig` instance; every
+    other node is an `HConfigChild`.
+    """
+
     __slots__ = (
         "_tags",
         "_text",
@@ -228,7 +236,19 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
             self._tags.difference_update(tag)
 
     def negate(self) -> HConfigChild:
-        """Negate self.text."""
+        """Negate self.text using driver-specific negation rules.
+
+        Negation is resolved in the following priority order:
+
+        1. ``negate_with`` rule — replaces ``self.text`` with a custom
+           negation string defined in the driver (e.g. ``no ip route``).
+        2. ``negation_default_when`` rule — rewrites the command to its
+           ``default`` form (e.g. ``no shutdown`` → ``default shutdown``).
+        3. ``swap_negation`` — toggles the negation prefix/declaration
+           prefix (e.g. ``shutdown`` ↔ ``no shutdown``).
+
+        Returns self so that callers can chain further operations.
+        """
         if negate_with := self.driver.negate_with(self):
             self.text = negate_with
             return self
@@ -307,7 +327,18 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         *,
         negate: bool = True,
     ) -> None:
-        """Deletes delta.child[self.text], adds a deep copy of target to delta."""
+        """Overwrite self's section in delta with a deep copy of target.
+
+        When the children of self and target differ, this method mutates
+        ``delta`` in-place: the existing entry for ``self.text`` is negated
+        (if ``negate=True``) or simply deleted (if ``negate=False``), and a
+        fresh deep copy of ``target`` is appended.  A ``"re-create section"``
+        comment is attached to the new entry, and a ``"dropping section"``
+        comment is added to the negated entry when applicable.
+
+        Used by :meth:`_config_to_get_to_right` when a sectional-overwrite
+        rule is active for ``self.text``.
+        """
         if self.children != target.children:
             if negate:
                 if negated := delta.children.get(self.text):
@@ -392,10 +423,22 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         contains: str | tuple[str, ...] | None = None,
         re_search: str | None = None,
     ) -> bool:
-        """True if `self.text` matches all the criteria.
+        """Return True if ``self.text`` satisfies all supplied criteria.
 
-        If all args are None, the function will return True.
-        If multiple args are provided, then all will need to match in order to return True.
+        All arguments are optional.  When *all* arguments are ``None`` the
+        method returns ``True`` (matches everything).  When multiple arguments
+        are provided, **all** must match.
+
+        Args:
+            equals: Exact string match, or a frozenset of acceptable values.
+            startswith: ``str.startswith`` prefix (str or tuple of strs).
+            endswith: ``str.endswith`` suffix (str or tuple of strs).
+            contains: Substring(s) that must appear in ``self.text``.
+            re_search: Regular expression applied via :func:`re.search`.
+
+        Returns:
+            ``True`` if every non-``None`` criterion is satisfied.
+
         """
         # Equals filter
         if isinstance(equals, str):

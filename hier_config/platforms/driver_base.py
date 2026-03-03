@@ -81,6 +81,13 @@ def _sectional_overwrite_no_negate_rules_default() -> list[
 
 
 class HConfigDriverRules(BaseModel):  # pylint: disable=too-many-instance-attributes
+    """Pydantic model holding all rule collections for a platform driver.
+
+    Each field corresponds to one category of driver behaviour (e.g. negation,
+    ordering, idempotency).  Instantiated by each driver's ``_instantiate_rules``
+    static method and stored on :class:`HConfigDriverBase`.
+    """
+
     full_text_sub: list[FullTextSubRule] = Field(
         default_factory=_full_text_sub_rules_default
     )

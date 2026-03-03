@@ -1,6 +1,6 @@
 # Creating Custom Workflows
 
-Certain scenarios demand remediation strategies that go beyond the standard negation and idempotency workflows Hier Config is designed to handle. To address these edge cases, Hier Config allows for custom remediation workflows that integrate seamlessly with the existing remediation process.
+Certain scenarios demand remediation strategies that go beyond the standard [negation](glossary.md#negation-prefix) and [idempotency](glossary.md#idempotent-command) workflows Hier Config is designed to handle. To address these edge cases, Hier Config allows for custom remediation workflows that integrate seamlessly with the existing remediation process.
 
 ----
 

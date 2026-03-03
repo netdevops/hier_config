@@ -14,6 +14,13 @@ from hier_config.root import HConfig
 
 
 class ConfigViewInterfaceBase:  # noqa: PLR0904
+    """Abstract base providing a typed view over a single interface config node.
+
+    Subclasses parse the child tree of one ``interface ...`` block and expose
+    structured properties (IP address, duplex, VLAN membership, bundle state,
+    etc.) in a platform-independent way.
+    """
+
     def __init__(self, config: HConfigChild) -> None:
         self.config = config
 
@@ -185,6 +192,13 @@ class ConfigViewInterfaceBase:  # noqa: PLR0904
 
 
 class HConfigViewBase(ABC):
+    """Abstract base providing a structured view over a full HConfig tree.
+
+    Platform-specific subclasses (e.g. ``HConfigViewCiscoIOS``) implement
+    ``interface_views`` to yield :class:`ConfigViewInterfaceBase` objects and
+    ``dot1q_mode_from_vlans`` to interpret 802.1Q mode from VLAN data.
+    """
+
     def __init__(self, config: HConfig) -> None:
         self.config = config
 

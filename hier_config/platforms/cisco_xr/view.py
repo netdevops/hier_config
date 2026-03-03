@@ -17,6 +17,8 @@ from hier_config.platforms.view_base import (
 
 
 class ConfigViewInterfaceCiscoIOSXR(ConfigViewInterfaceBase):  # noqa: PLR0904
+    """Interface config view for Cisco IOS XR."""
+
     @property
     def _bundle_prefix(self) -> str:
         return "Bundle-Ether"
@@ -163,6 +165,8 @@ class ConfigViewInterfaceCiscoIOSXR(ConfigViewInterfaceBase):  # noqa: PLR0904
 
 
 class HConfigViewCiscoIOSXR(HConfigViewBase):
+    """Full-tree config view for Cisco IOS XR."""
+
     def dot1q_mode_from_vlans(
         self,
         untagged_vlan: int | None = None,

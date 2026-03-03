@@ -10,15 +10,15 @@ A driver in Hier Config defines a structured and systematic approach to managing
 
 Drivers provide a consistent way to handle configurations by applying a set of specialized logic, including:
 
-1. **Negation Handling**: Ensures commands are properly negated or reset according to the operating system's syntax and behavior, maintaining consistency in enabling or disabling features.
+1. **[Negation Handling](glossary.md#negation-prefix)**: Ensures commands are properly negated or reset according to the operating system's syntax and behavior, maintaining consistency in enabling or disabling features.
 
-2. **Sectional Exiting Rules**: Defines how to navigate in and out of hierarchical configuration sections, ensuring commands are logically grouped and the configuration maintains its structural integrity.
+2. **[Sectional Exiting Rules](glossary.md#sectional-exiting)**: Defines how to navigate in and out of hierarchical configuration sections, ensuring commands are logically grouped and the configuration maintains its structural integrity.
 
 3. **Command Ordering**: Establishes the sequence in which commands should be applied based on dependencies or importance, preventing conflicts or misconfigurations during deployment.
 
 4. **Line Substitutions**: Cleans up unnecessary or temporary data in configurations, such as metadata, system-generated comments, or obsolete commands, resulting in a streamlined and standardized output.
 
-5. **Idempotency Management**: Identifies and enforces commands that should not be duplicated, ensuring repeated application of the configuration does not lead to redundant or conflicting entries.
+5. **[Idempotency Management](glossary.md#idempotent-command)**: Identifies and enforces commands that should not be duplicated, ensuring repeated application of the configuration does not lead to redundant or conflicting entries.
 
 6. **Post-Processing Callbacks**: Performs additional adjustments or enhancements after the initial configuration is processed, such as refining access control lists or applying custom transformations specific to the device's operating system.
 
@@ -49,6 +49,200 @@ from hier_config import get_hconfig_driver, Platform
 # Example: Activating the CISCO_IOS driver
 driver = get_hconfig_driver(Platform.CISCO_IOS)
 ```
+
+### Cisco IOS Driver
+
+Cisco IOS is hier_config's primary reference platform and the most thoroughly tested driver. The `CISCO_IOS` driver ships with a comprehensive set of rules covering common IOS configuration patterns:
+
+- **[Idempotent commands](glossary.md#idempotent-command)**: `hostname`, `ip address`, `ip access-group`, `description`, `banner`, and many others are treated as last-write-wins — applying the same command twice leaves only the final value in place.
+- **Negation**: standard `no ` [negation prefix](glossary.md#negation-prefix). Several commands (such as `logging console`) use [`NegationDefaultWithRule`](glossary.md#negation-negate-with) overrides to emit a specific reset form.
+- **[Sectional exiting](glossary.md#sectional-exiting)**: BGP `peer-policy` and `peer-session` blocks require `exit-peer-policy` and `exit-peer-session` closure tokens.
+- **Per-line substitutions**: strips `Building configuration…` banners and timestamp headers.
+
+Platform enum: `Platform.CISCO_IOS`
+
+```python
+from hier_config import Platform, get_hconfig_driver
+
+driver = get_hconfig_driver(Platform.CISCO_IOS)
+```
+
+---
+
+### Arista EOS Driver
+
+Arista EOS uses a Cisco IOS-like hierarchical CLI, so the `ARISTA_EOS` driver closely mirrors `CISCO_IOS`:
+
+- BGP peer-policy and peer-session blocks require `exit-peer-policy` and `exit-peer-session` closure tokens (same as IOS).
+- Broad idempotency rules cover the most common EOS configuration patterns.
+- [Negation prefix](glossary.md#negation-prefix): `no ` (default).
+
+Platform enum: `Platform.ARISTA_EOS`
+
+```python
+from hier_config import Platform, get_hconfig_driver
+
+driver = get_hconfig_driver(Platform.ARISTA_EOS)
+```
+
+---
+
+### Cisco IOS XR Driver
+
+Cisco IOS XR uses a commit-based configuration model with several syntax differences from classic IOS:
+
+- **[Sectional overwrite no-negate](glossary.md#sectional-overwrite-no-negate)**: `prefix-set`, `route-policy`, and similar blocks are replaced wholesale rather than line-by-line, because IOS XR does not support partial modification of these objects.
+- **[Indent adjust](glossary.md#indent-adjust)**: inline templates in `router bgp` use a different indentation depth; the driver adjusts the tree depth between `!#` markers.
+- **[Sectional exiting](glossary.md#sectional-exiting)**: route-policy blocks close with `end-policy`; prefix-set blocks close with `end-set`.
+- ACL sequence numbers are preserved for correct ordered access-list handling.
+
+Platform enum: `Platform.CISCO_XR`
+
+```python
+from hier_config import Platform, get_hconfig_driver
+
+driver = get_hconfig_driver(Platform.CISCO_XR)
+```
+
+---
+
+### Cisco NX-OS Driver
+
+Cisco NX-OS is similar to IOS in CLI structure but has NX-OS-specific idempotency requirements:
+
+- **TCAM region idempotency**: `hardware access-list tcam region` commands are treated as last-write-wins.
+- Some BGP commands use different negation forms; the driver includes `NegationDefaultWithRule` entries for affected commands.
+- [Negation prefix](glossary.md#negation-prefix): `no ` (default).
+
+Platform enum: `Platform.CISCO_NXOS`
+
+```python
+from hier_config import Platform, get_hconfig_driver
+
+driver = get_hconfig_driver(Platform.CISCO_NXOS)
+```
+
+---
+
+### VyOS Driver
+
+VyOS uses `set` and `delete` command syntax rather than the `no`-prefix convention.
+
+> **Experimental:** VyOS support has not been tested extensively in production environments. Use with caution.
+
+- **[Declaration prefix](glossary.md#declaration-prefix)**: `set ` (prepended to each positive command).
+- **[Negation prefix](glossary.md#negation-prefix)**: `delete ` (replaces `no `).
+
+Platform enum: `Platform.VYOS`
+
+```python
+from hier_config import Platform, get_hconfig_driver
+
+driver = get_hconfig_driver(Platform.VYOS)
+```
+
+---
+
+### Generic Driver
+
+The `GENERIC` driver contains no platform-specific rules. It is useful as a starting point for custom drivers or for platforms that follow standard Cisco-style syntax with few special cases.
+
+Platform enum: `Platform.GENERIC`
+
+```python
+from hier_config import Platform, get_hconfig_driver
+
+driver = get_hconfig_driver(Platform.GENERIC)
+```
+
+See [Creating a Custom Driver](#creating-a-custom-driver) for how to build on top of the generic driver.
+
+---
+
+### Juniper JunOS Driver
+
+Juniper JunOS uses `set` and `delete` command syntax for its hierarchical configuration.
+
+> **Experimental:** JunOS support has not been tested extensively in production environments. Use with caution.
+
+- **[Declaration prefix](glossary.md#declaration-prefix)**: `set ` (prepended to each positive command).
+- **[Negation prefix](glossary.md#negation-prefix)**: `delete ` (replaces `no `).
+
+For a worked example see [JunOS Style Syntax Remediation](junos-style-syntax-remediation.md).
+
+Platform enum: `Platform.JUNIPER_JUNOS`
+
+```python
+from hier_config import Platform, get_hconfig_driver
+
+driver = get_hconfig_driver(Platform.JUNIPER_JUNOS)
+```
+
+---
+
+### HP ProCurve (Aruba AOSS) Driver
+
+HP ProCurve switches (sold as Aruba switches after the HP/Aruba merger) use a Cisco-style hierarchical CLI with `no` as the negation prefix.  The `HP_PROCURVE` driver adds several post-load normalisation callbacks that simplify diffing:
+
+- **VLAN membership** — moves `untagged`/`tagged` directives out of `vlan <id>` blocks and into per-interface blocks, matching the mental model that operators typically use when writing intended configs.
+- **Port-access range expansion** — expands compact port ranges like `aaa port-access authenticator 1/15-1/20,1/26-1/40` into individual interface lines so that hier_config can apply idempotency rules per port.
+- **Device-profile tagged-VLAN splitting** — splits comma-separated VLAN lists in `device-profile` blocks into one command per VLAN.
+
+The driver also extends idempotency and negation-with logic to handle ProCurve-specific command patterns such as `aaa port-access`, `radius-server`, and `tacacs-server` with variable-length key fields.
+
+Platform enum: `Platform.HP_PROCURVE`
+
+Activate the driver:
+
+```python
+from hier_config import Platform, get_hconfig_driver
+
+driver = get_hconfig_driver(Platform.HP_PROCURVE)
+```
+
+**Remediation example:**
+
+```python
+from hier_config import WorkflowRemediation, get_hconfig, Platform
+
+running = get_hconfig(Platform.HP_PROCURVE, running_text)
+intended = get_hconfig(Platform.HP_PROCURVE, intended_text)
+workflow = WorkflowRemediation(running, intended)
+
+for line in workflow.remediation_config.all_children_sorted():
+    print(line.cisco_style_text())
+```
+
+---
+
+### HP Comware5 Driver
+
+HP Comware5 (and the compatible H3C platform) uses `undo` as the negation prefix rather than `no`.  The `HP_COMWARE5` driver overrides `negation_prefix` accordingly.  No additional platform-specific rules are configured by default; extend the driver if your environment requires them (see [Customising Existing Drivers](#customizing-existing-drivers)).
+
+Platform enum: `Platform.HP_COMWARE5`
+
+Activate the driver:
+
+```python
+from hier_config import Platform, get_hconfig_driver
+
+driver = get_hconfig_driver(Platform.HP_COMWARE5)
+```
+
+**Remediation example:**
+
+```python
+from hier_config import WorkflowRemediation, get_hconfig, Platform
+
+running = get_hconfig(Platform.HP_COMWARE5, running_text)
+intended = get_hconfig(Platform.HP_COMWARE5, intended_text)
+workflow = WorkflowRemediation(running, intended)
+
+for line in workflow.remediation_config.all_children_sorted():
+    print(line.cisco_style_text())
+```
+
+---
 
 ### Fortinet FortiOS Driver
 

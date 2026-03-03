@@ -12,7 +12,7 @@ To use `WorkflowRemediation`, you’ll import it along with `get_hconfig` (for g
 >>>
 ```
 
-With the Host class imported, it can be utilized to create host objects.
+With these imports, you can create HConfig objects and compare them.
 
 ## Step 2: Creating HConfig Objects for Configurations
 

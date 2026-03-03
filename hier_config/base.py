@@ -22,6 +22,14 @@ logger = getLogger(__name__)
 
 
 class HConfigBase(ABC):  # noqa: PLR0904
+    """Abstract base class for the hierarchical configuration tree.
+
+    Both `HConfig` (the root) and `HConfigChild` (individual nodes) inherit from
+    this class.  It provides the shared tree-manipulation API: adding, searching,
+    and diffing children, as well as the `_future` / `_config_to_get_to` algorithms
+    that power `WorkflowRemediation`.
+    """
+
     __slots__ = ("children",)
 
     def __init__(self) -> None:
@@ -228,12 +236,20 @@ class HConfigBase(ABC):  # noqa: PLR0904
         return new_child
 
     def unified_diff(self, target: HConfig | HConfigChild) -> Iterator[str]:
-        """In its current state, this algorithm does not consider duplicate child differences.
-        e.g. two instances `endif` in an IOS-XR route-policy. It also does not respect the
-        order of commands where it may count, such as in ACLs. In the case of ACLs, they
-        should contain sequence numbers if order is important.
+        """Yield unified-diff lines comparing self to target.
 
-        provides a similar output to difflib.unified_diff()
+        Each yielded string is prefixed with ``-`` (present in self but not
+        target) or ``+`` (present in target but not self), followed by the
+        appropriate indentation and the command text.
+
+        .. note::
+            This algorithm does not account for duplicate child differences
+            (e.g. two ``endif`` tokens in an IOS-XR route-policy) and does
+            not preserve command order where it matters (e.g. ACLs without
+            sequence numbers).  Use sequence numbers in ACL entries when
+            order is significant.
+
+        Produces output similar to :func:`difflib.unified_diff`.
         """
         # if a self child is missing from the target "- self_child.text"
         for self_child in self.children:
@@ -274,10 +290,18 @@ class HConfigBase(ABC):  # noqa: PLR0904
         config: HConfig | HConfigChild,
         future_config: HConfig | HConfigChild,
     ) -> None:
-        """The below cases still need to be accounted for:
-        - negate a numbered ACL when removing an item
-        - idempotent command avoid list
-        - and likely others.
+        """Recursively compute the future configuration subtree.
+
+        Called by :meth:`HConfig.future` to walk the config tree and merge
+        ``config`` on top of ``self``, applying driver-specific rules for
+        sectional overwrite, idempotency, and negation.  The result is written
+        into ``future_config``.
+
+        Known gaps (not yet accounted for):
+
+        - Negating a numbered ACL when removing a single entry
+        - Idempotent command avoid list
+        - And likely other edge cases
         """
         negated_or_recursed, config_children_ignore = self._future_pre(config)
 

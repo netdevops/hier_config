@@ -21,6 +21,8 @@ from hier_config.platforms.view_base import (
 class ConfigViewInterfaceHPProcurve(  # noqa: PLR0904 pylint: disable=abstract-method
     ConfigViewInterfaceBase,
 ):
+    """Interface config view for HP ProCurve / Aruba AOSS."""
+
     @property
     def bundle_id(self) -> str | None:
         raise NotImplementedError
@@ -233,6 +235,8 @@ def _duplex_from_speed_duplex(speed_duplex: str) -> InterfaceDuplex:
 
 
 class HConfigViewHPProcurve(HConfigViewBase):
+    """Full-tree config view for HP ProCurve / Aruba AOSS."""
+
     def dot1q_mode_from_vlans(
         self,
         untagged_vlan: int | None = None,

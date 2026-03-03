@@ -2,7 +2,7 @@
 
 ## MatchRules
 
-MatchRules, written in YAML, help users identify either highly specific sections or more generalized lines within a configuration. For instance, if you want to target interface descriptions, you could set up MatchRules as follows:
+[MatchRules](glossary.md#match-rule), written in YAML, help users identify either highly specific sections or more generalized lines within a configuration. For instance, if you want to target interface descriptions, you could set up MatchRules as follows:
 
 ```yaml
 - match_rules:
@@ -73,7 +73,7 @@ When `hier_config` processes MatchRules, it treats each as a separate rule, eval
 
 ## Working with Tags
 
-With a solid understanding of MatchRules, you can unlock more advanced capabilities in `hier_config`, such as tagging specific configuration sections to control remediation output based on tags. This feature is particularly useful during maintenance, allowing you to focus on low-risk changes or isolate high-risk changes for detailed inspection.
+With a solid understanding of MatchRules, you can unlock more advanced capabilities in `hier_config`, such as tagging specific configuration sections to control remediation output based on tags. See [Tag rules](glossary.md#tag-rules) for a conceptual overview. This feature is particularly useful during maintenance, allowing you to focus on low-risk changes or isolate high-risk changes for detailed inspection.
 
 Tagging builds on MatchRules by adding the **apply_tags** keyword to target specific configurations.
 

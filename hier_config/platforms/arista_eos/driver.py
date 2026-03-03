@@ -9,6 +9,14 @@ from hier_config.platforms.driver_base import HConfigDriverBase, HConfigDriverRu
 
 
 class HConfigDriverAristaEOS(HConfigDriverBase):
+    """Driver for Arista EOS (Extensible Operating System).
+
+    Handles EOS-specific conventions including BGP address-family sectional
+    exiting, per-line substitutions that strip timestamps and banner markers,
+    and a comprehensive set of idempotency rules for interface, BGP, and OSPF
+    commands.  Platform enum: ``Platform.ARISTA_EOS``.
+    """
+
     @staticmethod
     def _instantiate_rules() -> HConfigDriverRules:
         return HConfigDriverRules(

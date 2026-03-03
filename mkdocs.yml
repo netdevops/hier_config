@@ -4,16 +4,27 @@ repo_url: https://github.com/netdevops/hier_config
 theme:
   name: readthedocs
 
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          options:
+            show_source: true
+            show_root_heading: true
+
 nav:
-- Home: index.md
-- Install: install.md
-- Getting Started: getting-started.md
-- Config View: config-view.md
-- Drivers: drivers.md
-- Custom Workflows: custom-workflows.md
-- Future Config: future-config.md
-- JunOS Style Syntax Remediation: junos-style-syntax-remediation.md
-- Unified Diff: unified-diff.md
-- Utilities: utilities.md
-- Working with Tags: tags.md
-- Remediation Reporting: remediation-reporting.md
+  - Home: index.md
+  - Install: install.md
+  - Getting Started: getting-started.md
+  - Utilities: utilities.md
+  - Drivers: drivers.md
+  - Future Config: future-config.md
+  - Working with Tags: tags.md
+  - Custom Workflows: custom-workflows.md
+  - Remediation Reporting: remediation-reporting.md
+  - JunOS Style Syntax Remediation: junos-style-syntax-remediation.md
+  - Config View: config-view.md
+  - Architecture: architecture.md
+  - API Reference: api-reference.md
+  - Glossary: glossary.md
