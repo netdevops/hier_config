@@ -115,13 +115,19 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
             ],
             indent_adjust=[
                 IndentAdjustRule(
-                    start_expression="^\\s*template",
+                    start_expression="^\\s*template(?!\\s+timeout)",
                     end_expression="^\\s*end-template",
                 ),
             ],
             parent_allows_duplicate_child=[
                 ParentAllowsDuplicateChildRule(
                     match_rules=(MatchRule(startswith="route-policy"),)
+                ),
+                ParentAllowsDuplicateChildRule(
+                    match_rules=(
+                        MatchRule(startswith="route-policy"),
+                        MatchRule(startswith="if "),
+                    )
                 ),
             ],
             per_line_sub=[
