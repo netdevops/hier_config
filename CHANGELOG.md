@@ -11,6 +11,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.4.2] - 2026-03-17
+
+### Fixed
+
+- IOS-XR: `DuplicateChildError` on nested `if/endif` blocks inside `route-policy`
+  sections. Added a `parent_allows_duplicate_child` rule at depth 2
+  (`route-policy` -> `if`) so duplicate `endif` children are permitted (issue #206).
+- IOS-XR: `indent_adjust` rule for `template` incorrectly triggered on
+  `template timeout` leaf parameters inside `flow exporter-map` blocks, corrupting
+  indentation for all subsequent top-level sections. Narrowed the start expression
+  with a negative lookahead (`(?!\s+timeout)`) to exclude leaf uses (issue #205).
+
+---
+
 ## [3.4.1] - 2026-01-28
 
 ### Added
