@@ -14,13 +14,16 @@ from hier_config.models import (
     MatchRule,
     NegationDefaultWhenRule,
     NegationDefaultWithRule,
+    NegationSubRule,
     OrderingRule,
     ParentAllowsDuplicateChildRule,
     PerLineSubRule,
+    ReferenceLocation,
     SectionalExitingRule,
     SectionalOverwriteNoNegateRule,
     SectionalOverwriteRule,
     TagRule,
+    UnusedObjectRule,
 )
 from hier_config.platforms.driver_base import HConfigDriverBase
 
@@ -183,6 +186,33 @@ def _process_custom_rules(
         match_rules = _collect_match_rules(rule.get("lineage", []))
         driver.rules.negate_with.append(
             NegationDefaultWithRule(match_rules=match_rules, use=rule.get("use", "")),
+        )
+
+    for rule in v2_options.get("negation_sub", ()):
+        match_rules = _collect_match_rules(rule.get("lineage", []))
+        driver.rules.negation_sub.append(
+            NegationSubRule(
+                match_rules=match_rules,
+                search=rule.get("search", ""),
+                replace=rule.get("replace", ""),
+            ),
+        )
+
+    for rule in v2_options.get("unused_objects", ()):
+        match_rules = _collect_match_rules(rule.get("lineage", []))
+        ref_locations = tuple(
+            ReferenceLocation(
+                match_rules=_collect_match_rules(ref.get("lineage", [])),
+                reference_re=ref.get("reference_re", ""),
+            )
+            for ref in rule.get("reference_locations", [])
+        )
+        driver.rules.unused_objects.append(
+            UnusedObjectRule(
+                match_rules=match_rules,
+                name_re=rule.get("name_re", ""),
+                reference_locations=ref_locations,
+            ),
         )
 
 

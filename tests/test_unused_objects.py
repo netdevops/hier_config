@@ -7,6 +7,7 @@ from hier_config.models import (
 )
 from hier_config.platforms.driver_base import HConfigDriverRules
 from hier_config.platforms.generic.driver import HConfigDriverGeneric
+from hier_config.utils import load_hconfig_v2_options
 
 
 def _make_driver(
@@ -124,10 +125,25 @@ def test_multiple_reference_locations() -> None:
     assert unused == ["route-policy UNUSED_POLICY"]
 
 
-def test_xr_driver_unused_objects() -> None:
-    """Test the XR driver's built-in unused object rules."""
+def test_unused_objects_via_v2_options() -> None:
+    """Test unused object detection loaded via load_hconfig_v2_options."""
+    v2_options: dict[str, object] = {
+        "unused_objects": [
+            {
+                "lineage": [{"startswith": "ipv4 access-list "}],
+                "name_re": r"^ipv4 access-list (?P<name>\S+)",
+                "reference_locations": [
+                    {
+                        "lineage": [{"startswith": "interface "}],
+                        "reference_re": r"\bipv4 access-group {name}\b",
+                    },
+                ],
+            },
+        ],
+    }
+    driver = load_hconfig_v2_options(v2_options, Platform.CISCO_XR)
     config = get_hconfig_fast_load(
-        Platform.CISCO_XR,
+        driver,
         (
             "ipv4 access-list APPLIED_ACL",
             " 10 permit tcp any any",
