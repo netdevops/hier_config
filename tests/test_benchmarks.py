@@ -15,13 +15,27 @@ from hier_config.models import Platform
 pytestmark = pytest.mark.benchmark
 
 
-def _generate_large_ios_config(num_interfaces: int = 500) -> str:
-    """Generate a large Cisco IOS-style config."""
+_TARGET_LINES = 10_000
+
+
+def _generate_large_ios_config(num_interfaces: int = 1000) -> str:
+    """Generate a large Cisco IOS-style config (~10k+ lines at default)."""
     lines = [
         "hostname LARGE-ROUTER",
         "!",
         "ip name-server 8.8.8.8",
         "ip name-server 8.8.4.4",
+        "!",
+        "aaa new-model",
+        "aaa authentication login default local",
+        "aaa authorization exec default local",
+        "!",
+        "ip access-list extended MGMT_ACL",
+        " 10 permit tcp 10.0.0.0 0.255.255.255 any eq 22",
+        " 20 permit tcp 172.16.0.0 0.15.255.255 any eq 22",
+        " 30 deny ip any any log",
+        "!",
+        "ip prefix-list DEFAULT_ONLY seq 10 permit 0.0.0.0/0",
         "!",
     ]
     for i in range(num_interfaces):
@@ -31,6 +45,7 @@ def _generate_large_ios_config(num_interfaces: int = 500) -> str:
                 f" description Link to device {i}",
                 f" ip address 10.{i // 256}.{i % 256}.1 255.255.255.252",
                 " ip ospf cost 100",
+                " ip ospf network point-to-point",
                 " no shutdown",
                 "!",
             ]
@@ -39,17 +54,48 @@ def _generate_large_ios_config(num_interfaces: int = 500) -> str:
         [
             "router ospf 1",
             " router-id 10.0.0.1",
+            " auto-cost reference-bandwidth 100000",
         ]
     )
     for i in range(num_interfaces):
         lines.append(f" network 10.{i // 256}.{i % 256}.0 0.0.0.3 area 0")
-    lines.append("!")
+    lines.extend(
+        [
+            "!",
+            "router bgp 65000",
+            " bgp router-id 10.0.0.1",
+            " bgp log-neighbor-changes",
+        ]
+    )
+    for i in range(min(num_interfaces, 200)):
+        lines.extend(
+            [
+                f" neighbor 10.{i // 256}.{i % 256}.2 remote-as 6500{i}",
+                f" neighbor 10.{i // 256}.{i % 256}.2 description Peer-{i}",
+            ]
+        )
+    lines.extend(
+        [
+            "!",
+            "line con 0",
+            " exec-timeout 5 0",
+            " logging synchronous",
+            "line vty 0 4",
+            " access-class MGMT_ACL in",
+            " transport input ssh",
+            "!",
+        ]
+    )
     return "\n".join(lines)
 
 
-def _generate_large_xr_config(num_interfaces: int = 500) -> str:
-    """Generate a large Cisco IOS-XR-style config."""
-    lines = ["hostname LARGE-XR-ROUTER"]
+def _generate_large_xr_config(num_interfaces: int = 1000) -> str:
+    """Generate a large Cisco IOS-XR-style config (~10k+ lines at default)."""
+    lines = [
+        "hostname LARGE-XR-ROUTER",
+        "logging console informational",
+        "logging source-interface Loopback0",
+    ]
     for i in range(num_interfaces):
         lines.extend(
             [
@@ -57,6 +103,7 @@ def _generate_large_xr_config(num_interfaces: int = 500) -> str:
                 f" description Link to device {i}",
                 f" ipv4 address 10.{i // 256}.{i % 256}.1 255.255.255.252",
                 " mtu 9000",
+                " load-interval 30",
                 "!",
             ]
         )
@@ -74,6 +121,15 @@ def _generate_large_xr_config(num_interfaces: int = 500) -> str:
                 f"  description Peer {i}",
             ]
         )
+    lines.extend(
+        [
+            "!",
+            "router ospf 1",
+            " router-id 10.0.0.1",
+        ]
+    )
+    for i in range(num_interfaces):
+        lines.append(f" area 0 interface GigabitEthernet0/0/0/{i} cost 100")
     lines.append("!")
     return "\n".join(lines)
 
@@ -93,24 +149,24 @@ class TestParsingBenchmarks:
     """Benchmarks for config parsing."""
 
     def test_parse_large_ios_config(self) -> None:
-        """Parse a 500-interface IOS config via get_hconfig."""
-        config_text = _generate_large_ios_config(500)
+        """Parse a ~10k line IOS config via get_hconfig."""
+        config_text = _generate_large_ios_config()
         elapsed = _time_fn(lambda: get_hconfig(Platform.CISCO_IOS, config_text))
         line_count = config_text.count("\n")
         print(f"\nget_hconfig: {line_count} lines in {elapsed:.4f}s")
         assert elapsed < 5.0, f"Parsing took {elapsed:.2f}s, expected < 5s"
 
     def test_parse_large_xr_config(self) -> None:
-        """Parse a 500-interface XR config via get_hconfig."""
-        config_text = _generate_large_xr_config(500)
+        """Parse a ~10k line XR config via get_hconfig."""
+        config_text = _generate_large_xr_config()
         elapsed = _time_fn(lambda: get_hconfig(Platform.CISCO_XR, config_text))
         line_count = config_text.count("\n")
         print(f"\nget_hconfig (XR): {line_count} lines in {elapsed:.4f}s")
         assert elapsed < 5.0, f"Parsing took {elapsed:.2f}s, expected < 5s"
 
     def test_fast_load_large_ios_config(self) -> None:
-        """Parse a 500-interface IOS config via get_hconfig_fast_load."""
-        config_text = _generate_large_ios_config(500)
+        """Parse a ~10k line IOS config via get_hconfig_fast_load."""
+        config_text = _generate_large_ios_config()
         config_lines = tuple(config_text.splitlines())
         elapsed = _time_fn(
             lambda: get_hconfig_fast_load(Platform.CISCO_IOS, config_lines),
@@ -120,7 +176,7 @@ class TestParsingBenchmarks:
 
     def test_fast_load_vs_get_hconfig(self) -> None:
         """get_hconfig_fast_load should be faster than get_hconfig."""
-        config_text = _generate_large_ios_config(500)
+        config_text = _generate_large_ios_config()
         config_lines = tuple(config_text.splitlines())
 
         time_full = _time_fn(lambda: get_hconfig(Platform.CISCO_IOS, config_text))
@@ -142,7 +198,7 @@ class TestRemediationBenchmarks:
 
     def test_remediation_small_diff(self) -> None:
         """Remediation with ~10% of interfaces changed."""
-        running_text = _generate_large_ios_config(500)
+        running_text = _generate_large_ios_config()
         running = get_hconfig(Platform.CISCO_IOS, running_text)
 
         # Modify 50 interfaces in generated config
@@ -157,8 +213,8 @@ class TestRemediationBenchmarks:
 
     def test_remediation_large_diff(self) -> None:
         """Remediation with ~100% of interfaces changed."""
-        running = get_hconfig(Platform.CISCO_IOS, _generate_large_ios_config(500))
-        generated_text = _generate_large_ios_config(500).replace(
+        running = get_hconfig(Platform.CISCO_IOS, _generate_large_ios_config())
+        generated_text = _generate_large_ios_config().replace(
             " ip ospf cost 100", " ip ospf cost 200"
         )
         generated = get_hconfig(Platform.CISCO_IOS, generated_text)
@@ -169,10 +225,10 @@ class TestRemediationBenchmarks:
 
     def test_remediation_completely_different(self) -> None:
         """Remediation between two entirely different configs."""
-        running = get_hconfig(Platform.CISCO_IOS, _generate_large_ios_config(200))
+        running = get_hconfig(Platform.CISCO_IOS, _generate_large_ios_config(500))
         # Generate a completely different config
         lines = ["hostname OTHER-ROUTER"]
-        for i in range(200):
+        for i in range(500):
             lines.extend(
                 [
                     f"interface Loopback{i}",
@@ -192,7 +248,7 @@ class TestIterationBenchmarks:
 
     def test_all_children_sorted(self) -> None:
         """Iterate all_children_sorted on a large config."""
-        config = get_hconfig(Platform.CISCO_IOS, _generate_large_ios_config(500))
+        config = get_hconfig(Platform.CISCO_IOS, _generate_large_ios_config())
 
         elapsed = _time_fn(lambda: list(config.all_children_sorted()))
         child_count = len(list(config.all_children()))
@@ -201,7 +257,7 @@ class TestIterationBenchmarks:
 
     def test_dump_simple(self) -> None:
         """Dump a large config to simple text."""
-        config = get_hconfig(Platform.CISCO_IOS, _generate_large_ios_config(500))
+        config = get_hconfig(Platform.CISCO_IOS, _generate_large_ios_config())
 
         elapsed = _time_fn(config.dump_simple)
         line_count = len(config.dump_simple())
@@ -210,7 +266,7 @@ class TestIterationBenchmarks:
 
     def test_deep_copy(self) -> None:
         """Deep copy a large config tree."""
-        config = get_hconfig(Platform.CISCO_IOS, _generate_large_ios_config(500))
+        config = get_hconfig(Platform.CISCO_IOS, _generate_large_ios_config())
 
         elapsed = _time_fn(config.deep_copy)
         print(f"\ndeep_copy: {elapsed:.4f}s")
