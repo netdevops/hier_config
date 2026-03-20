@@ -639,3 +639,135 @@ def test_sectional_exit_text_multiple_sections() -> None:
         "  192.0.2.0/24",
         "end-set",
     )
+
+
+def test_indented_bang_section_separators_no_duplicate_child_error() -> None:
+    """Test that indented ! section separators don't raise DuplicateChildError (issue #231)."""
+    platform = Platform.CISCO_XR
+    config_text = """\
+telemetry model-driven
+ destination-group DEST-GROUP-1
+  address-family ipv4 10.0.0.1 port 57000
+   encoding self-describing-gpb
+   protocol tcp
+  !
+ !
+ destination-group DEST-GROUP-2
+  address-family ipv4 10.0.0.2 port 57000
+   encoding self-describing-gpb
+   protocol tcp
+  !
+ !
+ sensor-group SENSOR-1
+  sensor-path openconfig-platform:components/component/cpu
+  sensor-path openconfig-platform:components/component/memory
+ !
+ sensor-group SENSOR-2
+  sensor-path openconfig-interfaces:interfaces/interface/state/counters
+ !
+!
+"""
+    hconfig = get_hconfig(platform, config_text)
+    telemetry = hconfig.get_child(equals="telemetry model-driven")
+    assert telemetry is not None
+    child_texts = [child.text for child in telemetry.children]
+    assert "destination-group DEST-GROUP-1" in child_texts
+    assert "destination-group DEST-GROUP-2" in child_texts
+    assert "sensor-group SENSOR-1" in child_texts
+    assert "sensor-group SENSOR-2" in child_texts
+
+
+def test_running_with_bang_separators_intended_without_no_remediation() -> None:
+    """Running config with indented ! separators and intended without produces no remediation."""
+    platform = Platform.CISCO_XR
+    running = get_hconfig(
+        platform,
+        """\
+telemetry model-driven
+ destination-group DEST-GROUP-1
+  address-family ipv4 10.0.0.1 port 57000
+   encoding self-describing-gpb
+   protocol tcp
+  !
+ !
+ destination-group DEST-GROUP-2
+  address-family ipv4 10.0.0.2 port 57000
+   encoding self-describing-gpb
+   protocol tcp
+  !
+ !
+""",
+    )
+    intended = get_hconfig(
+        platform,
+        """\
+telemetry model-driven
+ destination-group DEST-GROUP-1
+  address-family ipv4 10.0.0.1 port 57000
+   encoding self-describing-gpb
+   protocol tcp
+ destination-group DEST-GROUP-2
+  address-family ipv4 10.0.0.2 port 57000
+   encoding self-describing-gpb
+   protocol tcp
+""",
+    )
+    assert running.config_to_get_to(intended).dump_simple() == ()
+
+
+def test_intended_with_bang_comments_running_without_no_remediation() -> None:
+    """Intended config with ! comment lines and running without produces no remediation."""
+    platform = Platform.CISCO_XR
+    running = get_hconfig(
+        platform,
+        """\
+telemetry model-driven
+ destination-group DEST-GROUP-1
+  address-family ipv4 10.0.0.1 port 57000
+   encoding self-describing-gpb
+   protocol tcp
+ destination-group DEST-GROUP-2
+  address-family ipv4 10.0.0.2 port 57000
+   encoding self-describing-gpb
+   protocol tcp
+""",
+    )
+    intended = get_hconfig(
+        platform,
+        """\
+telemetry model-driven
+ ! This is a test comment
+ ! This is a second test comment
+ destination-group DEST-GROUP-1
+  address-family ipv4 10.0.0.1 port 57000
+   encoding self-describing-gpb
+   protocol tcp
+ destination-group DEST-GROUP-2
+  address-family ipv4 10.0.0.2 port 57000
+   encoding self-describing-gpb
+   protocol tcp
+""",
+    )
+    assert running.config_to_get_to(intended).dump_simple() == ()
+
+
+def test_differing_bang_comment_text_produces_no_remediation() -> None:
+    """Differing ! comment text between running and intended produces no remediation."""
+    platform = Platform.CISCO_XR
+    running = get_hconfig(
+        platform,
+        """\
+router isis backbone
+ ! original comment
+ net 49.0001.1921.2022.0222.00
+""",
+    )
+    intended = get_hconfig(
+        platform,
+        """\
+router isis backbone
+ ! completely different comment
+ net 49.0001.1921.2022.0222.00
+""",
+    )
+    assert running.config_to_get_to(intended).dump_simple() == ()

@@ -179,7 +179,7 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
                 PerLineSubRule(search="^end-group$", replace=" end-group"),
                 PerLineSubRule(search="^end$", replace=""),
                 PerLineSubRule(search="^\\s*#.*", replace=""),
-                PerLineSubRule(search="^!\\s*$", replace=""),
+                PerLineSubRule(search="^\\s*!\\s*$", replace=""),
             ],
             post_load_callbacks=[_fixup_xr_comments],
             idempotent_commands=[
