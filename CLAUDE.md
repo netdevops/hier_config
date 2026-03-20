@@ -74,6 +74,10 @@ This project follows **Test-Driven Development (TDD)**:
 
 All new features and bug fixes must have corresponding tests. Write tests before or alongside implementation, not after.
 
+## Changelog
+
+When creating a PR, always update `CHANGELOG.md` with a summary of the changes under the `## [Unreleased]` section. Use the [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) format with categories: `Added`, `Changed`, `Fixed`, `Removed`. Reference the GitHub issue number when applicable (e.g., `(#209)`). When a version is released, move unreleased entries under a new version heading with the release date.
+
 ## Code Style
 
 - Strict type checking: pyright strict mode + mypy strict + pylint with pydantic plugin.

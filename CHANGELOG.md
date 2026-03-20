@@ -11,6 +11,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.5.0] - 2026-03-19
+
+### Added
+
+- Unused object detection framework: `UnusedObjectRule`, `ReferenceLocation` models,
+  and `unused_objects()` method on `HConfig`. Not enabled in any driver by default —
+  must be explicitly configured via driver extension or `load_hconfig_v2_options` (#15).
+- IOS-XR comment preservation: `!` comment lines inside sections are now attached to
+  the next sibling's `comments` set instead of being stripped. Top-level `!` delimiters
+  and `#` comments are still removed (#30).
+- Negation regex substitution: `NegationSubRule` model and `negation_sub` step in
+  `negate()` for platform-specific negation transformations such as truncating
+  SNMP user removal commands (#101).
+- `unused_objects` and `negation_sub` processing in `load_hconfig_v2_options`.
+- `post_load_callbacks` now run in `get_hconfig_fast_load` for consistency with
+  `get_hconfig`.
+- Idempotent command tests and improved `IdempotentCommandsRule` docstring (#61).
+- `exit_text_parent_level` on `SectionalExitingRule` for IOS-XR `end-*` exit text
+  rendered at parent indentation level (#130).
+- `CLAUDE.md` for Claude Code guidance.
+
+### Fixed
+
+- IOS-XR: `DuplicateChildError` when parsing configs with multiple `group`
+  blocks (#209).
+- IOS-XR: Three tests updated for `exit_text_parent_level` indentation change.
+- `pyproject.toml`: Closed author email brackets, removed duplicate pylint
+  extension, fixed "Coverred" typos (#190).
+
+---
+
 ## [3.4.3] - 2026-03-19
 
 ### Fixed
