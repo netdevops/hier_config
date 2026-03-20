@@ -1,5 +1,62 @@
-from hier_config import get_hconfig_fast_load
+from hier_config import get_hconfig, get_hconfig_fast_load
 from hier_config.models import Platform
+
+
+def test_multiple_groups_no_duplicate_child_error() -> None:
+    """Test that multiple group blocks don't raise DuplicateChildError (issue #209)."""
+    platform = Platform.CISCO_XR
+    config_text = """\
+hostname router1
+group core
+ interface 'Bundle-Ether.*'
+  mtu 9188
+ !
+end-group
+group edge
+ interface 'Bundle-Ether.*'
+  mtu 9092
+ !
+end-group
+"""
+    hconfig = get_hconfig(platform, config_text)
+    children = [child.text for child in hconfig.children]
+    assert "hostname router1" in children
+    assert "group core" in children
+    assert "group edge" in children
+
+
+def test_multiple_groups_remediation() -> None:
+    """Test remediation between configs with multiple group blocks."""
+    platform = Platform.CISCO_XR
+    running_config = get_hconfig_fast_load(
+        platform,
+        (
+            "hostname router1",
+            "group core",
+            " interface 'Bundle-Ether.*'",
+            "  mtu 9188",
+            " !",
+            "end-group",
+            "group edge",
+            " interface 'Bundle-Ether.*'",
+            "  mtu 9092",
+            " !",
+            "end-group",
+        ),
+    )
+    generated_config = get_hconfig_fast_load(
+        platform,
+        (
+            "hostname router1",
+            "group core",
+            " interface 'Bundle-Ether.*'",
+            "  mtu 9188",
+            " !",
+            "end-group",
+        ),
+    )
+    remediation_config = running_config.config_to_get_to(generated_config)
+    assert remediation_config.dump_simple(sectional_exiting=True) == ("no group edge",)
 
 
 def test_duplicate_child_route_policy() -> None:

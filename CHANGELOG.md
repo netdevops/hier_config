@@ -11,6 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.4.3] - 2026-03-19
+
+### Fixed
+
+- IOS-XR: `DuplicateChildError` when parsing configs with multiple `group`
+  blocks. Added `SectionalExitingRule` for `group` → `end-group` and a
+  `PerLineSubRule` to indent `end-group` so it is treated as a section
+  terminator rather than a standalone root-level child (issue #209).
+
+---
+
 ## [3.4.2] - 2026-03-17
 
 ### Fixed
