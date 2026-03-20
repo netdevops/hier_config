@@ -601,6 +601,92 @@ Both approaches allow you to extend the functionality of the Cisco IOS driver:
 1. **Subclassing:** Recommended for reusable, modular extensions where the driver logic can be encapsulated in a new class.
 2. **Dynamic Modification:** Useful when the driver is instantiated dynamically, and you need to modify the rules at runtime.
 
+### Example 3: Adding Unused Object Detection
+
+Unused object detection is not enabled in any driver by default — it must be explicitly configured. This ensures no unintended side-effects for users who are not expecting it.
+
+You can add unused object rules dynamically or via `load_hconfig_v2_options`:
+
+#### Dynamic Extension
+
+```python
+from hier_config import get_hconfig, get_hconfig_driver, Platform
+from hier_config.models import MatchRule, ReferenceLocation, UnusedObjectRule
+
+driver = get_hconfig_driver(Platform.CISCO_XR)
+
+# Detect unused IPv4 ACLs
+driver.rules.unused_objects.append(
+    UnusedObjectRule(
+        match_rules=(MatchRule(startswith="ipv4 access-list "),),
+        name_re=r"^ipv4 access-list (?P<name>\S+)",
+        reference_locations=(
+            ReferenceLocation(
+                match_rules=(MatchRule(startswith="interface "),),
+                reference_re=r"\bipv4 access-group {name}\b",
+            ),
+        ),
+    )
+)
+
+config = get_hconfig(driver, running_config_text)
+for unused in config.unused_objects():
+    print(f"Unused: {unused.text}")
+```
+
+#### Via `load_hconfig_v2_options`
+
+```python
+from hier_config import get_hconfig, Platform
+from hier_config.utils import load_hconfig_v2_options
+
+options = {
+    "unused_objects": [
+        {
+            "lineage": [{"startswith": "ipv4 access-list "}],
+            "name_re": r"^ipv4 access-list (?P<name>\S+)",
+            "reference_locations": [
+                {
+                    "lineage": [{"startswith": "interface "}],
+                    "reference_re": r"\bipv4 access-group {name}\b",
+                },
+            ],
+        },
+    ],
+}
+driver = load_hconfig_v2_options(options, Platform.CISCO_XR)
+config = get_hconfig(driver, running_config_text)
+
+for unused in config.unused_objects():
+    print(f"Unused: {unused.text}")
+```
+
+Each `UnusedObjectRule` requires:
+
+- `match_rules` — locates the object definition (e.g., `startswith="ipv4 access-list "`)
+- `name_re` — regex with a `(?P<name>...)` capture group to extract the object name
+- `reference_locations` — a tuple of `ReferenceLocation` entries, each specifying where to search and what regex pattern (with `{name}` placeholder) to match
+
+### Example 4: Adding Negation Substitution
+
+Some platforms require negation commands to be truncated or transformed. Use `NegationSubRule` for regex-based negation transformations:
+
+```python
+from hier_config import get_hconfig_driver, Platform
+from hier_config.models import MatchRule, NegationSubRule
+
+driver = get_hconfig_driver(Platform.CISCO_NXOS)
+
+# Truncate SNMP user negation after the username
+driver.rules.negation_sub.append(
+    NegationSubRule(
+        match_rules=(MatchRule(startswith="snmp-server user "),),
+        search=r"(no snmp-server user \S+).*",
+        replace=r"\1",
+    )
+)
+```
+
 ## Creating a Custom Driver
 
 This guide walks you through the process of creating a custom driver using the `HConfigDriverBase` class from the `hier_config.platforms.driver_base` module. Custom drivers allow you to define operating system-specific rules and behaviors for managing device configurations.

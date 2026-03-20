@@ -62,6 +62,18 @@ Platform drivers: `CISCO_IOS`, `CISCO_XR`, `CISCO_NXOS`, `ARISTA_EOS`, `FORTINET
 
 Pattern: add frozen Pydantic model in `models.py` → add default factory + field in `HConfigDriverRules` (driver_base.py) → consume in `child.py` or `root.py` → populate in platform driver's `_instantiate_rules()`.
 
+## Development Approach
+
+This project follows **Test-Driven Development (TDD)**:
+
+1. **Write a failing test first** that validates the expected behavior.
+2. **Run the test to confirm it fails** for the right reason.
+3. **Implement the minimal code** to make the test pass.
+4. **Run the full test suite** to ensure no regressions.
+5. **Refactor** if needed, keeping tests green.
+
+All new features and bug fixes must have corresponding tests. Write tests before or alongside implementation, not after.
+
 ## Code Style
 
 - Strict type checking: pyright strict mode + mypy strict + pylint with pydantic plugin.

@@ -1,4 +1,6 @@
-from collections.abc import Iterable
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from hier_config.child import HConfigChild
 from hier_config.models import (
@@ -13,6 +15,28 @@ from hier_config.models import (
     SectionalOverwriteRule,
 )
 from hier_config.platforms.driver_base import HConfigDriverBase, HConfigDriverRules
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from hier_config.root import HConfig
+
+
+def _fixup_xr_comments(config: HConfig) -> None:
+    """Move ``!`` comment lines into the next sibling's comments set."""
+    for parent in (config, *config.all_children()):
+        siblings = list(parent.children)
+        comment_buffer: list[str] = []
+        for sibling in siblings:
+            if sibling.text.startswith("!"):
+                comment_text = sibling.text.removeprefix("!").lstrip(" ")
+                if comment_text:
+                    comment_buffer.append(comment_text)
+                sibling.delete()
+            elif comment_buffer:
+                for comment in comment_buffer:
+                    sibling.comments.add(comment)
+                comment_buffer.clear()
 
 
 class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-instance-attributes
@@ -154,8 +178,10 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
                 PerLineSubRule(search="^end-set$", replace=" end-set"),
                 PerLineSubRule(search="^end-group$", replace=" end-group"),
                 PerLineSubRule(search="^end$", replace=""),
-                PerLineSubRule(search="^\\s*[#!].*", replace=""),
+                PerLineSubRule(search="^\\s*#.*", replace=""),
+                PerLineSubRule(search="^!\\s*$", replace=""),
             ],
+            post_load_callbacks=[_fixup_xr_comments],
             idempotent_commands=[
                 IdempotentCommandsRule(
                     match_rules=(

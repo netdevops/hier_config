@@ -1,14 +1,14 @@
 [tool.poetry]
 name = "hier-config"
-version = "3.4.3"
+version = "3.5.0"
 description = "A network configuration query and comparison library, used to build remediation configurations."
 packages = [
     { include="hier_config", from="."},
 ]
 authors = [
     "Andrew Edwards <edwards.andrew@heb.com>",
-    "James Williams <james.williams@networktocode.com",
-    "Jan Brooks <jan.brooks@rackspace.com"
+    "James Williams <james.williams@networktocode.com>",
+    "Jan Brooks <jan.brooks@rackspace.com>"
 ]
 license = "MIT"
 classifiers = [
@@ -73,7 +73,6 @@ load-plugins = [
     "pylint.extensions.eq_without_hash",
     "pylint.extensions.for_any_all",
     "pylint.extensions.overlapping_exceptions",
-    "pylint.extensions.overlapping_exceptions",
     "pylint.extensions.redefined_loop_name",
     "pylint.extensions.set_membership",
     "pylint.extensions.typing",
@@ -91,8 +90,8 @@ disable = [
     "redefined-loop-name",  # Covered by ruff PLW2901
     "too-many-arguments",  # Covered by ruff PLR0913
     "too-many-return-statements",  # Covered by ruff PLR0911
-    "too-many-locals",  # Coverred by ruff PLR0914
-    "too-many-public-methods",  # Coverred by ruff PLR0904
+    "too-many-locals",  # Covered by ruff PLR0914
+    "too-many-public-methods",  # Covered by ruff PLR0904
 ]
 
 

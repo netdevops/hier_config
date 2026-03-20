@@ -165,6 +165,9 @@ def get_hconfig_fast_load(
     for child in tuple(config.all_children()):
         child.delete_sectional_exit()
 
+    for callback in driver.rules.post_load_callbacks:
+        callback(config)
+
     return config
 
 

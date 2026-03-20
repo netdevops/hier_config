@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from itertools import chain
 from logging import getLogger
-from re import search
+from re import search, sub
 from typing import TYPE_CHECKING, Any
 
 from .base import HConfigBase
@@ -257,7 +257,9 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
            negation string defined in the driver (e.g. ``no ip route``).
         2. ``negation_default_when`` rule — rewrites the command to its
            ``default`` form (e.g. ``no shutdown`` → ``default shutdown``).
-        3. ``swap_negation`` — toggles the negation prefix/declaration
+        3. ``negation_sub`` rule — applies a regex substitution to the
+           negated text (e.g. truncating after a specific token).
+        4. ``swap_negation`` — toggles the negation prefix/declaration
            prefix (e.g. ``shutdown`` ↔ ``no shutdown``).
 
         Returns self so that callers can chain further operations.
@@ -268,6 +270,15 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
 
         if self.use_default_for_negation(self):
             return self._default()
+
+        for rule in self.driver.rules.negation_sub:
+            if self.is_lineage_match(rule.match_rules):
+                self.text = sub(
+                    rule.search,
+                    rule.replace,
+                    f"{self.driver.negation_prefix}{self.text}",
+                )
+                return self
 
         return self.driver.swap_negation(self)
 

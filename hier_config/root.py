@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 
 from .base import HConfigBase
 from .child import HConfigChild
-from .models import Dump, DumpLine
+from .models import Dump, DumpLine, ReferenceLocation
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -207,6 +207,45 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         for child in self.children:
             new_instance.add_deep_copy_of(child)
         return new_instance
+
+    def unused_objects(self) -> Iterator[HConfigChild]:
+        """Yield top-level children that are defined objects with no references.
+
+        Uses ``self.driver.rules.unused_objects`` to identify object definitions,
+        extract their names, and search for references across the config tree.
+        Objects with zero references are yielded.
+        """
+        from re import search as _re_search  # noqa: PLC0415
+
+        for rule in self.driver.rules.unused_objects:
+            seen_names: set[str] = set()
+            for definition in self.get_children_deep(rule.match_rules):
+                match = _re_search(rule.name_re, definition.text)
+                if not match:
+                    continue
+                name = match.group("name")
+                if name in seen_names:
+                    continue
+                seen_names.add(name)
+
+                if not self._is_object_referenced(name, rule.reference_locations):
+                    yield definition
+
+    def _is_object_referenced(
+        self,
+        name: str,
+        reference_locations: tuple[ReferenceLocation, ...],
+    ) -> bool:
+        """Return True if *name* is found in any reference location."""
+        from re import escape as _re_escape  # noqa: PLC0415
+        from re import search as _re_search  # noqa: PLC0415
+
+        for ref_location in reference_locations:
+            pattern = ref_location.reference_re.format(name=_re_escape(name))
+            for section in self.get_children_deep(ref_location.match_rules):
+                if any(_re_search(pattern, d.text) for d in section.all_children()):
+                    return True
+        return False
 
     def _is_duplicate_child_allowed(self) -> bool:  # noqa: PLR6301
         """Determine if duplicate(identical text) children are allowed under the parent."""
