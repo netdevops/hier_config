@@ -14,6 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Performance benchmarks for parsing, remediation, and iteration (#202).
   Skipped by default; run with `poetry run pytest -m benchmark -v -s`.
 
+### Fixed
+
+- `DuplicateChildError` raised when parsing IOS-XR configs with indented `!` section
+  separators (e.g., ` !`, `  !`). The `per_line_sub` regex was changed from `^!\s*$`
+  to `^\s*!\s*$` so bare `!` lines at any indentation level are stripped, restoring
+  v3.4.2 behavior (#231).
+
 ---
 
 ## [3.5.0] - 2026-03-19
