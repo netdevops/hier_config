@@ -148,3 +148,10 @@ parametrize-values-type = "tuple"
 
 [tool.ruff.lint.per-file-ignores]
 "**/tests/*" = ["PLC2701", "S101"]
+"tests/test_benchmarks.py" = ["T201", "PLR6301", "PERF401"]
+
+[tool.pytest.ini_options]
+markers = [
+    "benchmark: performance benchmark tests (deselect with '-m \"not benchmark\"')",
+]
+addopts = "-m 'not benchmark'"
