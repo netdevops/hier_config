@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Performance benchmarks for parsing, remediation, and iteration (#202).
+  Skipped by default; run with `poetry run pytest -m benchmark -v -s`.
+
 ---
 
 ## [3.5.0] - 2026-03-19
