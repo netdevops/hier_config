@@ -123,3 +123,22 @@ router isis backbone
     net_child = router_isis.get_child(startswith="net ")
     assert net_child is not None
     assert "!important note about ISIS" in net_child.comments
+
+
+def test_xr_trailing_comment_with_no_following_sibling_is_dropped() -> None:
+    """A trailing ! comment at the end of a section with no following sibling is silently dropped."""
+    config = get_hconfig(
+        Platform.CISCO_XR,
+        """\
+router isis backbone
+ net 49.0001.1921.2022.0222.00
+ ! trailing comment with no following sibling
+""",
+    )
+    router_isis = config.get_child(equals="router isis backbone")
+    assert router_isis is not None
+    net_child = router_isis.get_child(startswith="net ")
+    assert net_child is not None
+    assert len(net_child.comments) == 0
+    for child in router_isis.all_children():
+        assert not child.text.startswith("!")
