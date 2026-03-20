@@ -96,7 +96,15 @@ class PerLineSubRule(BaseModel):
 
 
 class IdempotentCommandsRule(BaseModel):
-    """Rule declaring that a command family is idempotent (last value wins)."""
+    r"""Rule declaring that a command family is idempotent (last value wins).
+
+    Use regex capture groups in ``MatchRule.re_search`` to parameterize
+    idempotency keys — e.g. ``r"^client (\S+) server-key"`` makes each
+    client IP independently idempotent.
+
+    Prefer separate rules for unrelated command families rather than
+    combining them via a tuple ``startswith`` in a single ``MatchRule``.
+    """
 
     match_rules: tuple[MatchRule, ...]
 
