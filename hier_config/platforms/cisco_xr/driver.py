@@ -1,4 +1,6 @@
-from collections.abc import Iterable
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from hier_config.child import HConfigChild
 from hier_config.models import (
@@ -8,11 +10,35 @@ from hier_config.models import (
     OrderingRule,
     ParentAllowsDuplicateChildRule,
     PerLineSubRule,
+    ReferenceLocation,
     SectionalExitingRule,
     SectionalOverwriteNoNegateRule,
     SectionalOverwriteRule,
+    UnusedObjectRule,
 )
 from hier_config.platforms.driver_base import HConfigDriverBase, HConfigDriverRules
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
+    from hier_config.root import HConfig
+
+
+def _fixup_xr_comments(config: HConfig) -> None:
+    """Move ``!`` comment lines into the next sibling's comments set."""
+    for parent in (config, *config.all_children()):
+        siblings = list(parent.children)
+        comment_buffer: list[str] = []
+        for sibling in siblings:
+            if sibling.text.startswith("!"):
+                comment_text = sibling.text.lstrip("! ")
+                if comment_text:
+                    comment_buffer.append(comment_text)
+                sibling.delete()
+            elif comment_buffer:
+                for comment in comment_buffer:
+                    sibling.comments.add(comment)
+                comment_buffer.clear()
 
 
 class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-instance-attributes
@@ -154,7 +180,65 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
                 PerLineSubRule(search="^end-set$", replace=" end-set"),
                 PerLineSubRule(search="^end-group$", replace=" end-group"),
                 PerLineSubRule(search="^end$", replace=""),
-                PerLineSubRule(search="^\\s*[#!].*", replace=""),
+                PerLineSubRule(search="^\\s*#.*", replace=""),
+                PerLineSubRule(search="^!\\s*$", replace=""),
+            ],
+            post_load_callbacks=[_fixup_xr_comments],
+            unused_objects=[
+                UnusedObjectRule(
+                    match_rules=(MatchRule(startswith="ipv4 access-list "),),
+                    name_re=r"^ipv4 access-list (?P<name>\S+)",
+                    reference_locations=(
+                        ReferenceLocation(
+                            match_rules=(MatchRule(startswith="interface "),),
+                            reference_re=r"\bipv4 access-group {name}\b",
+                        ),
+                    ),
+                ),
+                UnusedObjectRule(
+                    match_rules=(MatchRule(startswith="ipv6 access-list "),),
+                    name_re=r"^ipv6 access-list (?P<name>\S+)",
+                    reference_locations=(
+                        ReferenceLocation(
+                            match_rules=(MatchRule(startswith="interface "),),
+                            reference_re=r"\bipv6 access-group {name}\b",
+                        ),
+                    ),
+                ),
+                UnusedObjectRule(
+                    match_rules=(MatchRule(startswith="prefix-set "),),
+                    name_re=r"^prefix-set (?P<name>\S+)",
+                    reference_locations=(
+                        ReferenceLocation(
+                            match_rules=(MatchRule(startswith="route-policy "),),
+                            reference_re=r"\b{name}\b",
+                        ),
+                    ),
+                ),
+                UnusedObjectRule(
+                    match_rules=(MatchRule(startswith="community-set "),),
+                    name_re=r"^community-set (?P<name>\S+)",
+                    reference_locations=(
+                        ReferenceLocation(
+                            match_rules=(MatchRule(startswith="route-policy "),),
+                            reference_re=r"\b{name}\b",
+                        ),
+                    ),
+                ),
+                UnusedObjectRule(
+                    match_rules=(MatchRule(startswith="route-policy "),),
+                    name_re=r"^route-policy (?P<name>\S+)",
+                    reference_locations=(
+                        ReferenceLocation(
+                            match_rules=(MatchRule(startswith="router bgp"),),
+                            reference_re=r"\broute-policy {name}\b",
+                        ),
+                        ReferenceLocation(
+                            match_rules=(MatchRule(startswith="interface "),),
+                            reference_re=r"\broute-policy {name}\b",
+                        ),
+                    ),
+                ),
             ],
             idempotent_commands=[
                 IdempotentCommandsRule(

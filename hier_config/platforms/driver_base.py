@@ -14,12 +14,14 @@ from hier_config.models import (
     MatchRule,
     NegationDefaultWhenRule,
     NegationDefaultWithRule,
+    NegationSubRule,
     OrderingRule,
     ParentAllowsDuplicateChildRule,
     PerLineSubRule,
     SectionalExitingRule,
     SectionalOverwriteNoNegateRule,
     SectionalOverwriteRule,
+    UnusedObjectRule,
 )
 from hier_config.root import HConfig
 
@@ -80,6 +82,14 @@ def _sectional_overwrite_no_negate_rules_default() -> list[
     return []
 
 
+def _negation_sub_rules_default() -> list[NegationSubRule]:
+    return []
+
+
+def _unused_object_rules_default() -> list[UnusedObjectRule]:
+    return []
+
+
 class HConfigDriverRules(BaseModel):  # pylint: disable=too-many-instance-attributes
     """Pydantic model holding all rule collections for a platform driver.
 
@@ -125,6 +135,12 @@ class HConfigDriverRules(BaseModel):  # pylint: disable=too-many-instance-attrib
     )
     sectional_overwrite_no_negate: list[SectionalOverwriteNoNegateRule] = Field(
         default_factory=_sectional_overwrite_no_negate_rules_default
+    )
+    negation_sub: list[NegationSubRule] = Field(
+        default_factory=_negation_sub_rules_default
+    )
+    unused_objects: list[UnusedObjectRule] = Field(
+        default_factory=_unused_object_rules_default
     )
 
 
