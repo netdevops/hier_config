@@ -106,3 +106,20 @@ interface GigabitEthernet0/0/0/0
     )
     for child in config.all_children():
         assert not child.text.startswith("#")
+
+
+def test_xr_comment_with_leading_bang_preserved() -> None:
+    """A comment containing ! in its body is preserved correctly."""
+    config = get_hconfig(
+        Platform.CISCO_XR,
+        """\
+router isis backbone
+ ! !important note about ISIS
+ net 49.0001.1921.2022.0222.00
+""",
+    )
+    router_isis = config.get_child(equals="router isis backbone")
+    assert router_isis is not None
+    net_child = router_isis.get_child(startswith="net ")
+    assert net_child is not None
+    assert "!important note about ISIS" in net_child.comments

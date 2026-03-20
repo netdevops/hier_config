@@ -156,3 +156,30 @@ def test_unused_objects_via_v2_options() -> None:
     unused = [child.text for child in config.unused_objects()]
     assert "ipv4 access-list ORPHAN_ACL" in unused
     assert "ipv4 access-list APPLIED_ACL" not in unused
+
+
+def test_name_re_without_match_skips_definition() -> None:
+    """A name_re that doesn't match the definition text is safely skipped."""
+    driver = _make_driver(
+        [
+            UnusedObjectRule(
+                match_rules=(MatchRule(startswith="ipv4 access-list "),),
+                name_re=r"^WILL_NOT_MATCH (?P<name>\S+)",
+                reference_locations=(
+                    ReferenceLocation(
+                        match_rules=(MatchRule(startswith="interface "),),
+                        reference_re=r"\bipv4 access-group {name}\b",
+                    ),
+                ),
+            ),
+        ],
+    )
+    config = get_hconfig_fast_load(
+        driver,
+        (
+            "ipv4 access-list MY_ACL",
+            " 10 permit tcp any any",
+        ),
+    )
+    unused = list(config.unused_objects())
+    assert not unused

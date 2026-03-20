@@ -29,7 +29,7 @@ def _fixup_xr_comments(config: HConfig) -> None:
         comment_buffer: list[str] = []
         for sibling in siblings:
             if sibling.text.startswith("!"):
-                comment_text = sibling.text.lstrip("! ")
+                comment_text = sibling.text.removeprefix("!").lstrip(" ")
                 if comment_text:
                     comment_buffer.append(comment_text)
                 sibling.delete()

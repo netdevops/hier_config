@@ -2,9 +2,11 @@ from hier_config import get_hconfig_fast_load
 from hier_config.models import (
     MatchRule,
     NegationSubRule,
+    Platform,
 )
 from hier_config.platforms.driver_base import HConfigDriverRules
 from hier_config.platforms.generic.driver import HConfigDriverGeneric
+from hier_config.utils import load_hconfig_v2_options
 
 
 def _make_driver(
@@ -98,5 +100,26 @@ def test_negation_sub_full_remediation() -> None:
         driver,
         ("snmp-server user monitor auth sha secret2",),
     )
+    remediation = running.config_to_get_to(generated)
+    assert remediation.dump_simple() == ("no snmp-server user admin",)
+
+
+def test_negation_sub_via_v2_options() -> None:
+    """Negation sub rules loaded via load_hconfig_v2_options work correctly."""
+    v2_options: dict[str, object] = {
+        "negation_sub": [
+            {
+                "lineage": [{"startswith": "snmp-server user "}],
+                "search": r"(no snmp-server user \S+).*",
+                "replace": r"\1",
+            },
+        ],
+    }
+    driver = load_hconfig_v2_options(v2_options, Platform.GENERIC)
+    running = get_hconfig_fast_load(
+        driver,
+        ("snmp-server user admin auth sha secret",),
+    )
+    generated = get_hconfig_fast_load(driver, ())
     remediation = running.config_to_get_to(generated)
     assert remediation.dump_simple() == ("no snmp-server user admin",)
