@@ -75,6 +75,10 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
                     exit_text="end-template",
                 ),
                 SectionalExitingRule(
+                    match_rules=(MatchRule(startswith="group"),),
+                    exit_text="end-group",
+                ),
+                SectionalExitingRule(
                     match_rules=(MatchRule(startswith="interface"),),
                     exit_text="root",
                 ),
@@ -140,6 +144,7 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
                 PerLineSubRule(search=".*parity none.*", replace=""),
                 PerLineSubRule(search="^end-policy$", replace=" end-policy"),
                 PerLineSubRule(search="^end-set$", replace=" end-set"),
+                PerLineSubRule(search="^end-group$", replace=" end-group"),
                 PerLineSubRule(search="^end$", replace=""),
                 PerLineSubRule(search="^\\s*[#!].*", replace=""),
             ],
