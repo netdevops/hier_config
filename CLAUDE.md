@@ -44,6 +44,8 @@ poetry run pytest -m benchmark -k test_parse_large_ios_config -v -s
 
 Use `-s` to see printed timing results. Each benchmark reports the best time over 3 iterations and asserts an upper bound (e.g., `< 5s` for parsing, `< 10s` for remediation). If a benchmark fails its time threshold, investigate the relevant code path for performance regressions.
 
+After running benchmarks, always display the results to the user in a table format summarizing each benchmark's config size and elapsed time.
+
 ## Architecture
 
 Three-layer design: **Tree** (parse/represent config), **Driver** (platform-specific rules), **Workflow** (compute diffs/remediations).
