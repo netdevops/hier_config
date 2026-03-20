@@ -86,7 +86,7 @@ A frozen Pydantic model holding lists of typed rule objects:
 |-------|-----------|--------|
 | `negate_with` | `NegationDefaultWithRule` | Replace negation with a fixed command |
 | `negation_default_when` | `NegationDefaultWhenRule` | Use `default` form instead of `no` |
-| `sectional_exiting` | `SectionalExitingRule` | Emit an exit token at end of section |
+| `sectional_exiting` | `SectionalExitingRule` | Emit an exit token at end of section (optionally at parent indent level) |
 | `sectional_overwrite` | `SectionalOverwriteRule` | Negate + re-create whole section |
 | `sectional_overwrite_no_negate` | `SectionalOverwriteNoNegateRule` | Re-create without prior negation |
 | `ordering` | `OrderingRule` | Assign integer weights for apply order |

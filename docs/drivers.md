@@ -92,8 +92,8 @@ driver = get_hconfig_driver(Platform.ARISTA_EOS)
 Cisco IOS XR uses a commit-based configuration model with several syntax differences from classic IOS:
 
 - **[Sectional overwrite no-negate](glossary.md#sectional-overwrite-no-negate)**: `prefix-set`, `route-policy`, and similar blocks are replaced wholesale rather than line-by-line, because IOS XR does not support partial modification of these objects.
-- **[Indent adjust](glossary.md#indent-adjust)**: inline templates in `router bgp` use a different indentation depth; the driver adjusts the tree depth between `!#` markers.
-- **[Sectional exiting](glossary.md#sectional-exiting)**: route-policy blocks close with `end-policy`; prefix-set blocks close with `end-set`.
+- **[Indent adjust](glossary.md#indent-adjust)**: `template` blocks use a different indentation depth; the driver adjusts the tree depth between `template` and `end-template` markers.
+- **[Sectional exiting](glossary.md#sectional-exiting)**: route-policy blocks close with `end-policy`; prefix-set and community-set blocks close with `end-set`; template blocks close with `end-template`; group blocks close with `end-group`. All `end-*` exit text is rendered at the parent indentation level (`exit_text_parent_level=True`).
 - ACL sequence numbers are preserved for correct ordered access-list handling.
 
 Platform enum: `Platform.CISCO_XR`
@@ -297,6 +297,7 @@ In Hier Config, the rules within a driver are organized into sections, each targ
   - **`SectionalExitingRule`**:
     - `match_rules`: A tuple of `MatchRule` objects defining the section's boundaries.
     - `exit_text`: The command used to exit the section.
+    - `exit_text_parent_level`: A boolean (default `False`). When `True`, the exit text is rendered at the parent's indentation level rather than the section's own level (e.g., IOS XR `end-policy` appears unindented).
 
 ---
 
@@ -812,8 +813,13 @@ sectional_exiting=[
             MatchRule(startswith="policy-map"),
             MatchRule(startswith="class"),
         ),
-        exit_text="exit"
-    )
+        exit_text="exit",
+    ),
+    SectionalExitingRule(
+        match_rules=(MatchRule(startswith="route-policy"),),
+        exit_text="end-policy",
+        exit_text_parent_level=True,  # render at parent indentation
+    ),
 ]
 ```
 
