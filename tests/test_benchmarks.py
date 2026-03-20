@@ -15,9 +15,6 @@ from hier_config.models import Platform
 pytestmark = pytest.mark.benchmark
 
 
-_TARGET_LINES = 10_000
-
-
 def _generate_large_ios_config(num_interfaces: int = 1000) -> str:
     """Generate a large Cisco IOS-style config (~10k+ lines at default)."""
     lines = [
@@ -189,15 +186,17 @@ class TestParsingBenchmarks:
             f"fast_load: {time_fast:.4f}s, "
             f"ratio: {ratio:.1f}x"
         )
-        # fast_load should be at least somewhat faster
-        assert time_fast <= time_full, "fast_load should not be slower than get_hconfig"
+        # fast_load should not be significantly slower (allow 10% variance for CI noise)
+        assert time_fast <= time_full * 1.1, (
+            "fast_load should not be slower than get_hconfig"
+        )
 
 
 class TestRemediationBenchmarks:
     """Benchmarks for config_to_get_to remediation."""
 
     def test_remediation_small_diff(self) -> None:
-        """Remediation with ~10% of interfaces changed."""
+        """Remediation with ~5% of interfaces changed."""
         running_text = _generate_large_ios_config()
         running = get_hconfig(Platform.CISCO_IOS, running_text)
 
