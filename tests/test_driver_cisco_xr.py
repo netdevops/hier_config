@@ -156,7 +156,7 @@ def test_nested_if_endif_route_policy() -> None:
         "    exit",
         "  endif",
         "  pass",
-        "  end-policy",
+        "end-policy",
     )
 
 
@@ -215,7 +215,7 @@ def test_flow_exporter_template_indent_adjust() -> None:
         "    exit",
         "  endif",
         "  drop",
-        "  end-policy",
+        "end-policy",
     )
 
 
@@ -288,7 +288,7 @@ def test_template_block_indent_adjust() -> None:
         "    transmit",
         "    receive",
         "    exit",
-        "  end-template",
+        "end-template",
     )
 
 

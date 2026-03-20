@@ -84,6 +84,7 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
                 SectionalExitingRule(
                     match_rules=(MatchRule(startswith="group"),),
                     exit_text="end-group",
+                    exit_text_parent_level=True,
                 ),
                 SectionalExitingRule(
                     match_rules=(MatchRule(startswith="interface"),),
