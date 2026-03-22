@@ -14,6 +14,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Performance benchmarks for parsing, remediation, and iteration (#202).
   Skipped by default; run with `poetry run pytest -m benchmark -v -s`.
 
+### Changed
+
+- Renamed `load_hconfig_v2_options` to `load_driver_rules` (#221).
+- Renamed `load_hconfig_v2_tags` to `load_tag_rules` (#221).
+
+### Removed
+
+- Removed `HCONFIG_PLATFORM_V2_TO_V3_MAPPING` constant (#221).
+- Removed `hconfig_v2_os_v3_platform_mapper()` function (#221).
+- Removed `hconfig_v3_platform_v2_os_mapper()` function (#221).
+- Removed `load_hconfig_v2_options_from_file()` function (#221).
+
 ### Fixed
 
 - `DuplicateChildError` raised when parsing IOS-XR configs with indented `!` section

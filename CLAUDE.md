@@ -6,6 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 hier_config is a Python library that compares network device configurations (running vs intended) and generates minimal remediation commands. It parses config text into hierarchical trees and computes diffs respecting vendor-specific syntax rules.
 
+## Branching Strategy
+
+- `master` — stable branch for v3.x releases and maintenance.
+- `next` — long-lived development branch for v4 work. All v4 features and breaking changes target this branch. PRs for v4 work should be opened against `next`.
+
 ## Build & Test Commands
 
 All commands use **poetry** (not pip):
@@ -21,10 +26,16 @@ poetry run ./scripts/build.py lint
 poetry run ./scripts/build.py pytest --coverage
 
 # Run a single test
-poetry run pytest tests/test_driver_cisco_xr.py::test_multiple_groups_no_duplicate_child_error -v
+poetry run pytest tests/unit/platforms/test_cisco_xr.py::test_multiple_groups_no_duplicate_child_error -v
 
 # Run a single test file
-poetry run pytest tests/test_driver_cisco_xr.py -v
+poetry run pytest tests/unit/platforms/test_cisco_xr.py -v
+
+# Run only unit tests
+poetry run pytest tests/unit/ -v
+
+# Run only integration tests
+poetry run pytest tests/integration/ -v
 
 # Auto-fix formatting
 poetry run ruff format hier_config tests scripts
@@ -89,6 +100,21 @@ This project follows **Test-Driven Development (TDD)**:
 5. **Refactor** if needed, keeping tests green.
 
 All new features and bug fixes must have corresponding tests. Write tests before or alongside implementation, not after.
+
+### Test Organization
+
+Tests mirror the source code structure and are split into categories:
+
+- **`tests/unit/`** — Unit tests for individual classes and functions.
+  - `test_root.py`, `test_child.py`, `test_children.py` — Tree layer tests.
+  - `test_constructors.py`, `test_utils.py`, `test_workflows.py`, `test_reporting.py` — Core module tests.
+  - `platforms/` — Driver unit tests (post-load callbacks, swap_negation, etc.).
+  - `platforms/views/` — Config view tests.
+- **`tests/integration/`** — Tests that exercise driver remediation scenarios (running config → generated config → remediation).
+  - Per-platform files (`test_cisco_ios.py`, `test_cisco_xr.py`, etc.).
+  - `test_remediation.py` — Cross-platform remediation, future, and difference tests.
+  - `test_circular_workflows.py` — Roundtrip workflow validation across all platforms.
+- **`tests/benchmarks/`** — Performance benchmarks (skipped by default).
 
 ## Changelog
 

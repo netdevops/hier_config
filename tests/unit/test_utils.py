@@ -9,11 +9,9 @@ from hier_config import Platform
 from hier_config.models import MatchRule, TagRule
 from hier_config.utils import (
     _set_match_rule,  # pyright: ignore[reportPrivateUsage]
-    hconfig_v2_os_v3_platform_mapper,
-    hconfig_v3_platform_v2_os_mapper,
-    load_hconfig_v2_options,
-    load_hconfig_v2_tags,
+    load_driver_rules,
     load_hier_config_tags,
+    load_tag_rules,
     read_text_from_file,
 )
 
@@ -91,29 +89,48 @@ def test_load_hier_config_tags_empty_file(tmp_path: Path) -> None:
         load_hier_config_tags(str(empty_file))
 
 
-def test_hconfig_v2_os_v3_platform_mapper() -> None:
-    # Valid mappings
-    assert hconfig_v2_os_v3_platform_mapper("ios") == Platform.CISCO_IOS
-    assert hconfig_v2_os_v3_platform_mapper("nxos") == Platform.CISCO_NXOS
-    assert hconfig_v2_os_v3_platform_mapper("junos") == Platform.JUNIPER_JUNOS
-    assert hconfig_v2_os_v3_platform_mapper("invalid") == Platform.GENERIC
+def test_load_driver_rules(platform_generic: Platform) -> None:
+    # pylint: disable=redefined-outer-name
+    options: dict[str, Any] = {
+        "negation": "no",
+        "sectional_overwrite": [{"lineage": [{"startswith": "template"}]}],
+        "sectional_overwrite_no_negate": [{"lineage": [{"startswith": "as-path-set"}]}],
+        "ordering": [{"lineage": [{"startswith": "ntp"}], "order": 700}],
+        "indent_adjust": [
+            {
+                "start_expression": "^\\s*template",
+                "end_expression": "^\\s*end-template",
+            }
+        ],
+        "parent_allows_duplicate_child": [
+            {"lineage": [{"startswith": "route-policy"}]}
+        ],
+        "sectional_exiting": [
+            {"lineage": [{"startswith": "router bgp"}], "exit_text": "exit"}
+        ],
+        "full_text_sub": [{"search": "banner motd # replace me #", "replace": ""}],
+        "per_line_sub": [{"search": "^!.*Generated.*$", "replace": ""}],
+        "idempotent_commands_blacklist": [
+            {
+                "lineage": [
+                    {"startswith": "interface"},
+                    {"re_search": "ip address.*secondary"},
+                ]
+            }
+        ],
+        "idempotent_commands": [{"lineage": [{"startswith": "interface"}]}],
+        "negation_negate_with": [
+            {
+                "lineage": [
+                    {"startswith": "interface Ethernet"},
+                    {"startswith": "spanning-tree port type"},
+                ],
+                "use": "no spanning-tree port type",
+            }
+        ],
+    }
 
-
-def test_hconfig_v3_platform_v2_os_mapper() -> None:
-    # Valid mappings
-    assert hconfig_v3_platform_v2_os_mapper(Platform.CISCO_IOS) == "ios"
-    assert hconfig_v3_platform_v2_os_mapper(Platform.CISCO_NXOS) == "nxos"
-    assert hconfig_v3_platform_v2_os_mapper(Platform.JUNIPER_JUNOS) == "junos"
-    assert hconfig_v3_platform_v2_os_mapper(Platform.GENERIC) == "generic"
-
-
-def test_load_hconfig_v2_options(
-    platform_generic: Platform, v2_options: dict[str, Any]
-) -> None:
-    # pylint: disable=redefined-outer-name, unused-argument
-    platform = platform_generic
-
-    driver = load_hconfig_v2_options(v2_options, platform)
+    driver = load_driver_rules(options, platform_generic)
 
     # Assert sectional overwrite
     assert len(driver.rules.sectional_overwrite) == 1
@@ -183,8 +200,8 @@ def test_load_hconfig_v2_options(
     assert driver.rules.negate_with[0].use == "no spanning-tree port type"
 
 
-def test_load_hconfig_v2_tags_valid_input() -> None:
-    v2_tags = [
+def test_load_tag_rules_valid_input() -> None:
+    tags = [
         {
             "lineage": [
                 {"startswith": ["ip name-server", "no ip name-server", "ntp", "no ntp"]}
@@ -212,21 +229,21 @@ def test_load_hconfig_v2_tags_valid_input() -> None:
         ),
     )
 
-    result = load_hconfig_v2_tags(v2_tags)
+    result = load_tag_rules(tags)
     assert result == expected_output
 
 
-def test_load_hconfig_v2_tags_empty_input() -> None:
-    v2_tags: list[dict[str, Any]] = []
+def test_load_tag_rules_empty_input() -> None:
+    tags: list[dict[str, Any]] = []
 
     expected_output = ()
 
-    result = load_hconfig_v2_tags(v2_tags)
+    result = load_tag_rules(tags)
     assert result == expected_output
 
 
-def test_load_hconfig_v2_tags_multiple_lineage_fields() -> None:
-    v2_tags = [
+def test_load_tag_rules_multiple_lineage_fields() -> None:
+    tags = [
         {
             "lineage": [
                 {"startswith": ["ip name-server"]},
@@ -246,12 +263,12 @@ def test_load_hconfig_v2_tags_multiple_lineage_fields() -> None:
         ),
     )
 
-    result = load_hconfig_v2_tags(v2_tags)
+    result = load_tag_rules(tags)
     assert result == expected_output
 
 
-def test_load_hconfig_v2_tags_empty_lineage() -> None:
-    v2_tags: list[dict[str, str | list[str]]] = [
+def test_load_tag_rules_empty_lineage() -> None:
+    tags: list[dict[str, str | list[str]]] = [
         {
             "lineage": [],
             "add_tags": "empty",
@@ -260,13 +277,13 @@ def test_load_hconfig_v2_tags_empty_lineage() -> None:
 
     expected_output = (TagRule(match_rules=(), apply_tags=frozenset(["empty"])),)
 
-    result = load_hconfig_v2_tags(v2_tags)
+    result = load_tag_rules(tags)
     assert result == expected_output
 
 
-def test_load_hconfig_v2_options_from_file_valid(tmp_path: Path) -> None:
-    """Test loading valid v2 options from a YAML file."""
-    file_path = tmp_path / "v2_options.yml"
+def test_load_driver_rules_from_file_valid(tmp_path: Path) -> None:
+    """Test loading valid driver rules from a YAML file."""
+    file_path = tmp_path / "options.yml"
     file_content = """ordering:
   - lineage:
       - startswith: ntp
@@ -281,7 +298,7 @@ indent_adjust:
     file_path.write_text(file_content)
 
     platform = Platform.GENERIC
-    driver = load_hconfig_v2_options(v2_options=str(file_path), platform=platform)
+    driver = load_driver_rules(options=str(file_path), platform=platform)
 
     assert len(driver.rules.ordering) == 1
     assert driver.rules.ordering[0].match_rules[0].startswith == "ntp"
@@ -295,9 +312,9 @@ indent_adjust:
     assert driver.rules.indent_adjust[0].end_expression == "end expression"
 
 
-def test_load_hconfig_v2_options_from_file_invalid_yaml(tmp_path: Path) -> None:
-    """Test loading v2 options from a file with invalid YAML syntax."""
-    file_path = tmp_path / "invalid_v2_options.yml"
+def test_load_driver_rules_from_file_invalid_yaml(tmp_path: Path) -> None:
+    """Test loading driver rules from a file with invalid YAML syntax."""
+    file_path = tmp_path / "invalid_options.yml"
     file_content = """ordering:
   - lineage:
       - startswith: ntp
@@ -307,12 +324,12 @@ def test_load_hconfig_v2_options_from_file_invalid_yaml(tmp_path: Path) -> None:
 
     platform = Platform.GENERIC
     with pytest.raises(TypeError):
-        load_hconfig_v2_options(v2_options=str(file_path), platform=platform)
+        load_driver_rules(options=str(file_path), platform=platform)
 
 
-def test_load_hconfig_v2_tags_from_file_valid(tmp_path: Path) -> None:
-    """Test loading valid v2 tags from a YAML file."""
-    file_path = tmp_path / "v2_tags.yml"
+def test_load_tag_rules_from_file_valid(tmp_path: Path) -> None:
+    """Test loading valid tag rules from a YAML file."""
+    file_path = tmp_path / "tags.yml"
     file_content = """- lineage:
     - startswith: ip name-server
   add_tags: dns
@@ -322,16 +339,16 @@ def test_load_hconfig_v2_tags_from_file_valid(tmp_path: Path) -> None:
 """
     file_path.write_text(file_content)
 
-    result = load_hconfig_v2_tags(v2_tags=str(file_path))
+    result = load_tag_rules(tags=str(file_path))
 
     assert len(result) == 2
     assert result[0].apply_tags == frozenset(["dns"])
     assert result[1].apply_tags == frozenset(["bgp"])
 
 
-def test_load_hconfig_v2_tags_from_file_invalid_yaml(tmp_path: Path) -> None:
-    """Test loading v2 tags from a file with invalid YAML syntax."""
-    file_path = tmp_path / "invalid_v2_tags.yml"
+def test_load_tag_rules_from_file_invalid_yaml(tmp_path: Path) -> None:
+    """Test loading tag rules from a file with invalid YAML syntax."""
+    file_path = tmp_path / "invalid_tags.yml"
     file_content = """- lineage:
     - startswith: ip name-server
   add_tags dns  # Missing colon causes a syntax error
@@ -339,16 +356,16 @@ def test_load_hconfig_v2_tags_from_file_invalid_yaml(tmp_path: Path) -> None:
     file_path.write_text(file_content)
 
     with pytest.raises(yaml.YAMLError):
-        load_hconfig_v2_tags(v2_tags=str(file_path))
+        load_tag_rules(tags=str(file_path))
 
 
-def test_load_hconfig_v2_tags_from_file_empty_file(tmp_path: Path) -> None:
-    """Test loading v2 tags from an empty file."""
-    file_path = tmp_path / "empty_v2_tags.yml"
+def test_load_tag_rules_from_file_empty_file(tmp_path: Path) -> None:
+    """Test loading tag rules from an empty file."""
+    file_path = tmp_path / "empty_tags.yml"
     file_path.write_text("")
 
     with pytest.raises(TypeError):
-        load_hconfig_v2_tags(v2_tags=str(file_path))
+        load_tag_rules(tags=str(file_path))
 
 
 def test_set_match_rule_endswith() -> None:
@@ -386,24 +403,24 @@ def test_set_match_rule_none() -> None:
     assert result is None
 
 
-def test_load_hconfig_v2_options_invalid_type() -> None:
-    """Test load_hconfig_v2_options with invalid type."""
+def test_load_driver_rules_invalid_type() -> None:
+    """Test load_driver_rules with invalid type."""
     with pytest.raises(
-        TypeError, match="v2_options must be a dictionary or a valid file path"
+        TypeError, match="options must be a dictionary or a valid file path"
     ):
-        load_hconfig_v2_options(v2_options=123, platform=Platform.CISCO_IOS)  # type: ignore[arg-type]
+        load_driver_rules(options=123, platform=Platform.CISCO_IOS)  # type: ignore[arg-type]
 
 
-def test_load_hconfig_v2_tags_from_file(tmp_path: Path) -> None:
-    """Test load_hconfig_v2_tags with file path."""
-    file_path = tmp_path / "test_v2_tags.yml"
+def test_load_tag_rules_from_file(tmp_path: Path) -> None:
+    """Test load_tag_rules with file path."""
+    file_path = tmp_path / "test_tags.yml"
     tags_content = """
 - lineage:
   - startswith: interface
   add_tags: interfaces
 """
     file_path.write_text(tags_content)
-    result = load_hconfig_v2_tags(v2_tags=str(file_path))
+    result = load_tag_rules(tags=str(file_path))
 
     assert len(result) == 1
     assert result[0].apply_tags == frozenset(["interfaces"])

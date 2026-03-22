@@ -6,7 +6,7 @@ from hier_config.models import (
 )
 from hier_config.platforms.driver_base import HConfigDriverRules
 from hier_config.platforms.generic.driver import HConfigDriverGeneric
-from hier_config.utils import load_hconfig_v2_options
+from hier_config.utils import load_driver_rules
 
 
 def _make_driver(
@@ -104,9 +104,9 @@ def test_negation_sub_full_remediation() -> None:
     assert remediation.dump_simple() == ("no snmp-server user admin",)
 
 
-def test_negation_sub_via_v2_options() -> None:
-    """Negation sub rules loaded via load_hconfig_v2_options work correctly."""
-    v2_options: dict[str, object] = {
+def test_negation_sub_via_load_driver_rules() -> None:
+    """Negation sub rules loaded via load_driver_rules work correctly."""
+    options: dict[str, object] = {
         "negation_sub": [
             {
                 "lineage": [{"startswith": "snmp-server user "}],
@@ -115,7 +115,7 @@ def test_negation_sub_via_v2_options() -> None:
             },
         ],
     }
-    driver = load_hconfig_v2_options(v2_options, Platform.GENERIC)
+    driver = load_driver_rules(options, Platform.GENERIC)
     running = get_hconfig_fast_load(
         driver,
         ("snmp-server user admin auth sha secret",),
