@@ -233,7 +233,7 @@ def load_driver_rules(
 
 def load_tag_rules(
     tags: list[dict[str, Any]] | str,
-) -> tuple["TagRule"] | tuple["TagRule", ...]:
+) -> tuple[TagRule, ...]:
     """Load tag rules from a list of dictionaries or a YAML file.
 
     Args:
@@ -260,11 +260,7 @@ def load_tag_rules(
             lineage_rules = tag["lineage"]
             tag_name = tag["add_tags"]
 
-            match_rules = tuple(
-                match_rule
-                for lineage in lineage_rules
-                if (match_rule := _set_match_rule(lineage)) is not None
-            )
+            match_rules = _collect_match_rules(lineage_rules)
 
             result.append(
                 TagRule(match_rules=match_rules, apply_tags=frozenset([tag_name]))
