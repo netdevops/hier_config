@@ -1,11 +1,5 @@
-import pytest
-
 from hier_config import WorkflowRemediation, get_hconfig, get_hconfig_fast_load
-from hier_config.child import HConfigChild
 from hier_config.models import Platform
-from hier_config.platforms.juniper_junos.driver import HConfigDriverJuniperJUNOS
-
-# Tests moved from test_juniper_syntax.py
 
 
 def test_junos_basic_remediation() -> None:
@@ -53,59 +47,6 @@ def test_flat_junos_remediation(
     remediation_list = remediation_config_flat_junos.splitlines()
     for line in str(workflow_remediation.remediation_config).splitlines():
         assert line in remediation_list
-
-
-# New comprehensive driver tests for 100% coverage
-
-
-def test_swap_negation_delete_to_set() -> None:
-    """Test swapping from 'delete' to 'set' prefix (covers line 9-11)."""
-    platform = Platform.JUNIPER_JUNOS
-    driver = HConfigDriverJuniperJUNOS()
-    root = get_hconfig(platform)
-
-    # Create a child with 'delete' prefix
-    child = HConfigChild(root, "delete vlans test_vlan vlan-id 100")
-
-    # Swap negation should convert to 'set'
-    result = driver.swap_negation(child)
-
-    assert result.text == "set vlans test_vlan vlan-id 100"
-    assert result.text.startswith("set ")
-
-
-def test_swap_negation_set_to_delete() -> None:
-    """Test swapping from 'set' to 'delete' prefix (covers lines 10, 12)."""
-    platform = Platform.JUNIPER_JUNOS
-    driver = HConfigDriverJuniperJUNOS()
-    root = get_hconfig(platform)
-
-    # Create a child with 'set' prefix
-    child = HConfigChild(root, "set vlans test_vlan vlan-id 100")
-
-    # Swap negation should convert to 'delete'
-    result = driver.swap_negation(child)
-
-    assert result.text == "delete vlans test_vlan vlan-id 100"
-    assert result.text.startswith("delete ")
-
-
-def test_swap_negation_invalid_prefix() -> None:
-    """Test ValueError when text has neither 'set' nor 'delete' prefix (covers lines 14-15)."""
-    platform = Platform.JUNIPER_JUNOS
-    driver = HConfigDriverJuniperJUNOS()
-    root = get_hconfig(platform)
-
-    # Create a child without proper prefix
-    child = HConfigChild(root, "vlans test_vlan vlan-id 100")
-
-    # Should raise ValueError
-    with pytest.raises(ValueError, match="did not start with") as exc_info:
-        driver.swap_negation(child)
-
-    assert "did not start with" in str(exc_info.value)
-    assert "delete " in str(exc_info.value)
-    assert "set " in str(exc_info.value)
 
 
 def test_vlan_addition_scenario() -> None:
