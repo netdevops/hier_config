@@ -7,7 +7,7 @@ from hier_config.models import (
 )
 from hier_config.platforms.driver_base import HConfigDriverRules
 from hier_config.platforms.generic.driver import HConfigDriverGeneric
-from hier_config.utils import load_hconfig_v2_options
+from hier_config.utils import load_driver_rules
 
 
 def _make_driver(
@@ -125,9 +125,9 @@ def test_multiple_reference_locations() -> None:
     assert unused == ["route-policy UNUSED_POLICY"]
 
 
-def test_unused_objects_via_v2_options() -> None:
-    """Test unused object detection loaded via load_hconfig_v2_options."""
-    v2_options: dict[str, object] = {
+def test_unused_objects_via_load_driver_rules() -> None:
+    """Test unused object detection loaded via load_driver_rules."""
+    options: dict[str, object] = {
         "unused_objects": [
             {
                 "lineage": [{"startswith": "ipv4 access-list "}],
@@ -141,7 +141,7 @@ def test_unused_objects_via_v2_options() -> None:
             },
         ],
     }
-    driver = load_hconfig_v2_options(v2_options, Platform.CISCO_XR)
+    driver = load_driver_rules(options, Platform.CISCO_XR)
     config = get_hconfig_fast_load(
         driver,
         (

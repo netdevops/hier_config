@@ -1,6 +1,6 @@
 from hier_config import get_hconfig_fast_load
 from hier_config.models import Platform
-from hier_config.utils import load_hconfig_v2_options
+from hier_config.utils import load_driver_rules
 
 
 def test_line_console_terminal_settings_negation_negate_with() -> None:
@@ -9,7 +9,7 @@ def test_line_console_terminal_settings_negation_negate_with() -> None:
     NX-OS does not accept 'no terminal length <value>' or 'no terminal width <value>'.
     The correct remediation is to reset to platform defaults via negation_negate_with.
     """
-    driver = load_hconfig_v2_options(
+    driver = load_driver_rules(
         {
             "negation_negate_with": [
                 {

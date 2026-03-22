@@ -4,7 +4,7 @@ from hier_config import get_hconfig_fast_load
 from hier_config.exceptions import DuplicateChildError
 from hier_config.models import Platform
 from hier_config.root import HConfig
-from hier_config.utils import load_hconfig_v2_options
+from hier_config.utils import load_driver_rules
 
 
 def test_generic_snmp_scenario_1() -> None:
@@ -33,7 +33,7 @@ def test_generic_snmp_scenario_1() -> None:
 
 def test_generic_snmp_scenario_2() -> None:
     platform = Platform.GENERIC
-    driver = load_hconfig_v2_options(
+    driver = load_driver_rules(
         {
             "parent_allows_duplicate_child": [
                 {"lineage": [{"startswith": ["snmp-server community"]}]},
@@ -111,7 +111,7 @@ def test_generic_aaa_scenario_2() -> None:
         ),
     )
     # Create a driver with ordering rules for aaa group server management
-    driver = load_hconfig_v2_options(
+    driver = load_driver_rules(
         {
             "ordering": [
                 {"lineage": [{"startswith": "aaa group server radius "}], "order": 520},
