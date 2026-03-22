@@ -115,12 +115,11 @@ ruff format .
 Example:
 
 ```
-Add negation_negate_with support to load_hconfig_v2_options
+Add negation_negate_with support to load_driver_rules
 
-When migrating from v2 to v3, users may need to express custom negation
-strings via the v2 option dict format. This change forwards that value
-into the NegationDefaultWithRule model so that the behaviour is preserved
-during migration.
+When loading driver rules from a dict, users may need to express custom
+negation strings. This change forwards that value into the
+NegationDefaultWithRule model so that the behaviour is preserved.
 ```
 
 ---

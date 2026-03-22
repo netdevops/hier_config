@@ -605,7 +605,7 @@ Both approaches allow you to extend the functionality of the Cisco IOS driver:
 
 Unused object detection is not enabled in any driver by default — it must be explicitly configured. This ensures no unintended side-effects for users who are not expecting it.
 
-You can add unused object rules dynamically or via `load_hconfig_v2_options`:
+You can add unused object rules dynamically or via `load_driver_rules`:
 
 #### Dynamic Extension
 
@@ -634,11 +634,11 @@ for unused in config.unused_objects():
     print(f"Unused: {unused.text}")
 ```
 
-#### Via `load_hconfig_v2_options`
+#### Via `load_driver_rules`
 
 ```python
 from hier_config import get_hconfig, Platform
-from hier_config.utils import load_hconfig_v2_options
+from hier_config.utils import load_driver_rules
 
 options = {
     "unused_objects": [
@@ -654,7 +654,7 @@ options = {
         },
     ],
 }
-driver = load_hconfig_v2_options(options, Platform.CISCO_XR)
+driver = load_driver_rules(options, Platform.CISCO_XR)
 config = get_hconfig(driver, running_config_text)
 
 for unused in config.unused_objects():
