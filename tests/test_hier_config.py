@@ -1372,6 +1372,116 @@ def test_child_hash_consistency() -> None:
     assert hash1 == hash2
 
 
+def test_child_hash_eq_consistency_new_in_config() -> None:
+    """Test that equal HConfigChild objects have equal hashes regardless of new_in_config.
+
+    Validates the bug in issue #185: __hash__ includes new_in_config but __eq__ does not,
+    violating the Python invariant that a == b implies hash(a) == hash(b).
+    """
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    child1 = config.add_child("interface GigabitEthernet0/0")
+    config2 = get_hconfig(platform)
+    child2 = config2.add_child("interface GigabitEthernet0/0")
+
+    child1.new_in_config = False
+    child2.new_in_config = True
+
+    # These two children compare as equal (same text, no tags, no children)
+    assert child1 == child2
+    # Python invariant: equal objects must have equal hashes
+    assert hash(child1) == hash(child2)
+
+
+def test_child_hash_eq_consistency_order_weight() -> None:
+    """Test that equal HConfigChild objects have equal hashes regardless of order_weight.
+
+    Validates the bug in issue #185: __hash__ includes order_weight but __eq__ does not,
+    violating the Python invariant that a == b implies hash(a) == hash(b).
+    """
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    child1 = config.add_child("interface GigabitEthernet0/0")
+    config2 = get_hconfig(platform)
+    child2 = config2.add_child("interface GigabitEthernet0/0")
+
+    child1.order_weight = 0
+    child2.order_weight = 100
+
+    # These two children compare as equal (same text, no tags, no children)
+    assert child1 == child2
+    # Python invariant: equal objects must have equal hashes
+    assert hash(child1) == hash(child2)
+
+
+def test_child_hash_eq_consistency_tags() -> None:
+    """Test that __hash__ and __eq__ agree on whether tags affect equality.
+
+    Validates the bug in issue #185: __eq__ checks tags but __hash__ does not include
+    tags, meaning two objects that compare unequal could have the same hash (not a
+    correctness violation, but inconsistent) while also raising the question of whether
+    tags should be part of the hash.
+    """
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    child1 = config.add_child("interface GigabitEthernet0/0")
+    config2 = get_hconfig(platform)
+    child2 = config2.add_child("interface GigabitEthernet0/0")
+
+    child1.tags = frozenset({"safe"})
+    child2.tags = frozenset()
+
+    # __eq__ considers tags, so these are unequal
+    assert child1 != child2
+    # Since they are unequal, their hashes should differ to avoid excessive collisions
+    # (not strictly required by the invariant, but required for correctness in reverse:
+    # if hash(a) != hash(b) then a != b must hold — currently tags are in __eq__ but
+    # not __hash__, so unequal objects can share a hash, which means dict/set lookup
+    # will fall back to __eq__ unexpectedly)
+    assert hash(child1) != hash(child2)
+
+
+def test_child_set_deduplication_with_new_in_config() -> None:
+    """Test that equal HConfigChild objects are deduplicated correctly in sets.
+
+    Validates the practical impact of issue #185: when new_in_config differs,
+    two logically equal children occupy different set buckets, causing duplicates.
+    """
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    child1 = config.add_child("interface GigabitEthernet0/0")
+    config2 = get_hconfig(platform)
+    child2 = config2.add_child("interface GigabitEthernet0/0")
+
+    child1.new_in_config = False
+    child2.new_in_config = True
+
+    assert child1 == child2
+    # Equal objects must collapse to one entry in a set
+    assert len({child1, child2}) == 1
+
+
+def test_child_dict_key_lookup_with_order_weight() -> None:
+    """Test that HConfigChild objects with differing order_weight work as dict keys.
+
+    Validates the practical impact of issue #185: when order_weight differs, a
+    logically equal child cannot be found as a dict key.
+    """
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    child1 = config.add_child("interface GigabitEthernet0/0")
+    config2 = get_hconfig(platform)
+    child2 = config2.add_child("interface GigabitEthernet0/0")
+
+    child1.order_weight = 0
+    child2.order_weight = 100
+
+    assert child1 == child2
+    lookup: dict[HConfigChild, str] = {child1: "found"}
+    # child2 is equal to child1, so it must find the same dict entry
+    assert lookup[child2] == "found"
+
+
 def test_with_tags_recursive() -> None:
     """Test _with_tags recursion."""
     platform = Platform.CISCO_IOS
