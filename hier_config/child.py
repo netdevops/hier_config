@@ -69,10 +69,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         return hash(
             (
                 self.text,
-                # self.tags,
-                # self.comments,
-                self.new_in_config,
-                self.order_weight,
+                self.tags,
                 *self.children,
             ),
         )
