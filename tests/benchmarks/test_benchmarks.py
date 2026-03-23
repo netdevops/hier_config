@@ -54,8 +54,10 @@ def _generate_large_ios_config(num_interfaces: int = 1000) -> str:
             " auto-cost reference-bandwidth 100000",
         ]
     )
-    for i in range(num_interfaces):
-        lines.append(f" network 10.{i // 256}.{i % 256}.0 0.0.0.3 area 0")
+    lines.extend(
+        f" network 10.{i // 256}.{i % 256}.0 0.0.0.3 area 0"
+        for i in range(num_interfaces)
+    )
     lines.extend(
         [
             "!",
@@ -125,8 +127,10 @@ def _generate_large_xr_config(num_interfaces: int = 1000) -> str:
             " router-id 10.0.0.1",
         ]
     )
-    for i in range(num_interfaces):
-        lines.append(f" area 0 interface GigabitEthernet0/0/0/{i} cost 100")
+    lines.extend(
+        f" area 0 interface GigabitEthernet0/0/0/{i} cost 100"
+        for i in range(num_interfaces)
+    )
     lines.append("!")
     return "\n".join(lines)
 
@@ -145,33 +149,37 @@ def _time_fn(fn: Callable[[], object], iterations: int = 3) -> float:
 class TestParsingBenchmarks:
     """Benchmarks for config parsing."""
 
-    def test_parse_large_ios_config(self) -> None:
+    @staticmethod
+    def test_parse_large_ios_config() -> None:
         """Parse a ~10k line IOS config via get_hconfig."""
         config_text = _generate_large_ios_config()
         elapsed = _time_fn(lambda: get_hconfig(Platform.CISCO_IOS, config_text))
         line_count = config_text.count("\n")
-        print(f"\nget_hconfig: {line_count} lines in {elapsed:.4f}s")
+        print(f"\nget_hconfig: {line_count} lines in {elapsed:.4f}s")  # noqa: T201
         assert elapsed < 5.0, f"Parsing took {elapsed:.2f}s, expected < 5s"
 
-    def test_parse_large_xr_config(self) -> None:
+    @staticmethod
+    def test_parse_large_xr_config() -> None:
         """Parse a ~10k line XR config via get_hconfig."""
         config_text = _generate_large_xr_config()
         elapsed = _time_fn(lambda: get_hconfig(Platform.CISCO_XR, config_text))
         line_count = config_text.count("\n")
-        print(f"\nget_hconfig (XR): {line_count} lines in {elapsed:.4f}s")
+        print(f"\nget_hconfig (XR): {line_count} lines in {elapsed:.4f}s")  # noqa: T201
         assert elapsed < 5.0, f"Parsing took {elapsed:.2f}s, expected < 5s"
 
-    def test_fast_load_large_ios_config(self) -> None:
+    @staticmethod
+    def test_fast_load_large_ios_config() -> None:
         """Parse a ~10k line IOS config via get_hconfig_fast_load."""
         config_text = _generate_large_ios_config()
         config_lines = tuple(config_text.splitlines())
         elapsed = _time_fn(
             lambda: get_hconfig_fast_load(Platform.CISCO_IOS, config_lines),
         )
-        print(f"\nget_hconfig_fast_load: {len(config_lines)} lines in {elapsed:.4f}s")
+        print(f"\nget_hconfig_fast_load: {len(config_lines)} lines in {elapsed:.4f}s")  # noqa: T201
         assert elapsed < 5.0, f"Fast load took {elapsed:.2f}s, expected < 5s"
 
-    def test_fast_load_vs_get_hconfig(self) -> None:
+    @staticmethod
+    def test_fast_load_vs_get_hconfig() -> None:
         """get_hconfig_fast_load should be faster than get_hconfig."""
         config_text = _generate_large_ios_config()
         config_lines = tuple(config_text.splitlines())
@@ -181,7 +189,7 @@ class TestParsingBenchmarks:
             lambda: get_hconfig_fast_load(Platform.CISCO_IOS, config_lines),
         )
         ratio = time_full / time_fast if time_fast > 0 else float("inf")
-        print(
+        print(  # noqa: T201
             f"\nget_hconfig: {time_full:.4f}s, "
             f"fast_load: {time_fast:.4f}s, "
             f"ratio: {ratio:.1f}x"
@@ -195,7 +203,8 @@ class TestParsingBenchmarks:
 class TestRemediationBenchmarks:
     """Benchmarks for config_to_get_to remediation."""
 
-    def test_remediation_small_diff(self) -> None:
+    @staticmethod
+    def test_remediation_small_diff() -> None:
         """Remediation with ~5% of interfaces changed."""
         running_text = _generate_large_ios_config()
         running = get_hconfig(Platform.CISCO_IOS, running_text)
@@ -207,10 +216,11 @@ class TestRemediationBenchmarks:
         generated = get_hconfig(Platform.CISCO_IOS, generated_text)
 
         elapsed = _time_fn(lambda: running.config_to_get_to(generated))
-        print(f"\nRemediation (10% diff): {elapsed:.4f}s")
+        print(f"\nRemediation (10% diff): {elapsed:.4f}s")  # noqa: T201
         assert elapsed < 5.0, f"Remediation took {elapsed:.2f}s, expected < 5s"
 
-    def test_remediation_large_diff(self) -> None:
+    @staticmethod
+    def test_remediation_large_diff() -> None:
         """Remediation with ~100% of interfaces changed."""
         running = get_hconfig(Platform.CISCO_IOS, _generate_large_ios_config())
         generated_text = _generate_large_ios_config().replace(
@@ -219,10 +229,11 @@ class TestRemediationBenchmarks:
         generated = get_hconfig(Platform.CISCO_IOS, generated_text)
 
         elapsed = _time_fn(lambda: running.config_to_get_to(generated))
-        print(f"\nRemediation (100% diff): {elapsed:.4f}s")
+        print(f"\nRemediation (100% diff): {elapsed:.4f}s")  # noqa: T201
         assert elapsed < 10.0, f"Remediation took {elapsed:.2f}s, expected < 10s"
 
-    def test_remediation_completely_different(self) -> None:
+    @staticmethod
+    def test_remediation_completely_different() -> None:
         """Remediation between two entirely different configs."""
         running = get_hconfig(Platform.CISCO_IOS, _generate_large_ios_config(500))
         # Generate a completely different config
@@ -238,35 +249,38 @@ class TestRemediationBenchmarks:
         generated = get_hconfig(Platform.CISCO_IOS, "\n".join(lines))
 
         elapsed = _time_fn(lambda: running.config_to_get_to(generated))
-        print(f"\nRemediation (completely different): {elapsed:.4f}s")
+        print(f"\nRemediation (completely different): {elapsed:.4f}s")  # noqa: T201
         assert elapsed < 10.0, f"Remediation took {elapsed:.2f}s, expected < 10s"
 
 
 class TestIterationBenchmarks:
     """Benchmarks for tree traversal and iteration."""
 
-    def test_all_children_sorted(self) -> None:
+    @staticmethod
+    def test_all_children_sorted() -> None:
         """Iterate all_children_sorted on a large config."""
         config = get_hconfig(Platform.CISCO_IOS, _generate_large_ios_config())
 
         elapsed = _time_fn(lambda: list(config.all_children_sorted()))
         child_count = len(list(config.all_children()))
-        print(f"\nall_children_sorted: {child_count} nodes in {elapsed:.4f}s")
+        print(f"\nall_children_sorted: {child_count} nodes in {elapsed:.4f}s")  # noqa: T201
         assert elapsed < 2.0, f"Iteration took {elapsed:.2f}s, expected < 2s"
 
-    def test_dump_simple(self) -> None:
+    @staticmethod
+    def test_dump_simple() -> None:
         """Dump a large config to simple text."""
         config = get_hconfig(Platform.CISCO_IOS, _generate_large_ios_config())
 
         elapsed = _time_fn(config.dump_simple)
         line_count = len(config.dump_simple())
-        print(f"\ndump_simple: {line_count} lines in {elapsed:.4f}s")
+        print(f"\ndump_simple: {line_count} lines in {elapsed:.4f}s")  # noqa: T201
         assert elapsed < 2.0, f"dump_simple took {elapsed:.2f}s, expected < 2s"
 
-    def test_deep_copy(self) -> None:
+    @staticmethod
+    def test_deep_copy() -> None:
         """Deep copy a large config tree."""
         config = get_hconfig(Platform.CISCO_IOS, _generate_large_ios_config())
 
         elapsed = _time_fn(config.deep_copy)
-        print(f"\ndeep_copy: {elapsed:.4f}s")
+        print(f"\ndeep_copy: {elapsed:.4f}s")  # noqa: T201
         assert elapsed < 5.0, f"deep_copy took {elapsed:.2f}s, expected < 5s"

@@ -1,4 +1,5 @@
 """Tests for HConfigChild functionality."""
+# pylint: disable=too-many-lines
 
 import types
 
