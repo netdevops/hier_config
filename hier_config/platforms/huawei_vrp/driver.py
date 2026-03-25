@@ -1,7 +1,5 @@
 import re
 
-from typing_extensions import override
-
 from hier_config.child import HConfigChild
 from hier_config.models import PerLineSubRule
 from hier_config.platforms.driver_base import HConfigDriverBase, HConfigDriverRules
@@ -39,11 +37,11 @@ class HConfigDriverHuaweiVrp(HConfigDriverBase):
         child.text = f"{self.negation_prefix}{text}"
         return child
 
-    @override
     def sectional_exit(self, config: HConfigChild) -> str | None:
-        if config.children:
+        result = super().sectional_exit(config)
+        if result == "exit":
             return "quit"
-        return None
+        return result
 
     @staticmethod
     def _instantiate_rules() -> HConfigDriverRules:
