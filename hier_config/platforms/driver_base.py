@@ -178,6 +178,16 @@ class HConfigDriverBase(ABC):
                 return with_rule.use
         return None
 
+    def sectional_exit(self, config: HConfigChild) -> str | None:
+        for exit_rule in self.rules.sectional_exiting:
+            if config.is_lineage_match(exit_rule.match_rules):
+                if exit_text := exit_rule.exit_text:
+                    return exit_text
+                return None
+        if config.children:
+            return "exit"
+        return None
+
     def swap_negation(self, child: HConfigChild) -> HConfigChild:
         """Swap negation of a `child.text`."""
         if child.text.startswith(self.negation_prefix):

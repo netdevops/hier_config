@@ -128,16 +128,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
 
     @property
     def sectional_exit(self) -> str | None:
-        for rule in self.driver.rules.sectional_exiting:
-            if self.is_lineage_match(rule.match_rules):
-                if exit_text := rule.exit_text:
-                    return exit_text
-                return None
-
-        if not self.children:
-            return None
-
-        return "exit"
+        return self.driver.sectional_exit(self)
 
     @property
     def sectional_exit_text_parent_level(self) -> bool:

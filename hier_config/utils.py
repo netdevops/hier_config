@@ -35,6 +35,7 @@ HCONFIG_PLATFORM_V2_TO_V3_MAPPING = {
     "eos": Platform.ARISTA_EOS,
     "junos": Platform.JUNIPER_JUNOS,
     "vyos": Platform.VYOS,
+    "huawei_vrp": Platform.HUAWEI_VRP,
 }
 
 

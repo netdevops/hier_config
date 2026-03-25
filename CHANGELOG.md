@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Performance benchmarks for parsing, remediation, and iteration (#202).
   Skipped by default; run with `poetry run pytest -m benchmark -v -s`.
 
+- Added support for Huawei VRP with a new driver and test suite (#238).
+
 ### Fixed
 
 - `DuplicateChildError` raised when parsing IOS-XR configs with indented `!` section
