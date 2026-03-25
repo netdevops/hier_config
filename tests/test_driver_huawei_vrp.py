@@ -4,7 +4,7 @@ from hier_config.models import Platform
 
 
 def test_merge_with_undo() -> None:
-    platform = Platform.HUAWEI_VRPV8
+    platform = Platform.HUAWEI_VRP
     running_config = get_hconfig_fast_load(
         platform, ("test_for_undo", "undo test_for_redo")
     )
@@ -16,7 +16,7 @@ def test_merge_with_undo() -> None:
 
 
 def test_negate_description() -> None:
-    platform = Platform.HUAWEI_VRPV8
+    platform = Platform.HUAWEI_VRP
     running_config = get_hconfig_fast_load(
         platform, ("interface GigabitEthernet0/0/0", " description some old blabla")
     )
@@ -31,7 +31,7 @@ def test_negate_description() -> None:
 
 
 def test_negate_remark() -> None:
-    platform = Platform.HUAWEI_VRPV8
+    platform = Platform.HUAWEI_VRP
     running_config = get_hconfig_fast_load(
         platform, ("acl number 2000", " rule 5 remark some old remark")
     )
@@ -44,7 +44,7 @@ def test_negate_remark() -> None:
 
 
 def test_negate_alias() -> None:
-    platform = Platform.HUAWEI_VRPV8
+    platform = Platform.HUAWEI_VRP
     running_config = get_hconfig_fast_load(
         platform, ("interface GigabitEthernet0/0/0", " alias some old alias")
     )
@@ -59,7 +59,7 @@ def test_negate_alias() -> None:
 
 
 def test_negate_snmp_agent_community() -> None:
-    platform = Platform.HUAWEI_VRPV8
+    platform = Platform.HUAWEI_VRP
     running_config = get_hconfig_fast_load(
         platform, ("snmp-agent community read cipher %^%#blabla%^%# acl 2000",)
     )
@@ -71,7 +71,7 @@ def test_negate_snmp_agent_community() -> None:
 
 
 def test_comments_stripped() -> None:
-    platform = Platform.HUAWEI_VRPV8
+    platform = Platform.HUAWEI_VRP
     config = get_hconfig_fast_load(
         platform,
         (
@@ -90,7 +90,7 @@ def test_comments_stripped() -> None:
 
 
 def test_sectional_exit_is_quit() -> None:
-    platform = Platform.HUAWEI_VRPV8
+    platform = Platform.HUAWEI_VRP
     config = get_hconfig_fast_load(
         platform,
         (

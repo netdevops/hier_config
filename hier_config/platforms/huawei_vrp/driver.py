@@ -1,4 +1,5 @@
 import re
+
 from typing_extensions import override
 
 from hier_config.child import HConfigChild
@@ -6,10 +7,10 @@ from hier_config.models import PerLineSubRule
 from hier_config.platforms.driver_base import HConfigDriverBase, HConfigDriverRules
 
 
-class HConfigDriverHuaweiVrpv8(HConfigDriverBase):
-    """Driver for Huawei VRPv8 operating system.
+class HConfigDriverHuaweiVrp(HConfigDriverBase):
+    """Driver for Huawei VRP operating system.
 
-    Platform enum: ``Platform.HUAWEI_VRPV8``.
+    Platform enum: ``Platform.HUAWEI_VRP``.
     """
 
     @property
