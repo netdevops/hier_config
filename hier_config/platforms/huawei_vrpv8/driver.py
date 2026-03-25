@@ -1,5 +1,5 @@
 import re
-from typing import override
+from typing_extensions import override
 
 from hier_config.child import HConfigChild
 from hier_config.models import PerLineSubRule
