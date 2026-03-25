@@ -181,7 +181,9 @@ class HConfigDriverBase(ABC):
     def sectional_exit(self, config: HConfigChild) -> str | None:
         for exit_rule in self.rules.sectional_exiting:
             if config.is_lineage_match(exit_rule.match_rules):
-                return exit_rule.exit_text
+                if exit_text := exit_rule.exit_text:
+                    return exit_text
+                return None
         if config.children:
             return "exit"
         return None
