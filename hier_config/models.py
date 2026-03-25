@@ -192,6 +192,7 @@ class Platform(str, Enum):
     GENERIC = auto()  # used in cases where the specific platform is unimportant/unknown
     HP_COMWARE5 = auto()
     HP_PROCURVE = auto()
+    HUAWEI_VRPV8 = auto()
     JUNIPER_JUNOS = auto()
     VYOS = auto()
 
