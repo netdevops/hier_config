@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `TextStyle` type alias (`Literal["without_comments", "merged", "with_comments"]`) for
+  the `style` parameter on `HConfigChild.cisco_style_text()` and
+  `RemediationReporter.to_text()`, replacing the unconstrained `str` type (#189).
+
 - Performance benchmarks for parsing, remediation, and iteration (#202).
   Skipped by default; run with `poetry run pytest -m benchmark -v -s`.
 
