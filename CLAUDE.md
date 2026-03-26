@@ -63,9 +63,9 @@ Three-layer design: **Tree** (parse/represent config), **Driver** (platform-spec
 
 ### Tree Layer
 
-- `HConfig` (root.py) — root node, owns the driver reference. Key methods: `config_to_get_to()`, `future()`, `difference()`, `dump_simple()`.
+- `HConfig` (root.py) — root node, owns the driver reference. Key methods: `remediation()`, `future()`, `difference()`, `to_lines()`.
 - `HConfigChild` (child.py) — tree node with `text`, `parent`, `children`, `tags`, `comments`. Provides `is_lineage_match()` for rule evaluation and `negate()` for negation logic.
-- `HConfigBase` (base.py) — abstract base shared by both. Provides `add_child()`, `get_children_deep()`, `_config_to_get_to()` (left pass = negate missing, right pass = add new).
+- `HConfigBase` (base.py) — abstract base shared by both. Provides `add_child()`, `get_children_deep()`, `_remediation()` (left pass = negate missing, right pass = add new).
 - `HConfigChildren` (children.py) — ordered collection with O(1) dict lookup by text.
 
 ### Driver Layer (`platforms/`)

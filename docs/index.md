@@ -44,7 +44,7 @@ intended = get_hconfig(Platform.CISCO_IOS, intended_config_text)
 workflow = WorkflowRemediation(running, intended)
 
 for line in workflow.remediation_config.all_children_sorted():
-    print(line.cisco_style_text())
+    print(line.indented_text())
 ```
 
 ---

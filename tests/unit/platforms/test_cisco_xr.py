@@ -41,7 +41,7 @@ def test_sectional_exit_text_parent_level_route_policy() -> None:
     assert route_policy is not None
     assert route_policy.sectional_exit_text_parent_level is True
 
-    output = config.dump_simple(sectional_exiting=True)
+    output = config.to_lines(sectional_exiting=True)
     assert output == (
         "route-policy TEST",
         "  set local-preference 200",
@@ -66,7 +66,7 @@ def test_sectional_exit_text_parent_level_prefix_set() -> None:
     assert prefix_set is not None
     assert prefix_set.sectional_exit_text_parent_level is True
 
-    output = config.dump_simple(sectional_exiting=True)
+    output = config.to_lines(sectional_exiting=True)
     assert output == (
         "prefix-set TEST_PREFIX",
         "  192.0.2.0/24",
@@ -91,7 +91,7 @@ def test_sectional_exit_text_parent_level_policy_map() -> None:
     assert policy_map is not None
     assert policy_map.sectional_exit_text_parent_level is True
 
-    output = config.dump_simple(sectional_exiting=True)
+    output = config.to_lines(sectional_exiting=True)
     assert output == (
         "policy-map TEST_POLICY",
         "  class TEST_CLASS",
@@ -116,7 +116,7 @@ def test_sectional_exit_text_parent_level_class_map() -> None:
     assert class_map is not None
     assert class_map.sectional_exit_text_parent_level is True
 
-    output = config.dump_simple(sectional_exiting=True)
+    output = config.to_lines(sectional_exiting=True)
     assert output == (
         "class-map match-any TEST_CLASS",
         "  match access-group TEST_ACL",
@@ -140,7 +140,7 @@ def test_sectional_exit_text_parent_level_community_set() -> None:
     assert community_set is not None
     assert community_set.sectional_exit_text_parent_level is True
 
-    output = config.dump_simple(sectional_exiting=True)
+    output = config.to_lines(sectional_exiting=True)
     assert output == (
         "community-set TEST_COMM",
         "  65001:100",
@@ -165,7 +165,7 @@ def test_sectional_exit_text_parent_level_extcommunity_set() -> None:
     assert extcommunity_set is not None
     assert extcommunity_set.sectional_exit_text_parent_level is True
 
-    output = config.dump_simple(sectional_exiting=True)
+    output = config.to_lines(sectional_exiting=True)
     assert output == (
         "extcommunity-set rt TEST_RT",
         "  1:100",
@@ -189,7 +189,7 @@ def test_sectional_exit_text_parent_level_template() -> None:
     assert template is not None
     assert template.sectional_exit_text_parent_level is True
 
-    output = config.dump_simple(sectional_exiting=True)
+    output = config.to_lines(sectional_exiting=True)
     assert output == (
         "template TEST_TEMPLATE",
         "  description test template",
@@ -213,7 +213,7 @@ def test_sectional_exit_text_current_level_interface() -> None:
     assert interface is not None
     assert interface.sectional_exit_text_parent_level is False
 
-    output = config.dump_simple(sectional_exiting=True)
+    output = config.to_lines(sectional_exiting=True)
     assert output == (
         "interface GigabitEthernet0/0/0/0",
         "  description test interface",
@@ -238,7 +238,7 @@ def test_sectional_exit_text_current_level_router_bgp() -> None:
     assert router_bgp is not None
     assert router_bgp.sectional_exit_text_parent_level is False
 
-    output = config.dump_simple(sectional_exiting=True)
+    output = config.to_lines(sectional_exiting=True)
     assert output == (
         "router bgp 65000",
         "  bgp router-id 192.0.2.1",
@@ -276,7 +276,7 @@ def test_sectional_exit_text_multiple_sections() -> None:
     assert prefix_set is not None
     assert prefix_set.sectional_exit_text_parent_level is True
 
-    output = config.dump_simple(sectional_exiting=True)
+    output = config.to_lines(sectional_exiting=True)
     assert output == (
         "route-policy TEST1",
         "  pass",

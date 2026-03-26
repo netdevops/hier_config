@@ -66,7 +66,7 @@ def test_dump_and_load_from_dump_and_compare(platform_a: Platform) -> None:
     b2 = hier_pre_dump.add_children_deep(("a1", "b2"))
 
     b2.order_weight = 400
-    b2.tags_add("test")
+    b2.add_tags("test")
     b2.comments.add("test comment")
     b2.new_in_config = True
 

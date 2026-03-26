@@ -24,6 +24,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Renamed `load_hconfig_v2_options` to `load_driver_rules` (#221).
 - Renamed `load_hconfig_v2_tags` to `load_tag_rules` (#221).
+- Renamed `tags_add()`/`tags_remove()` to `add_tags()`/`remove_tags()` (#216).
+- Renamed `cisco_style_text()` to `indented_text()` (#216).
+- Renamed `dump_simple()` to `to_lines()` (#216).
+- Renamed `config_to_get_to()` to `remediation()` (#216).
+- Converted `depth()` method to `depth` property (#216).
 
 ### Removed
 

@@ -34,8 +34,8 @@ def test_negation_sub_truncates_snmp_user() -> None:
         ("snmp-server user admin auth sha secret",),
     )
     generated = get_hconfig_fast_load(driver, ())
-    remediation = running.config_to_get_to(generated)
-    assert remediation.dump_simple() == ("no snmp-server user admin",)
+    remediation = running.remediation(generated)
+    assert remediation.to_lines() == ("no snmp-server user admin",)
 
 
 def test_negation_sub_truncates_prefix_list() -> None:
@@ -54,8 +54,8 @@ def test_negation_sub_truncates_prefix_list() -> None:
         ("ipv6 prefix-list PL seq 1 permit 2801::/64 ge 65",),
     )
     generated = get_hconfig_fast_load(driver, ())
-    remediation = running.config_to_get_to(generated)
-    assert remediation.dump_simple() == ("no ipv6 prefix-list PL seq 1",)
+    remediation = running.remediation(generated)
+    assert remediation.to_lines() == ("no ipv6 prefix-list PL seq 1",)
 
 
 def test_negation_sub_no_match_uses_normal_negation() -> None:
@@ -74,8 +74,8 @@ def test_negation_sub_no_match_uses_normal_negation() -> None:
         ("hostname router1",),
     )
     generated = get_hconfig_fast_load(driver, ())
-    remediation = running.config_to_get_to(generated)
-    assert remediation.dump_simple() == ("no hostname router1",)
+    remediation = running.remediation(generated)
+    assert remediation.to_lines() == ("no hostname router1",)
 
 
 def test_negation_sub_full_remediation() -> None:
@@ -100,8 +100,8 @@ def test_negation_sub_full_remediation() -> None:
         driver,
         ("snmp-server user monitor auth sha secret2",),
     )
-    remediation = running.config_to_get_to(generated)
-    assert remediation.dump_simple() == ("no snmp-server user admin",)
+    remediation = running.remediation(generated)
+    assert remediation.to_lines() == ("no snmp-server user admin",)
 
 
 def test_negation_sub_via_load_driver_rules() -> None:
@@ -121,5 +121,5 @@ def test_negation_sub_via_load_driver_rules() -> None:
         ("snmp-server user admin auth sha secret",),
     )
     generated = get_hconfig_fast_load(driver, ())
-    remediation = running.config_to_get_to(generated)
-    assert remediation.dump_simple() == ("no snmp-server user admin",)
+    remediation = running.remediation(generated)
+    assert remediation.to_lines() == ("no snmp-server user admin",)

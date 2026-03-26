@@ -26,7 +26,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
 
     Both `HConfig` (the root) and `HConfigChild` (individual nodes) inherit from
     this class.  It provides the shared tree-manipulation API: adding, searching,
-    and diffing children, as well as the `_future` / `_config_to_get_to` algorithms
+    and diffing children, as well as the `_future` / `_remediation` algorithms
     that power `WorkflowRemediation`.
     """
 
@@ -62,6 +62,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
     def lineage(self) -> Iterator[HConfigChild]:
         pass
 
+    @property
     @abstractmethod
     def depth(self) -> int:
         pass
@@ -231,7 +232,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
         new_child.comments.update(child_to_add.comments)
         new_child.order_weight = child_to_add.order_weight
         if child_to_add.is_leaf:
-            new_child.tags_add(child_to_add.tags)
+            new_child.add_tags(child_to_add.tags)
 
         return new_child
 
@@ -372,7 +373,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
 
         return new_instance
 
-    def _config_to_get_to(
+    def _remediation(
         self,
         target: _HConfigRootOrChildT,
         delta: _HConfigRootOrChildT,
@@ -382,8 +383,8 @@ class HConfigBase(ABC):  # noqa: PLR0904
         target is the destination(i.e. generated_config).
 
         """
-        self._config_to_get_to_left(target, delta)
-        self._config_to_get_to_right(target, delta)
+        self._remediation_left(target, delta)
+        self._remediation_right(target, delta)
 
         return delta
 
@@ -441,7 +442,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
 
         return delta
 
-    def _config_to_get_to_left(
+    def _remediation_left(
         self,
         target: HConfig | HConfigChild,
         delta: HConfig | HConfigChild,
@@ -462,7 +463,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
             if self_child.children:
                 negated.comments.add(f"removes {len(self_child.children) + 1} lines")
 
-    def _config_to_get_to_right(
+    def _remediation_right(
         self,
         target: HConfig | HConfigChild,
         delta: HConfig | HConfigChild,
@@ -481,7 +482,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
                 # This creates a new HConfigChild object just in case there are some delta children.
                 # This is not very efficient, think of a way to not do this.
                 subtree = delta.instantiate_child(target_child.text)
-                self_child._config_to_get_to(target_child, subtree)  # noqa: SLF001
+                self_child._remediation(target_child, subtree)  # noqa: SLF001
                 if subtree.children:
                     delta.children.append(subtree)
             # The child is absent, add it.

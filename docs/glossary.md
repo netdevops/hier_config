@@ -24,7 +24,7 @@ A Python class that encodes all operating-system-specific behaviour for one netw
 
 A configuration command where only the *last* value applied takes effect — applying the same command twice with different values results in only the second value being active.  Typical examples: `hostname`, `ip address`, `description`.
 
-hier_config uses `IdempotentCommandsRule` to identify these commands.  During `config_to_get_to()`, when both the running and intended configs contain a command that matches an idempotency rule, the running value is **not** negated before the new value is applied (the new value simply overwrites it).
+hier_config uses `IdempotentCommandsRule` to identify these commands.  During `remediation()`, when both the running and intended configs contain a command that matches an idempotency rule, the running value is **not** negated before the new value is applied (the new value simply overwrites it).
 
 **Example rule:**
 
@@ -126,7 +126,7 @@ A `SectionalExitingRule` that instructs hier_config to emit a closing token at t
 
 ## Sectional overwrite
 
-A `SectionalOverwriteRule` that tells `config_to_get_to()` to **negate the entire section** and then re-create it from the intended config rather than performing a line-by-line diff.  Appropriate for configuration blocks where the order of entries matters globally or where partial changes are not supported by the OS.
+A `SectionalOverwriteRule` that tells `remediation()` to **negate the entire section** and then re-create it from the intended config rather than performing a line-by-line diff.  Appropriate for configuration blocks where the order of entries matters globally or where partial changes are not supported by the OS.
 
 ---
 

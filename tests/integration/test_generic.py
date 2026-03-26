@@ -20,8 +20,8 @@ def test_generic_snmp_scenario_1() -> None:
             "snmp-server host 192.2.0.3 trap version v2c community examplekey3",
         ),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple() == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines() == (
         "no snmp-server community public",
         "snmp-server community examplekey1",
         "snmp-server community examplekey2",
@@ -76,8 +76,8 @@ def test_generic_aaa_scenario_1() -> None:
             "  server 192.2.0.121",
         ),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple() == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines() == (
         "no aaa group server tacacs TACACS_GROUP1",
         "no aaa group server radius RADIUS_GROUP1",
         "aaa group server tacacs TACACS_GROUP2",
@@ -128,7 +128,7 @@ def test_generic_aaa_scenario_2() -> None:
         Platform.GENERIC,
     )
 
-    base_remediation = running_config.config_to_get_to(generated_config)
+    base_remediation = running_config.remediation(generated_config)
     remediation_config = HConfig(driver)
 
     for child in base_remediation.children:
@@ -149,7 +149,7 @@ def test_generic_aaa_scenario_2() -> None:
 
     remediation_config.set_order_weight()
 
-    assert remediation_config.dump_simple() == (
+    assert remediation_config.to_lines() == (
         "aaa group server tacacs TACACS_GROUP1",
         "  no server 192.2.0.3",
         "  no server 192.2.0.7",

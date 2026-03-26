@@ -33,7 +33,9 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         return "\n".join(str(c) for c in sorted(self.children))
 
     def __repr__(self) -> str:
-        return f"HConfig(driver={self.driver.__class__.__name__}, lines={self.dump_simple()})"
+        return (
+            f"HConfig(driver={self.driver.__class__.__name__}, lines={self.to_lines()})"
+        )
 
     def __hash__(self) -> int:
         return hash(*self.children)
@@ -116,7 +118,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         for child in sorted(self.children):
             yield from child.lines(sectional_exiting=sectional_exiting)
 
-    def dump_simple(self, *, sectional_exiting: bool = False) -> tuple[str, ...]:
+    def to_lines(self, *, sectional_exiting: bool = False) -> tuple[str, ...]:
         return tuple(self.lines(sectional_exiting=sectional_exiting))
 
     def dump(self) -> Dump:
@@ -124,7 +126,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         return Dump(
             lines=tuple(
                 DumpLine(
-                    depth=c.depth(),
+                    depth=c.depth,
                     text=c.text,
                     tags=frozenset(c.tags),
                     comments=frozenset(c.comments),
@@ -134,7 +136,8 @@ class HConfig(HConfigBase):  # noqa: PLR0904
             ),
         )
 
-    def depth(self) -> int:  # noqa: PLR6301
+    @property
+    def depth(self) -> int:
         """Returns the distance to the root HConfig object i.e. indent level."""
         return 0
 
@@ -142,7 +145,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         """Creates a new HConfig object with the config from self that is not in target."""
         return self._difference(target, HConfig(self.driver))
 
-    def config_to_get_to(
+    def remediation(
         self,
         target: HConfig,
         delta: HConfig | None = None,
@@ -154,7 +157,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         if delta is None:
             delta = HConfig(self.driver)
 
-        return self._config_to_get_to(target, delta)
+        return self._remediation(target, delta)
 
     def add_ancestor_copy_of(
         self,

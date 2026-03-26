@@ -7,12 +7,12 @@ def test_logging_console_emergencies_scenario_1() -> None:
     platform = Platform.CISCO_IOS
     running_config = get_hconfig_fast_load(platform, ("no logging console",))
     generated_config = get_hconfig_fast_load(platform, ("logging console emergencies",))
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple() == ("logging console emergencies",)
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines() == ("logging console emergencies",)
     future_config = running_config.future(remediation_config)
-    assert future_config.dump_simple() == ("logging console emergencies",)
-    rollback = future_config.config_to_get_to(running_config)
-    assert rollback.dump_simple() == ("no logging console",)
+    assert future_config.to_lines() == ("logging console emergencies",)
+    rollback = future_config.remediation(running_config)
+    assert rollback.to_lines() == ("no logging console",)
     running_after_rollback = future_config.future(rollback)
 
     assert not tuple(running_config.unified_diff(running_after_rollback))
@@ -22,12 +22,12 @@ def test_logging_console_emergencies_scenario_2() -> None:
     platform = Platform.CISCO_IOS
     running_config = get_hconfig_fast_load(platform, ("logging console",))
     generated_config = get_hconfig_fast_load(platform, ("logging console emergencies",))
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple() == ("logging console emergencies",)
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines() == ("logging console emergencies",)
     future_config = running_config.future(remediation_config)
-    assert future_config.dump_simple() == ("logging console emergencies",)
-    rollback = future_config.config_to_get_to(running_config)
-    assert rollback.dump_simple() == ("logging console",)
+    assert future_config.to_lines() == ("logging console emergencies",)
+    rollback = future_config.remediation(running_config)
+    assert rollback.to_lines() == ("logging console",)
     running_after_rollback = future_config.future(rollback)
 
     assert not tuple(running_config.unified_diff(running_after_rollback))
@@ -37,12 +37,12 @@ def test_logging_console_emergencies_scenario_3() -> None:
     platform = Platform.CISCO_IOS
     running_config = get_hconfig(platform)
     generated_config = get_hconfig_fast_load(platform, ("logging console emergencies",))
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple() == ("logging console emergencies",)
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines() == ("logging console emergencies",)
     future_config = running_config.future(remediation_config)
-    assert future_config.dump_simple() == ("logging console emergencies",)
-    rollback = future_config.config_to_get_to(running_config)
-    assert rollback.dump_simple() == ("logging console debugging",)
+    assert future_config.to_lines() == ("logging console emergencies",)
+    rollback = future_config.remediation(running_config)
+    assert rollback.to_lines() == ("logging console debugging",)
     running_after_rollback = future_config.future(rollback)
 
     assert not tuple(running_config.unified_diff(running_after_rollback))
@@ -94,8 +94,8 @@ def test_duplicate_child_router() -> None:
             " exit-address-family",
         ),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple() == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines() == (
         "router eigrp EIGRP_INSTANCE",
         "  address-family ipv4 unicast autonomous-system 10000",
         "    topology base",

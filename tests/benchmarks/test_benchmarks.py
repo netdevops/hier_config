@@ -201,7 +201,7 @@ class TestParsingBenchmarks:
 
 
 class TestRemediationBenchmarks:
-    """Benchmarks for config_to_get_to remediation."""
+    """Benchmarks for remediation remediation."""
 
     @staticmethod
     def test_remediation_small_diff() -> None:
@@ -215,7 +215,7 @@ class TestRemediationBenchmarks:
         )
         generated = get_hconfig(Platform.CISCO_IOS, generated_text)
 
-        elapsed = _time_fn(lambda: running.config_to_get_to(generated))
+        elapsed = _time_fn(lambda: running.remediation(generated))
         print(f"\nRemediation (10% diff): {elapsed:.4f}s")  # noqa: T201
         assert elapsed < 5.0, f"Remediation took {elapsed:.2f}s, expected < 5s"
 
@@ -228,7 +228,7 @@ class TestRemediationBenchmarks:
         )
         generated = get_hconfig(Platform.CISCO_IOS, generated_text)
 
-        elapsed = _time_fn(lambda: running.config_to_get_to(generated))
+        elapsed = _time_fn(lambda: running.remediation(generated))
         print(f"\nRemediation (100% diff): {elapsed:.4f}s")  # noqa: T201
         assert elapsed < 10.0, f"Remediation took {elapsed:.2f}s, expected < 10s"
 
@@ -248,7 +248,7 @@ class TestRemediationBenchmarks:
             )
         generated = get_hconfig(Platform.CISCO_IOS, "\n".join(lines))
 
-        elapsed = _time_fn(lambda: running.config_to_get_to(generated))
+        elapsed = _time_fn(lambda: running.remediation(generated))
         print(f"\nRemediation (completely different): {elapsed:.4f}s")  # noqa: T201
         assert elapsed < 10.0, f"Remediation took {elapsed:.2f}s, expected < 10s"
 
@@ -267,14 +267,14 @@ class TestIterationBenchmarks:
         assert elapsed < 2.0, f"Iteration took {elapsed:.2f}s, expected < 2s"
 
     @staticmethod
-    def test_dump_simple() -> None:
+    def test_to_lines() -> None:
         """Dump a large config to simple text."""
         config = get_hconfig(Platform.CISCO_IOS, _generate_large_ios_config())
 
-        elapsed = _time_fn(config.dump_simple)
-        line_count = len(config.dump_simple())
-        print(f"\ndump_simple: {line_count} lines in {elapsed:.4f}s")  # noqa: T201
-        assert elapsed < 2.0, f"dump_simple took {elapsed:.2f}s, expected < 2s"
+        elapsed = _time_fn(config.to_lines)
+        line_count = len(config.to_lines())
+        print(f"\nto_lines: {line_count} lines in {elapsed:.4f}s")  # noqa: T201
+        assert elapsed < 2.0, f"to_lines took {elapsed:.2f}s, expected < 2s"
 
     @staticmethod
     def test_deep_copy() -> None:

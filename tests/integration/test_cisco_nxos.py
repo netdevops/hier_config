@@ -48,9 +48,9 @@ def test_line_console_terminal_settings_negation_negate_with() -> None:
         ),
     )
 
-    remediation = running_config.config_to_get_to(generated_config)
+    remediation = running_config.remediation(generated_config)
 
-    assert remediation.dump_simple() == (
+    assert remediation.to_lines() == (
         "line console",
         "  terminal length 24",
         "  terminal width 80",

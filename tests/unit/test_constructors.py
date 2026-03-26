@@ -83,9 +83,9 @@ interface GigabitEthernet0/0
 
     assert interface is not None
     assert len(interface.children) > 0
-    assert interface.depth() == 1
+    assert interface.depth == 1
     for subchild in interface.children:
-        assert subchild.depth() == 2
+        assert subchild.depth == 2
 
 
 def test_get_hconfig_fast_generic_load_with_string_conversion() -> None:
@@ -298,7 +298,7 @@ router bgp 65000
             break
 
     assert router_bgp is not None
-    assert router_bgp.depth() == 1
+    assert router_bgp.depth == 1
 
     if router_bgp.children:
         address_family = None
@@ -308,10 +308,10 @@ router bgp 65000
                 break
 
         if address_family:
-            assert address_family.depth() == 2
+            assert address_family.depth == 2
             if address_family.children:
                 for nested_child in address_family.children:
-                    assert nested_child.depth() == 3
+                    assert nested_child.depth == 3
 
 
 def test_banner_detection_with_various_delimiters() -> None:

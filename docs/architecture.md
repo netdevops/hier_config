@@ -26,7 +26,7 @@ The tree layer lives in `hier_config/base.py`, `hier_config/root.py`, `hier_conf
 
 - A reference to the **driver** for the platform.
 - An `HConfigChildren` collection of top-level `HConfigChild` nodes.
-- High-level operations: `future()`, `config_to_get_to()`, `merge()`, `difference()`, `dump()`.
+- High-level operations: `future()`, `remediation()`, `merge()`, `difference()`, `dump()`.
 
 Create an `HConfig` object via the constructor function:
 
@@ -62,7 +62,7 @@ Both `HConfig` and `HConfigChild` inherit from `HConfigBase`, which provides:
 
 - Child manipulation: `add_child`, `add_children`, `add_deep_copy_of`, `add_shallow_copy_of`.
 - Searching: `get_child`, `get_children`, `get_child_deep`, `get_children_deep`.
-- Diffing: `unified_diff`, `_config_to_get_to`, `_difference`.
+- Diffing: `unified_diff`, `_remediation`, `_difference`.
 - Future prediction: `_future`, `_future_pre`.
 
 ---
@@ -129,9 +129,9 @@ remediation = workflow.remediation_config   # what to apply
 rollback    = workflow.rollback_config      # how to revert
 ```
 
-Internally it calls `running_config.config_to_get_to(generated_config)` which traverses the tree and calls `_config_to_get_to_left` (what to negate) and `_config_to_get_to_right` (what to add).
+Internally it calls `running_config.remediation(generated_config)` which traverses the tree and calls `_remediation_left` (what to negate) and `_remediation_right` (what to add).
 
-### `config_to_get_to()`
+### `remediation()`
 
 This method computes the **minimal delta** between two configs:
 
@@ -204,7 +204,7 @@ HConfig tree                  (HConfigBase / HConfigChild nodes)
     │
     ├──► HConfig.future()     → predicted post-change HConfig
     │
-    ├──► HConfig.config_to_get_to()
+    ├──► HConfig.remediation()
     │         │
     │         ▼
     │     delta HConfig       (remediation commands)

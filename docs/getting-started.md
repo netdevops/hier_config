@@ -48,7 +48,7 @@ The `remediation_config` attribute generates the configuration needed to apply t
 >>> print("Remediation configuration:")
 Remediation configuration:
 >>> for line in workflow.remediation_config.all_children_sorted():
-...     print(line.cisco_style_text())
+...     print(line.indented_text())
 ...
 vlan 3
   name switch_mgmt_10.0.3.0/24
@@ -79,7 +79,7 @@ Similarly, the `rollback_config` attribute generates a configuration that can re
 >>> print("Rollback configuration:")
 Rollback configuration:
 >>> for line in workflow.rollback_config.all_children_sorted():
-...     print(line.cisco_style_text())
+...     print(line.indented_text())
 ...
 no vlan 4
 no interface Vlan4
