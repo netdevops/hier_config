@@ -7,6 +7,7 @@ from re import search, sub
 from hier_config.platforms.driver_base import HConfigDriverBase
 
 from .child import HConfigChild
+from .exceptions import DriverNotFoundError, InvalidConfigError
 from .models import Dump, Platform
 from .platforms.arista_eos.driver import HConfigDriverAristaEOS
 from .platforms.arista_eos.view import HConfigViewAristaEOS
@@ -49,7 +50,7 @@ def get_hconfig_driver(platform: Platform) -> HConfigDriverBase:
 
     if driver_cls is None:
         message = f"Unsupported platform: {platform}"
-        raise ValueError(message)
+        raise DriverNotFoundError(message)
 
     return driver_cls()
 
@@ -72,7 +73,7 @@ def get_hconfig_view(config: HConfig) -> HConfigViewBase:
         return HConfigViewHPProcurve(config)
 
     message = f"Unsupported platform: {config.driver.__class__.__name__}"
-    raise ValueError(message)
+    raise DriverNotFoundError(message)
 
 
 def get_hconfig(
@@ -307,4 +308,4 @@ def _load_from_string_lines(config: HConfig, config_text: str) -> None:  # noqa:
             end_indent_adjust.pop(0)
     if in_banner:
         message = "we are still in a banner for some reason"
-        raise ValueError(message)
+        raise InvalidConfigError(message)

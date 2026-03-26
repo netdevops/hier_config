@@ -15,6 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Skipped by default; run with `poetry run pytest -m benchmark -v -s`.
 
 - Added support for Huawei VRP with a new driver and test suite (#238).
+- Custom exception hierarchy: `HierConfigError` base, `DriverNotFoundError`,
+  `InvalidConfigError`, `IncompatibleDriverError` (#219). `DuplicateChildError`
+  reparented under `HierConfigError`.
 
 ### Changed
 
