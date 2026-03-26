@@ -70,7 +70,7 @@ class TestConfigWorkflows:  # pylint: disable=too-few-public-methods
         assert running_config is not None
         assert running_config.children
         loaded_running_text = "\n".join(
-            line.cisco_style_text() for line in running_config.all_children_sorted()
+            line.indented_text() for line in running_config.all_children_sorted()
         )
         assert loaded_running_text.strip() == running_config_text.strip(), (
             "Loaded running config does not match the file"
@@ -81,7 +81,7 @@ class TestConfigWorkflows:  # pylint: disable=too-few-public-methods
         assert generated_config is not None
         assert generated_config.children
         loaded_generated_text = "\n".join(
-            line.cisco_style_text() for line in generated_config.all_children_sorted()
+            line.indented_text() for line in generated_config.all_children_sorted()
         )
         assert loaded_generated_text.strip() == generated_config_text.strip(), (
             "Loaded generated config does not match the file"
@@ -94,7 +94,7 @@ class TestConfigWorkflows:  # pylint: disable=too-few-public-methods
         remediation_config = workflow.remediation_config
         assert remediation_config is not None
         remediation_text = "\n".join(
-            line.cisco_style_text() for line in remediation_config.all_children_sorted()
+            line.indented_text() for line in remediation_config.all_children_sorted()
         )
         assert remediation_text.strip() == expected_remediation_text.strip(), (
             "Generated remediation config does not match expected"
@@ -110,14 +110,14 @@ class TestConfigWorkflows:  # pylint: disable=too-few-public-methods
         # remove deleted sections, so we verify that all generated lines are present (subset check)
         # rather than exact equality
         future_lines = {
-            line.cisco_style_text()
+            line.indented_text()
             for line in future_config.all_children_sorted()
-            if not line.cisco_style_text().strip().startswith(("no ", "delete "))
+            if not line.indented_text().strip().startswith(("no ", "delete "))
         }
         generated_lines = {
-            line.cisco_style_text()
+            line.indented_text()
             for line in generated_config.all_children_sorted()
-            if not line.cisco_style_text().strip().startswith(("no ", "delete "))
+            if not line.indented_text().strip().startswith(("no ", "delete "))
         }
         # Check that all generated lines are present in future (subset check)
         missing_lines = generated_lines - future_lines
@@ -130,7 +130,7 @@ class TestConfigWorkflows:  # pylint: disable=too-few-public-methods
         rollback_config = workflow.rollback_config
         assert rollback_config is not None
         rollback_text = "\n".join(
-            line.cisco_style_text() for line in rollback_config.all_children_sorted()
+            line.indented_text() for line in rollback_config.all_children_sorted()
         )
         assert rollback_text.strip() == expected_rollback_text.strip(), (
             "Generated rollback config does not match expected"
@@ -146,14 +146,14 @@ class TestConfigWorkflows:  # pylint: disable=too-few-public-methods
         # remove deleted sections, so we verify that all running lines are present (subset check)
         # rather than exact equality
         rollback_future_lines = {
-            line.cisco_style_text()
+            line.indented_text()
             for line in rollback_future_config.all_children_sorted()
-            if not line.cisco_style_text().strip().startswith(("no ", "delete "))
+            if not line.indented_text().strip().startswith(("no ", "delete "))
         }
         running_lines = {
-            line.cisco_style_text()
+            line.indented_text()
             for line in running_config.all_children_sorted()
-            if not line.cisco_style_text().strip().startswith(("no ", "delete "))
+            if not line.indented_text().strip().startswith(("no ", "delete "))
         }
         # Check that all running lines are present in rollback_future (subset check)
         missing_lines = running_lines - rollback_future_lines

@@ -30,7 +30,7 @@ def test_depth(platform_a: Platform) -> None:
     ip_address = get_hconfig(platform_a).add_children_deep(
         ("interface Vlan2", "ip address 192.168.1.1 255.255.255.0"),
     )
-    assert ip_address.depth() == 2
+    assert ip_address.depth == 2
 
 
 def test_get_child(platform_a: Platform) -> None:
@@ -186,7 +186,7 @@ def test_add_children(platform_a: Platform) -> None:
 def test_add_child(platform_a: Platform) -> None:
     config = get_hconfig(platform_a)
     interface = config.add_child("interface Vlan2")
-    assert interface.depth() == 1
+    assert interface.depth == 1
     assert interface.text == "interface Vlan2"
     with pytest.raises(DuplicateChildError):
         config.add_child("interface Vlan2")
@@ -211,15 +211,15 @@ def test_path(platform_a: Platform) -> None:
     assert tuple(config_aaa.path()) == ("a", "aa", "aaa")
 
 
-def test_cisco_style_text(platform_a: Platform) -> None:
+def test_indented_text(platform_a: Platform) -> None:
     ip_address = (
         get_hconfig(platform_a)
         .add_child("interface Vlan2")
         .add_child("ip address 192.168.1.1 255.255.255.0")
     )
-    assert ip_address.cisco_style_text() == "  ip address 192.168.1.1 255.255.255.0"
-    assert isinstance(ip_address.cisco_style_text(), str)
-    assert not isinstance(ip_address.cisco_style_text(), list)
+    assert ip_address.indented_text() == "  ip address 192.168.1.1 255.255.255.0"
+    assert isinstance(ip_address.indented_text(), str)
+    assert not isinstance(ip_address.indented_text(), list)
 
 
 def test_all_children_sorted_by_tags(platform_a: Platform) -> None:
@@ -229,8 +229,8 @@ def test_all_children_sorted_by_tags(platform_a: Platform) -> None:
     config_a.add_child("ab")
     config_aaa = config_aa.add_child("aaa")
     config_aab = config_aa.add_child("aab")
-    config_aaa.tags_add("aaa")
-    config_aab.tags_add("aab")
+    config_aaa.add_tags("aaa")
+    config_aab.add_tags("aab")
 
     case_1_matches = [
         c.text
@@ -280,19 +280,19 @@ def test_set_order_weight(platform_a: Platform) -> None:
     assert child.order_weight == 200
 
 
-def test_tags_add(platform_a: Platform) -> None:
+def test_add_tags(platform_a: Platform) -> None:
     interface = get_hconfig(platform_a).add_child("interface Vlan2")
     ip_address = interface.add_child("ip address 192.168.1.1/24")
     assert not interface.tags
     assert not ip_address.tags
-    ip_address.tags_add("a")
+    ip_address.add_tags("a")
     assert "a" in interface.tags
     assert "a" in ip_address.tags
     assert "b" not in interface.tags
     assert "b" not in ip_address.tags
-    interface.tags_add("c")
+    interface.add_tags("c")
     assert "c" in ip_address.tags
-    interface.tags_remove("c")
+    interface.remove_tags("c")
     assert "c" not in ip_address.tags
 
 
@@ -300,7 +300,7 @@ def test_append_tags(platform_a: Platform) -> None:
     config = get_hconfig(platform_a)
     interface = config.add_child("interface Vlan2")
     ip_address = interface.add_child("ip address 192.168.1.1/24")
-    ip_address.tags_add("test_tag")
+    ip_address.add_tags("test_tag")
     assert "test_tag" in config.tags
     assert "test_tag" in interface.tags
     assert "test_tag" in ip_address.tags
@@ -310,11 +310,11 @@ def test_remove_tags(platform_a: Platform) -> None:
     config = get_hconfig(platform_a)
     interface = config.add_child("interface Vlan2")
     ip_address = interface.add_child("ip address 192.168.1.1/24")
-    ip_address.tags_add("test_tag")
+    ip_address.add_tags("test_tag")
     assert "test_tag" in config.tags
     assert "test_tag" in interface.tags
     assert "test_tag" in ip_address.tags
-    ip_address.tags_remove("test_tag")
+    ip_address.remove_tags("test_tag")
     assert "test_tag" not in config.tags
     assert "test_tag" not in interface.tags
     assert "test_tag" not in ip_address.tags
@@ -332,7 +332,7 @@ def test_add_shallow_copy_of(platform_a: Platform) -> None:
     base_config = get_hconfig(platform_a)
 
     interface_a = get_hconfig(platform_a).add_child("interface Vlan2")
-    interface_a.tags_add(frozenset(("ta", "tb")))
+    interface_a.add_tags(frozenset(("ta", "tb")))
     interface_a.comments.add("ca")
     interface_a.order_weight = 200
 
@@ -353,7 +353,7 @@ def test_line_inclusion_test(platform_a: Platform) -> None:
     ip_address_ab = get_hconfig(platform_a).add_children_deep(
         ("interface Vlan2", "ip address 192.168.2.1/24"),
     )
-    ip_address_ab.tags_add(frozenset(("a", "b")))
+    ip_address_ab.add_tags(frozenset(("a", "b")))
 
     assert not ip_address_ab.line_inclusion_test(frozenset(("a",)), frozenset(("b",)))
     assert not ip_address_ab.line_inclusion_test(frozenset(), frozenset(("a",)))
@@ -419,14 +419,14 @@ def test_child_ne() -> None:
     assert child1 != child2
 
 
-def test_cisco_style_text_with_comments() -> None:
-    """Test cisco_style_text with comments."""
+def test_indented_text_with_comments() -> None:
+    """Test indented_text with comments."""
     platform = Platform.CISCO_IOS
     config = get_hconfig(platform)
     child = config.add_child("interface GigabitEthernet0/0")
     child.comments.add("test comment")
     child.comments.add("another comment")
-    line = child.cisco_style_text(style="with_comments")
+    line = child.indented_text(style="with_comments")
 
     assert "!another comment, test comment" in line
 
@@ -434,14 +434,14 @@ def test_cisco_style_text_with_comments() -> None:
         id=1, comments=frozenset(["instance comment"]), tags=frozenset(["tag1"])
     )
     child.instances.append(instance)
-    line_merged = child.cisco_style_text(style="merged", tag="tag1")
+    line_merged = child.indented_text(style="merged", tag="tag1")
 
     assert "1 instance" in line_merged
     assert "instance comment" in line_merged
 
     instance2 = Instance(id=2, comments=frozenset(), tags=frozenset(["tag1"]))
     child.instances.append(instance2)
-    line_merged2 = child.cisco_style_text(style="merged", tag="tag1")
+    line_merged2 = child.indented_text(style="merged", tag="tag1")
 
     assert "2 instances" in line_merged2
 
@@ -496,14 +496,14 @@ def test_child_use_default_for_negation() -> None:
     assert isinstance(uses_default, bool)
 
 
-def test_child_tags_remove_leaf_iterable() -> None:
-    """Test tags_remove on leaf with iterable."""
+def test_child_remove_tags_leaf_iterable() -> None:
+    """Test remove_tags on leaf with iterable."""
     platform = Platform.CISCO_IOS
     config = get_hconfig(platform)
     interface = config.add_child("interface GigabitEthernet0/0")
     description = interface.add_child("description test")
-    description.tags_add(frozenset(["tag1", "tag2", "tag3"]))
-    description.tags_remove(["tag1", "tag2"])
+    description.add_tags(frozenset(["tag1", "tag2", "tag3"]))
+    description.remove_tags(["tag1", "tag2"])
 
     assert "tag1" not in description.tags
     assert "tag2" not in description.tags
@@ -578,14 +578,14 @@ def test_child_overwrite_with_existing_negated() -> None:
     assert delta_interface is not None
 
 
-def test_child_tags_remove_branch() -> None:
-    """Test tags_remove on branch node."""
+def test_child_remove_tags_branch() -> None:
+    """Test remove_tags on branch node."""
     platform = Platform.CISCO_IOS
     config = get_hconfig(platform)
     interface = config.add_child("interface GigabitEthernet0/0")
     description = interface.add_child("description test")
-    description.tags_add("test_tag")
-    interface.tags_remove("test_tag")
+    description.add_tags("test_tag")
+    interface.remove_tags("test_tag")
 
     assert "test_tag" not in description.tags
 
@@ -600,7 +600,7 @@ def test_child_add_children_deep() -> None:
     )
 
     assert result.text == "description test"
-    assert result.depth() == 3
+    assert result.depth == 3
 
 
 def test_child_default_method() -> None:
@@ -631,9 +631,9 @@ def test_abstract_methods_coverage() -> None:
     assert len(lineage) == 2
     assert lineage[0] is interface
 
-    assert config.depth() == 0
-    assert interface.depth() == 1
-    assert desc.depth() == 2
+    assert config.depth == 0
+    assert interface.depth == 1
+    assert desc.depth == 2
 
     hash_value = hash(interface)
     assert isinstance(hash_value, int)
@@ -1145,7 +1145,6 @@ def test_idempotency_key_regex_trimmed_to_no_match() -> None:
     key = driver._idempotency_key(child, (MatchRule(re_search=r"interface.*"),))  # noqa: SLF001  # pyright: ignore[reportPrivateUsage]
     # Since "interface.*" doesn't match "logging console", should fall back to text
     assert key == ("text|logging console",)
-
 
 
 def test_child_hash_eq_consistency_new_in_config() -> None:

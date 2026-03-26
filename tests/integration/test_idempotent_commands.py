@@ -34,8 +34,8 @@ def test_parameterized_regex_same_key_is_idempotent() -> None:
         driver,
         ("client 10.1.1.1 server-key KEY_NEW",),
     )
-    remediation = running.config_to_get_to(generated)
-    assert remediation.dump_simple() == ("client 10.1.1.1 server-key KEY_NEW",)
+    remediation = running.remediation(generated)
+    assert remediation.to_lines() == ("client 10.1.1.1 server-key KEY_NEW",)
 
 
 def test_parameterized_regex_different_key_not_idempotent() -> None:
@@ -58,9 +58,9 @@ def test_parameterized_regex_different_key_not_idempotent() -> None:
         driver,
         ("client 10.1.1.1 server-key KEY1",),
     )
-    remediation = running.config_to_get_to(generated)
+    remediation = running.remediation(generated)
     # 10.2.2.2 is removed because it's not in generated (not idempotent with 10.1.1.1)
-    assert remediation.dump_simple() == ("no client 10.2.2.2 server-key KEY2",)
+    assert remediation.to_lines() == ("no client 10.2.2.2 server-key KEY2",)
 
 
 def test_bgp_neighbor_regex_idempotent() -> None:
@@ -84,8 +84,8 @@ def test_bgp_neighbor_regex_idempotent() -> None:
             "  neighbor 1000::8 remote-as 2002",
         ),
     )
-    remediation = running.config_to_get_to(generated)
-    lines = remediation.dump_simple()
+    remediation = running.remediation(generated)
+    lines = remediation.to_lines()
     # The changed ASN for 40.0.0.0 should appear
     assert "  neighbor 40.0.0.0 remote-as 44001" in lines
     # New neighbors should be added
@@ -122,8 +122,8 @@ def test_startswith_rules_do_not_cross_contaminate() -> None:
             "hardware profile tcam region racl 512",
         ),
     )
-    remediation = running.config_to_get_to(generated)
-    lines = remediation.dump_simple()
+    remediation = running.remediation(generated)
+    lines = remediation.to_lines()
     # Both should be updated independently (idempotent within their own rule)
     assert "hardware access-list tcam region arp-ether 256" in lines
     assert "hardware profile tcam region racl 512" in lines

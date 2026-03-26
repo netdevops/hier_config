@@ -38,13 +38,13 @@ class WorkflowRemediation:
         remediation_config = workflow.remediation_config
         print("Remediation configuration:")
         for line in remediation_config.all_children_sorted():
-            print(line.cisco_style_text())
+            print(line.indented_text())
 
         # Generate the rollback configuration to revert back to the running configuration
         rollback_config = workflow.rollback_config
         print("Rollback configuration:")
         for line in rollback_config.all_children_sorted():
-            print(line.cisco_style_text())
+            print(line.indented_text())
         ```
 
     """
@@ -79,7 +79,7 @@ class WorkflowRemediation:
         if self._remediation_config:
             return self._remediation_config
 
-        remediation_config = self.running_config.config_to_get_to(
+        remediation_config = self.running_config.remediation(
             self.generated_config
         ).set_order_weight()
 
@@ -102,7 +102,7 @@ class WorkflowRemediation:
         if self._rollback_config:
             return self._rollback_config
 
-        rollback_config = self.generated_config.config_to_get_to(
+        rollback_config = self.generated_config.remediation(
             self.running_config, HConfig(self.running_config.driver)
         ).set_order_weight()
 
@@ -125,7 +125,7 @@ class WorkflowRemediation:
             for child in self.remediation_config.get_children_deep(
                 tag_rule.match_rules
             ):
-                child.tags_add(tag_rule.apply_tags)
+                child.add_tags(tag_rule.apply_tags)
 
     def remediation_config_filtered_text(
         self,
@@ -153,4 +153,4 @@ class WorkflowRemediation:
             if include_tags or exclude_tags
             else self.remediation_config.all_children_sorted()
         )
-        return "\n".join(c.cisco_style_text() for c in children)
+        return "\n".join(c.indented_text() for c in children)

@@ -10,26 +10,26 @@ from hier_config import (
 from hier_config.models import Platform
 
 
-def test_config_to_get_to(platform_a: Platform) -> None:
+def test_remediation(platform_a: Platform) -> None:
     running_config_hier = get_hconfig(platform_a)
     interface = running_config_hier.add_child("interface Vlan2")
     interface.add_child("ip address 192.168.1.1/24")
     generated_config_hier = get_hconfig(platform_a)
     generated_config_hier.add_child("interface Vlan3")
-    remediation_config_hier = running_config_hier.config_to_get_to(
+    remediation_config_hier = running_config_hier.remediation(
         generated_config_hier,
     )
     assert len(tuple(remediation_config_hier.all_children())) == 2
 
 
-def test_config_to_get_to2(platform_a: Platform) -> None:
+def test_remediation2(platform_a: Platform) -> None:
     running_config_hier = get_hconfig(platform_a)
     running_config_hier.add_child("do not add me")
     generated_config_hier = get_hconfig(platform_a)
     generated_config_hier.add_child("do not add me")
     generated_config_hier.add_child("add me")
     delta = get_hconfig(platform_a)
-    running_config_hier.config_to_get_to(
+    running_config_hier.remediation(
         generated_config_hier,
         delta,
     )
@@ -47,7 +47,7 @@ def test_future_config(platform_a: Platform) -> None:
     config.add_children_deep(("a", "no az"))
 
     future_config = running_config.future(config)
-    assert tuple(c.cisco_style_text() for c in future_config.all_children()) == (
+    assert tuple(c.indented_text() for c in future_config.all_children()) == (
         "a",
         "  ac",  # config lines are added first
         "  no az",
@@ -61,7 +61,7 @@ def test_future_preserves_bgp_neighbor_description() -> None:
     """Validate Arista BGP neighbors keep untouched descriptions across future/rollback.
 
     This regression asserts that applying a candidate config via ``future()`` retains
-    existing neighbor descriptions and the subsequent ``config_to_get_to`` rollback only
+    existing neighbor descriptions and the subsequent ``remediation`` rollback only
     negates the new commands.
     """
     platform = Platform.ARISTA_EOS
@@ -87,16 +87,16 @@ def test_future_preserves_bgp_neighbor_description() -> None:
         "  neighbor 2.2.2.2 remote-as 2",
         "  exit",
     )
-    assert future_config.dump_simple(sectional_exiting=True) == expected_future
+    assert future_config.to_lines(sectional_exiting=True) == expected_future
 
-    rollback_config = future_config.config_to_get_to(running_config)
+    rollback_config = future_config.remediation(running_config)
     expected_rollback = (
         "router bgp 1",
         "  no neighbor 3.3.3.3 description neighbor3",
         "  no neighbor 3.3.3.3 remote-as 3",
         "  exit",
     )
-    assert rollback_config.dump_simple(sectional_exiting=True) == expected_rollback
+    assert rollback_config.to_lines(sectional_exiting=True) == expected_rollback
 
 
 def test_idempotent_commands() -> None:
@@ -106,7 +106,7 @@ def test_idempotent_commands() -> None:
     interface_name = "interface 1/1"
     config_a.add_children_deep((interface_name, "untagged vlan 1"))
     config_b.add_children_deep((interface_name, "untagged vlan 2"))
-    interface = config_a.config_to_get_to(config_b).get_child(equals=interface_name)
+    interface = config_a.remediation(config_b).get_child(equals=interface_name)
     assert interface is not None
     assert interface.get_child(equals="untagged vlan 2")
     assert len(interface.children) == 1
@@ -121,7 +121,7 @@ def test_idempotent_commands2() -> None:
     config_b.add_children_deep(
         (interface_name, "authentication host-mode multi-domain"),
     )
-    interface = config_a.config_to_get_to(config_b).get_child(equals=interface_name)
+    interface = config_a.remediation(config_b).get_child(equals=interface_name)
     assert interface is not None
     assert interface.get_child(equals="authentication host-mode multi-domain")
     assert len(interface.children) == 1
@@ -133,12 +133,12 @@ def test_future_config_no_command_in_source() -> None:
     generated_config = get_hconfig(platform)
     generated_config.add_child("no service dhcp")
 
-    remediation_config = running_config.config_to_get_to(generated_config)
+    remediation_config = running_config.remediation(generated_config)
     future_config = running_config.future(remediation_config)
     assert len(future_config.children) == 1
     assert future_config.get_child(equals="no service dhcp")
     assert not tuple(future_config.unified_diff(generated_config))
-    rollback_config = future_config.config_to_get_to(running_config)
+    rollback_config = future_config.remediation(running_config)
     assert len(rollback_config.children) == 1
     assert rollback_config.get_child(equals="service dhcp")
     calculated_running_config = future_config.future(rollback_config)
@@ -227,7 +227,7 @@ def test_overwrite_with_no_negate() -> None:
     assert delta_config == expected_config
 
 
-def test_config_to_get_to_parent_identity() -> None:
+def test_remediation_parent_identity() -> None:
     interface_vlan2 = "interface Vlan2"
     platform = Platform.CISCO_IOS
     running_config_hier = get_hconfig(platform)
@@ -236,7 +236,7 @@ def test_config_to_get_to_parent_identity() -> None:
     )
     generated_config_hier = get_hconfig(platform)
     generated_config_hier.add_child(interface_vlan2)
-    remediation_config_hier = running_config_hier.config_to_get_to(
+    remediation_config_hier = running_config_hier.remediation(
         generated_config_hier,
     )
     remediation_config_interface = remediation_config_hier.get_child(
@@ -256,7 +256,7 @@ def test_difference1(platform_a: Platform) -> None:
         get_hconfig_driver(platform_a), "\n".join(step)
     ).difference(rc_hier)
     difference_children = tuple(
-        c.cisco_style_text() for c in difference.all_children_sorted()
+        c.indented_text() for c in difference.all_children_sorted()
     )
 
     assert len(difference_children) == 6
@@ -279,8 +279,7 @@ def test_difference2() -> None:
     step_hier = get_hconfig(get_hconfig_driver(platform), "\n".join(step))
 
     difference_children = tuple(
-        c.cisco_style_text()
-        for c in step_hier.difference(rc_hier).all_children_sorted()
+        c.indented_text() for c in step_hier.difference(rc_hier).all_children_sorted()
     )
     assert len(difference_children) == 6
 
@@ -293,8 +292,7 @@ def test_difference3() -> None:
     step_hier = get_hconfig(get_hconfig_driver(platform), "\n".join(step))
 
     difference_children = tuple(
-        c.cisco_style_text()
-        for c in step_hier.difference(rc_hier).all_children_sorted()
+        c.indented_text() for c in step_hier.difference(rc_hier).all_children_sorted()
     )
     assert difference_children == ("ip access-list extended test", "  30 c")
 

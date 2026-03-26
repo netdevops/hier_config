@@ -11,8 +11,8 @@ def test_merge_with_undo() -> None:
     generated_config = get_hconfig_fast_load(
         platform, ("undo test_for_undo", "test_for_redo")
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple() == ("undo test_for_undo", "test_for_redo")
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines() == ("undo test_for_undo", "test_for_redo")
 
 
 def test_negate_description() -> None:
@@ -23,8 +23,8 @@ def test_negate_description() -> None:
     generated_config = get_hconfig_fast_load(
         platform, ("interface GigabitEthernet0/0/0",)
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple() == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines() == (
         "interface GigabitEthernet0/0/0",
         "  undo description",
     )
@@ -36,8 +36,8 @@ def test_negate_remark() -> None:
         platform, ("acl number 2000", " rule 5 remark some old remark")
     )
     generated_config = get_hconfig_fast_load(platform, ("acl number 2000",))
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple() == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines() == (
         "acl number 2000",
         "  undo rule 5 remark",
     )
@@ -51,8 +51,8 @@ def test_negate_alias() -> None:
     generated_config = get_hconfig_fast_load(
         platform, ("interface GigabitEthernet0/0/0",)
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple() == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines() == (
         "interface GigabitEthernet0/0/0",
         "  undo alias",
     )
@@ -64,8 +64,8 @@ def test_negate_snmp_agent_community() -> None:
         platform, ("snmp-agent community read cipher %^%#blabla%^%# acl 2000",)
     )
     generated_config = get_hconfig(platform)
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple() == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines() == (
         "undo snmp-agent community read cipher %^%#blabla%^%#",
     )
 
@@ -83,7 +83,7 @@ def test_comments_stripped() -> None:
             "! yet another comment",
         ),
     )
-    assert config.dump_simple() == (
+    assert config.to_lines() == (
         "interface GigabitEthernet0/0/0",
         "  description test",
     )
@@ -98,7 +98,7 @@ def test_sectional_exit_is_quit() -> None:
             " description test",
         ),
     )
-    assert config.dump_simple(sectional_exiting=True) == (
+    assert config.to_lines(sectional_exiting=True) == (
         "interface GigabitEthernet0/0/0",
         "  description test",
         "  quit",

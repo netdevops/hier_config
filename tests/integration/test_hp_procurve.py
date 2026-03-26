@@ -17,8 +17,8 @@ def test_negate_with() -> None:
         ),
     )
     generated_config = get_hconfig(platform)
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple() == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines() == (
         "aaa port-access authenticator 1/1 tx-period 30",
         "aaa port-access authenticator 1/1 supplicant-timeout 30",
         "no aaa port-access authenticator 1/1 client-limit",
@@ -52,8 +52,8 @@ def test_idempotent_for() -> None:
             'aaa port-access 1/1 critical-auth user-role "allownone"',
         ),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple() == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines() == (
         "aaa port-access authenticator 1/1 tx-period 4",
         "aaa port-access authenticator 1/1 supplicant-timeout 4",
         "aaa port-access authenticator 1/1 client-limit 5",
@@ -96,9 +96,9 @@ def test_negate_with_child_config() -> None:
         platform,
         ("interface 1/1",),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
+    remediation_config = running_config.remediation(generated_config)
 
-    assert remediation_config.dump_simple() == (
+    assert remediation_config.to_lines() == (
         "interface 1/1",
         "  no speed-duplex auto",
     )
@@ -118,9 +118,9 @@ def test_negate_with_from_base_driver() -> None:
         platform,
         ("interface 1/1",),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
+    remediation_config = running_config.remediation(generated_config)
 
-    assert remediation_config.dump_simple() == (
+    assert remediation_config.to_lines() == (
         "interface 1/1",
         "  enable",
     )

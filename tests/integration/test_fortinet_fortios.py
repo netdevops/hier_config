@@ -33,8 +33,8 @@ def test_swap_negation() -> None:
             "end",
         ),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple(sectional_exiting=True) == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines(sectional_exiting=True) == (
         "config system interface",
         "  edit port1",
         "    unset description",
@@ -78,8 +78,8 @@ def test_idempotent_for() -> None:
             "end",
         ),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple(sectional_exiting=True) == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines(sectional_exiting=True) == (
         "config system interface",
         "  edit port1",
         "    set description 'New Description'",

@@ -31,8 +31,8 @@ def test_interface_address_addition_scenario() -> None:
             "set interfaces ethernet eth0 address 192.168.1.2/24",
         ),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple() == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines() == (
         "set interfaces ethernet eth0 address 192.168.1.2/24",
     )
 
@@ -54,8 +54,8 @@ def test_interface_description_modification_scenario() -> None:
             "set interfaces ethernet eth0 description New Description",
         ),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple() == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines() == (
         "delete interfaces ethernet eth0 description Old Description",
         "set interfaces ethernet eth0 description New Description",
     )
@@ -79,8 +79,8 @@ def test_interface_removal_scenario() -> None:
             "set interfaces ethernet eth0 description WAN Interface",
         ),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple() == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines() == (
         "delete interfaces ethernet eth1 address 10.0.0.1/24",
     )
 
@@ -103,8 +103,8 @@ def test_system_configuration_scenario() -> None:
             "set system time-zone America/New_York",
         ),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple() == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines() == (
         "delete system host-name old-vyos-router",
         "set system host-name new-vyos-router",
         "set system time-zone America/New_York",
@@ -122,13 +122,13 @@ def test_empty_to_basic_config_scenario() -> None:
             "set interfaces ethernet eth0 address 192.168.1.1/24",
         ),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple() == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines() == (
         "set system host-name test-router",
         "set interfaces ethernet eth0 address 192.168.1.1/24",
     )
     future_config = running_config.future(remediation_config)
-    assert future_config.dump_simple() == (
+    assert future_config.to_lines() == (
         "set system host-name test-router",
         "set interfaces ethernet eth0 address 192.168.1.1/24",
     )
@@ -153,8 +153,8 @@ def test_nat_configuration_scenario() -> None:
             "set nat source rule 10 translation address masquerade",
         ),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple() == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines() == (
         "delete nat source rule 10 source address 192.168.1.0/24",
         "set nat source rule 10 source address 192.168.2.0/24",
     )
@@ -180,8 +180,8 @@ def test_firewall_rule_scenario() -> None:
             "set firewall name WAN_LOCAL rule 10 state related enable",
         ),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple() == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines() == (
         "set firewall name WAN_LOCAL rule 10 state related enable",
     )
 
@@ -197,8 +197,8 @@ def test_ipv6_address_configuration_scenario() -> None:
         platform,
         ("set interfaces ethernet eth0 address 2001:db8:2::1/64",),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple() == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines() == (
         "delete interfaces ethernet eth0 address 2001:db8:1::1/64",
         "set interfaces ethernet eth0 address 2001:db8:2::1/64",
     )

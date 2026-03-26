@@ -108,10 +108,10 @@ def get_hconfig_from_dump(
         if item.depth == 1:
             parent: HConfig | HConfigChild = config
         # has the same parent
-        elif last_item.depth() == item.depth:
+        elif last_item.depth == item.depth:
             parent = last_item.parent
         # is a child object
-        elif last_item.depth() + 1 == item.depth:
+        elif last_item.depth + 1 == item.depth:
             parent = last_item
         # has a parent somewhere closer to the root but not the root
         else:

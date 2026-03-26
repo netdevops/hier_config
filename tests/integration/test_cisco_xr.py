@@ -32,8 +32,8 @@ def test_multiple_groups_remediation() -> None:
             "end-group",
         ),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple(sectional_exiting=True) == ("no group edge",)
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines(sectional_exiting=True) == ("no group edge",)
 
 
 def test_duplicate_child_route_policy() -> None:
@@ -74,8 +74,8 @@ def test_duplicate_child_route_policy() -> None:
             "",
         ),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple(sectional_exiting=True) == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines(sectional_exiting=True) == (
         "no route-policy SET_LOCAL_PREF_AND_PASS",
     )
 
@@ -117,8 +117,8 @@ def test_nested_if_endif_route_policy() -> None:
             "end-policy",
         ),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple(sectional_exiting=True) == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines(sectional_exiting=True) == (
         "route-policy EXAMPLE-POLICY",
         "  if (community matches-any COMM-SET-A) then",
         "    if (community matches-any COMM-SET-B) then",
@@ -180,8 +180,8 @@ def test_flow_exporter_template_indent_adjust() -> None:
             "end-policy",
         ),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple(sectional_exiting=True) == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines(sectional_exiting=True) == (
         "route-policy POLICY1",
         "  if (destination in PREFIX-SET1) then",
         "    drop",
@@ -251,8 +251,8 @@ def test_template_block_indent_adjust() -> None:
             "!",
         ),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple(sectional_exiting=True) == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines(sectional_exiting=True) == (
         "no template UPLINK-PORT",
         "template UPLINK-PORT",
         "  description Uplink - Core Facing",
@@ -290,9 +290,9 @@ def test_ipv4_acl_sequence_number_idempotent() -> None:
             " 30 deny ipv4 any any",
         ),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
+    remediation_config = running_config.remediation(generated_config)
 
-    assert remediation_config.dump_simple() == (
+    assert remediation_config.to_lines() == (
         "ipv4 access-list TEST_ACL",
         "  20 permit tcp any any eq 22",
     )
@@ -317,9 +317,9 @@ def test_ipv6_acl_sequence_number_idempotent() -> None:
             " 20 deny ipv6 any any",
         ),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
+    remediation_config = running_config.remediation(generated_config)
 
-    assert remediation_config.dump_simple() == (
+    assert remediation_config.to_lines() == (
         "ipv6 access-list TEST_IPV6_ACL",
         "  10 permit tcp any any eq 22",
     )
@@ -345,9 +345,9 @@ def test_ipv4_acl_sequence_number_addition() -> None:
             " 30 deny ipv4 any any",
         ),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
+    remediation_config = running_config.remediation(generated_config)
 
-    assert remediation_config.dump_simple() == (
+    assert remediation_config.to_lines() == (
         "ipv4 access-list TEST_ACL",
         "  20 permit tcp any any eq 22",
     )
@@ -388,7 +388,7 @@ telemetry model-driven
    protocol tcp
 """,
     )
-    assert running.config_to_get_to(intended).dump_simple() == ()
+    assert running.remediation(intended).to_lines() == ()
 
 
 def test_intended_with_bang_comments_running_without_no_remediation() -> None:
@@ -424,7 +424,7 @@ telemetry model-driven
    protocol tcp
 """,
     )
-    assert running.config_to_get_to(intended).dump_simple() == ()
+    assert running.remediation(intended).to_lines() == ()
 
 
 def test_differing_bang_comment_text_produces_no_remediation() -> None:
@@ -446,4 +446,4 @@ router isis backbone
  net 49.0001.1921.2022.0222.00
 """,
     )
-    assert running.config_to_get_to(intended).dump_simple() == ()
+    assert running.remediation(intended).to_lines() == ()

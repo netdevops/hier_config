@@ -114,15 +114,13 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         return self.parent.root
 
     def lines(self, *, sectional_exiting: bool = False) -> Iterable[str]:
-        yield self.cisco_style_text()
+        yield self.indented_text()
         for child in sorted(self.children):
             yield from child.lines(sectional_exiting=sectional_exiting)
 
         if sectional_exiting and (exit_text := self.sectional_exit):
             depth = (
-                self.depth() - 1
-                if self.sectional_exit_text_parent_level
-                else self.depth()
+                self.depth - 1 if self.sectional_exit_text_parent_level else self.depth
             )
             yield " " * self.driver.rules.indentation * depth + exit_text
 
@@ -147,9 +145,10 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         if (exit_text := self.sectional_exit) and exit_text == potential_exit.text:
             potential_exit.delete()
 
+    @property
     def depth(self) -> int:
         """Returns the distance to the root HConfig object i.e. indent level."""
-        return self.parent.depth() + 1
+        return self.parent.depth + 1
 
     def move(self, new_parent: HConfig | HConfigChild) -> None:
         """Move one HConfigChild object to different HConfig parent object.
@@ -179,12 +178,12 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         for child in self.lineage():
             yield child.text
 
-    def cisco_style_text(
+    def indented_text(
         self,
         style: str = "without_comments",
         tag: str | None = None,
     ) -> str:
-        """Return a Cisco style formated line i.e. indentation_level + text ! comments."""
+        """Return an indented text line i.e. indentation_level + text ! comments."""
         comments: list[str] = []
         if style == "without_comments":
             pass
@@ -210,27 +209,27 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
 
     @property
     def indentation(self) -> str:
-        return " " * self.driver.rules.indentation * (self.depth() - 1)
+        return " " * self.driver.rules.indentation * (self.depth - 1)
 
     def delete(self) -> None:
         """Delete the current object from its parent."""
         self.parent.children.delete(self)
 
-    def tags_add(self, tag: str | Iterable[str]) -> None:
+    def add_tags(self, tag: str | Iterable[str]) -> None:
         """Add a tag to self._tags on all leaf nodes."""
         if self.is_branch:
             for child in self.children:
-                child.tags_add(tag)
+                child.add_tags(tag)
         elif isinstance(tag, str):
             self._tags.add(tag)
         else:
             self._tags.update(tag)
 
-    def tags_remove(self, tag: str | Iterable[str]) -> None:
+    def remove_tags(self, tag: str | Iterable[str]) -> None:
         """Remove a tag from self._tags on all leaf nodes."""
         if self.is_branch:
             for child in self.children:
-                child.tags_remove(tag)
+                child.remove_tags(tag)
         elif isinstance(tag, str):
             self._tags.remove(tag)
         else:
@@ -348,7 +347,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
         comment is attached to the new entry, and a ``"dropping section"``
         comment is added to the negated entry when applicable.
 
-        Used by :meth:`_config_to_get_to_right` when a sectional-overwrite
+        Used by :meth:`_remediation_right` when a sectional-overwrite
         rule is active for ``self.text``.
         """
         if self.children != target.children:

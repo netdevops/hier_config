@@ -68,8 +68,8 @@ def test_vlan_addition_scenario() -> None:
             "set vlans switch_mgmt_10.0.3.0/24 l3-interface irb.3",
         ),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple() == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines() == (
         "set vlans switch_mgmt_10.0.3.0/24 vlan-id 3",
         "set vlans switch_mgmt_10.0.3.0/24 l3-interface irb.3",
     )
@@ -94,8 +94,8 @@ def test_vlan_removal_scenario() -> None:
             "set vlans switch_mgmt_10.0.2.0/24 l3-interface irb.2",
         ),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple() == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines() == (
         "delete vlans switch_mgmt_10.0.3.0/24 vlan-id 3",
         "delete vlans switch_mgmt_10.0.3.0/24 l3-interface irb.3",
     )
@@ -117,8 +117,8 @@ def test_interface_unit_configuration_scenario() -> None:
             "set interfaces irb unit 2 family inet description switch_mgmt_10.0.2.0/24",
         ),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple() == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines() == (
         "set interfaces irb unit 2 family inet filter input TEST",
         "set interfaces irb unit 2 family inet mtu 9000",
         "set interfaces irb unit 2 family inet description switch_mgmt_10.0.2.0/24",
@@ -136,8 +136,8 @@ def test_interface_address_change_scenario() -> None:
         platform,
         ("set interfaces irb unit 3 family inet address 10.0.3.1/16",),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple() == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines() == (
         "delete interfaces irb unit 3 family inet address 10.0.4.1/16",
         "set interfaces irb unit 3 family inet address 10.0.3.1/16",
     )
@@ -157,8 +157,8 @@ def test_interface_disable_enable_scenario() -> None:
         platform,
         ("set interfaces irb unit 2 family inet address 10.0.2.1/24",),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple() == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines() == (
         "delete interfaces irb unit 2 family inet disable",
     )
 
@@ -182,8 +182,8 @@ def test_firewall_filter_configuration_scenario() -> None:
             "set firewall family inet filter TEST term 2 then reject",
         ),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple() == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines() == (
         "set firewall family inet filter TEST term 2 from destination-address 192.168.1.0/24",
         "set firewall family inet filter TEST term 2 then reject",
     )
@@ -204,8 +204,8 @@ def test_physical_interface_configuration_scenario() -> None:
             "set interfaces xe-0/0/0 unit 0 family inet6 address 2001:db8:5695::1/64",
         ),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple() == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines() == (
         "set interfaces xe-0/0/0 description bb01.lax01:Ethernet2; ID:YT661812121",
         "set interfaces xe-0/0/0 mtu 9160",
         "set interfaces xe-0/0/0 unit 0 family iso",
@@ -214,7 +214,7 @@ def test_physical_interface_configuration_scenario() -> None:
         "set interfaces xe-0/0/0 unit 0 family inet6 address 2001:db8:5695::1/64",
     )
     future_config = running_config.future(remediation_config)
-    assert future_config.dump_simple() == (
+    assert future_config.to_lines() == (
         "set interfaces xe-0/0/0 description bb01.lax01:Ethernet2; ID:YT661812121",
         "set interfaces xe-0/0/0 mtu 9160",
         "set interfaces xe-0/0/0 unit 0 family iso",
@@ -235,8 +235,8 @@ def test_system_hostname_change_scenario() -> None:
         platform,
         ("set system host-name new-router.example.com",),
     )
-    remediation_config = running_config.config_to_get_to(generated_config)
-    assert remediation_config.dump_simple() == (
+    remediation_config = running_config.remediation(generated_config)
+    assert remediation_config.to_lines() == (
         "delete system host-name old-router.example.com",
         "set system host-name new-router.example.com",
     )
