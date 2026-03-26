@@ -1255,3 +1255,29 @@ def test_child_dict_key_lookup_with_order_weight() -> None:
     lookup: dict[HConfigChild, str] = {child1: "found"}
     # child2 is equal to child1, so it must find the same dict entry
     assert lookup[child2] == "found"
+
+
+def test_indented_text_style_literal_values() -> None:
+    """Test that indented_text accepts each valid TextStyle literal value."""
+    platform = Platform.CISCO_IOS
+    config = get_hconfig(platform)
+    child = config.add_child("interface GigabitEthernet0/0")
+    child.comments.add("a comment")
+
+    # without_comments: should NOT include the comment
+    result_without = child.indented_text(style="without_comments")
+    assert "interface GigabitEthernet0/0" in result_without
+    assert "!" not in result_without
+
+    # with_comments: should include the comment
+    result_with = child.indented_text(style="with_comments")
+    assert "interface GigabitEthernet0/0" in result_with
+    assert "!a comment" in result_with
+
+    # merged: should include instance count info
+    instance = Instance(
+        id=1, comments=frozenset(["inst comment"]), tags=frozenset(["tag1"])
+    )
+    child.instances.append(instance)
+    result_merged = child.indented_text(style="merged")
+    assert "1 instance" in result_merged
