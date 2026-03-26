@@ -34,10 +34,11 @@ The following drivers are included in Hier Config:
 - **CISCO_IOS**
 - **CISCO_XR**
 - **CISCO_NXOS**
-- **GENERIC**
 - **FORTINET_FORTIOS**
+- **GENERIC**
 - **HP_COMWARE5**
 - **HP_PROCURVE**
+- **HUAWEI_VRP**
 - **JUNIPER_JUNOS**
 - **VYOS**
 
@@ -236,6 +237,38 @@ from hier_config import WorkflowRemediation, get_hconfig, Platform
 
 running = get_hconfig(Platform.HP_COMWARE5, running_text)
 intended = get_hconfig(Platform.HP_COMWARE5, intended_text)
+workflow = WorkflowRemediation(running, intended)
+
+for line in workflow.remediation_config.all_children_sorted():
+    print(line.cisco_style_text())
+```
+
+---
+
+### Huawei VRP Driver
+
+Huawei VRP (Versatile Routing Platform) uses `undo` as the negation prefix rather than `no`. The `HUAWEI_VRP` driver customises negation handling for several command families:
+
+- **[Negation prefix](glossary.md#negation-prefix)**: `undo ` (replaces `no `).
+- **Smart negation**: `description` and `alias` commands are negated without their argument; `remark` commands strip the remark text; `snmp-agent community` commands truncate to the community name.
+- **Sectional exiting**: section exit text `exit` is translated to `quit` as VRP requires.
+- **Per-line substitutions**: strips `#` and `!` comment lines during parsing.
+
+Platform enum: `Platform.HUAWEI_VRP`
+
+```python
+from hier_config import Platform, get_hconfig_driver
+
+driver = get_hconfig_driver(Platform.HUAWEI_VRP)
+```
+
+**Remediation example:**
+
+```python
+from hier_config import WorkflowRemediation, get_hconfig, Platform
+
+running = get_hconfig(Platform.HUAWEI_VRP, running_text)
+intended = get_hconfig(Platform.HUAWEI_VRP, intended_text)
 workflow = WorkflowRemediation(running, intended)
 
 for line in workflow.remediation_config.all_children_sorted():
