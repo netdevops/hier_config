@@ -6,7 +6,7 @@ from re import search, sub
 from typing import TYPE_CHECKING, Any
 
 from .base import HConfigBase
-from .models import Instance, MatchRule, SetLikeOfStr
+from .models import Instance, MatchRule, SetLikeOfStr, TextStyle
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -181,7 +181,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
 
     def cisco_style_text(
         self,
-        style: str = "without_comments",
+        style: TextStyle = "without_comments",
         tag: str | None = None,
     ) -> str:
         """Return a Cisco style formated line i.e. indentation_level + text ! comments."""

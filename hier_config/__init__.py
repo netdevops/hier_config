@@ -6,7 +6,7 @@ from .constructors import (
     get_hconfig_from_dump,
     get_hconfig_view,
 )
-from .models import ChangeDetail, MatchRule, Platform, ReportSummary, TagRule
+from .models import ChangeDetail, MatchRule, Platform, ReportSummary, TagRule, TextStyle
 from .reporting import RemediationReporter
 from .root import HConfig
 from .workflows import WorkflowRemediation
@@ -20,6 +20,7 @@ __all__ = (
     "RemediationReporter",
     "ReportSummary",
     "TagRule",
+    "TextStyle",
     "WorkflowRemediation",
     "get_hconfig",
     "get_hconfig_driver",

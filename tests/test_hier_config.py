@@ -2187,3 +2187,16 @@ def test_children_extend() -> None:
     assert len(interface1.children) == 2
     assert "description test" in interface1.children
     assert "ip address 192.0.2.1 255.255.255.0" in interface1.children
+
+
+def test_cisco_style_text_literal_styles(platform_a: Platform) -> None:
+    """Verify cisco_style_text works with each valid TextStyle literal value (#189)."""
+    config = get_hconfig(platform_a)
+    child = config.add_child("interface Vlan2")
+    child.add_child("ip address 10.0.0.1 255.255.255.0")
+
+    # Each valid style should produce a non-empty string without raising
+    for style in ("without_comments", "merged", "with_comments"):
+        result = child.cisco_style_text(style=style)
+        assert isinstance(result, str)
+        assert "interface Vlan2" in result

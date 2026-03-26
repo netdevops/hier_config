@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from hier_config.child import HConfigChild
-from hier_config.models import ChangeDetail, ReportSummary, TagRule
+from hier_config.models import ChangeDetail, ReportSummary, TagRule, TextStyle
 from hier_config.root import HConfig
 
 
@@ -637,7 +637,7 @@ class RemediationReporter:  # noqa: PLR0904
         self,
         file_path: str | Path,
         *,
-        style: str = "merged",
+        style: TextStyle = "merged",
         include_tags: Iterable[str] = (),
         exclude_tags: Iterable[str] = (),
     ) -> None:
