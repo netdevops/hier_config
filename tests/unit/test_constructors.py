@@ -18,22 +18,25 @@ from hier_config.constructors import (
     _load_from_string_lines,  # pyright: ignore[reportPrivateUsage]
     get_hconfig_fast_generic_load,
 )
+from hier_config.exceptions import DriverNotFoundError, InvalidConfigError
 from hier_config.models import Platform
 from hier_config.root import HConfig
 
 
 def test_get_hconfig_driver_unsupported_platform() -> None:
-    """Test ValueError when platform is not supported (lines 49-50)."""
-    with pytest.raises(ValueError, match="Unsupported platform: invalid_platform"):
+    """Test DriverNotFoundError when platform is not supported (lines 49-50)."""
+    with pytest.raises(
+        DriverNotFoundError, match="Unsupported platform: invalid_platform"
+    ):
         get_hconfig_driver("invalid_platform")  # type: ignore[arg-type]
 
 
 def test_get_hconfig_view_unsupported_platform() -> None:
-    """Test ValueError when platform is not supported (lines 72-73)."""
+    """Test DriverNotFoundError when platform is not supported (lines 72-73)."""
     driver = get_hconfig_driver(Platform.FORTINET_FORTIOS)
     config = HConfig(driver=driver)
     with pytest.raises(
-        ValueError, match="Unsupported platform: HConfigDriverFortinetFortiOS"
+        DriverNotFoundError, match="Unsupported platform: HConfigDriverFortinetFortiOS"
     ):
         get_hconfig_view(config)
 
@@ -237,7 +240,9 @@ def test_load_from_string_lines_with_incomplete_banner() -> None:
 This is line 1
 This is line 2
 """
-    with pytest.raises(ValueError, match="we are still in a banner for some reason"):
+    with pytest.raises(
+        InvalidConfigError, match="we are still in a banner for some reason"
+    ):
         _load_from_string_lines(config, config_text)
 
 

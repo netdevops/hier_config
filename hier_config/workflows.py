@@ -1,6 +1,7 @@
 from collections.abc import Iterable
 from logging import getLogger
 
+from .exceptions import IncompatibleDriverError
 from .models import TagRule
 from .root import HConfig
 
@@ -59,7 +60,7 @@ class WorkflowRemediation:
 
         if running_config.driver.__class__ is not generated_config.driver.__class__:
             message = "The running and generated configs must use the same driver."
-            raise ValueError(message)
+            raise IncompatibleDriverError(message)
 
         self._remediation_config: HConfig | None = None
         self._rollback_config: HConfig | None = None

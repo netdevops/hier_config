@@ -1,6 +1,7 @@
 import pytest
 
 from hier_config import WorkflowRemediation, get_hconfig
+from hier_config.exceptions import IncompatibleDriverError
 from hier_config.models import Platform, TagRule
 
 
@@ -50,7 +51,8 @@ def test_remediation_config_driver_mismatch() -> None:
     generated_config = get_hconfig(Platform.JUNIPER_JUNOS, "dummy_config")
 
     with pytest.raises(
-        ValueError, match=r"The running and generated configs must use the same driver."
+        IncompatibleDriverError,
+        match=r"The running and generated configs must use the same driver.",
     ):
         WorkflowRemediation(running_config, generated_config)
 
