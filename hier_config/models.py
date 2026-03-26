@@ -1,7 +1,10 @@
 from enum import Enum, auto
+from typing import Literal
 
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic import ConfigDict, NonNegativeInt, PositiveInt
+
+TextStyle = Literal["without_comments", "merged", "with_comments"]
 
 
 class BaseModel(PydanticBaseModel):
