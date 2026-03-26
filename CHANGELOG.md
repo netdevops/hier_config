@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [3.6.0] - 2026-03-26
+
 ### Added
 
 - `TextStyle` type alias (`Literal["without_comments", "merged", "with_comments"]`) for
@@ -26,6 +30,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   separators (e.g., ` !`, `  !`). The `per_line_sub` regex was changed from `^!\s*$`
   to `^\s*!\s*$` so bare `!` lines at any indentation level are stripped, restoring
   v3.4.2 behavior (#231).
+
+- `__hash__` and `__eq__` inconsistency in `HConfigChild`: `__hash__` included
+  `new_in_config` and `order_weight` but `__eq__` excluded them, and `__eq__` checked
+  `tags` but `__hash__` did not, violating the Python invariant that `a == b` implies
+  `hash(a) == hash(b)`. Both methods now use the same fields: `text`, `tags`, and
+  `children` (#185).
 
 ---
 
@@ -226,7 +236,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/netdevops/hier_config/compare/v3.4.1...HEAD
+[Unreleased]: https://github.com/netdevops/hier_config/compare/v3.6.0...HEAD
+[3.6.0]: https://github.com/netdevops/hier_config/compare/v3.5.1...v3.6.0
+[3.5.1]: https://github.com/netdevops/hier_config/compare/v3.5.0...v3.5.1
+[3.5.0]: https://github.com/netdevops/hier_config/compare/v3.4.3...v3.5.0
+[3.4.3]: https://github.com/netdevops/hier_config/compare/v3.4.2...v3.4.3
+[3.4.2]: https://github.com/netdevops/hier_config/compare/v3.4.1...v3.4.2
 [3.4.1]: https://github.com/netdevops/hier_config/compare/v3.4.0...v3.4.1
 [3.4.0]: https://github.com/netdevops/hier_config/compare/v3.3.0...v3.4.0
 [3.3.0]: https://github.com/netdevops/hier_config/compare/v3.2.2...v3.3.0
