@@ -96,6 +96,7 @@ def test_hconfig_v2_os_v3_platform_mapper() -> None:
     assert hconfig_v2_os_v3_platform_mapper("ios") == Platform.CISCO_IOS
     assert hconfig_v2_os_v3_platform_mapper("nxos") == Platform.CISCO_NXOS
     assert hconfig_v2_os_v3_platform_mapper("junos") == Platform.JUNIPER_JUNOS
+    assert hconfig_v2_os_v3_platform_mapper("nokia_srl") == Platform.NOKIA_SRL
     assert hconfig_v2_os_v3_platform_mapper("invalid") == Platform.GENERIC
 
 
@@ -104,6 +105,7 @@ def test_hconfig_v3_platform_v2_os_mapper() -> None:
     assert hconfig_v3_platform_v2_os_mapper(Platform.CISCO_IOS) == "ios"
     assert hconfig_v3_platform_v2_os_mapper(Platform.CISCO_NXOS) == "nxos"
     assert hconfig_v3_platform_v2_os_mapper(Platform.JUNIPER_JUNOS) == "junos"
+    assert hconfig_v3_platform_v2_os_mapper(Platform.NOKIA_SRL) == "nokia_srl"
     assert hconfig_v3_platform_v2_os_mapper(Platform.GENERIC) == "generic"
 
 
