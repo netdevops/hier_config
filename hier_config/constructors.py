@@ -23,6 +23,7 @@ from .platforms.hp_procurve.driver import HConfigDriverHPProcurve
 from .platforms.hp_procurve.view import HConfigViewHPProcurve
 from .platforms.huawei_vrp.driver import HConfigDriverHuaweiVrp
 from .platforms.juniper_junos.driver import HConfigDriverJuniperJUNOS
+from .platforms.nokia_srl.driver import HConfigDriverNokiaSRL
 from .platforms.view_base import HConfigViewBase
 from .platforms.vyos.driver import HConfigDriverVYOS
 from .root import HConfig
@@ -43,6 +44,7 @@ def get_hconfig_driver(platform: Platform) -> HConfigDriverBase:
         Platform.HP_COMWARE5: HConfigDriverHPComware5,
         Platform.HUAWEI_VRP: HConfigDriverHuaweiVrp,
         Platform.JUNIPER_JUNOS: HConfigDriverJuniperJUNOS,
+        Platform.NOKIA_SRL: HConfigDriverNokiaSRL,
         Platform.VYOS: HConfigDriverVYOS,
     }
     driver_cls = platform_drivers.get(platform)
