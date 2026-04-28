@@ -74,7 +74,7 @@ The string prepended to a command to negate (remove) it.  `HConfigDriverBase.neg
 |----------|----------------|
 | Cisco IOS / EOS / NX-OS | `"no "` |
 | HP Comware5 / H3C | `"undo "` |
-| JunOS / VyOS | `"delete "` |
+| JunOS / VyOS / Nokia SRL | `"delete "` |
 
 ---
 

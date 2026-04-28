@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Nokia SRL platform driver (`Platform.NOKIA_SRL`) (#245)
+
 - Renovate bot configuration (`.github/renovate.json`) to automate Poetry and
   GitHub Actions dependency updates, with weekly lock-file maintenance, grouped
   non-major updates, and immediate vulnerability alerts.

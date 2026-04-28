@@ -40,6 +40,7 @@ The following drivers are included in Hier Config:
 - **HP_PROCURVE**
 - **HUAWEI_VRP**
 - **JUNIPER_JUNOS**
+- **NOKIA_SRL**
 - **VYOS**
 
 To activate a driver, use the `get_hconfig_driver` utility provided by Hier Config:
@@ -140,6 +141,38 @@ Platform enum: `Platform.VYOS`
 from hier_config import Platform, get_hconfig_driver
 
 driver = get_hconfig_driver(Platform.VYOS)
+```
+
+---
+
+### Nokia SRL (Service Router Linux) Driver
+
+Nokia SR Linux uses `set` and `delete` command syntax, similar to VyOS and JunOS. The driver converts hierarchical SRL configuration (from `info` output) into flat `set`/`delete` commands via a preprocessor.
+
+> **Experimental:** Nokia SRL support has not been tested extensively in production environments. Use with caution.
+
+- **[Declaration prefix](glossary.md#declaration-prefix)**: `set ` (prepended to each positive command).
+- **[Negation prefix](glossary.md#negation-prefix)**: `delete ` (replaces `no `).
+
+Platform enum: `Platform.NOKIA_SRL`
+
+```python
+from hier_config import Platform, get_hconfig_driver
+
+driver = get_hconfig_driver(Platform.NOKIA_SRL)
+```
+
+**Remediation example:**
+
+```python
+from hier_config import WorkflowRemediation, get_hconfig, Platform
+
+running = get_hconfig(Platform.NOKIA_SRL, running_text)
+intended = get_hconfig(Platform.NOKIA_SRL, intended_text)
+workflow = WorkflowRemediation(running, intended)
+
+for line in workflow.remediation_config.all_children_sorted():
+    print(line.cisco_style_text())
 ```
 
 ---
