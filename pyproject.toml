@@ -29,7 +29,7 @@ classifiers = [
 ]
 [tool.poetry.dependencies]
 python = ">=3.10.0,<4.0"
-pydantic = "^2.9"
+pydantic = "^2.13.3"
 
 [tool.poetry.group.dev.dependencies]
 flynt = "*"
