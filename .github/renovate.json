@@ -21,6 +21,17 @@
       "enabled": false
     },
     {
+      "description": "Disable pip_requirements manager — docs/requirements.txt is a Read the Docs duplicate of Poetry dev-deps",
+      "matchManagers": ["pip_requirements"],
+      "enabled": false
+    },
+    {
+      "description": "For library runtime deps, only refresh the lockfile rather than raising the lower-bound constraint (keeps the library installable for users on older minor versions)",
+      "matchManagers": ["poetry"],
+      "matchDepTypes": ["dependencies"],
+      "rangeStrategy": "update-lockfile"
+    },
+    {
       "description": "Keep major bumps as separate PRs so they can be reviewed deliberately",
       "matchUpdateTypes": ["major"],
       "addLabels": ["major-update"]
