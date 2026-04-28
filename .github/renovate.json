@@ -4,27 +4,21 @@
     "config:recommended",
     ":dependencyDashboard",
     ":semanticCommits",
-    ":maintainLockFilesWeekly"
+    ":maintainLockFilesWeekly",
+    "group:allNonMajor"
   ],
   "labels": ["dependencies"],
-  "prConcurrentLimit": 5,
+  "prConcurrentLimit": 3,
   "prHourlyLimit": 2,
   "rangeStrategy": "bump",
   "schedule": ["before 6am on monday"],
   "timezone": "Etc/UTC",
   "packageRules": [
     {
-      "description": "Group non-major Poetry dev-dependency updates into a single PR",
+      "description": "Don't bump the python constraint; project supports 3.10+ across all matrix versions",
       "matchManagers": ["poetry"],
-      "matchDepTypes": ["dev", "dev-dependencies"],
-      "matchUpdateTypes": ["minor", "patch"],
-      "groupName": "dev dependencies (non-major)"
-    },
-    {
-      "description": "Group non-major GitHub Actions updates into a single PR",
-      "matchManagers": ["github-actions"],
-      "matchUpdateTypes": ["minor", "patch", "digest"],
-      "groupName": "github-actions (non-major)"
+      "matchPackageNames": ["python"],
+      "enabled": false
     },
     {
       "description": "Keep major bumps as separate PRs so they can be reviewed deliberately",
