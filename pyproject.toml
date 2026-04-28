@@ -28,7 +28,7 @@ classifiers = [
     "Topic :: System :: Networking",
 ]
 [tool.poetry.dependencies]
-python = ">=3.10.0,<4.0"
+python = ">=3.14.4,<4.0"
 pydantic = "^2.9"
 
 [tool.poetry.group.dev.dependencies]
