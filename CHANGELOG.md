@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Nokia SRL platform driver (`Platform.NOKIA_SRL`) (#245)
 
+### Fixed
+
+- Huawei VRP: parsing configs with multiple `peer-public-key` blocks no longer
+  raises `DuplicateChildError`. The closing `peer-public-key end` line (printed
+  at the same indent as the opening `rsa/dsa/ecc peer-public-key ...` line) is
+  now nested under its opener via an `IndentAdjustRule`.
+
 - Renovate bot configuration (`.github/renovate.json`) to automate Poetry and
   GitHub Actions dependency updates, with weekly lock-file maintenance, grouped
   non-major updates, and immediate vulnerability alerts.

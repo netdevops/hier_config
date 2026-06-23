@@ -89,6 +89,39 @@ def test_comments_stripped() -> None:
     )
 
 
+def test_multiple_peer_public_keys_no_duplicate_child_error() -> None:
+    platform = Platform.HUAWEI_VRP
+    config = get_hconfig(
+        platform,
+        "rsa peer-public-key user1 encoding-type openssh\n"
+        " public-key-code begin\n"
+        "  AAAAB3Nza1\n"
+        "  C1yc2EAAA\n"
+        " public-key-code end\n"
+        "peer-public-key end\n"
+        "#\n"
+        "rsa peer-public-key user2 encoding-type openssh\n"
+        " public-key-code begin\n"
+        "  DDDDB3Nza2\n"
+        " public-key-code end\n"
+        "peer-public-key end\n"
+        "#\n",
+    )
+    assert config.dump_simple() == (
+        "rsa peer-public-key user1 encoding-type openssh",
+        "  public-key-code begin",
+        "    AAAAB3Nza1",
+        "    C1yc2EAAA",
+        "  public-key-code end",
+        "  peer-public-key end",
+        "rsa peer-public-key user2 encoding-type openssh",
+        "  public-key-code begin",
+        "    DDDDB3Nza2",
+        "  public-key-code end",
+        "  peer-public-key end",
+    )
+
+
 def test_sectional_exit_is_quit() -> None:
     platform = Platform.HUAWEI_VRP
     config = get_hconfig_fast_load(
