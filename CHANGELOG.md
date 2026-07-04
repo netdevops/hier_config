@@ -9,16 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [3.6.1] - 2026-07-04
+
 ### Added
 
 - Nokia SRL platform driver (`Platform.NOKIA_SRL`) (#245)
 
-### Fixed
-
-- Huawei VRP: parsing configs with multiple `peer-public-key` blocks no longer
-  raises `DuplicateChildError`. The closing `peer-public-key end` line (printed
-  at the same indent as the opening `rsa/dsa/ecc peer-public-key ...` line) is
-  now nested under its opener via an `IndentAdjustRule`.
+### Changed
 
 - Renovate bot configuration (`.github/renovate.json`) to automate Poetry and
   GitHub Actions dependency updates, with weekly lock-file maintenance, grouped
@@ -26,7 +25,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Collapsed VLAN lines can produce a destructive `no vlan x,y` remediation in Cisco IOS (#264)
+- Huawei VRP: parsing configs with multiple `peer-public-key` blocks no longer
+  raises `DuplicateChildError`. The closing `peer-public-key end` line (printed
+  at the same indent as the opening `rsa/dsa/ecc peer-public-key ...` line) is
+  now nested under its opener via an `IndentAdjustRule` (#266).
+
+- Collapsed VLAN lines can produce a destructive `no vlan x,y` remediation in Cisco IOS (#264, #265).
 
 ---
 
