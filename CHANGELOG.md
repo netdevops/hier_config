@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   GitHub Actions dependency updates, with weekly lock-file maintenance, grouped
   non-major updates, and immediate vulnerability alerts.
 
+### Fixed
+
+- Collapsed VLAN lines can produce a destructive `no vlan x,y` remediation in Cisco IOS (#264)
+
 ---
 
 ## [3.6.0] - 2026-03-26

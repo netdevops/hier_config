@@ -60,6 +60,7 @@ Cisco IOS is hier_config's primary reference platform and the most thoroughly te
 - **Negation**: standard `no ` [negation prefix](glossary.md#negation-prefix). Several commands (such as `logging console`) use [`NegationDefaultWithRule`](glossary.md#negation-negate-with) overrides to emit a specific reset form.
 - **[Sectional exiting](glossary.md#sectional-exiting)**: BGP `peer-policy` and `peer-session` blocks require `exit-peer-policy` and `exit-peer-session` closure tokens.
 - **Per-line substitutions**: strips `Building configuration…` banners and timestamp headers.
+- **VLAN id list splitting**: IOS can render unnamed VLANs collapsed onto a single comma/range line (e.g. `vlan 69,381`, `vlan 10-12`), depending on how the VLANs were created — named VLANs always get their own block, and the grouping shifts as VLANs are named or unnamed. When such a collapsed line is present, a post-load callback splits it into one `vlan <id>` block each so the VLANs diff block-to-block against an intended config that lists them separately — avoiding a destructive `no vlan 69,381`.
 
 Platform enum: `Platform.CISCO_IOS`
 
