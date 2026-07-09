@@ -219,6 +219,77 @@ def test_flow_exporter_template_indent_adjust() -> None:
     )
 
 
+def test_flow_exporter_template_data_options_timeout_indent_adjust() -> None:
+    """Test 'template data timeout' / 'template options timeout' inside flow exporter-map.
+
+    Follow-up to issue #205: the negative lookahead added there covered only the bare
+    'template timeout' form. The 'template data timeout' and 'template options timeout'
+    leaf forms still triggered the indent_adjust rule, and with no 'end-template' ever
+    arriving, every subsequent line in the config was nested under them.
+    """
+    platform = Platform.CISCO_XR
+    running_config = get_hconfig_fast_load(
+        platform,
+        (
+            "flow exporter-map EXPORTER1",
+            " version v9",
+            "  options interface-table timeout 300",
+            "  options sampler-table timeout 300",
+            "  template data timeout 15",
+            "  template options timeout 15",
+            " !",
+            " transport udp 9999",
+            "!",
+            "interface Loopback0",
+            " ipv4 address 10.0.0.1 255.255.255.255",
+            "!",
+            "router bgp 65000",
+            " neighbor 10.0.0.2",
+            "  remote-as 65001",
+        ),
+    )
+    # Everything after the flow exporter-map must remain at the top level; with the
+    # unguarded rule it is all swallowed under 'template data timeout 15'.
+    assert running_config.get_child(equals="interface Loopback0") is not None
+    assert running_config.get_child(equals="router bgp 65000") is not None
+    exporter = running_config.get_child(equals="flow exporter-map EXPORTER1")
+    assert exporter is not None
+    version = exporter.get_child(equals="version v9")
+    assert version is not None
+    assert version.get_child(equals="template data timeout 15") is not None
+    assert version.get_child(equals="template options timeout 15") is not None
+
+    generated_config = get_hconfig_fast_load(
+        platform,
+        (
+            "flow exporter-map EXPORTER1",
+            " version v9",
+            "  options interface-table timeout 300",
+            "  options sampler-table timeout 300",
+            "  template data timeout 15",
+            "  template options timeout 15",
+            " !",
+            " transport udp 9999",
+            "!",
+            "interface Loopback0",
+            " ipv4 address 10.0.0.1 255.255.255.255",
+            "!",
+            "router bgp 65000",
+            " neighbor 10.0.0.3",
+            "  remote-as 65001",
+        ),
+    )
+    remediation_config = running_config.config_to_get_to(generated_config)
+    assert remediation_config.dump_simple(sectional_exiting=True) == (
+        "router bgp 65000",
+        "  no neighbor 10.0.0.2",
+        "  neighbor 10.0.0.3",
+        "    remote-as 65001",
+        "    exit",
+        "  root",
+    )
+
+
 def test_template_block_indent_adjust() -> None:
     """Test that template blocks still parse correctly with the indent_adjust rule."""
     platform = Platform.CISCO_XR

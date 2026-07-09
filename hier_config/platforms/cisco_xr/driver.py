@@ -151,7 +151,10 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
             ],
             indent_adjust=[
                 IndentAdjustRule(
-                    start_expression="^\\s*template(?!\\s+timeout)",
+                    # Exclude the flow exporter-map leaf forms `template timeout`,
+                    # `template data timeout`, and `template options timeout` so they
+                    # are not mistaken for a `template ... end-template` block.
+                    start_expression="^\\s*template(?!\\s+(?:data\\s+|options\\s+)?timeout)",
                     end_expression="^\\s*end-template",
                 ),
             ],
