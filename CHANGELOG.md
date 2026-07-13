@@ -11,6 +11,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [3.6.2] - 2026-07-13
+
+### Fixed
+
+- Cisco IOS-XR: the `indent_adjust` rule no longer misfires on the
+  `template data timeout` and `template options timeout` leaves inside a
+  `flow exporter-map` version block. Because no `end-template` follows these
+  leaves, the parser previously nested every subsequent configuration line
+  under them, silently collapsing the tree. Follow-up to #205 (#268).
+
+---
+
 ## [3.6.1] - 2026-07-04
 
 ### Added
