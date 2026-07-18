@@ -117,6 +117,9 @@ class HConfigDriverRules(BaseModel):  # pylint: disable=too-many-instance-attrib
     post_load_callbacks: list[Callable[[HConfig], None]] = Field(
         default_factory=_post_load_callbacks_default
     )
+    remediation_transform_callbacks: list[Callable[[HConfig], None]] = Field(
+        default_factory=_post_load_callbacks_default
+    )
     sectional_exiting: list[SectionalExitingRule] = Field(
         default_factory=_sectional_exiting_rules_default
     )

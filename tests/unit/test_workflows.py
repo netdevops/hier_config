@@ -1,6 +1,6 @@
 import pytest
 
-from hier_config import HConfig, WorkflowRemediation
+from hier_config import HConfig, RemediationPlugin, WorkflowRemediation
 from hier_config.exceptions import IncompatibleDriverError
 from hier_config.models import Platform, TagRule
 
@@ -72,3 +72,40 @@ def test_rollback_config_reverts_changes(wfr: WorkflowRemediation) -> None:
     )
     expected_text = "no vlan 4\nno interface Vlan4\nvlan 3\n  name switch_mgmt_10.0.4.0/24\ninterface Vlan2\n  no mtu 9000\n  no ip access-group TEST in\n  shutdown\ninterface Vlan3\n  description switch_mgmt_10.0.4.0/24\n  ip address 10.0.4.1 255.255.0.0"
     assert rollback_text == expected_text
+
+
+def test_remediation_transform_callbacks_applied() -> None:
+    """Driver remediation_transform_callbacks run on the remediation config (#180)."""
+    running_config = HConfig.from_text(Platform.CISCO_IOS, "hostname old\n")
+    generated_config = HConfig.from_text(Platform.CISCO_IOS, "hostname new\n")
+
+    def add_marker(remediation: HConfig) -> None:
+        remediation.add_child("end")
+
+    running_config.driver.rules.remediation_transform_callbacks.append(add_marker)
+    workflow = WorkflowRemediation(running_config, generated_config)
+
+    assert workflow.remediation_config.get_child(equals="end") is not None
+
+
+def test_remediation_plugin_applied() -> None:
+    """User plugins transform the remediation config (#181)."""
+
+    class MarkerPlugin(RemediationPlugin):
+        """Adds a marker line to every remediation."""
+
+        @property
+        def name(self) -> str:
+            return "marker"
+
+        def transform(self, remediation: HConfig) -> None:
+            remediation.add_child("end")
+
+    running_config = HConfig.from_text(Platform.CISCO_IOS, "hostname old\n")
+    generated_config = HConfig.from_text(Platform.CISCO_IOS, "hostname new\n")
+    workflow = WorkflowRemediation(
+        running_config, generated_config, plugins=(MarkerPlugin(),)
+    )
+
+    assert workflow.remediation_config.get_child(equals="end") is not None
+    assert workflow.plugins[0].description == ""

@@ -9,6 +9,7 @@ from .exceptions import (
 )
 from .models import ChangeDetail, MatchRule, Platform, ReportSummary, TagRule, TextStyle
 from .platforms.driver_base import HConfigDriverBase, HConfigDriverRules
+from .plugins import RemediationPlugin
 from .registry import (
     get_hconfig_driver,
     get_registered_platforms,
@@ -32,6 +33,7 @@ __all__ = (
     "InvalidConfigError",
     "MatchRule",
     "Platform",
+    "RemediationPlugin",
     "RemediationReporter",
     "ReportSummary",
     "TagRule",

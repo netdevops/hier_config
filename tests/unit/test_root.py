@@ -6,7 +6,8 @@ from pathlib import Path
 import pytest
 
 from hier_config import HConfig, get_hconfig_driver
-from hier_config.models import Platform
+from hier_config.exceptions import DuplicateChildError
+from hier_config.models import ParentAllowsDuplicateChildRule, Platform
 
 
 def test_bool(platform_a: Platform) -> None:
@@ -200,3 +201,25 @@ def test_len_counts_all_descendants() -> None:
 
     assert len(config) == 4
     assert len(interface) == 2
+
+
+def test_root_duplicate_children_allowed_by_rule() -> None:
+    """A ParentAllowsDuplicateChildRule with empty match_rules applies to the root (#215)."""
+    driver = get_hconfig_driver(Platform.GENERIC)
+    driver.rules.parent_allows_duplicate_child.append(
+        ParentAllowsDuplicateChildRule(match_rules=())
+    )
+    config = HConfig.from_text(driver)
+    child1 = config.add_child("ip prefix-list PL seq 10 permit 10.0.0.0/8")
+    child2 = config.add_child("ip prefix-list PL seq 10 permit 10.0.0.0/8")
+
+    assert child1 is not child2
+    assert len(config.children) == 2
+
+
+def test_root_duplicate_children_denied_by_default() -> None:
+    """Without a root rule, duplicate root children still raise (#215)."""
+    config = HConfig.from_text(Platform.CISCO_IOS)
+    config.add_child("hostname router1")
+    with pytest.raises(DuplicateChildError):
+        config.add_child("hostname router1")

@@ -3,6 +3,7 @@ from logging import getLogger
 
 from .exceptions import IncompatibleDriverError
 from .models import TagRule
+from .plugins import RemediationPlugin
 from .root import HConfig
 
 logger = getLogger(__name__)
@@ -56,9 +57,11 @@ class WorkflowRemediation:
         self,
         running_config: HConfig,
         generated_config: HConfig,
+        plugins: Iterable[RemediationPlugin] = (),
     ) -> None:
         self.running_config = running_config
         self.generated_config = generated_config
+        self.plugins = tuple(plugins)
 
         if running_config.driver.__class__ is not generated_config.driver.__class__:
             message = "The running and generated configs must use the same driver."
@@ -85,6 +88,12 @@ class WorkflowRemediation:
         remediation_config = self.running_config.remediation(
             self.generated_config
         ).set_order_weight()
+
+        # Driver-level transforms (#180), then user plugins (#181).
+        for callback in remediation_config.driver.rules.remediation_transform_callbacks:
+            callback(remediation_config)
+        for plugin in self.plugins:
+            plugin.transform(remediation_config)
 
         self._remediation_config = remediation_config
 

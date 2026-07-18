@@ -448,3 +448,24 @@ interface GigabitEthernet0/1
     for af_child in router_bgp.children:
         if af_child.text.startswith("address-family"):
             assert len(af_child.children) >= 1
+
+
+def test_xml_config_raises_invalid_config_error() -> None:
+    """XML input is detected and rejected with a clear message (#232)."""
+    xml_text = '<?xml version="1.0"?><config><system><name>r1</name></system></config>'
+    with pytest.raises(InvalidConfigError, match="appears to be XML"):
+        HConfig.from_text(Platform.CISCO_IOS, xml_text)
+
+
+def test_json_config_raises_invalid_config_error() -> None:
+    """JSON input is detected and rejected with a clear message (#232)."""
+    json_text = '{"system": {"config": {"hostname": "r1"}}}'
+    with pytest.raises(InvalidConfigError, match="appears to be JSON"):
+        HConfig.from_text(Platform.CISCO_IOS, json_text)
+
+
+def test_curly_brace_junos_config_still_parses() -> None:
+    """Junos hierarchical (curly-brace) config is not misdetected as JSON (#232)."""
+    junos_text = "system {\n    host-name r1;\n}\n"
+    config = HConfig.from_text(Platform.JUNIPER_JUNOS, junos_text)
+    assert config.get_child(equals="set system host-name r1") is not None
