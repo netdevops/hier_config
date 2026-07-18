@@ -167,7 +167,7 @@ def _future_pre(
     return negated_or_recursed, config_children_ignore
 
 
-def compute_future(  # noqa: C901
+def compute_future(  # ruff:ignore[complex-structure]
     source: HConfigBase,
     config: HConfig | HConfigChild,
     future_config: HConfig | HConfigChild,

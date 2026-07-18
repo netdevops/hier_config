@@ -20,7 +20,7 @@ from hier_config.platforms.view_base import (
 )
 
 
-class ConfigViewInterfaceHPProcurve(  # noqa: PLR0904
+class ConfigViewInterfaceHPProcurve(
     InterfaceBundleViewMixin,
     InterfaceNACViewMixin,
     InterfacePhysicalViewMixin,
@@ -98,14 +98,6 @@ class ConfigViewInterfaceHPProcurve(  # noqa: PLR0904
                 continue
 
     @property
-    def is_loopback(self) -> bool:
-        return self.name.lower().startswith("loopback")
-
-    @property
-    def is_svi(self) -> bool:
-        return self.name.lower().startswith("vlan")
-
-    @property
     def nac_control_direction_in(self) -> bool:
         """Determine if the interface has NAC control direction in configured."""
         return (
@@ -159,16 +151,8 @@ class ConfigViewInterfaceHPProcurve(  # noqa: PLR0904
         return None
 
     @property
-    def number(self) -> str:
-        return re.sub(r"^[a-zA-Z-]+", "", self.name)
-
-    @property
     def poe(self) -> bool:
         return not self.config.get_child(equals="no power-over-ethernet")
-
-    @property
-    def port_number(self) -> int:
-        return int(self.number.split("/")[-1].split(".")[0])
 
     @property
     def speed(self) -> tuple[int, ...] | None:
@@ -255,12 +239,6 @@ class HConfigViewHPProcurve(HConfigViewBase):
         if gateway := self.config.get_child(startswith="ip default-gateway "):
             return IPv4Address(gateway.text.split()[2])
         return None
-
-    @property
-    def location(self) -> str:
-        if location := self.config.get_child(startswith="snmp-server location "):
-            return location.text.split(maxsplit=2)[2].replace('"', "")
-        return ""
 
     @property
     def stack_members(self) -> Iterable[StackMember]:

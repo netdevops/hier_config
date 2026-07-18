@@ -99,7 +99,7 @@ def test_children_eq_with_non_children_type() -> None:
 
     # Directly call __eq__ to verify it returns NotImplemented for non-HConfigChildren types
     # We must use __eq__ directly here to test the NotImplemented return value
-    result = interface.children.__eq__("not a children object")  # pylint: disable=unnecessary-dunder-call # noqa: PLC2801
+    result = interface.children.__eq__("not a children object")  # pylint: disable=unnecessary-dunder-call # ruff:ignore[unnecessary-dunder-call]
     assert result is NotImplemented
 
     # This allows Python to try the reverse comparison, which results in False

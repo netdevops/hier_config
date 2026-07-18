@@ -155,7 +155,7 @@ class TestParsingBenchmarks:
         config_text = _generate_large_ios_config()
         elapsed = _time_fn(lambda: HConfig.from_text(Platform.CISCO_IOS, config_text))
         line_count = config_text.count("\n")
-        print(f"\nget_hconfig: {line_count} lines in {elapsed:.4f}s")  # noqa: T201
+        print(f"\nget_hconfig: {line_count} lines in {elapsed:.4f}s")  # ruff:ignore[print]
         assert elapsed < 5.0, f"Parsing took {elapsed:.2f}s, expected < 5s"
 
     @staticmethod
@@ -164,7 +164,7 @@ class TestParsingBenchmarks:
         config_text = _generate_large_xr_config()
         elapsed = _time_fn(lambda: HConfig.from_text(Platform.CISCO_XR, config_text))
         line_count = config_text.count("\n")
-        print(f"\nget_hconfig (XR): {line_count} lines in {elapsed:.4f}s")  # noqa: T201
+        print(f"\nget_hconfig (XR): {line_count} lines in {elapsed:.4f}s")  # ruff:ignore[print]
         assert elapsed < 5.0, f"Parsing took {elapsed:.2f}s, expected < 5s"
 
     @staticmethod
@@ -175,7 +175,7 @@ class TestParsingBenchmarks:
         elapsed = _time_fn(
             lambda: HConfig.from_lines(Platform.CISCO_IOS, config_lines),
         )
-        print(f"\nget_hconfig_fast_load: {len(config_lines)} lines in {elapsed:.4f}s")  # noqa: T201
+        print(f"\nget_hconfig_fast_load: {len(config_lines)} lines in {elapsed:.4f}s")  # ruff:ignore[print]
         assert elapsed < 5.0, f"Fast load took {elapsed:.2f}s, expected < 5s"
 
     @staticmethod
@@ -189,7 +189,7 @@ class TestParsingBenchmarks:
             lambda: HConfig.from_lines(Platform.CISCO_IOS, config_lines),
         )
         ratio = time_full / time_fast if time_fast > 0 else float("inf")
-        print(  # noqa: T201
+        print(  # ruff:ignore[print]
             f"\nget_hconfig: {time_full:.4f}s, "
             f"fast_load: {time_fast:.4f}s, "
             f"ratio: {ratio:.1f}x"
@@ -216,7 +216,7 @@ class TestRemediationBenchmarks:
         generated = HConfig.from_text(Platform.CISCO_IOS, generated_text)
 
         elapsed = _time_fn(lambda: running.remediation(generated))
-        print(f"\nRemediation (10% diff): {elapsed:.4f}s")  # noqa: T201
+        print(f"\nRemediation (10% diff): {elapsed:.4f}s")  # ruff:ignore[print]
         assert elapsed < 5.0, f"Remediation took {elapsed:.2f}s, expected < 5s"
 
     @staticmethod
@@ -229,7 +229,7 @@ class TestRemediationBenchmarks:
         generated = HConfig.from_text(Platform.CISCO_IOS, generated_text)
 
         elapsed = _time_fn(lambda: running.remediation(generated))
-        print(f"\nRemediation (100% diff): {elapsed:.4f}s")  # noqa: T201
+        print(f"\nRemediation (100% diff): {elapsed:.4f}s")  # ruff:ignore[print]
         assert elapsed < 10.0, f"Remediation took {elapsed:.2f}s, expected < 10s"
 
     @staticmethod
@@ -249,7 +249,7 @@ class TestRemediationBenchmarks:
         generated = HConfig.from_text(Platform.CISCO_IOS, "\n".join(lines))
 
         elapsed = _time_fn(lambda: running.remediation(generated))
-        print(f"\nRemediation (completely different): {elapsed:.4f}s")  # noqa: T201
+        print(f"\nRemediation (completely different): {elapsed:.4f}s")  # ruff:ignore[print]
         assert elapsed < 10.0, f"Remediation took {elapsed:.2f}s, expected < 10s"
 
 
@@ -263,7 +263,7 @@ class TestIterationBenchmarks:
 
         elapsed = _time_fn(lambda: list(config.all_children_sorted()))
         child_count = len(list(config.all_children()))
-        print(f"\nall_children_sorted: {child_count} nodes in {elapsed:.4f}s")  # noqa: T201
+        print(f"\nall_children_sorted: {child_count} nodes in {elapsed:.4f}s")  # ruff:ignore[print]
         assert elapsed < 2.0, f"Iteration took {elapsed:.2f}s, expected < 2s"
 
     @staticmethod
@@ -273,7 +273,7 @@ class TestIterationBenchmarks:
 
         elapsed = _time_fn(config.to_lines)
         line_count = len(config.to_lines())
-        print(f"\nto_lines: {line_count} lines in {elapsed:.4f}s")  # noqa: T201
+        print(f"\nto_lines: {line_count} lines in {elapsed:.4f}s")  # ruff:ignore[print]
         assert elapsed < 2.0, f"to_lines took {elapsed:.2f}s, expected < 2s"
 
     @staticmethod
@@ -282,5 +282,5 @@ class TestIterationBenchmarks:
         config = HConfig.from_text(Platform.CISCO_IOS, _generate_large_ios_config())
 
         elapsed = _time_fn(config.deep_copy)
-        print(f"\ndeep_copy: {elapsed:.4f}s")  # noqa: T201
+        print(f"\ndeep_copy: {elapsed:.4f}s")  # ruff:ignore[print]
         assert elapsed < 5.0, f"deep_copy took {elapsed:.2f}s, expected < 5s"

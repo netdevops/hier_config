@@ -1,9 +1,8 @@
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from logging import getLogger
 
 from .exceptions import IncompatibleDriverError
 from .models import TagRule
-from .plugins import RemediationPlugin
 from .root import HConfig
 
 logger = getLogger(__name__)
@@ -57,7 +56,7 @@ class WorkflowRemediation:
         self,
         running_config: HConfig,
         generated_config: HConfig,
-        plugins: Iterable[RemediationPlugin] = (),
+        plugins: Iterable[Callable[[HConfig], None]] = (),
     ) -> None:
         self.running_config = running_config
         self.generated_config = generated_config
@@ -93,7 +92,7 @@ class WorkflowRemediation:
         for callback in remediation_config.driver.rules.remediation_transform_callbacks:
             callback(remediation_config)
         for plugin in self.plugins:
-            plugin.transform(remediation_config)
+            plugin(remediation_config)
 
         self._remediation_config = remediation_config
 

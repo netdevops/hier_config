@@ -1,8 +1,10 @@
 from abc import ABC, abstractmethod
 from collections.abc import Iterable
 from ipaddress import IPv4Address, IPv4Interface
+from re import sub
 
 from hier_config.child import HConfigChild
+from hier_config.platforms.functions import expand_range
 from hier_config.platforms.models import (
     InterfaceDot1qMode,
     InterfaceDuplex,
@@ -31,14 +33,16 @@ class ConfigViewInterfaceBase(ABC):
         self.config = config
 
     @property
-    @abstractmethod
     def description(self) -> str:
         """Determine the interface's description."""
+        if child := self.config.get_child(startswith="description "):
+            return child.text.split(maxsplit=1)[1]
+        return ""
 
     @property
-    @abstractmethod
     def enabled(self) -> bool:
         """Determines if the interface is enabled."""
+        return not self.config.get_child(equals="shutdown")
 
     @property
     def ipv4_interface(self) -> IPv4Interface | None:
@@ -51,9 +55,9 @@ class ConfigViewInterfaceBase(ABC):
         """Determine the configured IPv4Interface, address/prefix, objects."""
 
     @property
-    @abstractmethod
     def is_loopback(self) -> bool:
         """Determine if the interface is a loopback."""
+        return self.name.lower().startswith("loopback")
 
     @property
     def is_subinterface(self) -> bool:
@@ -61,19 +65,19 @@ class ConfigViewInterfaceBase(ABC):
         return "." in self.name
 
     @property
-    @abstractmethod
     def is_svi(self) -> bool:
         """Determine if the interface is an SVI."""
+        return self.name.lower().startswith("vlan")
 
     @property
-    @abstractmethod
     def name(self) -> str:
         """Determine the name of the interface."""
+        return self.config.text.split()[1]
 
     @property
-    @abstractmethod
     def number(self) -> str:
         """Remove letters from the interface name, leaving just numbers and symbols."""
+        return sub(r"^[a-zA-Z-]+", "", self.name)
 
     @property
     def parent_name(self) -> str | None:
@@ -83,9 +87,9 @@ class ConfigViewInterfaceBase(ABC):
         return None
 
     @property
-    @abstractmethod
     def port_number(self) -> int:
         """Determine the interface port number."""
+        return int(self.number.split("/")[-1].split(".")[0])
 
     @property
     def subinterface_number(self) -> int | None:
@@ -99,17 +103,40 @@ class ConfigViewInterfaceBase(ABC):
 
 
 class InterfaceBundleViewMixin(ConfigViewInterfaceBase, ABC):
-    """Mixin for platforms that support bundle (LAG/port-channel) interfaces."""
+    """Mixin for platforms that support bundle (LAG/port-channel) interfaces.
+
+    ``_bundle_membership_prefix`` is the child command prefix that assigns an
+    interface to a bundle, e.g. ``"channel-group "`` / ``"bundle id "``. It is
+    required by the default ``bundle_id``/``bundle_member_interfaces``
+    implementations; the bundle id is the word at index
+    ``len(_bundle_membership_prefix.split())`` of the matching child.
+    """
+
+    _bundle_membership_prefix: str = ""
 
     @property
-    @abstractmethod
     def bundle_id(self) -> str | None:
         """Determine the bundle ID."""
+        if membership := self.config.get_child(
+            startswith=self._bundle_membership_prefix,
+        ):
+            return membership.text.split()[len(self._bundle_membership_prefix.split())]
+        return None
 
     @property
-    @abstractmethod
     def bundle_member_interfaces(self) -> Iterable[str]:
         """Determine the member interfaces of a bundle."""
+        if not self.is_bundle:
+            return
+        id_index = len(self._bundle_membership_prefix.split())
+        number = self.number
+        for interface in self.config.parent.get_children(startswith="interface "):
+            if (
+                membership := interface.get_child(
+                    startswith=self._bundle_membership_prefix,
+                )
+            ) and membership.text.split()[id_index] == number:
+                yield interface.text.split()[1]
 
     @property
     def bundle_name(self) -> str | None:
@@ -130,7 +157,15 @@ class InterfaceBundleViewMixin(ConfigViewInterfaceBase, ABC):
 
 
 class InterfaceVlanViewMixin(ConfigViewInterfaceBase, ABC):
-    """Mixin for platforms that support 802.1Q VLAN interface configuration."""
+    """Mixin for platforms that support 802.1Q VLAN interface configuration.
+
+    ``_encapsulation_prefix`` is the subinterface dot1q encapsulation command
+    prefix used by the default ``native_vlan`` implementation; the VLAN id is
+    the word at index ``len(_encapsulation_prefix.split())`` of the matching
+    child.
+    """
+
+    _encapsulation_prefix: str = "encapsulation dot1q "
 
     @property
     def dot1q_mode(self) -> InterfaceDot1qMode | None:
@@ -144,19 +179,55 @@ class InterfaceVlanViewMixin(ConfigViewInterfaceBase, ABC):
         return None
 
     @property
-    @abstractmethod
     def native_vlan(self) -> int | None:
         """Determine the native VLAN."""
+        # It's configured as a sub-interface
+        if self.is_subinterface and (
+            vlan := self.config.get_child(startswith=self._encapsulation_prefix)
+        ):
+            return int(vlan.text.split()[len(self._encapsulation_prefix.split())])
+
+        # It's not a switchport
+        if (
+            self.config.get_child(equals="no switchport")
+            or self.config.get_child(startswith="ip address ")
+            or self.is_loopback
+            or self.is_svi
+        ):
+            return None
+
+        # It's configured as a trunk
+        if self.config.get_child(equals="switchport mode trunk"):
+            if vlan := self.config.get_child(
+                startswith="switchport trunk native vlan ",
+            ):
+                return int(vlan.text.split()[4])
+
+            return None
+
+        # It's either dynamic or configured as an access port
+        if vlan := self.config.get_child(startswith="switchport access vlan "):
+            return int(vlan.text.split()[3])
+
+        # Default VLAN
+        return 1
 
     @property
-    @abstractmethod
     def tagged_all(self) -> bool:
         """Determine if all the VLANs are tagged."""
+        return bool(
+            self.config.get_child(equals="switchport mode trunk")
+            and not self.tagged_vlans,
+        )
 
     @property
-    @abstractmethod
     def tagged_vlans(self) -> tuple[int, ...]:
         """Determine the tagged VLANs."""
+        if child := self.config.get_child(
+            re_search="^switchport trunk allowed vlan [0-9,-]+$",
+        ):
+            return expand_range(child.text.split()[4])
+        return ()
 
 
 class InterfaceNACViewMixin(ConfigViewInterfaceBase, ABC):
@@ -261,9 +332,9 @@ class HConfigViewBase(ABC):
         pass
 
     @property
-    @abstractmethod
     def interface_names_mentioned(self) -> frozenset[str]:
-        """Returns a set with all the interface names mentioned in the config."""
+        """Determine all the interface names mentioned in the config."""
+        return frozenset(model.name for model in self.interface_views)
 
     def interface_view_by_name(self, name: str) -> ConfigViewInterfaceBase | None:
         for interface_view in self.interface_views:
@@ -292,9 +363,11 @@ class HConfigViewBase(ABC):
         pass
 
     @property
-    @abstractmethod
     def location(self) -> str:
-        pass
+        """Determine the SNMP location."""
+        if location := self.config.get_child(startswith="snmp-server location "):
+            return location.text.split(maxsplit=2)[2].replace('"', "")
+        return ""
 
     @property
     def module_numbers(self) -> Iterable[int]:
@@ -309,9 +382,12 @@ class HConfigViewBase(ABC):
                 yield module_number
 
     @property
-    @abstractmethod
     def stack_members(self) -> Iterable[StackMember]:
-        """Determine the configured stack members."""
+        """Determine the configured stack members.
+
+        Defaults to an empty tuple for platforms without stacking support.
+        """
+        return ()
 
     @property
     def vlan_ids(self) -> frozenset[int]:
@@ -319,6 +395,37 @@ class HConfigViewBase(ABC):
         return frozenset(vlan.id for vlan in self.vlans)
 
     @property
-    @abstractmethod
     def vlans(self) -> Iterable[Vlan]:
-        """Determine the configured VLANs."""
+        """Determine the configured VLANs.
+
+        Yields explicitly defined VLAN blocks first, then any remaining
+        unnamed VLANs mentioned on interfaces (e.g. subinterface
+        encapsulations or switchport membership).
+        """
+        yielded_vlans: set[int] = set()
+
+        # Yield explicitly defined VLANs
+        for child in self.config.get_children(re_search="^vlan [0-9,-]+$"):
+            vlan_name = None
+            if name := child.get_child(startswith="name "):
+                _, vlan_name = name.text.split(maxsplit=1)
+                vlan_name = vlan_name.replace('"', "")
+            for vlan_id in expand_range(child.text.split()[1]):
+                yielded_vlans.add(vlan_id)
+                yield Vlan(
+                    id=vlan_id,
+                    name=vlan_name or None,
+                )
+
+        # Yield any remaining unnamed VLANs mentioned on interfaces
+        for interface_view in self.interface_views:
+            if not isinstance(interface_view, InterfaceVlanViewMixin):
+                continue
+            if (
+                native_vlan := interface_view.native_vlan
+            ) and native_vlan not in yielded_vlans:
+                yielded_vlans.add(native_vlan)
+                yield Vlan(
+                    id=native_vlan,
+                    name=None,
+                )

@@ -33,17 +33,28 @@ def get_hconfig_view(config: HConfig) -> HConfigViewBase:
 def _detect_structured_format(config_text: str) -> str | None:
     """Detect structured config formats that the text parser cannot ingest (#232).
 
-    Only guards the from_text() path; from_lines() assumes pre-processed CLI
-    lines and performs no detection.
+    Guards the raw-text entry points (from_text() and the str form of
+    from_lines()); pre-split lines are assumed to be CLI text.
     """
-    stripped = config_text.lstrip()
-    if stripped.startswith("<"):
+    prefix = config_text[:64].lstrip()
+    if prefix.startswith("<"):
         return "XML"
-    if stripped.startswith(("{", "[")):
+    if prefix.startswith(("{", "[")):
         with suppress(JSONDecodeError):
-            loads(stripped)
+            loads(config_text)
             return "JSON"
     return None
+
+
+def _reject_structured_format(config_text: str) -> None:
+    if detected := _detect_structured_format(config_text):
+        message = (
+            f"The config appears to be {detected}, which hier_config does not"
+            " parse. Convert it to the platform's indented CLI text first"
+            " (set-style configs are supported natively by the Juniper JunOS,"
+            " VyOS, and Nokia SRL drivers)."
+        )
+        raise InvalidConfigError(message)
 
 
 def hconfig_from_text(
@@ -53,14 +64,7 @@ def hconfig_from_text(
     if isinstance(config_raw, Path):
         config_raw = config_raw.read_text(encoding="utf8")
 
-    if detected := _detect_structured_format(config_raw):
-        message = (
-            f"The config appears to be {detected}, which hier_config does not"
-            " parse. Convert it to the platform's indented CLI text first"
-            " (set-style configs are supported natively by the Juniper JunOS,"
-            " VyOS, and Nokia SRL drivers)."
-        )
-        raise InvalidConfigError(message)
+    _reject_structured_format(config_raw)
 
     config = HConfig(_get_driver(platform_or_driver))
     for rule in config.driver.rules.full_text_sub:
@@ -81,7 +85,7 @@ def hconfig_from_dump(
     platform_or_driver: Platform | str | HConfigDriverBase, dump: Dump
 ) -> HConfig:
     """Load an HConfig dump."""
-    config = hconfig_from_text(_get_driver(platform_or_driver))
+    config = HConfig(_get_driver(platform_or_driver))
     last_item: HConfig | HConfigChild = config
     for item in dump.lines:
         # parent is the root
@@ -110,8 +114,9 @@ def hconfig_from_lines(
     lines: list[str] | tuple[str, ...] | str,
 ) -> HConfig:
     driver = _get_driver(platform_or_driver)
-    config = hconfig_from_text(driver)
+    config = HConfig(driver)
     if isinstance(lines, str):
+        _reject_structured_format(lines)
         lines = lines.splitlines()
 
     current_section: HConfig | HConfigChild = config
@@ -223,9 +228,7 @@ class _ConfigTextLoader:  # pylint: disable=too-many-instance-attributes,too-few
         for line in config_text.splitlines():
             if self.in_banner:
                 self._process_banner_line(line)
-            elif self._detect_banner_start(line):
-                pass
-            else:
+            elif not self._detect_banner_start(line):
                 self._process_config_line(line)
         if self.in_banner:
             message = "we are still in a banner for some reason"

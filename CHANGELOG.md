@@ -66,6 +66,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Shared interface-view logic hoisted out of the five platform view files into
+  concrete defaults on `ConfigViewInterfaceBase`, the capability mixins
+  (parameterized by `_bundle_membership_prefix` / `_encapsulation_prefix`
+  hooks), `HConfigViewBase`, and a new `parse_ipv4_interface()` helper in
+  `hier_config.platforms.functions` — removing ~390 duplicated lines (#227).
+- `WorkflowRemediation(plugins=...)` accepts any `Callable[[HConfig], None]`;
+  `RemediationPlugin` instances are now callable (#181).
+- The structured-format guard (#232) also covers the raw-`str` form of
+  `HConfig.from_lines()`, inspects only a bounded prefix of the input, and
+  `from_lines()`/`from_dump()` no longer route empty-tree construction through
+  the full text-parsing pipeline.
+- `HConfig` calls the `tree_algorithms` functions directly; the pass-through
+  delegation shims on `HConfigBase` were removed (#217).
 - Negation rules are unified into a single `NegationRule` model with a
   `NegationStrategy` enum — `REPLACE` (was `negate_with`), `DEFAULT` (was
   `negation_default_when`), and `REGEX_SUB` (was `negation_sub`) — in one

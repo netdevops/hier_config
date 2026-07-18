@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 logger = getLogger(__name__)
 
 
-class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attributes
+class HConfigChild(  # ruff:ignore[too-many-public-methods]  pylint: disable=too-many-instance-attributes
     HConfigBase,
 ):
     """A single node in the hierarchical configuration tree.
@@ -110,7 +110,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
 
     @property
     def root(self) -> HConfig:
-        """Returns the HConfig object at the base of the tree."""
+        """The HConfig object at the base of the tree."""
         return self.parent.root
 
     def lines(self, *, sectional_exiting: bool = False) -> Iterable[str]:
@@ -147,7 +147,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
 
     @property
     def depth(self) -> int:
-        """Returns the distance to the root HConfig object i.e. indent level."""
+        """The distance to the root HConfig object i.e. indent level."""
         return self.parent.depth + 1
 
     def move(self, new_parent: HConfig | HConfigChild) -> None:
@@ -271,12 +271,12 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
 
     @property
     def is_leaf(self) -> bool:
-        """Returns True if there are no children and is not an instance of HConfig."""
+        """True if there are no children and is not an instance of HConfig."""
         return not self.is_branch
 
     @property
     def is_branch(self) -> bool:
-        """Returns True if there are children or is an instance of HConfig."""
+        """True if there are children or is an instance of HConfig."""
         return bool(self.children)
 
     @property
@@ -419,7 +419,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
             for (child, rule) in zip(reversed(lineage), reversed(rules), strict=True)
         )
 
-    def is_match(  # noqa: PLR0911
+    def is_match(  # ruff:ignore[too-many-return-statements]
         self,
         *,
         equals: str | SetLikeOfStr | None = None,

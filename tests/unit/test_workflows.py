@@ -98,14 +98,28 @@ def test_remediation_plugin_applied() -> None:
         def name(self) -> str:
             return "marker"
 
-        def transform(self, remediation: HConfig) -> None:  # noqa: PLR6301
+        def transform(self, remediation: HConfig) -> None:  # ruff:ignore[no-self-use]
             remediation.add_child("end")
 
     running_config = HConfig.from_text(Platform.CISCO_IOS, "hostname old\n")
     generated_config = HConfig.from_text(Platform.CISCO_IOS, "hostname new\n")
+    plugin = MarkerPlugin()
+    workflow = WorkflowRemediation(running_config, generated_config, plugins=(plugin,))
+
+    assert workflow.remediation_config.get_child(equals="end") is not None
+    assert not plugin.description
+
+
+def test_plain_callable_plugin_applied() -> None:
+    """plugins= accepts bare callables, not just RemediationPlugin instances."""
+    running_config = HConfig.from_text(Platform.CISCO_IOS, "hostname old\n")
+    generated_config = HConfig.from_text(Platform.CISCO_IOS, "hostname new\n")
+
+    def add_marker(remediation: HConfig) -> None:
+        remediation.add_child("end")
+
     workflow = WorkflowRemediation(
-        running_config, generated_config, plugins=(MarkerPlugin(),)
+        running_config, generated_config, plugins=(add_marker,)
     )
 
     assert workflow.remediation_config.get_child(equals="end") is not None
-    assert not workflow.plugins[0].description

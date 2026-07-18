@@ -6,6 +6,12 @@ from typing import TYPE_CHECKING
 from .base import HConfigBase
 from .child import HConfigChild
 from .models import Dump, DumpLine, Platform, ReferenceLocation
+from .tree_algorithms import (
+    compute_difference,
+    compute_future,
+    compute_remediation,
+    compute_with_tags,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -19,7 +25,7 @@ logger = getLogger(__name__)
 # - Cases of children.index() could be replaced with an identity based approach.
 
 
-class HConfig(HConfigBase):  # noqa: PLR0904
+class HConfig(HConfigBase):  # ruff:ignore[too-many-public-methods]
     """A class for representing and comparing Cisco like configurations in a
     hierarchical tree data structure.
     """
@@ -37,7 +43,9 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         config_text: Path | str = "",
     ) -> HConfig:
         """Create an HConfig from raw configuration text (or a Path to it)."""
-        from .constructors import hconfig_from_text  # noqa: PLC0415
+        from .constructors import (
+            hconfig_from_text,
+        )
 
         return hconfig_from_text(platform_or_driver, config_text)
 
@@ -48,7 +56,9 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         lines: list[str] | tuple[str, ...] | str,
     ) -> HConfig:
         """Create an HConfig from pre-split configuration lines (fast load)."""
-        from .constructors import hconfig_from_lines  # noqa: PLC0415
+        from .constructors import (
+            hconfig_from_lines,
+        )
 
         return hconfig_from_lines(platform_or_driver, lines)
 
@@ -59,7 +69,9 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         dump: Dump,
     ) -> HConfig:
         """Reconstruct an HConfig from a serialized Dump."""
-        from .constructors import hconfig_from_dump  # noqa: PLC0415
+        from .constructors import (
+            hconfig_from_dump,
+        )
 
         return hconfig_from_dump(platform_or_driver, dump)
 
@@ -94,17 +106,17 @@ class HConfig(HConfigBase):  # noqa: PLR0904
 
     @property
     def root(self) -> HConfig:
-        """Returns the HConfig object at the base of the tree."""
+        """The HConfig object at the base of the tree."""
         return self
 
     @property
     def is_leaf(self) -> bool:
-        """Returns True if there are no children and is not an instance of HConfig."""
+        """True if there are no children and is not an instance of HConfig."""
         return False
 
     @property
     def is_branch(self) -> bool:
-        """Returns True if there are children or is an instance of HConfig."""
+        """True if there are children or is an instance of HConfig."""
         return True
 
     def instantiate_child(self, text: str) -> HConfigChild:
@@ -144,7 +156,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
             raise TypeError(message)
         return base
 
-    def lineage(self) -> Iterator[HConfigChild]:  # noqa: PLR6301
+    def lineage(self) -> Iterator[HConfigChild]:  # ruff:ignore[no-self-use]
         """Yields the lineage of parent objects, up to but excluding the root."""
         yield from ()
 
@@ -172,12 +184,12 @@ class HConfig(HConfigBase):  # noqa: PLR0904
 
     @property
     def depth(self) -> int:
-        """Returns the distance to the root HConfig object i.e. indent level."""
+        """The distance to the root HConfig object i.e. indent level."""
         return 0
 
     def difference(self, target: HConfig) -> HConfig:
         """Creates a new HConfig object with the config from self that is not in target."""
-        return self._difference(target, HConfig(self.driver))
+        return compute_difference(self, target, HConfig(self.driver))
 
     def remediation(
         self,
@@ -191,7 +203,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         if delta is None:
             delta = HConfig(self.driver)
 
-        return self._remediation(target, delta)
+        return compute_remediation(self, target, delta)
 
     def add_ancestor_copy_of(
         self,
@@ -222,12 +234,12 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         especially important.
         """
         future_config = HConfig(self.driver)
-        self._future(config, future_config)
+        compute_future(self, config, future_config)
         return future_config
 
     def with_tags(self, tags: Iterable[str]) -> HConfig:
         """Returns a new instance recursively containing children that only have a subset of tags."""
-        return self._with_tags(frozenset(tags), HConfig(self.driver))
+        return compute_with_tags(self, frozenset(tags), HConfig(self.driver))
 
     def all_children_sorted_by_tags(
         self,
@@ -252,7 +264,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         extract their names, and search for references across the config tree.
         Objects with zero references are yielded.
         """
-        from re import search as _re_search  # noqa: PLC0415
+        from re import search as _re_search
 
         for rule in self.driver.rules.unused_objects:
             seen_names: set[str] = set()
@@ -274,8 +286,8 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         reference_locations: tuple[ReferenceLocation, ...],
     ) -> bool:
         """Return True if *name* is found in any reference location."""
-        from re import escape as _re_escape  # noqa: PLC0415
-        from re import search as _re_search  # noqa: PLC0415
+        from re import escape as _re_escape
+        from re import search as _re_search
 
         for ref_location in reference_locations:
             pattern = ref_location.reference_re.format(name=_re_escape(name))

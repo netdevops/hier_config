@@ -3,16 +3,10 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from itertools import chain
 from logging import getLogger
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING
 
 from .children import HConfigChildren
 from .exceptions import DuplicateChildError
-from .tree_algorithms import (
-    compute_difference,
-    compute_future,
-    compute_remediation,
-    compute_with_tags,
-)
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -22,18 +16,17 @@ if TYPE_CHECKING:
     from .platforms.driver_base import HConfigDriverBase
     from .root import HConfig
 
-    _HConfigRootOrChildT = TypeVar("_HConfigRootOrChildT", bound=HConfig | HConfigChild)
 
 logger = getLogger(__name__)
 
 
-class HConfigBase(ABC):  # noqa: PLR0904
+class HConfigBase(ABC):  # ruff:ignore[too-many-public-methods]
     """Abstract base class for the hierarchical configuration tree.
 
     Both `HConfig` (the root) and `HConfigChild` (individual nodes) inherit from
     this class.  It provides the shared tree-manipulation API: adding, searching,
-    and diffing children, as well as the `_future` / `_remediation` algorithms
-    that power `WorkflowRemediation`.
+    and diffing children. The diff/remediation/future algorithms live in
+    `hier_config.tree_algorithms` and are invoked from `HConfig`.
     """
 
     __slots__ = ("children",)
@@ -104,7 +97,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
         self.children.append(new_child)
         return new_child
 
-    def path(self) -> Iterator[str]:  # noqa: PLR6301
+    def path(self) -> Iterator[str]:  # ruff:ignore[no-self-use]
         yield from ()
 
     def add_deep_copy_of(
@@ -280,14 +273,6 @@ class HConfigBase(ABC):  # noqa: PLR0904
                     for c in target_child.all_children_sorted()
                 )
 
-    def _future(
-        self,
-        config: HConfig | HConfigChild,
-        future_config: HConfig | HConfigChild,
-    ) -> None:
-        """Delegates to :func:`hier_config.tree_algorithms.compute_future`."""
-        compute_future(self, config, future_config)
-
     @abstractmethod
     def instantiate_child(self, text: str) -> HConfigChild:
         pass
@@ -295,27 +280,3 @@ class HConfigBase(ABC):  # noqa: PLR0904
     @abstractmethod
     def _is_duplicate_child_allowed(self) -> bool:
         pass
-
-    def _with_tags(
-        self,
-        tags: frozenset[str],
-        new_instance: _HConfigRootOrChildT,
-    ) -> _HConfigRootOrChildT:
-        """Delegates to :func:`hier_config.tree_algorithms.compute_with_tags`."""
-        return compute_with_tags(self, tags, new_instance)
-
-    def _remediation(
-        self,
-        target: _HConfigRootOrChildT,
-        delta: _HConfigRootOrChildT,
-    ) -> _HConfigRootOrChildT:
-        """Delegates to :func:`hier_config.tree_algorithms.compute_remediation`."""
-        return compute_remediation(self, target, delta)
-
-    def _difference(
-        self,
-        target: _HConfigRootOrChildT,
-        delta: _HConfigRootOrChildT,
-    ) -> _HConfigRootOrChildT:
-        """Delegates to :func:`hier_config.tree_algorithms.compute_difference`."""
-        return compute_difference(self, target, delta)

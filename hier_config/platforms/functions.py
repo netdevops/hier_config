@@ -1,3 +1,31 @@
+from ipaddress import IPv4Interface
+
+
+def parse_ipv4_interface(words: list[str]) -> IPv4Interface | None:
+    """Parse the address words of an interface IPv4 address command.
+
+    Handles the three common forms:
+
+    - a single CIDR word: ``10.0.0.1/24``
+    - an address and a slash-prefixed length: ``10.0.0.1 /24``
+    - an address and a netmask: ``10.0.0.1 255.255.255.0``
+
+    Returns None when the words do not form a valid IPv4 interface.
+    """
+    if not words:
+        return None
+    if len(words) == 1 or "/" in words[0]:
+        address = words[0]
+    elif words[1].startswith("/"):
+        address = f"{words[0]}{words[1]}"
+    else:
+        address = f"{words[0]}/{words[1]}"
+    try:
+        return IPv4Interface(address)
+    except ValueError:
+        return None
+
+
 def expand_range(number_range_str: str) -> tuple[int, ...]:
     """Expand ranges like 2-5,8,22-45."""
     numbers: list[int] = []

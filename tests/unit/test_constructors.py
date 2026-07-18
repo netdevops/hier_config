@@ -469,3 +469,10 @@ def test_curly_brace_junos_config_still_parses() -> None:
     junos_text = "system {\n    host-name r1;\n}\n"
     config = HConfig.from_text(Platform.JUNIPER_JUNOS, junos_text)
     assert config.get_child(equals="set system host-name r1") is not None
+
+
+def test_json_via_from_lines_str_raises() -> None:
+    """The str form of from_lines gets the same format guard as from_text (#232)."""
+    json_text = '{"system": {"config": {"hostname": "r1"}}}'
+    with pytest.raises(InvalidConfigError, match="appears to be JSON"):
+        HConfig.from_lines(Platform.CISCO_IOS, json_text)

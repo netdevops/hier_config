@@ -21,8 +21,14 @@ class RemediationPlugin(ABC):
 
     Subclasses implement ``transform()``, which receives the computed
     remediation config and may mutate it in place (add safety commands,
-    reorder sections, drop disallowed changes, etc.).
+    reorder sections, drop disallowed changes, etc.). Instances are
+    callable, so anywhere a plain ``Callable[[HConfig], None]`` transform
+    is accepted, a plugin works too.
     """
+
+    def __call__(self, remediation: HConfig) -> None:
+        """Apply this plugin's transform."""
+        self.transform(remediation)
 
     @property
     @abstractmethod
