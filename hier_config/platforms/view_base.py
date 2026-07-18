@@ -117,6 +117,8 @@ class InterfaceBundleViewMixin(ConfigViewInterfaceBase, ABC):
     @property
     def bundle_id(self) -> str | None:
         """Determine the bundle ID."""
+        if not self._bundle_membership_prefix:
+            return None
         if membership := self.config.get_child(
             startswith=self._bundle_membership_prefix,
         ):
@@ -126,7 +128,7 @@ class InterfaceBundleViewMixin(ConfigViewInterfaceBase, ABC):
     @property
     def bundle_member_interfaces(self) -> Iterable[str]:
         """Determine the member interfaces of a bundle."""
-        if not self.is_bundle:
+        if not (self._bundle_membership_prefix and self.is_bundle):
             return
         id_index = len(self._bundle_membership_prefix.split())
         number = self.number
