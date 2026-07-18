@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Remediation right pass no longer allocates a probe `HConfigChild` for matched
+  leaf lines, where the delta subtree is provably empty. Speeds up remediation
+  of mostly-identical configs by ~30% and resolves the long-standing TODO in
+  `_remediation_right()` (#191).
 - `get_hconfig_view()` resolves the view from the driver's `view_class`
   attribute instead of a hardcoded `isinstance` chain; drivers without a view
   raise `DriverNotFoundError` with a `No view registered for driver` message (#187).
