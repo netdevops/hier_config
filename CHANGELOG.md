@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `HConfigBase.__len__()` now counts descendants with a generator instead of
   materializing a tuple of every node, avoiding a large temporary allocation on
   big configuration trees (#188).
+- `dot1q_mode_from_vlans()` is now a concrete static method on `HConfigViewBase`
+  implementing the same semantics as `ConfigViewInterfaceBase.dot1q_mode`
+  (`tagged_all` → `TAGGED_ALL`, tagged VLANs → `TAGGED`, untagged only →
+  `ACCESS`); the per-platform `NotImplementedError` stubs were removed (#228).
 - Changed `style` parameter on `indented_text()` and `RemediationReporter.to_text()` from `str` to `Literal["without_comments", "merged", "with_comments"]` via new `TextStyle` type alias (#189).
 - Renamed `load_hconfig_v2_options` to `load_driver_rules` (#221).
 - Renamed `load_hconfig_v2_tags` to `load_tag_rules` (#221).
