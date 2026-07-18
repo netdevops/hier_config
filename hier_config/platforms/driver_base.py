@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable
 from re import Match, search
+from typing import TYPE_CHECKING, ClassVar
 
 from pydantic import Field, PositiveInt
 
@@ -24,6 +25,9 @@ from hier_config.models import (
     UnusedObjectRule,
 )
 from hier_config.root import HConfig
+
+if TYPE_CHECKING:
+    from hier_config.platforms.view_base import HConfigViewBase
 
 
 def _full_text_sub_rules_default() -> list[FullTextSubRule]:
@@ -148,6 +152,11 @@ class HConfigDriverBase(ABC):
     """Defines all hier_config options, rules, and rule checking methods.
     Override methods as needed.
     """
+
+    #: View class instantiated by ``get_hconfig_view()``. ``None`` means the
+    #: platform has no config view. Set this on a driver subclass to register
+    #: a view for a custom platform or to override a built-in view.
+    view_class: ClassVar[type["HConfigViewBase"] | None] = None
 
     def __init__(self) -> None:
         self.rules = self._instantiate_rules()

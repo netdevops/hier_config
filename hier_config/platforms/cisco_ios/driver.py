@@ -9,6 +9,7 @@ from hier_config.models import (
     PerLineSubRule,
     SectionalExitingRule,
 )
+from hier_config.platforms.cisco_ios.view import HConfigViewCiscoIOS
 from hier_config.platforms.driver_base import HConfigDriverBase, HConfigDriverRules
 from hier_config.root import HConfig
 
@@ -83,6 +84,8 @@ class HConfigDriverCiscoIOS(HConfigDriverBase):
     ``logging console`` negation-with replacement.  Platform enum:
     ``Platform.CISCO_IOS``.
     """
+
+    view_class = HConfigViewCiscoIOS
 
     @staticmethod
     def _instantiate_rules() -> HConfigDriverRules:

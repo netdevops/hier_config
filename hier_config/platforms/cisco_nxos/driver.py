@@ -6,6 +6,7 @@ from hier_config.models import (
     NegationDefaultWithRule,
     PerLineSubRule,
 )
+from hier_config.platforms.cisco_nxos.view import HConfigViewCiscoNXOS
 from hier_config.platforms.driver_base import HConfigDriverBase, HConfigDriverRules
 
 
@@ -17,6 +18,8 @@ class HConfigDriverCiscoNXOS(HConfigDriverBase):
     assignments, and ``secondary`` IP address avoidance in idempotency checks.
     Platform enum: ``Platform.CISCO_NXOS``.
     """
+
+    view_class = HConfigViewCiscoNXOS
 
     @staticmethod
     def _instantiate_rules() -> HConfigDriverRules:

@@ -14,9 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Custom exception hierarchy: `HierConfigError` base, `DriverNotFoundError`,
   `InvalidConfigError`, `IncompatibleDriverError` (#219). `DuplicateChildError`
   reparented under `HierConfigError`.
+- `view_class` attribute on `HConfigDriverBase`: drivers now declare their own
+  config view, so custom drivers can register or override views (#187, #229).
 
 ### Changed
 
+- `get_hconfig_view()` resolves the view from the driver's `view_class`
+  attribute instead of a hardcoded `isinstance` chain; drivers without a view
+  raise `DriverNotFoundError` with a `No view registered for driver` message (#187).
 - Changed `style` parameter on `indented_text()` and `RemediationReporter.to_text()` from `str` to `Literal["without_comments", "merged", "with_comments"]` via new `TextStyle` type alias (#189).
 - Renamed `load_hconfig_v2_options` to `load_driver_rules` (#221).
 - Renamed `load_hconfig_v2_tags` to `load_tag_rules` (#221).
