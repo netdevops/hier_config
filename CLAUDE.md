@@ -76,14 +76,15 @@ Each platform driver subclasses `HConfigDriverBase` (driver_base.py) and overrid
 - **MatchRule** supports: `equals`, `startswith`, `endswith`, `contains`, `re_search`. Multiple fields = AND logic.
 - `is_lineage_match()` on `HConfigChild` compares the full ancestry path against a tuple of MatchRules.
 
-Key rule types: `SectionalExitingRule`, `IdempotentCommandsRule`, `PerLineSubRule`, `NegationDefaultWithRule`, `OrderingRule`, `ParentAllowsDuplicateChildRule`, `IndentAdjustRule`.
+Key rule types: `SectionalExitingRule`, `IdempotentCommandsRule`, `PerLineSubRule`, `NegationRule` (strategy enum: REPLACE/DEFAULT/REGEX_SUB), `OrderingRule`, `ParentAllowsDuplicateChildRule`, `IndentAdjustRule`.
 
-Platform drivers: `CISCO_IOS`, `CISCO_XR`, `CISCO_NXOS`, `ARISTA_EOS`, `FORTINET_FORTIOS`, `HP_PROCURVE`, `HP_COMWARE5`, `JUNIPER_JUNOS`, `VYOS`, `GENERIC`.
+Platform drivers: `CISCO_IOS`, `CISCO_XR`, `CISCO_NXOS`, `ARISTA_EOS`, `FORTINET_FORTIOS`, `HP_PROCURVE`, `HP_COMWARE5`, `HUAWEI_VRP`, `JUNIPER_JUNOS`, `NOKIA_SRL`, `VYOS`, `GENERIC`. Custom drivers register via `register_driver()` (registry.py).
 
 ### Workflow Layer
 
 - `WorkflowRemediation` (workflows.py) — primary API: `remediation_config` and `rollback_config` properties.
-- Constructor functions in `constructors.py`: `get_hconfig()`, `get_hconfig_fast_load()`, `get_hconfig_driver()`.
+- Constructors: `HConfig.from_text()`, `HConfig.from_lines()`, `HConfig.from_dump()` classmethods (implementations in `constructors.py`); `get_hconfig_driver()` (registry.py) and `get_hconfig_view()` remain standalone.
+- Tree algorithms (diff/remediation/future) live in `tree_algorithms.py`; `HConfigBase` delegates to them.
 
 ### Adding a New Driver Rule Type
 

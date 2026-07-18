@@ -21,15 +21,15 @@ The `RemediationReporter` class allows you to:
 from hier_config import (
     RemediationReporter,
     WorkflowRemediation,
-    get_hconfig,
+    HConfig,
     Platform,
 )
 
 # Generate remediations for each device
 devices_remediations = []
 for device in devices:
-    running = get_hconfig(Platform.CISCO_IOS, device.running_config)
-    generated = get_hconfig(Platform.CISCO_IOS, device.generated_config)
+    running = HConfig.from_text(Platform.CISCO_IOS, device.running_config)
+    generated = HConfig.from_text(Platform.CISCO_IOS, device.generated_config)
     wfr = WorkflowRemediation(running, generated)
     devices_remediations.append(wfr.remediation_config)
 
@@ -93,7 +93,7 @@ reporter.add_remediations(more_remediations)
 
 ```python
 # If you already have a merged configuration
-merged = get_hconfig(Platform.CISCO_IOS)
+merged = HConfig.from_text(Platform.CISCO_IOS)
 merged.merge([device1, device2, device3])
 
 reporter = RemediationReporter.from_merged_config(merged)

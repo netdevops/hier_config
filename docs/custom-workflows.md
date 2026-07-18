@@ -11,7 +11,7 @@ Certain scenarios demand remediation strategies that go beyond the standard [neg
 Start by importing the necessary modules and loading the running and intended configurations for comparison.
 
 ```python
-from hier_config import WorkflowRemediation, get_hconfig, Platform
+from hier_config import WorkflowRemediation, HConfig, Platform
 from hier_config.utils import read_text_from_file
 ```
 
@@ -33,8 +33,8 @@ Initialize the WorkflowRemediation object for a Cisco IOS platform:
 
 ```python
 wfr = WorkflowRemediation(
-        running_config=get_hconfig(Platform.CISCO_IOS, running_config),
-        generated_config=get_hconfig(Platform.CISCO_IOS, generated_config)
+        running_config=HConfig.from_text(Platform.CISCO_IOS, running_config),
+        generated_config=HConfig.from_text(Platform.CISCO_IOS, generated_config)
 )
 ```
 This object manages the remediation workflow between the running and generated configurations.

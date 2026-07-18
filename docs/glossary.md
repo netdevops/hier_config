@@ -14,7 +14,7 @@ The string that precedes a *positive* (enabling) command in platforms that use e
 
 ## Driver / HConfigDriverBase
 
-A Python class that encodes all operating-system-specific behaviour for one network platform.  Every driver subclasses `HConfigDriverBase` and provides an `HConfigDriverRules` instance via `_instantiate_rules()`.  Drivers are selected by passing a `Platform` enum value to `get_hconfig()` or `get_hconfig_driver()`.
+A Python class that encodes all operating-system-specific behaviour for one network platform.  Every driver subclasses `HConfigDriverBase` and provides an `HConfigDriverRules` instance via `_instantiate_rules()`.  Drivers are selected by passing a `Platform` enum value to `HConfig.from_text()` or `get_hconfig_driver()`.
 
 **Example:** `HConfigDriverCiscoIOS`, `HConfigDriverJuniperJUNOS`.
 
@@ -80,13 +80,13 @@ The string prepended to a command to negate (remove) it.  `HConfigDriverBase.neg
 
 ## Negation — default when
 
-A `NegationDefaultWhenRule` that causes hier_config to use the `default <command>` form of negation instead of `no <command>`.  Some IOS and EOS commands behave differently when defaulted vs negated (e.g. `logging event link-status`).
+A DEFAULT-strategy `NegationRule` that causes hier_config to use the `default <command>` form of negation instead of `no <command>`.  Some IOS and EOS commands behave differently when defaulted vs negated (e.g. `logging event link-status`).
 
 ---
 
 ## Negation — negate with
 
-A `NegationDefaultWithRule` that replaces the standard negation with a fixed command string.  Used when a command cannot be simply prepended with `"no "` — for example, `logging console debugging` is the correct way to reset the console logging level rather than `no logging console`.
+A REPLACE-strategy `NegationRule` that replaces the standard negation with a fixed command string.  Used when a command cannot be simply prepended with `"no "` — for example, `logging console debugging` is the correct way to reset the console logging level rather than `no logging console`.
 
 ---
 

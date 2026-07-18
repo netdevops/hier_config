@@ -31,9 +31,9 @@ The tree layer lives in `hier_config/base.py`, `hier_config/root.py`, `hier_conf
 Create an `HConfig` object via the constructor function:
 
 ```python
-from hier_config import get_hconfig, Platform
+from hier_config import HConfig, Platform
 
-hconfig = get_hconfig(Platform.CISCO_IOS, config_text)
+hconfig = HConfig.from_text(Platform.CISCO_IOS, config_text)
 ```
 
 ### `HConfigChild` (tree node)
@@ -84,8 +84,7 @@ A frozen Pydantic model holding lists of typed rule objects:
 
 | Field | Rule type | Effect |
 |-------|-----------|--------|
-| `negate_with` | `NegationDefaultWithRule` | Replace negation with a fixed command |
-| `negation_default_when` | `NegationDefaultWhenRule` | Use `default` form instead of `no` |
+| `negation` | `NegationRule` | Unified negation: REPLACE a fixed command, use the DEFAULT form, or REGEX_SUB the negated text (#220) |
 | `sectional_exiting` | `SectionalExitingRule` | Emit an exit token at end of section (optionally at parent indent level) |
 | `sectional_overwrite` | `SectionalOverwriteRule` | Negate + re-create whole section |
 | `sectional_overwrite_no_negate` | `SectionalOverwriteNoNegateRule` | Re-create without prior negation |

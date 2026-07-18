@@ -524,3 +524,28 @@ def test_sectional_exit_text_parent_level_generic_platform() -> None:
     # Generic platform has no specific sectional_exiting rules with parent_level=True
     section = config.add_child("section test")
     assert section.sectional_exit_text_parent_level is False
+
+
+def test_remediation_does_not_mutate_inputs() -> None:
+    """remediation() must not modify the running or generated configs (#224)."""
+    running_text = (
+        "hostname old\n"
+        "interface GigabitEthernet0/0\n"
+        " description keep\n"
+        " shutdown\n"
+    )
+    generated_text = (
+        "hostname new\n"
+        "interface GigabitEthernet0/0\n"
+        " description keep\n"
+        " ip address 10.0.0.1 255.255.255.0\n"
+    )
+    running_config = HConfig.from_text(Platform.CISCO_IOS, running_text)
+    generated_config = HConfig.from_text(Platform.CISCO_IOS, generated_text)
+    running_before = running_config.to_lines()
+    generated_before = generated_config.to_lines()
+
+    running_config.remediation(generated_config)
+
+    assert running_config.to_lines() == running_before
+    assert generated_config.to_lines() == generated_before

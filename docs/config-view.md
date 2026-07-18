@@ -114,7 +114,7 @@ The framework uses a combination of abstract base classes (e.g., `ConfigViewInte
 Assume we have a Cisco IOS configuration file as a string.
 
 ```python
-from hier_config import Platform, get_hconfig
+from hier_config import Platform, HConfig
 
 
 raw_config = """
@@ -129,7 +129,7 @@ vlan 10
  name DATA
 """
 
-hconfig = get_hconfig(Platform.CISCO_IOS, raw_config)
+hconfig = HConfig.from_text(Platform.CISCO_IOS, raw_config)
 ```
 
 ### Step 2: Create Config View
@@ -169,7 +169,7 @@ for vlan in config_view.vlans:
 Assume we have a Cisco IOS configuration file as a string.
 
 ```python
-from hier_config import Platform, get_hconfig
+from hier_config import Platform, HConfig
 
 
 raw_config = """
@@ -186,7 +186,7 @@ interface GigabitEthernet0/2
 !
 """
 
-hconfig = get_hconfig(Platform.CISCO_IOS, raw_config)
+hconfig = HConfig.from_text(Platform.CISCO_IOS, raw_config)
 ```
 
 ### Step 2: Create Config View and Access Interface Views

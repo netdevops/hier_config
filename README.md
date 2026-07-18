@@ -52,7 +52,7 @@ pip install hier-config
 ### Step 1: Import Required Classes
 
 ```python
-from hier_config import WorkflowRemediation, get_hconfig, Platform
+from hier_config import WorkflowRemediation, HConfig, Platform
 from hier_config.utils import read_text_from_file
 ```
 
@@ -70,8 +70,8 @@ generated_config_text = read_text_from_file("./tests/fixtures/generated_config.c
 Specify the device platform (e.g., `Platform.CISCO_IOS`):
 
 ```python
-running_config = get_hconfig(Platform.CISCO_IOS, running_config_text)
-generated_config = get_hconfig(Platform.CISCO_IOS, generated_config_text)
+running_config = HConfig.from_text(Platform.CISCO_IOS, running_config_text)
+generated_config = HConfig.from_text(Platform.CISCO_IOS, generated_config_text)
 ```
 
 ### Step 4: Initialize WorkflowRemediation

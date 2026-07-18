@@ -7,14 +7,14 @@ This feature is particularly useful when comparing configurations from two netwo
 Currently, the algorithm does not account for duplicate child entries (e.g., multiple `endif` statements in an IOS-XR route-policy) or enforce command order in sections where it may be critical, such as Access Control Lists (ACLs). For accurate ordering in ACLs, sequence numbers should be used if command order is important.
 
 ```bash
->>> from hier_config import get_hconfig, Platform
+>>> from hier_config import HConfig, Platform
 >>> from pprint import pprint
 >>>
 >>> running_config_text = read_text_from_file("./tests/fixtures/running_config.conf")
 >>> generated_config_text = read_text_from_file("./tests/fixtures/generated_config.conf")
 >>>
->>> running_config = get_hconfig(Platform.CISCO_IOS, running_config_text)
->>> generated_config = get_hconfig(Platform.CISCO_IOS, generated_config_text)
+>>> running_config = HConfig.from_text(Platform.CISCO_IOS, running_config_text)
+>>> generated_config = HConfig.from_text(Platform.CISCO_IOS, generated_config_text)
 >>>
 >>> pprint(list(running_config.unified_diff(generated_config)))
 ['vlan 3',

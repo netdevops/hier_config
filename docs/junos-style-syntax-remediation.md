@@ -25,14 +25,14 @@ set interfaces irb unit 3 family inet description "switch_mgmt_10.0.4.0/24"
 
 
 $ python3
->>> from hier_config import WorkflowRemediation, get_hconfig, Platform
+>>> from hier_config import WorkflowRemediation, HConfig, Platform
 >>> from hier_config.utils import read_text_from_file
 >>>
 >>> running_config_text = read_text_from_file("./tests/fixtures/running_config_flat_junos.conf")
 >>> generated_config_text = read_text_from_file("./tests/fixtures/generated_config_flat_junos.conf")
 # Create HConfig objects for the running and generated configurations using JunOS syntax
->>> running_config = get_hconfig(Platform.JUNIPER_JUNOS, running_config_text)
->>> generated_config = get_hconfig(Platform.JUNIPER_JUNOS, generated_config_text)
+>>> running_config = HConfig.from_text(Platform.JUNIPER_JUNOS, running_config_text)
+>>> generated_config = HConfig.from_text(Platform.JUNIPER_JUNOS, generated_config_text)
 >>>
 # Initialize WorkflowRemediation with the running and generated configurations
 >>> workflow = WorkflowRemediation(running_config, generated_config)
@@ -118,14 +118,14 @@ interfaces {
 }
 
 $ python3
->>> from hier_config import WorkflowRemediation, get_hconfig, Platform
+>>> from hier_config import WorkflowRemediation, HConfig, Platform
 >>> from hier_config.utils import read_text_from_file
 >>>
 >>> running_config_text = read_text_from_file("./tests/fixtures/running_config_junos.conf")
 >>> generated_config_text = read_text_from_file("./tests/fixtures/generated_config_junos.conf")
 # Create HConfig objects for the running and generated configurations using JunOS syntax
->>> running_config = get_hconfig(Platform.JUNIPER_JUNOS, running_config_text)
->>> generated_config = get_hconfig(Platform.JUNIPER_JUNOS, generated_config_text)
+>>> running_config = HConfig.from_text(Platform.JUNIPER_JUNOS, running_config_text)
+>>> generated_config = HConfig.from_text(Platform.JUNIPER_JUNOS, generated_config_text)
 >>>
 # Initialize WorkflowRemediation with the running and generated configurations
 >>> workflow = WorkflowRemediation(running_config, generated_config)
