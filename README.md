@@ -11,10 +11,12 @@ Hierarchical Configuration has been used extensively on:
 - [x] Fortinet FortiOS
 - [x] HP Procurve (Aruba AOSS)
 - [x] HP Comware5 / H3C
+- [x] Huawei VRP
 
 In addition to the Cisco-style syntax, hier_config offers experimental support for Juniper-style configurations using set and delete commands. This allows users to remediate Junos configurations in native syntax. However, please note that Juniper syntax support is still in an experimental phase and has not been tested extensively. Use with caution in production environments.
 
 - [x] Juniper JunOS
+- [x] Nokia SRL (Service Router Linux)
 - [x] VyOS
 
 Hier Config is compatible with any NOS that utilizes a structured CLI syntax similar to Cisco IOS or Junos OS.
