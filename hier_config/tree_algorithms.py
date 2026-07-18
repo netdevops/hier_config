@@ -12,6 +12,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, TypeVar
 
 if TYPE_CHECKING:
+    from .base import HConfigBase
     from .child import HConfigChild
     from .root import HConfig
 
@@ -19,7 +20,7 @@ if TYPE_CHECKING:
 
 
 def compute_remediation(
-    source: HConfig | HConfigChild,
+    source: HConfigBase,
     target: _HConfigRootOrChildT,
     delta: _HConfigRootOrChildT,
 ) -> _HConfigRootOrChildT:
@@ -35,7 +36,7 @@ def compute_remediation(
 
 
 def _remediation_left(
-    source: HConfig | HConfigChild,
+    source: HConfigBase,
     target: HConfig | HConfigChild,
     delta: HConfig | HConfigChild,
 ) -> None:
@@ -57,7 +58,7 @@ def _remediation_left(
 
 
 def _remediation_right(
-    source: HConfig | HConfigChild,
+    source: HConfigBase,
     target: HConfig | HConfigChild,
     delta: HConfig | HConfigChild,
 ) -> None:
@@ -102,7 +103,7 @@ def _strip_acl_sequence_number(hier_child: HConfigChild) -> str:
 
 
 def compute_difference(
-    source: HConfig | HConfigChild,
+    source: HConfigBase,
     target: _HConfigRootOrChildT,
     delta: _HConfigRootOrChildT,
     target_acl_children: dict[str, HConfigChild] | None = None,
@@ -138,8 +139,7 @@ def compute_difference(
                     target_child,
                     delta_child,
                     target_acl_children={
-                        _strip_acl_sequence_number(c): c
-                        for c in target_child.children
+                        _strip_acl_sequence_number(c): c for c in target_child.children
                     },
                     in_acl=True,
                 )
@@ -152,7 +152,7 @@ def compute_difference(
 
 
 def _future_pre(
-    source: HConfig | HConfigChild,
+    source: HConfigBase,
     config: HConfig | HConfigChild,
 ) -> tuple[set[str], set[str]]:
     negated_or_recursed: set[str] = set()
@@ -168,7 +168,7 @@ def _future_pre(
 
 
 def compute_future(  # noqa: C901
-    source: HConfig | HConfigChild,
+    source: HConfigBase,
     config: HConfig | HConfigChild,
     future_config: HConfig | HConfigChild,
 ) -> None:
@@ -235,7 +235,7 @@ def compute_future(  # noqa: C901
 
 
 def compute_with_tags(
-    source: HConfig | HConfigChild,
+    source: HConfigBase,
     tags: frozenset[str],
     new_instance: _HConfigRootOrChildT,
 ) -> _HConfigRootOrChildT:

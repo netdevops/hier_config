@@ -11,6 +11,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Interface view capability mixins (#227): `ConfigViewInterfaceBase` now
+  carries only the core interface properties (`name`, `description`,
+  `enabled`, `ipv4_interfaces`, `is_loopback`, `is_svi`, `number`,
+  `port_number`, `vrf`, plus concrete helpers `ipv4_interface`,
+  `is_subinterface`, `parent_name`, `subinterface_number`). Optional
+  capabilities moved to new ABC mixins in
+  `hier_config.platforms.view_base` — `InterfaceBundleViewMixin`,
+  `InterfaceVlanViewMixin` (owns the concrete `dot1q_mode`),
+  `InterfaceNACViewMixin`, and `InterfacePhysicalViewMixin` (owns a concrete
+  `module_number`) — all exported from the package root. Platform views
+  inherit only the mixins they support, and users check capability with
+  `isinstance(view, InterfaceVlanViewMixin)` instead of catching
+  `NotImplementedError`. `HConfigViewBase.bundle_interface_views` and
+  `module_numbers` are now capability-aware.
+- Completed the Arista EOS, Cisco NX-OS, and Cisco IOS XR config views (#230):
+  all three now implement the full core interface property set plus the VLAN
+  and bundle mixins (EOS/NX-OS switchport, trunk, and channel-group parsing;
+  XR `encapsulation dot1q`, `ipv4 address x.x.x.x/nn | x.x.x.x y.y.y.y`, and
+  `Bundle-Ether`/`bundle id <N>` parsing), along with the root view
+  properties `interface_names_mentioned`, `ipv4_default_gw`, `location`,
+  `stack_members`, and `vlans`.
+- Cisco IOS `bundle_member_interfaces` and HP ProCurve `bundle_id` are now
+  implemented (previously `NotImplementedError` stubs) (#230).
+
 - Driver registration system (#226): `register_driver()`, `unregister_driver()`,
   and `get_registered_platforms()`. Custom platforms are registered by string
   name (case-insensitive) and work anywhere a `Platform` is accepted; built-in

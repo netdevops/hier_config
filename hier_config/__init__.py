@@ -9,6 +9,14 @@ from .exceptions import (
 )
 from .models import ChangeDetail, MatchRule, Platform, ReportSummary, TagRule, TextStyle
 from .platforms.driver_base import HConfigDriverBase, HConfigDriverRules
+from .platforms.view_base import (
+    ConfigViewInterfaceBase,
+    HConfigViewBase,
+    InterfaceBundleViewMixin,
+    InterfaceNACViewMixin,
+    InterfacePhysicalViewMixin,
+    InterfaceVlanViewMixin,
+)
 from .plugins import RemediationPlugin
 from .registry import (
     get_hconfig_driver,
@@ -22,14 +30,20 @@ from .workflows import WorkflowRemediation
 
 __all__ = (
     "ChangeDetail",
+    "ConfigViewInterfaceBase",
     "DriverNotFoundError",
     "DuplicateChildError",
     "HConfig",
     "HConfigChild",
     "HConfigDriverBase",
     "HConfigDriverRules",
+    "HConfigViewBase",
     "HierConfigError",
     "IncompatibleDriverError",
+    "InterfaceBundleViewMixin",
+    "InterfaceNACViewMixin",
+    "InterfacePhysicalViewMixin",
+    "InterfaceVlanViewMixin",
     "InvalidConfigError",
     "MatchRule",
     "Platform",

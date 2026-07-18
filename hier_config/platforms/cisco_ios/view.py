@@ -11,12 +11,20 @@ from hier_config.platforms.models import (
     Vlan,
 )
 from hier_config.platforms.view_base import (
-    ConfigViewInterfaceBase,
     HConfigViewBase,
+    InterfaceBundleViewMixin,
+    InterfaceNACViewMixin,
+    InterfacePhysicalViewMixin,
+    InterfaceVlanViewMixin,
 )
 
 
-class ConfigViewInterfaceCiscoIOS(ConfigViewInterfaceBase):  # noqa: PLR0904
+class ConfigViewInterfaceCiscoIOS(  # noqa: PLR0904
+    InterfaceBundleViewMixin,
+    InterfaceNACViewMixin,
+    InterfacePhysicalViewMixin,
+    InterfaceVlanViewMixin,
+):
     """Interface config view for Cisco IOS / IOS-XE."""
 
     @property
@@ -27,13 +35,13 @@ class ConfigViewInterfaceCiscoIOS(ConfigViewInterfaceBase):  # noqa: PLR0904
 
     @property
     def bundle_member_interfaces(self) -> Iterable[str]:
-        raise NotImplementedError
-
-    @property
-    def bundle_name(self) -> str | None:
-        if self.bundle_id:
-            return f"{self._bundle_prefix}{self.bundle_id}"
-        return None
+        if not self.is_bundle:
+            return
+        for interface in self.config.parent.get_children(startswith="interface "):
+            if (
+                channel_group := interface.get_child(startswith="channel-group ")
+            ) and channel_group.text.split()[1] == self.number:
+                yield interface.text.split()[1]
 
     @property
     def description(self) -> str:
@@ -62,10 +70,6 @@ class ConfigViewInterfaceCiscoIOS(ConfigViewInterfaceBase):  # noqa: PLR0904
         )
 
     @property
-    def ipv4_interface(self) -> IPv4Interface | None:
-        return next(iter(self.ipv4_interfaces), None)
-
-    @property
     def ipv4_interfaces(self) -> Iterable[IPv4Interface]:
         for ipv4_address_obj in self.config.get_children(startswith="ip address "):
             ipv4_address = ipv4_address_obj.text.split()
@@ -75,27 +79,12 @@ class ConfigViewInterfaceCiscoIOS(ConfigViewInterfaceBase):  # noqa: PLR0904
                 continue
 
     @property
-    def is_bundle(self) -> bool:
-        return self.name.lower().startswith(self._bundle_prefix)
-
-    @property
     def is_loopback(self) -> bool:
         return self.name.lower().startswith("loopback")
 
     @property
-    def is_subinterface(self) -> bool:
-        return "." in self.name
-
-    @property
     def is_svi(self) -> bool:
         return self.name.lower().startswith("vlan")
-
-    @property
-    def module_number(self) -> int | None:
-        words = self.number.split("/", 1)
-        if len(words) == 1:
-            return None
-        return int(words[0])
 
     @property
     def nac_control_direction_in(self) -> bool:
@@ -179,12 +168,6 @@ class ConfigViewInterfaceCiscoIOS(ConfigViewInterfaceBase):  # noqa: PLR0904
         return sub(r"^[a-zA-Z-]+", "", self.name)
 
     @property
-    def parent_name(self) -> str | None:
-        if self.is_subinterface:
-            return self.name.split(".")[0]
-        return None
-
-    @property
     def poe(self) -> bool:
         return not self.config.get_child(equals="power inline never")
 
@@ -199,10 +182,6 @@ class ConfigViewInterfaceCiscoIOS(ConfigViewInterfaceBase):  # noqa: PLR0904
                 return None
             return (int(speed.text.split()[1]),)
         return None
-
-    @property
-    def subinterface_number(self) -> int | None:
-        return int(self.name.split(".")[0 - 1]) if self.is_subinterface else None
 
     @property
     def tagged_all(self) -> bool:

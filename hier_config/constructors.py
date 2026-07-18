@@ -195,7 +195,7 @@ def _config_from_string_lines_end_of_banner_test(
     return any(c in config_line for c in banner_end_contains)
 
 
-class _ConfigTextLoader:
+class _ConfigTextLoader:  # pylint: disable=too-many-instance-attributes,too-few-public-methods
     """Stateful parser turning raw config text into an HConfig tree (#186).
 
     Splits the three responsibilities of the former monolithic loader into

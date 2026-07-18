@@ -5,20 +5,31 @@ from ipaddress import IPv4Address, IPv4Interface
 import pytest
 
 from hier_config import HConfig, Platform, get_hconfig_view
+from hier_config.platforms.hp_procurve.view import ConfigViewInterfaceHPProcurve
 from hier_config.platforms.models import InterfaceDuplex, StackMember
 
 
-def test_bundle_id_not_implemented() -> None:
-    """Test bundle_id raises NotImplementedError (covers line 26)."""
+def test_bundle_id() -> None:
+    """Test bundle_id returns the trunk number of a bundle member."""
     config = HConfig.from_text(Platform.HP_PROCURVE)
-    config.add_child("interface Trk1")
+    config.add_child("interface 1/45")
+    config.add_child("trunk 1/45,2/45 trk1 trunk")
 
     view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Trk1")
-    assert interface_view is not None
+    interface_view = view.interface_view_by_name("1/45")
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
+    assert interface_view.bundle_id == "1"
 
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.bundle_id
+
+def test_bundle_id_none() -> None:
+    """Test bundle_id returns None when the interface is not a bundle member."""
+    config = HConfig.from_text(Platform.HP_PROCURVE)
+    config.add_child("interface 1/1")
+
+    view = get_hconfig_view(config)
+    interface_view = view.interface_view_by_name("1/1")
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
+    assert interface_view.bundle_id is None
 
 
 def test_bundle_member_interfaces() -> None:
@@ -29,7 +40,7 @@ def test_bundle_member_interfaces() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("Trk1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
 
     members = list(interface_view.bundle_member_interfaces)
     assert "1/45" in members
@@ -43,7 +54,7 @@ def test_bundle_member_interfaces_bundle_not_found_error() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("Trk1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
 
     with pytest.raises(
         TypeError, match="Interface is a bundle but bundle config was not found"
@@ -58,7 +69,7 @@ def test_bundle_member_interfaces_value_error() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
 
     with pytest.raises(ValueError, match="The bundle config line couldn't be found"):
         _ = list(interface_view.bundle_member_interfaces)
@@ -72,7 +83,7 @@ def test_bundle_name() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.bundle_name == "Trk1"
 
 
@@ -83,7 +94,7 @@ def test_bundle_name_none() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.bundle_name is None
 
 
@@ -94,7 +105,7 @@ def test_description() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.description == "uplink port"
 
 
@@ -105,7 +116,7 @@ def test_description_empty() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert not interface_view.description
 
 
@@ -116,7 +127,7 @@ def test_duplex_auto() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.duplex == InterfaceDuplex.AUTO
 
 
@@ -127,7 +138,7 @@ def test_enabled_true() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.enabled is True
 
 
@@ -138,7 +149,7 @@ def test_enabled_false() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.enabled is False
 
 
@@ -150,7 +161,7 @@ def test_has_nac_authenticator() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.has_nac is True
 
 
@@ -162,7 +173,7 @@ def test_has_nac_mac_based() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.has_nac is True
 
 
@@ -173,7 +184,7 @@ def test_has_nac_false() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.has_nac is False
 
 
@@ -184,7 +195,7 @@ def test_ipv4_interface_none() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.ipv4_interface is None
 
 
@@ -195,7 +206,7 @@ def test_ipv4_interfaces() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("vlan 10")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
 
     ips = list(interface_view.ipv4_interfaces)
     assert len(ips) == 1
@@ -209,7 +220,7 @@ def test_ipv4_interfaces_invalid() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("vlan 10")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
 
     ips = list(interface_view.ipv4_interfaces)
     assert len(ips) == 0
@@ -222,7 +233,7 @@ def test_is_bundle_true() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("Trk1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.is_bundle is True
 
 
@@ -233,7 +244,7 @@ def test_is_bundle_false() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.is_bundle is False
 
 
@@ -244,7 +255,7 @@ def test_is_loopback_true() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("Loopback0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.is_loopback is True
 
 
@@ -255,7 +266,7 @@ def test_is_loopback_false() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.is_loopback is False
 
 
@@ -266,7 +277,7 @@ def test_is_subinterface_true() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1.100")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.is_subinterface is True
 
 
@@ -277,7 +288,7 @@ def test_is_subinterface_false() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.is_subinterface is False
 
 
@@ -301,7 +312,7 @@ def test_is_svi_false() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.is_svi is False
 
 
@@ -312,7 +323,7 @@ def test_module_number() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("2/10")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.module_number == 2
 
 
@@ -323,7 +334,7 @@ def test_module_number_none() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("Trk1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.module_number is None
 
 
@@ -335,7 +346,7 @@ def test_nac_control_direction_in_true() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.nac_control_direction_in is True
 
 
@@ -346,7 +357,7 @@ def test_nac_control_direction_in_false() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.nac_control_direction_in is False
 
 
@@ -357,7 +368,7 @@ def test_nac_host_mode() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.nac_host_mode is None
 
 
@@ -369,7 +380,7 @@ def test_nac_mab_first_true() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.nac_mab_first is True
 
 
@@ -380,7 +391,7 @@ def test_nac_mab_first_false() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.nac_mab_first is False
 
 
@@ -392,7 +403,7 @@ def test_nac_max_dot1x_clients() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.nac_max_dot1x_clients == 5
 
 
@@ -403,7 +414,7 @@ def test_nac_max_dot1x_clients_default() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.nac_max_dot1x_clients == 1
 
 
@@ -415,7 +426,7 @@ def test_nac_max_mab_clients() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.nac_max_mab_clients == 10
 
 
@@ -426,7 +437,7 @@ def test_nac_max_mab_clients_default() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.nac_max_mab_clients == 1
 
 
@@ -437,7 +448,7 @@ def test_name_with_interface_prefix() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.name == "1/1"
 
 
@@ -461,7 +472,7 @@ def test_native_vlan() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.native_vlan == 100
 
 
@@ -472,7 +483,7 @@ def test_native_vlan_none() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.native_vlan is None
 
 
@@ -483,7 +494,7 @@ def test_number() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/10")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.number == "1/10"
 
 
@@ -494,7 +505,7 @@ def test_parent_name() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1.100")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.parent_name == "1/1"
 
 
@@ -505,7 +516,7 @@ def test_parent_name_none() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.parent_name is None
 
 
@@ -516,7 +527,7 @@ def test_poe_true() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.poe is True
 
 
@@ -527,7 +538,7 @@ def test_poe_false() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.poe is False
 
 
@@ -538,7 +549,7 @@ def test_port_number() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("2/15")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.port_number == 15
 
 
@@ -549,7 +560,7 @@ def test_port_number_with_subinterface() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/5.100")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.port_number == 5
 
 
@@ -560,7 +571,7 @@ def test_speed_none() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.speed is None
 
 
@@ -571,7 +582,7 @@ def test_subinterface_number() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1.200")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.subinterface_number == 200
 
 
@@ -582,7 +593,7 @@ def test_subinterface_number_none() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.subinterface_number is None
 
 
@@ -593,7 +604,7 @@ def test_tagged_all_false() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.tagged_all is False
 
 
@@ -606,7 +617,7 @@ def test_tagged_vlans() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.tagged_vlans == (10, 20)
 
 
@@ -617,7 +628,7 @@ def test_tagged_vlans_empty() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.tagged_vlans == ()
 
 
@@ -628,7 +639,7 @@ def test_vrf_empty() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("1/1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert not interface_view.vrf
 
 
@@ -639,7 +650,7 @@ def test_bundle_prefix() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("Trk1")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
     assert interface_view.is_bundle
 
 

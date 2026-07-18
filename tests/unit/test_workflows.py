@@ -98,7 +98,7 @@ def test_remediation_plugin_applied() -> None:
         def name(self) -> str:
             return "marker"
 
-        def transform(self, remediation: HConfig) -> None:
+        def transform(self, remediation: HConfig) -> None:  # noqa: PLR6301
             remediation.add_child("end")
 
     running_config = HConfig.from_text(Platform.CISCO_IOS, "hostname old\n")
@@ -108,4 +108,4 @@ def test_remediation_plugin_applied() -> None:
     )
 
     assert workflow.remediation_config.get_child(equals="end") is not None
-    assert workflow.plugins[0].description == ""
+    assert not workflow.plugins[0].description

@@ -1,507 +1,336 @@
 """Tests for Cisco NX-OS view.py ConfigViewInterfaceCiscoNXOS and HConfigViewCiscoNXOS classes."""
 
-from ipaddress import IPv4Interface
+from ipaddress import IPv4Address, IPv4Interface
 
-import pytest
-
-from hier_config import HConfig, Platform, get_hconfig_view
-
-
-def test_bundle_id_not_implemented() -> None:
-    """Test bundle_id raises NotImplementedError (covers line 22)."""
-    config = HConfig.from_text(Platform.CISCO_NXOS)
-    config.add_child("interface port-channel1")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("port-channel1")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.bundle_id
+from hier_config import (
+    HConfig,
+    InterfaceBundleViewMixin,
+    InterfaceNACViewMixin,
+    InterfacePhysicalViewMixin,
+    InterfaceVlanViewMixin,
+    Platform,
+    get_hconfig_view,
+)
+from hier_config.platforms.cisco_nxos.view import ConfigViewInterfaceCiscoNXOS
+from hier_config.platforms.models import InterfaceDot1qMode, Vlan
 
 
-def test_bundle_member_interfaces_not_implemented() -> None:
-    """Test bundle_member_interfaces raises NotImplementedError (covers line 26)."""
-    config = HConfig.from_text(Platform.CISCO_NXOS)
-    config.add_child("interface Ethernet1/1")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/1")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = list(interface_view.bundle_member_interfaces)
+def _interface_view(
+    config: HConfig, name: str = "Ethernet1/1"
+) -> ConfigViewInterfaceCiscoNXOS:
+    interface_view = get_hconfig_view(config).interface_view_by_name(name)
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoNXOS)
+    return interface_view
 
 
-def test_bundle_name_not_implemented() -> None:
-    """Test bundle_name raises NotImplementedError (covers line 30)."""
+def test_capabilities() -> None:
+    """NX-OS interface views support bundles and VLANs but not NAC or physical."""
     config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/1")
-    assert interface_view is not None
+    interface_view = _interface_view(config)
+    assert isinstance(interface_view, InterfaceBundleViewMixin)
+    assert isinstance(interface_view, InterfaceVlanViewMixin)
+    assert not isinstance(interface_view, InterfaceNACViewMixin)
+    assert not isinstance(interface_view, InterfacePhysicalViewMixin)
 
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.bundle_name
+
+def test_bundle_id() -> None:
+    config = HConfig.from_text(Platform.CISCO_NXOS)
+    config.add_children_deep(("interface Ethernet1/1", "channel-group 10 mode active"))
+
+    assert _interface_view(config).bundle_id == "10"
+
+
+def test_bundle_id_none() -> None:
+    config = HConfig.from_text(Platform.CISCO_NXOS)
+    config.add_child("interface Ethernet1/1")
+
+    assert _interface_view(config).bundle_id is None
+
+
+def test_bundle_name() -> None:
+    config = HConfig.from_text(Platform.CISCO_NXOS)
+    config.add_children_deep(("interface Ethernet1/1", "channel-group 10 mode active"))
+
+    assert _interface_view(config).bundle_name == "port-channel10"
+
+
+def test_bundle_member_interfaces() -> None:
+    config = HConfig.from_text(Platform.CISCO_NXOS)
+    config.add_child("interface port-channel10")
+    config.add_children_deep(("interface Ethernet1/1", "channel-group 10 mode active"))
+    config.add_children_deep(("interface Ethernet1/2", "channel-group 10 mode active"))
+    config.add_children_deep(("interface Ethernet1/3", "channel-group 20 mode active"))
+
+    interface_view = _interface_view(config, "port-channel10")
+    assert list(interface_view.bundle_member_interfaces) == [
+        "Ethernet1/1",
+        "Ethernet1/2",
+    ]
+
+
+def test_bundle_member_interfaces_not_a_bundle() -> None:
+    config = HConfig.from_text(Platform.CISCO_NXOS)
+    config.add_child("interface Ethernet1/1")
+
+    assert not list(_interface_view(config).bundle_member_interfaces)
 
 
 def test_description() -> None:
-    """Test description returns description text (covers lines 34-36)."""
+    """Test description returns description text."""
     config = HConfig.from_text(Platform.CISCO_NXOS)
     interface = config.add_child("interface Ethernet1/1")
     interface.add_child("description Uplink to Core")
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/1")
-    assert interface_view is not None
-    assert interface_view.description == "Uplink to Core"
+    assert _interface_view(config).description == "Uplink to Core"
 
 
 def test_description_empty() -> None:
-    """Test description returns empty string (covers line 36)."""
+    """Test description returns empty string."""
     config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/1")
-    assert interface_view is not None
-    assert not interface_view.description
+    assert not _interface_view(config).description
 
 
-def test_duplex_not_implemented() -> None:
-    """Test duplex raises NotImplementedError (covers line 40)."""
+def test_enabled() -> None:
     config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
+    config.add_children_deep(("interface Ethernet1/2", "shutdown"))
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/1")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.duplex
-
-
-def test_enabled_not_implemented() -> None:
-    """Test enabled raises NotImplementedError (covers line 44)."""
-    config = HConfig.from_text(Platform.CISCO_NXOS)
-    config.add_child("interface Ethernet1/1")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/1")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.enabled
-
-
-def test_has_nac_not_implemented() -> None:
-    """Test has_nac raises NotImplementedError (covers line 49)."""
-    config = HConfig.from_text(Platform.CISCO_NXOS)
-    config.add_child("interface Ethernet1/1")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/1")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.has_nac
+    assert _interface_view(config).enabled is True
+    assert _interface_view(config, "Ethernet1/2").enabled is False
 
 
 def test_ipv4_interface_none() -> None:
-    """Test ipv4_interface returns None (covers line 53)."""
+    """Test ipv4_interface returns None."""
     config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/1")
-    assert interface_view is not None
-    assert interface_view.ipv4_interface is None
+    assert _interface_view(config).ipv4_interface is None
 
 
 def test_ipv4_interfaces() -> None:
-    """Test ipv4_interfaces returns IP addresses (covers lines 57-62)."""
+    """Test ipv4_interfaces returns IP addresses."""
     config = HConfig.from_text(Platform.CISCO_NXOS)
     interface = config.add_child("interface Ethernet1/1")
     interface.add_child("ip address 10.1.1.1 255.255.255.0")
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/1")
-    assert interface_view is not None
+    assert list(_interface_view(config).ipv4_interfaces) == [
+        IPv4Interface("10.1.1.1/24")
+    ]
 
-    ips = list(interface_view.ipv4_interfaces)
-    assert len(ips) == 1
-    assert ips[0] == IPv4Interface("10.1.1.1/24")
+
+def test_ipv4_interfaces_cidr() -> None:
+    """Test ipv4_interfaces supports NX-OS address/prefix syntax."""
+    config = HConfig.from_text(Platform.CISCO_NXOS)
+    config.add_children_deep(("interface Ethernet1/1", "ip address 10.1.1.1/24"))
+
+    assert _interface_view(config).ipv4_interface == IPv4Interface("10.1.1.1/24")
 
 
 def test_ipv4_interfaces_invalid() -> None:
-    """Test ipv4_interfaces skips invalid addresses (covers line 62)."""
+    """Test ipv4_interfaces skips invalid addresses."""
     config = HConfig.from_text(Platform.CISCO_NXOS)
     interface = config.add_child("interface Ethernet1/1")
     interface.add_child("ip address dhcp")
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/1")
-    assert interface_view is not None
-
-    ips = list(interface_view.ipv4_interfaces)
-    assert len(ips) == 0
+    assert not list(_interface_view(config).ipv4_interfaces)
 
 
 def test_is_bundle_true() -> None:
-    """Test is_bundle returns True (covers line 66)."""
+    """Test is_bundle returns True."""
     config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface port-channel10")
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("port-channel10")
-    assert interface_view is not None
-    assert interface_view.is_bundle is True
+    assert _interface_view(config, "port-channel10").is_bundle is True
 
 
 def test_is_bundle_false() -> None:
-    """Test is_bundle returns False (covers line 66)."""
+    """Test is_bundle returns False."""
     config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/1")
-    assert interface_view is not None
-    assert interface_view.is_bundle is False
+    assert _interface_view(config).is_bundle is False
 
 
-def test_is_loopback_true() -> None:
-    """Test is_loopback returns True (covers line 70)."""
+def test_is_loopback() -> None:
     config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface loopback0")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("loopback0")
-    assert interface_view is not None
-    assert interface_view.is_loopback is True
-
-
-def test_is_loopback_false() -> None:
-    """Test is_loopback returns False (covers line 70)."""
-    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/1")
-    assert interface_view is not None
-    assert interface_view.is_loopback is False
+    assert _interface_view(config, "loopback0").is_loopback is True
+    assert _interface_view(config).is_loopback is False
 
 
-def test_is_subinterface_true() -> None:
-    """Test is_subinterface returns True (covers line 74)."""
+def test_is_subinterface() -> None:
     config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1.100")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/1.100")
-    assert interface_view is not None
-    assert interface_view.is_subinterface is True
-
-
-def test_is_subinterface_false() -> None:
-    """Test is_subinterface returns False (covers line 74)."""
-    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/1")
-    assert interface_view is not None
-    assert interface_view.is_subinterface is False
+    assert _interface_view(config, "Ethernet1/1.100").is_subinterface is True
+    assert _interface_view(config).is_subinterface is False
 
 
-def test_is_svi_true() -> None:
-    """Test is_svi returns True (covers line 78)."""
+def test_is_svi() -> None:
     config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface vlan100")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("vlan100")
-    assert interface_view is not None
-    assert interface_view.is_svi is True
-
-
-def test_is_svi_false() -> None:
-    """Test is_svi returns False (covers line 78)."""
-    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/1")
-    assert interface_view is not None
-    assert interface_view.is_svi is False
-
-
-def test_module_number() -> None:
-    """Test module_number returns module (covers lines 82-85)."""
-    config = HConfig.from_text(Platform.CISCO_NXOS)
-    config.add_child("interface Ethernet2/15")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet2/15")
-    assert interface_view is not None
-    assert interface_view.module_number == 2
-
-
-def test_module_number_none() -> None:
-    """Test module_number returns None (covers lines 84-85)."""
-    config = HConfig.from_text(Platform.CISCO_NXOS)
-    config.add_child("interface loopback0")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("loopback0")
-    assert interface_view is not None
-    assert interface_view.module_number is None
-
-
-def test_nac_control_direction_in_not_implemented() -> None:
-    """Test nac_control_direction_in raises NotImplementedError (covers line 90)."""
-    config = HConfig.from_text(Platform.CISCO_NXOS)
-    config.add_child("interface Ethernet1/1")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/1")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.nac_control_direction_in
-
-
-def test_nac_host_mode_not_implemented() -> None:
-    """Test nac_host_mode raises NotImplementedError (covers line 95)."""
-    config = HConfig.from_text(Platform.CISCO_NXOS)
-    config.add_child("interface Ethernet1/1")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/1")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.nac_host_mode
-
-
-def test_nac_mab_first_not_implemented() -> None:
-    """Test nac_mab_first raises NotImplementedError (covers line 100)."""
-    config = HConfig.from_text(Platform.CISCO_NXOS)
-    config.add_child("interface Ethernet1/1")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/1")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.nac_mab_first
-
-
-def test_nac_max_dot1x_clients_not_implemented() -> None:
-    """Test nac_max_dot1x_clients raises NotImplementedError (covers line 105)."""
-    config = HConfig.from_text(Platform.CISCO_NXOS)
-    config.add_child("interface Ethernet1/1")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/1")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.nac_max_dot1x_clients
-
-
-def test_nac_max_mab_clients_not_implemented() -> None:
-    """Test nac_max_mab_clients raises NotImplementedError (covers line 110)."""
-    config = HConfig.from_text(Platform.CISCO_NXOS)
-    config.add_child("interface Ethernet1/1")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/1")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.nac_max_mab_clients
+    assert _interface_view(config, "vlan100").is_svi is True
+    assert _interface_view(config).is_svi is False
 
 
 def test_name() -> None:
-    """Test name returns interface name (covers line 114)."""
+    """Test name returns interface name."""
     config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/10")
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/10")
-    assert interface_view is not None
-    assert interface_view.name == "Ethernet1/10"
+    assert _interface_view(config, "Ethernet1/10").name == "Ethernet1/10"
 
 
-def test_native_vlan_not_implemented() -> None:
-    """Test native_vlan raises NotImplementedError (covers line 118)."""
+def test_native_vlan_subinterface() -> None:
+    config = HConfig.from_text(Platform.CISCO_NXOS)
+    config.add_children_deep(("interface Ethernet1/1.100", "encapsulation dot1q 100"))
+
+    assert _interface_view(config, "Ethernet1/1.100").native_vlan == 100
+
+
+def test_native_vlan_routed_port() -> None:
+    config = HConfig.from_text(Platform.CISCO_NXOS)
+    config.add_children_deep(("interface Ethernet1/1", "no switchport"))
+
+    assert _interface_view(config).native_vlan is None
+
+
+def test_native_vlan_trunk() -> None:
+    config = HConfig.from_text(Platform.CISCO_NXOS)
+    interface = config.add_child("interface Ethernet1/1")
+    interface.add_child("switchport mode trunk")
+    interface.add_child("switchport trunk native vlan 999")
+
+    assert _interface_view(config).native_vlan == 999
+
+
+def test_native_vlan_trunk_default() -> None:
+    config = HConfig.from_text(Platform.CISCO_NXOS)
+    config.add_children_deep(("interface Ethernet1/1", "switchport mode trunk"))
+
+    assert _interface_view(config).native_vlan is None
+
+
+def test_native_vlan_access() -> None:
+    config = HConfig.from_text(Platform.CISCO_NXOS)
+    config.add_children_deep(("interface Ethernet1/1", "switchport access vlan 50"))
+
+    interface_view = _interface_view(config)
+    assert interface_view.native_vlan == 50
+    assert interface_view.dot1q_mode == InterfaceDot1qMode.ACCESS
+
+
+def test_native_vlan_default() -> None:
     config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/1")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.native_vlan
+    assert _interface_view(config).native_vlan == 1
 
 
 def test_number() -> None:
-    """Test number returns interface number (covers line 122)."""
+    """Test number returns interface number."""
     config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet3/25")
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet3/25")
-    assert interface_view is not None
-    assert interface_view.number == "3/25"
+    assert _interface_view(config, "Ethernet3/25").number == "3/25"
 
 
 def test_parent_name() -> None:
-    """Test parent_name returns parent interface (covers lines 126-128)."""
+    """Test parent_name returns parent interface."""
     config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1.200")
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/1.200")
-    assert interface_view is not None
-    assert interface_view.parent_name == "Ethernet1/1"
+    assert _interface_view(config, "Ethernet1/1.200").parent_name == "Ethernet1/1"
 
 
 def test_parent_name_none() -> None:
-    """Test parent_name returns None (covers line 128)."""
+    """Test parent_name returns None."""
     config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/1")
-    assert interface_view is not None
-    assert interface_view.parent_name is None
-
-
-def test_poe_not_implemented() -> None:
-    """Test poe raises NotImplementedError (covers line 132)."""
-    config = HConfig.from_text(Platform.CISCO_NXOS)
-    config.add_child("interface Ethernet1/1")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/1")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.poe
+    assert _interface_view(config).parent_name is None
 
 
 def test_port_number() -> None:
-    """Test port_number returns port number (covers line 136)."""
+    """Test port_number returns port number."""
     config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet2/48")
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet2/48")
-    assert interface_view is not None
-    assert interface_view.port_number == 48
+    assert _interface_view(config, "Ethernet2/48").port_number == 48
 
 
 def test_port_number_with_subinterface() -> None:
-    """Test port_number with subinterface (covers line 136)."""
+    """Test port_number with subinterface."""
     config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/5.300")
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/5.300")
-    assert interface_view is not None
-    assert interface_view.port_number == 5
-
-
-def test_speed_not_implemented() -> None:
-    """Test speed raises NotImplementedError (covers line 140)."""
-    config = HConfig.from_text(Platform.CISCO_NXOS)
-    config.add_child("interface Ethernet1/1")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/1")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.speed
+    assert _interface_view(config, "Ethernet1/5.300").port_number == 5
 
 
 def test_subinterface_number() -> None:
-    """Test subinterface_number returns number (covers line 144)."""
+    """Test subinterface_number returns number."""
     config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1.999")
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/1.999")
-    assert interface_view is not None
-    assert interface_view.subinterface_number == 999
+    assert _interface_view(config, "Ethernet1/1.999").subinterface_number == 999
 
 
 def test_subinterface_number_none() -> None:
-    """Test subinterface_number returns None (covers line 144)."""
+    """Test subinterface_number returns None."""
     config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/1")
-    assert interface_view is not None
-    assert interface_view.subinterface_number is None
+    assert _interface_view(config).subinterface_number is None
 
 
-def test_tagged_all_not_implemented() -> None:
-    """Test tagged_all raises NotImplementedError (covers line 148)."""
+def test_tagged_all() -> None:
+    config = HConfig.from_text(Platform.CISCO_NXOS)
+    config.add_children_deep(("interface Ethernet1/1", "switchport mode trunk"))
+
+    interface_view = _interface_view(config)
+    assert interface_view.tagged_all is True
+    assert interface_view.dot1q_mode == InterfaceDot1qMode.TAGGED_ALL
+
+
+def test_tagged_vlans() -> None:
+    config = HConfig.from_text(Platform.CISCO_NXOS)
+    interface = config.add_child("interface Ethernet1/1")
+    interface.add_child("switchport mode trunk")
+    interface.add_child("switchport trunk allowed vlan 10,20,30-32")
+
+    interface_view = _interface_view(config)
+    assert interface_view.tagged_vlans == (10, 20, 30, 31, 32)
+    assert interface_view.tagged_all is False
+    assert interface_view.dot1q_mode == InterfaceDot1qMode.TAGGED
+
+
+def test_tagged_vlans_empty() -> None:
     config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/1")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.tagged_all
+    assert _interface_view(config).tagged_vlans == ()
 
 
-def test_tagged_vlans_not_implemented() -> None:
-    """Test tagged_vlans raises NotImplementedError (covers line 152)."""
+def test_vrf() -> None:
     config = HConfig.from_text(Platform.CISCO_NXOS)
-    config.add_child("interface Ethernet1/1")
+    config.add_children_deep(("interface Ethernet1/1", "vrf member RED"))
+    config.add_child("interface Ethernet1/2")
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/1")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.tagged_vlans
-
-
-def test_vrf_not_implemented() -> None:
-    """Test vrf raises NotImplementedError (covers line 156)."""
-    config = HConfig.from_text(Platform.CISCO_NXOS)
-    config.add_child("interface Ethernet1/1")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Ethernet1/1")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.vrf
-
-
-def test_bundle_prefix() -> None:
-    """Test _bundle_prefix returns 'port-channel' (covers line 160)."""
-    config = HConfig.from_text(Platform.CISCO_NXOS)
-    config.add_child("interface port-channel1")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("port-channel1")
-    assert interface_view is not None
-    assert interface_view.is_bundle
+    assert _interface_view(config).vrf == "RED"
+    assert not _interface_view(config, "Ethernet1/2").vrf
 
 
 def test_hostname() -> None:
-    """Test hostname returns hostname (covers lines 175-177)."""
+    """Test hostname returns hostname."""
     config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("hostname NEXUS-CORE-01")
 
@@ -510,26 +339,24 @@ def test_hostname() -> None:
 
 
 def test_hostname_none() -> None:
-    """Test hostname returns None (covers line 177)."""
+    """Test hostname returns None."""
     config = HConfig.from_text(Platform.CISCO_NXOS)
 
     view = get_hconfig_view(config)
     assert view.hostname is None
 
 
-def test_interface_names_mentioned_not_implemented() -> None:
-    """Test interface_names_mentioned raises NotImplementedError (covers line 182)."""
+def test_interface_names_mentioned() -> None:
     config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
+    config.add_child("interface Ethernet1/2")
 
     view = get_hconfig_view(config)
-
-    with pytest.raises(NotImplementedError):
-        _ = view.interface_names_mentioned
+    assert view.interface_names_mentioned == frozenset({"Ethernet1/1", "Ethernet1/2"})
 
 
 def test_interface_views() -> None:
-    """Test interface_views yields interface views (covers lines 186-187)."""
+    """Test interface_views yields interface views."""
     config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
     config.add_child("interface Ethernet1/2")
@@ -545,7 +372,7 @@ def test_interface_views() -> None:
 
 
 def test_interfaces() -> None:
-    """Test interfaces returns interface children (covers line 191)."""
+    """Test interfaces returns interface children."""
     config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
     config.add_child("interface Ethernet1/2")
@@ -557,41 +384,54 @@ def test_interfaces() -> None:
     assert len(interfaces) == 3
 
 
-def test_ipv4_default_gw_not_implemented() -> None:
-    """Test ipv4_default_gw raises NotImplementedError (covers line 195)."""
+def test_ipv4_default_gw() -> None:
+    config = HConfig.from_text(Platform.CISCO_NXOS)
+    config.add_child("ip route 0.0.0.0/0 192.0.2.254")
+
+    view = get_hconfig_view(config)
+    assert view.ipv4_default_gw == IPv4Address("192.0.2.254")
+
+
+def test_ipv4_default_gw_none() -> None:
     config = HConfig.from_text(Platform.CISCO_NXOS)
 
     view = get_hconfig_view(config)
-
-    with pytest.raises(NotImplementedError):
-        _ = view.ipv4_default_gw
+    assert view.ipv4_default_gw is None
 
 
-def test_location_not_implemented() -> None:
-    """Test location raises NotImplementedError (covers line 199)."""
+def test_location() -> None:
+    config = HConfig.from_text(Platform.CISCO_NXOS)
+    config.add_child('snmp-server location "Data Center 1"')
+
+    view = get_hconfig_view(config)
+    assert view.location == "Data Center 1"
+
+
+def test_location_empty() -> None:
     config = HConfig.from_text(Platform.CISCO_NXOS)
 
     view = get_hconfig_view(config)
-
-    with pytest.raises(NotImplementedError):
-        _ = view.location
+    assert not view.location
 
 
-def test_stack_members_not_implemented() -> None:
-    """Test stack_members raises NotImplementedError (covers line 203)."""
+def test_stack_members() -> None:
+    """NX-OS has no stacking, so stack_members is always empty."""
     config = HConfig.from_text(Platform.CISCO_NXOS)
 
     view = get_hconfig_view(config)
-
-    with pytest.raises(NotImplementedError):
-        _ = list(view.stack_members)
+    assert not list(view.stack_members)
 
 
-def test_vlans_not_implemented() -> None:
-    """Test vlans raises NotImplementedError (covers line 207)."""
+def test_vlans() -> None:
     config = HConfig.from_text(Platform.CISCO_NXOS)
+    config.add_children_deep(("vlan 10", "name PROD"))
+    config.add_child("vlan 20")
+    config.add_children_deep(("interface Ethernet1/1", "switchport access vlan 30"))
 
     view = get_hconfig_view(config)
-
-    with pytest.raises(NotImplementedError):
-        _ = list(view.vlans)
+    assert list(view.vlans) == [
+        Vlan(id=10, name="PROD"),
+        Vlan(id=20, name=None),
+        Vlan(id=30, name=None),
+    ]
+    assert view.vlan_ids == frozenset({10, 20, 30})

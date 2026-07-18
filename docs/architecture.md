@@ -157,7 +157,8 @@ See [Future Config](future-config.md) for known limitations.
 The view layer (`hier_config/platforms/view_base.py` and platform-specific `view.py` files) provides structured, typed access to configuration elements without modifying the underlying tree.
 
 - `HConfigViewBase` — abstract base; subclasses implement `interface_views` and `dot1q_mode_from_vlans`.
-- `ConfigViewInterfaceBase` — abstract base for per-interface views; exposes properties like `ip_address`, `native_vlan`, `tagged_vlans`, `description`, `duplex`, `bundle_id`.
+- `ConfigViewInterfaceBase` — abstract base for per-interface views; exposes core properties like `name`, `description`, `enabled`, `ipv4_interfaces`, and `vrf`.
+- Optional capability mixins — `InterfaceBundleViewMixin` (`bundle_id`, `bundle_member_interfaces`, ...), `InterfaceVlanViewMixin` (`native_vlan`, `tagged_vlans`, `dot1q_mode`, ...), `InterfaceNACViewMixin` (`has_nac`, `nac_host_mode`, ...), and `InterfacePhysicalViewMixin` (`duplex`, `speed`, `poe`, `module_number`). Platform views inherit only the mixins they support; check capability with `isinstance(view, InterfaceVlanViewMixin)`.
 
 Instantiate a view with:
 

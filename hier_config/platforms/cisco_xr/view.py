@@ -1,40 +1,37 @@
 from collections.abc import Iterable
-from ipaddress import AddressValueError, IPv4Address, IPv4Interface
+from ipaddress import IPv4Address, IPv4Interface
 from re import sub
 
 from hier_config.child import HConfigChild
-from hier_config.platforms.models import (
-    InterfaceDuplex,
-    NACHostMode,
-    StackMember,
-    Vlan,
-)
+from hier_config.platforms.models import StackMember, Vlan
 from hier_config.platforms.view_base import (
-    ConfigViewInterfaceBase,
     HConfigViewBase,
+    InterfaceBundleViewMixin,
+    InterfaceVlanViewMixin,
 )
 
 
-class ConfigViewInterfaceCiscoIOSXR(ConfigViewInterfaceBase):  # noqa: PLR0904
+class ConfigViewInterfaceCiscoIOSXR(
+    InterfaceBundleViewMixin,
+    InterfaceVlanViewMixin,
+):
     """Interface config view for Cisco IOS XR."""
 
     @property
-    def _bundle_prefix(self) -> str:
-        return "Bundle-Ether"
-
-    @property
     def bundle_id(self) -> str | None:
-        raise NotImplementedError
+        if bundle := self.config.get_child(startswith="bundle id "):
+            return bundle.text.split()[2]
+        return None
 
     @property
     def bundle_member_interfaces(self) -> Iterable[str]:
-        raise NotImplementedError
-
-    @property
-    def bundle_name(self) -> str | None:
-        if self.bundle_id:
-            return f"{self._bundle_prefix}{self.bundle_id}"
-        return None
+        if not self.is_bundle:
+            return
+        for interface in self.config.parent.get_children(startswith="interface "):
+            if (
+                bundle := interface.get_child(startswith="bundle id ")
+            ) and bundle.text.split()[2] == self.number:
+                yield interface.text.split()[1]
 
     @property
     def description(self) -> str:
@@ -43,78 +40,34 @@ class ConfigViewInterfaceCiscoIOSXR(ConfigViewInterfaceBase):  # noqa: PLR0904
         return ""
 
     @property
-    def duplex(self) -> InterfaceDuplex:
-        raise NotImplementedError
-
-    @property
     def enabled(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def has_nac(self) -> bool:
-        """Determine if the interface has NAC configured."""
-        raise NotImplementedError
-
-    @property
-    def ipv4_interface(self) -> IPv4Interface | None:
-        return next(iter(self.ipv4_interfaces), None)
+        return not self.config.get_child(equals="shutdown")
 
     @property
     def ipv4_interfaces(self) -> Iterable[IPv4Interface]:
         for ipv4_address_obj in self.config.get_children(startswith="ipv4 address "):
-            ipv4_address = ipv4_address_obj.text.split()
+            words = ipv4_address_obj.text.split()[2:]
+            if len(words) == 1:
+                # ipv4 address x.x.x.x/nn
+                address = words[0]
+            elif words[1].startswith("/"):
+                # ipv4 address x.x.x.x /nn
+                address = f"{words[0]}{words[1]}"
+            else:
+                # ipv4 address x.x.x.x y.y.y.y
+                address = f"{words[0]}/{words[1]}"
             try:
-                yield IPv4Interface("/".join(ipv4_address[2:4]))
-            except AddressValueError:
+                yield IPv4Interface(address)
+            except ValueError:
                 continue
-
-    @property
-    def is_bundle(self) -> bool:
-        return self.name.lower().startswith(self._bundle_prefix)
 
     @property
     def is_loopback(self) -> bool:
         return self.name.lower().startswith("loopback")
 
     @property
-    def is_subinterface(self) -> bool:
-        return "." in self.name
-
-    @property
     def is_svi(self) -> bool:
         return self.name.lower().startswith("vlan")
-
-    @property
-    def module_number(self) -> int | None:
-        words = self.number.split("/", 1)
-        if len(words) == 1:
-            return None
-        return int(words[0])
-
-    @property
-    def nac_control_direction_in(self) -> bool:
-        """Determine if the interface has NAC control direction in configured."""
-        raise NotImplementedError
-
-    @property
-    def nac_host_mode(self) -> NACHostMode | None:
-        """Determine the NAC host mode."""
-        raise NotImplementedError
-
-    @property
-    def nac_mab_first(self) -> bool:
-        """Determine if the interface has NAC configured for MAB first."""
-        raise NotImplementedError
-
-    @property
-    def nac_max_dot1x_clients(self) -> int:
-        """Determine the max dot1x clients."""
-        raise NotImplementedError
-
-    @property
-    def nac_max_mab_clients(self) -> int:
-        """Determine the max mab clients."""
-        raise NotImplementedError
 
     @property
     def name(self) -> str:
@@ -122,45 +75,40 @@ class ConfigViewInterfaceCiscoIOSXR(ConfigViewInterfaceBase):  # noqa: PLR0904
 
     @property
     def native_vlan(self) -> int | None:
-        raise NotImplementedError
+        # VLANs only exist on sub-interfaces (e.g. `encapsulation dot1q 100`)
+        if self.is_subinterface and (
+            vlan := self.config.get_child(startswith="encapsulation dot1q ")
+        ):
+            return int(vlan.text.split()[2])
+        return None
 
     @property
     def number(self) -> str:
         return sub(r"^[a-zA-Z-]+", "", self.name)
 
     @property
-    def parent_name(self) -> str | None:
-        if self.is_subinterface:
-            return self.name.split(".")[0]
-        return None
-
-    @property
-    def poe(self) -> bool:
-        raise NotImplementedError
-
-    @property
     def port_number(self) -> int:
         return int(self.name.split("/")[-1].split(".")[0])
 
     @property
-    def speed(self) -> tuple[int, ...] | None:
-        raise NotImplementedError
-
-    @property
-    def subinterface_number(self) -> int | None:
-        return int(self.name.split(".")[0 - 1]) if self.is_subinterface else None
-
-    @property
     def tagged_all(self) -> bool:
-        raise NotImplementedError
+        """Cisco IOS XR has no switchports; interfaces never tag all VLANs."""
+        return False
 
     @property
     def tagged_vlans(self) -> tuple[int, ...]:
-        raise NotImplementedError
+        """Cisco IOS XR has no switchports; interfaces carry no tagged VLANs."""
+        return ()
 
     @property
     def vrf(self) -> str:
-        raise NotImplementedError
+        if vrf := self.config.get_child(startswith="vrf "):
+            return vrf.text.split()[1]
+        return ""
+
+    @property
+    def _bundle_prefix(self) -> str:
+        return "Bundle-Ether"
 
 
 class HConfigViewCiscoIOSXR(HConfigViewBase):
@@ -174,7 +122,8 @@ class HConfigViewCiscoIOSXR(HConfigViewBase):
 
     @property
     def interface_names_mentioned(self) -> frozenset[str]:
-        raise NotImplementedError
+        """Returns a set with all the interface names mentioned in the config."""
+        return frozenset(model.name for model in self.interface_views)
 
     @property
     def interface_views(self) -> Iterable[ConfigViewInterfaceCiscoIOSXR]:
@@ -187,16 +136,39 @@ class HConfigViewCiscoIOSXR(HConfigViewBase):
 
     @property
     def ipv4_default_gw(self) -> IPv4Address | None:
-        raise NotImplementedError
+        if (
+            (router_static := self.config.get_child(equals="router static"))
+            and (
+                address_family := router_static.get_child(
+                    equals="address-family ipv4 unicast",
+                )
+            )
+            and (route := address_family.get_child(startswith="0.0.0.0/0 "))
+        ):
+            return IPv4Address(route.text.split()[1])
+        return None
 
     @property
     def location(self) -> str:
-        raise NotImplementedError
+        if location := self.config.get_child(startswith="snmp-server location "):
+            return location.text.split(maxsplit=2)[2].replace('"', "")
+        return ""
 
     @property
     def stack_members(self) -> Iterable[StackMember]:
-        raise NotImplementedError
+        """Cisco IOS XR does not support stacking."""
+        return ()
 
     @property
     def vlans(self) -> Iterable[Vlan]:
-        raise NotImplementedError
+        """Yield the VLANs encapsulated on sub-interfaces."""
+        yielded_vlans: set[int] = set()
+        for interface_view in self.interface_views:
+            if (
+                native_vlan := interface_view.native_vlan
+            ) and native_vlan not in yielded_vlans:
+                yielded_vlans.add(native_vlan)
+                yield Vlan(
+                    id=native_vlan,
+                    name=None,
+                )

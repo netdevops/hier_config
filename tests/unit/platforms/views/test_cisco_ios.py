@@ -5,6 +5,7 @@ from ipaddress import IPv4Address
 import pytest
 
 from hier_config import HConfig, Platform, get_hconfig_view
+from hier_config.platforms.cisco_ios.view import ConfigViewInterfaceCiscoIOS
 from hier_config.platforms.models import InterfaceDuplex, NACHostMode, StackMember
 
 
@@ -16,7 +17,7 @@ def test_bundle_id() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.bundle_id == "10"
 
 
@@ -27,21 +28,62 @@ def test_bundle_id_none() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.bundle_id is None
 
 
-def test_bundle_member_interfaces_not_implemented() -> None:
-    """Test bundle_member_interfaces raises NotImplementedError (covers line 29)."""
+def test_bundle_member_interfaces() -> None:
+    """Test bundle_member_interfaces yields the bundle's member interfaces."""
+    config = HConfig.from_text(Platform.CISCO_IOS)
+    config.add_child("interface Port-channel10")
+    config.add_children_deep(
+        ("interface GigabitEthernet0/0", "channel-group 10 mode active")
+    )
+    config.add_children_deep(
+        ("interface GigabitEthernet0/1", "channel-group 10 mode active")
+    )
+    config.add_children_deep(
+        ("interface GigabitEthernet0/2", "channel-group 20 mode active")
+    )
+
+    view = get_hconfig_view(config)
+    interface_view = view.interface_view_by_name("Port-channel10")
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
+
+    assert list(interface_view.bundle_member_interfaces) == [
+        "GigabitEthernet0/0",
+        "GigabitEthernet0/1",
+    ]
+
+
+def test_bundle_member_interfaces_not_a_bundle() -> None:
+    """Test bundle_member_interfaces yields nothing for a non-bundle interface."""
     config = HConfig.from_text(Platform.CISCO_IOS)
     config.add_child("interface GigabitEthernet0/0")
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
 
-    with pytest.raises(NotImplementedError):
-        _ = list(interface_view.bundle_member_interfaces)
+    assert not list(interface_view.bundle_member_interfaces)
+
+
+def test_is_bundle() -> None:
+    """Test is_bundle matches Port-channel interfaces case-insensitively."""
+    config = HConfig.from_text(Platform.CISCO_IOS)
+    config.add_child("interface Port-channel10")
+    config.add_child("interface GigabitEthernet0/0")
+
+    view = get_hconfig_view(config)
+    port_channel = view.interface_view_by_name("Port-channel10")
+    assert isinstance(port_channel, ConfigViewInterfaceCiscoIOS)
+    assert port_channel.is_bundle is True
+
+    ethernet = view.interface_view_by_name("GigabitEthernet0/0")
+    assert isinstance(ethernet, ConfigViewInterfaceCiscoIOS)
+    assert ethernet.is_bundle is False
+
+    assert [iv.name for iv in view.bundle_interface_views] == ["Port-channel10"]
 
 
 def test_bundle_name() -> None:
@@ -52,7 +94,7 @@ def test_bundle_name() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.bundle_name == "Port-channel5"
 
 
@@ -63,7 +105,7 @@ def test_bundle_name_none() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.bundle_name is None
 
 
@@ -75,7 +117,7 @@ def test_description() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.description == "Uplink to Core"
 
 
@@ -86,7 +128,7 @@ def test_description_empty() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert not interface_view.description
 
 
@@ -97,7 +139,7 @@ def test_duplex_auto() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.duplex == InterfaceDuplex.AUTO
 
 
@@ -108,7 +150,7 @@ def test_enabled_true() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.enabled is True
 
 
@@ -120,7 +162,7 @@ def test_enabled_false() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.enabled is False
 
 
@@ -132,7 +174,7 @@ def test_has_nac_port_control() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.has_nac is True
 
 
@@ -144,7 +186,7 @@ def test_has_nac_mab() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.has_nac is True
 
 
@@ -155,7 +197,7 @@ def test_has_nac_false() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.has_nac is False
 
 
@@ -166,7 +208,7 @@ def test_ipv4_interface_none() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.ipv4_interface is None
 
 
@@ -178,7 +220,7 @@ def test_nac_control_direction_in_true() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.nac_control_direction_in is True
 
 
@@ -189,7 +231,7 @@ def test_nac_control_direction_in_false() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.nac_control_direction_in is False
 
 
@@ -201,7 +243,7 @@ def test_nac_host_mode_multi_auth() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.nac_host_mode == NACHostMode.MULTI_AUTH
 
 
@@ -213,7 +255,7 @@ def test_nac_host_mode_multi_domain() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.nac_host_mode == NACHostMode.MULTI_DOMAIN
 
 
@@ -225,7 +267,7 @@ def test_nac_host_mode_multi_host() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.nac_host_mode == NACHostMode.MULTI_HOST
 
 
@@ -237,7 +279,7 @@ def test_nac_host_mode_single_host() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.nac_host_mode == NACHostMode.SINGLE_HOST
 
 
@@ -248,7 +290,7 @@ def test_nac_host_mode_none() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.nac_host_mode is None
 
 
@@ -260,7 +302,7 @@ def test_nac_mab_first_true() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.nac_mab_first is True
 
 
@@ -271,7 +313,7 @@ def test_nac_mab_first_false() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.nac_mab_first is False
 
 
@@ -282,7 +324,7 @@ def test_nac_max_dot1x_clients_not_implemented() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
 
     with pytest.raises(NotImplementedError):
         _ = interface_view.nac_max_dot1x_clients
@@ -295,7 +337,7 @@ def test_nac_max_mab_clients_not_implemented() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
 
     with pytest.raises(NotImplementedError):
         _ = interface_view.nac_max_mab_clients
@@ -309,7 +351,7 @@ def test_native_vlan_subinterface() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0.100")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.native_vlan == 50
 
 
@@ -321,7 +363,7 @@ def test_native_vlan_no_switchport() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.native_vlan is None
 
 
@@ -334,7 +376,7 @@ def test_native_vlan_trunk() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.native_vlan == 999
 
 
@@ -346,7 +388,7 @@ def test_native_vlan_trunk_default() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.native_vlan is None
 
 
@@ -358,7 +400,7 @@ def test_native_vlan_access() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.native_vlan == 50
 
 
@@ -369,7 +411,7 @@ def test_native_vlan_default() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.native_vlan == 1
 
 
@@ -380,7 +422,7 @@ def test_poe_true() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.poe is True
 
 
@@ -392,7 +434,7 @@ def test_poe_false() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.poe is False
 
 
@@ -404,7 +446,7 @@ def test_speed() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.speed == (1000,)
 
 
@@ -416,7 +458,7 @@ def test_tagged_all_true() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.tagged_all is True
 
 
@@ -427,7 +469,7 @@ def test_tagged_all_false() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.tagged_all is False
 
 
@@ -439,7 +481,7 @@ def test_tagged_vlans() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.tagged_vlans == (10, 20, 30, 31, 32, 33, 34, 35)
 
 
@@ -450,7 +492,7 @@ def test_tagged_vlans_empty() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.tagged_vlans == ()
 
 
@@ -462,7 +504,7 @@ def test_vrf() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.vrf == "MGMT"
 
 
@@ -473,7 +515,7 @@ def test_vrf_empty() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert not interface_view.vrf
 
 

@@ -2,7 +2,14 @@
 
 from hier_config import HConfig, Platform, get_hconfig_view
 from hier_config.platforms.models import InterfaceDot1qMode
-from hier_config.platforms.view_base import ConfigViewInterfaceBase, HConfigViewBase
+from hier_config.platforms.view_base import (
+    ConfigViewInterfaceBase,
+    HConfigViewBase,
+    InterfaceBundleViewMixin,
+    InterfaceNACViewMixin,
+    InterfacePhysicalViewMixin,
+    InterfaceVlanViewMixin,
+)
 
 
 def test_interface_dot1q_mode_tagged() -> None:
@@ -15,7 +22,7 @@ def test_interface_dot1q_mode_tagged() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, InterfaceVlanViewMixin)
     assert interface_view.dot1q_mode == InterfaceDot1qMode.TAGGED
 
 
@@ -28,7 +35,7 @@ def test_interface_dot1q_mode_access() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, InterfaceVlanViewMixin)
     assert interface_view.dot1q_mode == InterfaceDot1qMode.ACCESS
 
 
@@ -39,7 +46,7 @@ def test_interface_dot1q_mode_none() -> None:
 
     view = get_hconfig_view(config)
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
-    assert interface_view is not None
+    assert isinstance(interface_view, InterfaceVlanViewMixin)
     assert interface_view.dot1q_mode is None
 
 
@@ -146,20 +153,39 @@ def test_hconfig_view_vlan_ids() -> None:
 
 
 def test_interface_view_abstract_properties_coverage() -> None:
-    """Test that abstract properties are properly defined (covers view_base.py lines 184, 205, 210, 226, 231, 235, 241, 246, 256)."""
-    assert hasattr(ConfigViewInterfaceBase, "bundle_id")
-    assert hasattr(ConfigViewInterfaceBase, "bundle_member_interfaces")
-    assert hasattr(ConfigViewInterfaceBase, "bundle_name")
+    """Test that abstract properties are defined on the base and the mixins."""
     assert hasattr(ConfigViewInterfaceBase, "description")
-    assert hasattr(ConfigViewInterfaceBase, "duplex")
     assert hasattr(ConfigViewInterfaceBase, "enabled")
-    assert hasattr(ConfigViewInterfaceBase, "has_nac")
     assert hasattr(ConfigViewInterfaceBase, "ipv4_interfaces")
-    assert hasattr(ConfigViewInterfaceBase, "is_bundle")
     assert hasattr(ConfigViewInterfaceBase, "is_loopback")
     assert hasattr(ConfigViewInterfaceBase, "is_svi")
-    assert hasattr(ConfigViewInterfaceBase, "module_number")
-    assert hasattr(ConfigViewInterfaceBase, "_bundle_prefix")
+    assert hasattr(ConfigViewInterfaceBase, "name")
+    assert hasattr(ConfigViewInterfaceBase, "number")
+    assert hasattr(ConfigViewInterfaceBase, "port_number")
+    assert hasattr(ConfigViewInterfaceBase, "vrf")
+
+    assert hasattr(InterfaceBundleViewMixin, "bundle_id")
+    assert hasattr(InterfaceBundleViewMixin, "bundle_member_interfaces")
+    assert hasattr(InterfaceBundleViewMixin, "bundle_name")
+    assert hasattr(InterfaceBundleViewMixin, "is_bundle")
+    assert hasattr(InterfaceBundleViewMixin, "_bundle_prefix")
+
+    assert hasattr(InterfaceVlanViewMixin, "dot1q_mode")
+    assert hasattr(InterfaceVlanViewMixin, "native_vlan")
+    assert hasattr(InterfaceVlanViewMixin, "tagged_all")
+    assert hasattr(InterfaceVlanViewMixin, "tagged_vlans")
+
+    assert hasattr(InterfaceNACViewMixin, "has_nac")
+    assert hasattr(InterfaceNACViewMixin, "nac_control_direction_in")
+    assert hasattr(InterfaceNACViewMixin, "nac_host_mode")
+    assert hasattr(InterfaceNACViewMixin, "nac_mab_first")
+    assert hasattr(InterfaceNACViewMixin, "nac_max_dot1x_clients")
+    assert hasattr(InterfaceNACViewMixin, "nac_max_mab_clients")
+
+    assert hasattr(InterfacePhysicalViewMixin, "duplex")
+    assert hasattr(InterfacePhysicalViewMixin, "module_number")
+    assert hasattr(InterfacePhysicalViewMixin, "poe")
+    assert hasattr(InterfacePhysicalViewMixin, "speed")
 
     # Verify HConfigViewBase has the expected abstract methods/properties
     assert hasattr(HConfigViewBase, "dot1q_mode_from_vlans")

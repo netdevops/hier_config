@@ -529,10 +529,7 @@ def test_sectional_exit_text_parent_level_generic_platform() -> None:
 def test_remediation_does_not_mutate_inputs() -> None:
     """remediation() must not modify the running or generated configs (#224)."""
     running_text = (
-        "hostname old\n"
-        "interface GigabitEthernet0/0\n"
-        " description keep\n"
-        " shutdown\n"
+        "hostname old\ninterface GigabitEthernet0/0\n description keep\n shutdown\n"
     )
     generated_text = (
         "hostname new\n"
