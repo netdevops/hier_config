@@ -49,10 +49,10 @@ def _detect_structured_format(config_text: str) -> str | None:
 def _reject_structured_format(config_text: str) -> None:
     if detected := _detect_structured_format(config_text):
         message = (
-            f"The config appears to be {detected}, which hier_config does not"
-            " parse. Convert it to the platform's indented CLI text first"
-            " (set-style configs are supported natively by the Juniper JunOS,"
-            " VyOS, and Nokia SRL drivers)."
+            f"The config appears to be {detected}. Use HConfig.from_xml() or"
+            " HConfig.from_json() for structured formats, or convert to the"
+            " platform's indented CLI text (set-style configs are supported"
+            " natively by the Juniper JunOS, VyOS, and Nokia SRL drivers)."
         )
         raise InvalidConfigError(message)
 
