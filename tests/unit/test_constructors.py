@@ -6,17 +6,13 @@ from tempfile import NamedTemporaryFile
 import pytest
 
 from hier_config import (
-    get_hconfig,
     get_hconfig_driver,
-    get_hconfig_fast_load,
-    get_hconfig_from_dump,
     get_hconfig_view,
 )
 from hier_config.constructors import (
-    _adjust_indent,  # pyright: ignore[reportPrivateUsage]
-    _config_from_string_lines_end_of_banner_test,  # pyright: ignore[reportPrivateUsage]
-    _load_from_string_lines,  # pyright: ignore[reportPrivateUsage]
-    get_hconfig_fast_generic_load,
+    _adjust_indent,
+    _config_from_string_lines_end_of_banner_test,
+    _load_from_string_lines,
 )
 from hier_config.exceptions import DriverNotFoundError, InvalidConfigError
 from hier_config.models import Platform
@@ -102,7 +98,7 @@ def test_get_hconfig_from_path() -> None:
         path = Path(tmpfile.name)
 
     driver = get_hconfig_driver(Platform.CISCO_IOS)
-    result = get_hconfig(driver, path)
+    result = HConfig.from_text(driver, path)
     hostname_child = result.get_child(startswith="hostname")
     try:
         assert hostname_child is not None
@@ -120,11 +116,11 @@ interface GigabitEthernet0/0
  no shutdown
 """
     driver = get_hconfig_driver(Platform.CISCO_IOS)
-    hconfig = get_hconfig(driver, config)
+    hconfig = HConfig.from_text(driver, config)
 
     dump = hconfig.dump()
 
-    restored = get_hconfig_from_dump(driver, dump)
+    restored = HConfig.from_dump(driver, dump)
     hostname_child = restored.get_child(startswith="hostname")
     assert hostname_child is not None
 
@@ -148,7 +144,7 @@ def test_get_hconfig_fast_generic_load_with_string_conversion() -> None:
         "interface GigabitEthernet0/0",
         " description test",
     ]
-    result = get_hconfig_fast_generic_load(config_lines)
+    result = HConfig.from_lines(Platform.GENERIC, config_lines)
     hostname_child = result.get_child(startswith="hostname")
     assert hostname_child is not None
     assert len(result.children) > 0
@@ -162,7 +158,7 @@ def test_get_hconfig_fast_load_with_string_conversion() -> None:
         " description test",
     ]
     driver = get_hconfig_driver(Platform.CISCO_IOS)
-    result = get_hconfig_fast_load(driver, config_lines)
+    result = HConfig.from_lines(driver, config_lines)
     hostname_child = result.get_child(startswith="hostname")
     assert hostname_child is not None
     assert len(result.children) > 0
@@ -341,10 +337,10 @@ router bgp 65000
   neighbor 10.0.0.2 activate
 """
     driver = get_hconfig_driver(Platform.CISCO_IOS)
-    hconfig = get_hconfig(driver, config)
+    hconfig = HConfig.from_text(driver, config)
 
     dump = hconfig.dump()
-    restored = get_hconfig_from_dump(driver, dump)
+    restored = HConfig.from_dump(driver, dump)
 
     router_bgp = None
     for child in restored.children:
@@ -432,11 +428,11 @@ interface GigabitEthernet0/1
  description another
 """
     driver = get_hconfig_driver(Platform.CISCO_IOS)
-    hconfig = get_hconfig(driver, config)
+    hconfig = HConfig.from_text(driver, config)
 
     dump = hconfig.dump()
 
-    restored = get_hconfig_from_dump(driver, dump)
+    restored = HConfig.from_dump(driver, dump)
 
     assert len(restored.children) > 0
 

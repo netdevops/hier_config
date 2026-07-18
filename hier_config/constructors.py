@@ -9,47 +9,11 @@ from hier_config.platforms.driver_base import HConfigDriverBase
 from .child import HConfigChild
 from .exceptions import DriverNotFoundError, InvalidConfigError
 from .models import Dump, Platform
-from .platforms.arista_eos.driver import HConfigDriverAristaEOS
-from .platforms.cisco_ios.driver import HConfigDriverCiscoIOS
-from .platforms.cisco_nxos.driver import HConfigDriverCiscoNXOS
-from .platforms.cisco_xr.driver import HConfigDriverCiscoIOSXR
-from .platforms.fortinet_fortios.driver import HConfigDriverFortinetFortiOS
-from .platforms.generic.driver import HConfigDriverGeneric
-from .platforms.hp_comware5.driver import HConfigDriverHPComware5
-from .platforms.hp_procurve.driver import HConfigDriverHPProcurve
-from .platforms.huawei_vrp.driver import HConfigDriverHuaweiVrp
-from .platforms.juniper_junos.driver import HConfigDriverJuniperJUNOS
-from .platforms.nokia_srl.driver import HConfigDriverNokiaSRL
 from .platforms.view_base import HConfigViewBase
-from .platforms.vyos.driver import HConfigDriverVYOS
+from .registry import get_hconfig_driver
 from .root import HConfig
 
 logger = getLogger(__name__)
-
-
-def get_hconfig_driver(platform: Platform) -> HConfigDriverBase:
-    """Create base options on an OS level."""
-    platform_drivers: dict[Platform, type[HConfigDriverBase]] = {
-        Platform.ARISTA_EOS: HConfigDriverAristaEOS,
-        Platform.CISCO_IOS: HConfigDriverCiscoIOS,
-        Platform.CISCO_NXOS: HConfigDriverCiscoNXOS,
-        Platform.CISCO_XR: HConfigDriverCiscoIOSXR,
-        Platform.FORTINET_FORTIOS: HConfigDriverFortinetFortiOS,
-        Platform.GENERIC: HConfigDriverGeneric,
-        Platform.HP_PROCURVE: HConfigDriverHPProcurve,
-        Platform.HP_COMWARE5: HConfigDriverHPComware5,
-        Platform.HUAWEI_VRP: HConfigDriverHuaweiVrp,
-        Platform.JUNIPER_JUNOS: HConfigDriverJuniperJUNOS,
-        Platform.NOKIA_SRL: HConfigDriverNokiaSRL,
-        Platform.VYOS: HConfigDriverVYOS,
-    }
-    driver_cls = platform_drivers.get(platform)
-
-    if driver_cls is None:
-        message = f"Unsupported platform: {platform}"
-        raise DriverNotFoundError(message)
-
-    return driver_cls()
 
 
 def get_hconfig_view(config: HConfig) -> HConfigViewBase:
@@ -65,8 +29,8 @@ def get_hconfig_view(config: HConfig) -> HConfigViewBase:
     raise DriverNotFoundError(message)
 
 
-def get_hconfig(
-    platform_or_driver: Platform | HConfigDriverBase,
+def _hconfig_from_text(
+    platform_or_driver: Platform | str | HConfigDriverBase,
     config_raw: Path | str = "",
 ) -> HConfig:
     if isinstance(config_raw, Path):
@@ -87,11 +51,11 @@ def get_hconfig(
     return config
 
 
-def get_hconfig_from_dump(
-    platform_or_driver: Platform | HConfigDriverBase, dump: Dump
+def _hconfig_from_dump(
+    platform_or_driver: Platform | str | HConfigDriverBase, dump: Dump
 ) -> HConfig:
     """Load an HConfig dump."""
-    config = get_hconfig(_get_driver(platform_or_driver))
+    config = _hconfig_from_text(_get_driver(platform_or_driver))
     last_item: HConfig | HConfigChild = config
     for item in dump.lines:
         # parent is the root
@@ -115,18 +79,12 @@ def get_hconfig_from_dump(
     return config
 
 
-def get_hconfig_fast_generic_load(
-    lines: list[str] | tuple[str, ...] | str,
-) -> HConfig:
-    return get_hconfig_fast_load(Platform.GENERIC, lines)
-
-
-def get_hconfig_fast_load(
-    platform_or_driver: Platform | HConfigDriverBase,
+def _hconfig_from_lines(
+    platform_or_driver: Platform | str | HConfigDriverBase,
     lines: list[str] | tuple[str, ...] | str,
 ) -> HConfig:
     driver = _get_driver(platform_or_driver)
-    config = get_hconfig(driver)
+    config = _hconfig_from_text(driver)
     if isinstance(lines, str):
         lines = lines.splitlines()
 
@@ -164,9 +122,9 @@ def get_hconfig_fast_load(
 
 
 def _get_driver(
-    platform_or_driver: Platform | HConfigDriverBase,
+    platform_or_driver: Platform | str | HConfigDriverBase,
 ) -> HConfigDriverBase:
-    if isinstance(platform_or_driver, Platform):
+    if isinstance(platform_or_driver, (Platform, str)):
         return get_hconfig_driver(platform_or_driver)
     return platform_or_driver
 

@@ -2,12 +2,12 @@
 
 import pytest
 
-from hier_config import Platform, get_hconfig, get_hconfig_view
+from hier_config import HConfig, Platform, get_hconfig_view
 
 
 def test_hostname() -> None:
     """Test hostname returns hostname (covers lines 158-160)."""
-    config = get_hconfig(Platform.ARISTA_EOS)
+    config = HConfig.from_text(Platform.ARISTA_EOS)
     config.add_child("hostname ARISTA-LEAF-01")
 
     view = get_hconfig_view(config)
@@ -16,7 +16,7 @@ def test_hostname() -> None:
 
 def test_hostname_none() -> None:
     """Test hostname returns None (covers line 160)."""
-    config = get_hconfig(Platform.ARISTA_EOS)
+    config = HConfig.from_text(Platform.ARISTA_EOS)
 
     view = get_hconfig_view(config)
     assert view.hostname is None
@@ -24,7 +24,7 @@ def test_hostname_none() -> None:
 
 def test_interface_names_mentioned_not_implemented() -> None:
     """Test interface_names_mentioned raises NotImplementedError (covers line 165)."""
-    config = get_hconfig(Platform.ARISTA_EOS)
+    config = HConfig.from_text(Platform.ARISTA_EOS)
     config.add_child("interface Ethernet1")
 
     view = get_hconfig_view(config)
@@ -35,7 +35,7 @@ def test_interface_names_mentioned_not_implemented() -> None:
 
 def test_interface_views() -> None:
     """Test interface_views yields interface views (covers lines 169-170)."""
-    config = get_hconfig(Platform.ARISTA_EOS)
+    config = HConfig.from_text(Platform.ARISTA_EOS)
     config.add_child("interface Ethernet1")
     config.add_child("interface Ethernet2")
     config.add_child("interface Management1")
@@ -48,7 +48,7 @@ def test_interface_views() -> None:
 
 def test_interfaces() -> None:
     """Test interfaces returns interface children (covers line 174)."""
-    config = get_hconfig(Platform.ARISTA_EOS)
+    config = HConfig.from_text(Platform.ARISTA_EOS)
     config.add_child("interface Ethernet1")
     config.add_child("interface Ethernet2")
 
@@ -60,7 +60,7 @@ def test_interfaces() -> None:
 
 def test_ipv4_default_gw_not_implemented() -> None:
     """Test ipv4_default_gw raises NotImplementedError (covers line 178)."""
-    config = get_hconfig(Platform.ARISTA_EOS)
+    config = HConfig.from_text(Platform.ARISTA_EOS)
 
     view = get_hconfig_view(config)
 
@@ -70,7 +70,7 @@ def test_ipv4_default_gw_not_implemented() -> None:
 
 def test_location_not_implemented() -> None:
     """Test location raises NotImplementedError (covers line 182)."""
-    config = get_hconfig(Platform.ARISTA_EOS)
+    config = HConfig.from_text(Platform.ARISTA_EOS)
 
     view = get_hconfig_view(config)
 
@@ -80,7 +80,7 @@ def test_location_not_implemented() -> None:
 
 def test_stack_members_not_implemented() -> None:
     """Test stack_members raises NotImplementedError (covers line 186)."""
-    config = get_hconfig(Platform.ARISTA_EOS)
+    config = HConfig.from_text(Platform.ARISTA_EOS)
 
     view = get_hconfig_view(config)
 
@@ -90,7 +90,7 @@ def test_stack_members_not_implemented() -> None:
 
 def test_vlans_not_implemented() -> None:
     """Test vlans raises NotImplementedError (covers line 190)."""
-    config = get_hconfig(Platform.ARISTA_EOS)
+    config = HConfig.from_text(Platform.ARISTA_EOS)
 
     view = get_hconfig_view(config)
 

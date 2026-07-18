@@ -29,8 +29,8 @@ class WorkflowRemediation:
         from hier_config.model import Platform
 
         # Create running and generated configurations as HConfig objects
-        running_config = get_hconfig(Platform.CISCO_IOS, "running_config_text")
-        generated_config = get_hconfig(Platform.CISCO_IOS, "generated_config_text")
+        running_config = HConfig.from_text(Platform.CISCO_IOS, "running_config_text")
+        generated_config = HConfig.from_text(Platform.CISCO_IOS, "generated_config_text")
 
         # Initialize WorkflowRemediation with running and generated configurations
         workflow = WorkflowRemediation(running_config, generated_config)

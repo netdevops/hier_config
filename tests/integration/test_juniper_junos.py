@@ -1,4 +1,4 @@
-from hier_config import WorkflowRemediation, get_hconfig, get_hconfig_fast_load
+from hier_config import HConfig, WorkflowRemediation
 from hier_config.models import Platform
 
 
@@ -9,8 +9,8 @@ def test_junos_basic_remediation() -> None:
     remediation_str = "delete vlans switch_mgmt_10.0.2.0/24 vlan-id 2\nset vlans switch_mgmt_10.0.3.0/24 vlan-id 3"
 
     workflow_remediation = WorkflowRemediation(
-        get_hconfig_fast_load(platform, running_config_str),
-        get_hconfig_fast_load(platform, generated_config_str),
+        HConfig.from_lines(platform, running_config_str),
+        HConfig.from_lines(platform, generated_config_str),
     )
 
     assert workflow_remediation.remediation_config_filtered_text() == remediation_str
@@ -23,8 +23,8 @@ def test_junos_convert_to_set(
 ) -> None:
     platform = Platform.JUNIPER_JUNOS
     workflow_remediation = WorkflowRemediation(
-        get_hconfig(platform, running_config_junos),
-        get_hconfig(platform, generated_config_junos),
+        HConfig.from_text(platform, running_config_junos),
+        HConfig.from_text(platform, generated_config_junos),
     )
 
     assert (
@@ -40,8 +40,8 @@ def test_flat_junos_remediation(
 ) -> None:
     platform = Platform.JUNIPER_JUNOS
     workflow_remediation = WorkflowRemediation(
-        get_hconfig_fast_load(platform, running_config_flat_junos),
-        get_hconfig_fast_load(platform, generated_config_flat_junos),
+        HConfig.from_lines(platform, running_config_flat_junos),
+        HConfig.from_lines(platform, generated_config_flat_junos),
     )
 
     remediation_list = remediation_config_flat_junos.splitlines()
@@ -52,14 +52,14 @@ def test_flat_junos_remediation(
 def test_vlan_addition_scenario() -> None:
     """Test adding a new VLAN to the configuration."""
     platform = Platform.JUNIPER_JUNOS
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         (
             "set vlans switch_mgmt_10.0.2.0/24 vlan-id 2",
             "set vlans switch_mgmt_10.0.2.0/24 l3-interface irb.2",
         ),
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform,
         (
             "set vlans switch_mgmt_10.0.2.0/24 vlan-id 2",
@@ -78,7 +78,7 @@ def test_vlan_addition_scenario() -> None:
 def test_vlan_removal_scenario() -> None:
     """Test removing a VLAN from the configuration."""
     platform = Platform.JUNIPER_JUNOS
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         (
             "set vlans switch_mgmt_10.0.2.0/24 vlan-id 2",
@@ -87,7 +87,7 @@ def test_vlan_removal_scenario() -> None:
             "set vlans switch_mgmt_10.0.3.0/24 l3-interface irb.3",
         ),
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform,
         (
             "set vlans switch_mgmt_10.0.2.0/24 vlan-id 2",
@@ -104,11 +104,11 @@ def test_vlan_removal_scenario() -> None:
 def test_interface_unit_configuration_scenario() -> None:
     """Test configuring interface unit parameters."""
     platform = Platform.JUNIPER_JUNOS
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         ("set interfaces irb unit 2 family inet address 10.0.2.1/24",),
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform,
         (
             "set interfaces irb unit 2 family inet address 10.0.2.1/24",
@@ -128,11 +128,11 @@ def test_interface_unit_configuration_scenario() -> None:
 def test_interface_address_change_scenario() -> None:
     """Test changing an interface IP address."""
     platform = Platform.JUNIPER_JUNOS
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         ("set interfaces irb unit 3 family inet address 10.0.4.1/16",),
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform,
         ("set interfaces irb unit 3 family inet address 10.0.3.1/16",),
     )
@@ -146,14 +146,14 @@ def test_interface_address_change_scenario() -> None:
 def test_interface_disable_enable_scenario() -> None:
     """Test disabling and enabling an interface."""
     platform = Platform.JUNIPER_JUNOS
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         (
             "set interfaces irb unit 2 family inet address 10.0.2.1/24",
             "set interfaces irb unit 2 family inet disable",
         ),
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform,
         ("set interfaces irb unit 2 family inet address 10.0.2.1/24",),
     )
@@ -166,14 +166,14 @@ def test_interface_disable_enable_scenario() -> None:
 def test_firewall_filter_configuration_scenario() -> None:
     """Test configuring firewall filter rules."""
     platform = Platform.JUNIPER_JUNOS
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         (
             "set firewall family inet filter TEST term 1 from source-address 10.0.0.0/29",
             "set firewall family inet filter TEST term 1 then accept",
         ),
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform,
         (
             "set firewall family inet filter TEST term 1 from source-address 10.0.0.0/29",
@@ -192,8 +192,8 @@ def test_firewall_filter_configuration_scenario() -> None:
 def test_physical_interface_configuration_scenario() -> None:
     """Test configuring physical interface with multiple families."""
     platform = Platform.JUNIPER_JUNOS
-    running_config = get_hconfig(platform)
-    generated_config = get_hconfig_fast_load(
+    running_config = HConfig.from_text(platform)
+    generated_config = HConfig.from_lines(
         platform,
         (
             "set interfaces xe-0/0/0 description bb01.lax01:Ethernet2; ID:YT661812121",
@@ -227,11 +227,11 @@ def test_physical_interface_configuration_scenario() -> None:
 def test_system_hostname_change_scenario() -> None:
     """Test changing system hostname."""
     platform = Platform.JUNIPER_JUNOS
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         ("set system host-name old-router.example.com",),
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform,
         ("set system host-name new-router.example.com",),
     )

@@ -1,4 +1,4 @@
-from hier_config import get_hconfig
+from hier_config import HConfig
 from hier_config.child import HConfigChild
 from hier_config.models import Platform
 from hier_config.platforms.vyos.driver import HConfigDriverVYOS
@@ -8,7 +8,7 @@ def test_swap_negation_delete_to_set() -> None:
     """Test swapping from 'delete' to 'set' prefix (covers lines 9-11)."""
     platform = Platform.VYOS
     driver = HConfigDriverVYOS()
-    root = get_hconfig(platform)
+    root = HConfig.from_text(platform)
 
     # Create a child with 'delete' prefix
     child = HConfigChild(root, "delete interfaces ethernet eth0 address 192.168.1.1/24")
@@ -24,7 +24,7 @@ def test_swap_negation_set_to_delete() -> None:
     """Test swapping from 'set' to 'delete' prefix (covers lines 10, 12)."""
     platform = Platform.VYOS
     driver = HConfigDriverVYOS()
-    root = get_hconfig(platform)
+    root = HConfig.from_text(platform)
 
     # Create a child with 'set' prefix
     child = HConfigChild(root, "set interfaces ethernet eth0 address 192.168.1.1/24")
@@ -40,7 +40,7 @@ def test_swap_negation_no_prefix() -> None:
     """Test swap_negation behavior when text has neither prefix (covers VyOS-specific behavior)."""
     platform = Platform.VYOS
     driver = HConfigDriverVYOS()
-    root = get_hconfig(platform)
+    root = HConfig.from_text(platform)
 
     # Create a child without proper prefix
     child = HConfigChild(root, "interfaces ethernet eth0 address 192.168.1.1/24")

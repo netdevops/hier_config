@@ -1,4 +1,4 @@
-from hier_config import get_hconfig_fast_load
+from hier_config import HConfig
 from hier_config.models import (
     MatchRule,
     Platform,
@@ -35,7 +35,7 @@ def test_unused_acl_detected() -> None:
             ),
         ],
     )
-    config = get_hconfig_fast_load(
+    config = HConfig.from_lines(
         driver,
         (
             "ipv4 access-list USED_ACL",
@@ -66,7 +66,7 @@ def test_used_acl_not_detected() -> None:
             ),
         ],
     )
-    config = get_hconfig_fast_load(
+    config = HConfig.from_lines(
         driver,
         (
             "ipv4 access-list MY_ACL",
@@ -81,7 +81,7 @@ def test_used_acl_not_detected() -> None:
 
 def test_no_unused_object_rules_yields_nothing() -> None:
     """A driver with no unused_objects rules yields nothing."""
-    config = get_hconfig_fast_load(
+    config = HConfig.from_lines(
         Platform.GENERIC,
         ("hostname router1",),
     )
@@ -109,7 +109,7 @@ def test_multiple_reference_locations() -> None:
             ),
         ],
     )
-    config = get_hconfig_fast_load(
+    config = HConfig.from_lines(
         driver,
         (
             "route-policy USED_IN_BGP",
@@ -142,7 +142,7 @@ def test_unused_objects_via_load_driver_rules() -> None:
         ],
     }
     driver = load_driver_rules(options, Platform.CISCO_XR)
-    config = get_hconfig_fast_load(
+    config = HConfig.from_lines(
         driver,
         (
             "ipv4 access-list APPLIED_ACL",
@@ -174,7 +174,7 @@ def test_name_re_without_match_skips_definition() -> None:
             ),
         ],
     )
-    config = get_hconfig_fast_load(
+    config = HConfig.from_lines(
         driver,
         (
             "ipv4 access-list MY_ACL",

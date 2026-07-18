@@ -1,11 +1,10 @@
-from hier_config import get_hconfig_fast_load
-from hier_config.constructors import get_hconfig
+from hier_config import HConfig
 from hier_config.models import Platform
 
 
 def test_swap_negation() -> None:
     platform = Platform.FORTINET_FORTIOS
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         (
             "config system interface",
@@ -20,7 +19,7 @@ def test_swap_negation() -> None:
             "end",
         ),
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform,
         (
             "config system interface",
@@ -48,7 +47,7 @@ def test_swap_negation() -> None:
 
 def test_idempotent_for() -> None:
     platform = Platform.FORTINET_FORTIOS
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         (
             "config system interface",
@@ -63,7 +62,7 @@ def test_idempotent_for() -> None:
             "end",
         ),
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform,
         (
             "config system interface",
@@ -93,8 +92,8 @@ def test_idempotent_for() -> None:
 
 def test_future() -> None:
     platform = Platform.FORTINET_FORTIOS
-    running_config = get_hconfig(platform)
-    remediation_config = get_hconfig_fast_load(
+    running_config = HConfig.from_text(platform)
+    remediation_config = HConfig.from_lines(
         platform,
         (
             "config system interface",

@@ -15,7 +15,6 @@ from hier_config import (
     RemediationReporter,
     TagRule,
     WorkflowRemediation,
-    get_hconfig,
 )
 from hier_config.models import ChangeDetail, ReportSummary
 
@@ -23,7 +22,7 @@ from hier_config.models import ChangeDetail, ReportSummary
 @pytest.fixture
 def sample_remediation_1() -> tuple[HConfig, str]:
     """Create a sample remediation configuration for device 1."""
-    running = get_hconfig(
+    running = HConfig.from_text(
         Platform.CISCO_IOS,
         """interface Vlan2
  ip address 10.0.0.1 255.255.255.0
@@ -32,7 +31,7 @@ line vty 0 4
 ntp server 10.1.1.1""",
     )
 
-    generated = get_hconfig(
+    generated = HConfig.from_text(
         Platform.CISCO_IOS,
         """interface Vlan2
  ip address 10.0.0.2 255.255.255.0
@@ -50,7 +49,7 @@ snmp-server community public RO""",
 @pytest.fixture
 def sample_remediation_2() -> tuple[HConfig, str]:
     """Create a sample remediation configuration for device 2."""
-    running = get_hconfig(
+    running = HConfig.from_text(
         Platform.CISCO_IOS,
         """interface Vlan3
  ip address 10.0.1.1 255.255.255.0
@@ -59,7 +58,7 @@ line vty 0 4
 ntp server 10.1.1.1""",
     )
 
-    generated = get_hconfig(
+    generated = HConfig.from_text(
         Platform.CISCO_IOS,
         """interface Vlan3
  ip address 10.0.1.2 255.255.255.0
@@ -77,14 +76,14 @@ snmp-server community public RO""",
 @pytest.fixture
 def sample_remediation_3() -> tuple[HConfig, str]:
     """Create a sample remediation configuration for device 3."""
-    running = get_hconfig(
+    running = HConfig.from_text(
         Platform.CISCO_IOS,
         """interface Vlan4
  ip address 10.0.2.1 255.255.255.0
 ntp server 10.1.1.1""",
     )
 
-    generated = get_hconfig(
+    generated = HConfig.from_text(
         Platform.CISCO_IOS,
         """interface Vlan4
  ip address 10.0.2.2 255.255.255.0
@@ -153,7 +152,7 @@ def test_from_merged_config(
     rem2, _ = sample_remediation_2
 
     # Create a merged config manually
-    merged = get_hconfig(Platform.CISCO_IOS)
+    merged = HConfig.from_text(Platform.CISCO_IOS)
     merged.merge([rem1, rem2])
 
     reporter = RemediationReporter.from_merged_config(merged)
@@ -686,7 +685,7 @@ def test_empty_reporter() -> None:
 
 def test_reporter_with_empty_remediation() -> None:
     """Test reporter with empty remediation config."""
-    empty_config = get_hconfig(Platform.CISCO_IOS)
+    empty_config = HConfig.from_text(Platform.CISCO_IOS)
 
     reporter = RemediationReporter()
     reporter.add_remediation(empty_config)

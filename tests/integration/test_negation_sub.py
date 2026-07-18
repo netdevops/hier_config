@@ -1,4 +1,4 @@
-from hier_config import get_hconfig_fast_load
+from hier_config import HConfig
 from hier_config.models import (
     MatchRule,
     NegationSubRule,
@@ -29,11 +29,11 @@ def test_negation_sub_truncates_snmp_user() -> None:
             ),
         ],
     )
-    running = get_hconfig_fast_load(
+    running = HConfig.from_lines(
         driver,
         ("snmp-server user admin auth sha secret",),
     )
-    generated = get_hconfig_fast_load(driver, ())
+    generated = HConfig.from_lines(driver, ())
     remediation = running.remediation(generated)
     assert remediation.to_lines() == ("no snmp-server user admin",)
 
@@ -49,11 +49,11 @@ def test_negation_sub_truncates_prefix_list() -> None:
             ),
         ],
     )
-    running = get_hconfig_fast_load(
+    running = HConfig.from_lines(
         driver,
         ("ipv6 prefix-list PL seq 1 permit 2801::/64 ge 65",),
     )
-    generated = get_hconfig_fast_load(driver, ())
+    generated = HConfig.from_lines(driver, ())
     remediation = running.remediation(generated)
     assert remediation.to_lines() == ("no ipv6 prefix-list PL seq 1",)
 
@@ -69,11 +69,11 @@ def test_negation_sub_no_match_uses_normal_negation() -> None:
             ),
         ],
     )
-    running = get_hconfig_fast_load(
+    running = HConfig.from_lines(
         driver,
         ("hostname router1",),
     )
-    generated = get_hconfig_fast_load(driver, ())
+    generated = HConfig.from_lines(driver, ())
     remediation = running.remediation(generated)
     assert remediation.to_lines() == ("no hostname router1",)
 
@@ -89,14 +89,14 @@ def test_negation_sub_full_remediation() -> None:
             ),
         ],
     )
-    running = get_hconfig_fast_load(
+    running = HConfig.from_lines(
         driver,
         (
             "snmp-server user admin auth sha secret",
             "snmp-server user monitor auth sha secret2",
         ),
     )
-    generated = get_hconfig_fast_load(
+    generated = HConfig.from_lines(
         driver,
         ("snmp-server user monitor auth sha secret2",),
     )
@@ -116,10 +116,10 @@ def test_negation_sub_via_load_driver_rules() -> None:
         ],
     }
     driver = load_driver_rules(options, Platform.GENERIC)
-    running = get_hconfig_fast_load(
+    running = HConfig.from_lines(
         driver,
         ("snmp-server user admin auth sha secret",),
     )
-    generated = get_hconfig_fast_load(driver, ())
+    generated = HConfig.from_lines(driver, ())
     remediation = running.remediation(generated)
     assert remediation.to_lines() == ("no snmp-server user admin",)

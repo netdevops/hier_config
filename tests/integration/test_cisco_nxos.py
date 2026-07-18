@@ -1,4 +1,4 @@
-from hier_config import get_hconfig_fast_load
+from hier_config import HConfig
 from hier_config.models import Platform
 from hier_config.utils import load_driver_rules
 
@@ -31,7 +31,7 @@ def test_line_console_terminal_settings_negation_negate_with() -> None:
         Platform.CISCO_NXOS,
     )
 
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         driver,
         (
             "line console",
@@ -40,7 +40,7 @@ def test_line_console_terminal_settings_negation_negate_with() -> None:
             "  terminal width 160",
         ),
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         driver,
         (
             "line console",

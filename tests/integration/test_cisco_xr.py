@@ -1,11 +1,11 @@
-from hier_config import get_hconfig, get_hconfig_fast_load
+from hier_config import HConfig
 from hier_config.models import Platform
 
 
 def test_multiple_groups_remediation() -> None:
     """Test remediation between configs with multiple group blocks."""
     platform = Platform.CISCO_XR
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         (
             "hostname router1",
@@ -21,7 +21,7 @@ def test_multiple_groups_remediation() -> None:
             "end-group",
         ),
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform,
         (
             "hostname router1",
@@ -38,7 +38,7 @@ def test_multiple_groups_remediation() -> None:
 
 def test_duplicate_child_route_policy() -> None:
     platform = Platform.CISCO_XR
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         (
             "route-policy SET_COMMUNITY_AND_PERMIT",
@@ -60,7 +60,7 @@ def test_duplicate_child_route_policy() -> None:
             "end-policy",
         ),
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform,
         (
             "route-policy SET_COMMUNITY_AND_PERMIT",
@@ -83,7 +83,7 @@ def test_duplicate_child_route_policy() -> None:
 def test_nested_if_endif_route_policy() -> None:
     """Test nested if/endif blocks in route-policy don't raise DuplicateChildError."""
     platform = Platform.CISCO_XR
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         (
             "route-policy EXAMPLE-POLICY",
@@ -100,7 +100,7 @@ def test_nested_if_endif_route_policy() -> None:
             "end-policy",
         ),
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform,
         (
             "route-policy EXAMPLE-POLICY",
@@ -140,7 +140,7 @@ def test_nested_if_endif_route_policy() -> None:
 def test_flow_exporter_template_indent_adjust() -> None:
     """Test that 'template timeout' inside flow exporter-map doesn't corrupt indentation."""
     platform = Platform.CISCO_XR
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         (
             "flow exporter-map EXPORTER1",
@@ -160,7 +160,7 @@ def test_flow_exporter_template_indent_adjust() -> None:
             "end-policy",
         ),
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform,
         (
             "flow exporter-map EXPORTER1",
@@ -205,7 +205,7 @@ def test_flow_exporter_template_data_options_timeout_indent_adjust() -> None:
     arriving, every subsequent line in the config was nested under them.
     """
     platform = Platform.CISCO_XR
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         (
             "flow exporter-map EXPORTER1",
@@ -236,7 +236,7 @@ def test_flow_exporter_template_data_options_timeout_indent_adjust() -> None:
     assert version.get_child(equals="template data timeout 15") is not None
     assert version.get_child(equals="template options timeout 15") is not None
 
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform,
         (
             "flow exporter-map EXPORTER1",
@@ -270,7 +270,7 @@ def test_flow_exporter_template_data_options_timeout_indent_adjust() -> None:
 def test_template_block_indent_adjust() -> None:
     """Test that template blocks still parse correctly with the indent_adjust rule."""
     platform = Platform.CISCO_XR
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         (
             "template ACCESS-PORT",
@@ -296,7 +296,7 @@ def test_template_block_indent_adjust() -> None:
             "!",
         ),
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform,
         (
             "template ACCESS-PORT",
@@ -343,7 +343,7 @@ def test_template_block_indent_adjust() -> None:
 def test_ipv4_acl_sequence_number_idempotent() -> None:
     """Test IPv4 ACL sequence number idempotency (covers lines 25-31)."""
     platform = Platform.CISCO_XR
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         (
             "ipv4 access-list TEST_ACL",
@@ -352,7 +352,7 @@ def test_ipv4_acl_sequence_number_idempotent() -> None:
             " 30 deny ipv4 any any",
         ),
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform,
         (
             "ipv4 access-list TEST_ACL",
@@ -372,7 +372,7 @@ def test_ipv4_acl_sequence_number_idempotent() -> None:
 def test_ipv6_acl_sequence_number_idempotent() -> None:
     """Test IPv6 ACL sequence number idempotency (covers lines 25-31)."""
     platform = Platform.CISCO_XR
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         (
             "ipv6 access-list TEST_IPV6_ACL",
@@ -380,7 +380,7 @@ def test_ipv6_acl_sequence_number_idempotent() -> None:
             " 20 deny ipv6 any any",
         ),
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform,
         (
             "ipv6 access-list TEST_IPV6_ACL",
@@ -399,7 +399,7 @@ def test_ipv6_acl_sequence_number_idempotent() -> None:
 def test_ipv4_acl_sequence_number_addition() -> None:
     """Test adding new IPv4 ACL entries with sequence numbers."""
     platform = Platform.CISCO_XR
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         (
             "ipv4 access-list TEST_ACL",
@@ -407,7 +407,7 @@ def test_ipv4_acl_sequence_number_addition() -> None:
             " 30 deny ipv4 any any",
         ),
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform,
         (
             "ipv4 access-list TEST_ACL",
@@ -427,7 +427,7 @@ def test_ipv4_acl_sequence_number_addition() -> None:
 def test_running_with_bang_separators_intended_without_no_remediation() -> None:
     """Running config with indented ! separators and intended without produces no remediation."""
     platform = Platform.CISCO_XR
-    running = get_hconfig(
+    running = HConfig.from_text(
         platform,
         """\
 telemetry model-driven
@@ -445,7 +445,7 @@ telemetry model-driven
  !
 """,
     )
-    intended = get_hconfig(
+    intended = HConfig.from_text(
         platform,
         """\
 telemetry model-driven
@@ -465,7 +465,7 @@ telemetry model-driven
 def test_intended_with_bang_comments_running_without_no_remediation() -> None:
     """Intended config with ! comment lines and running without produces no remediation."""
     platform = Platform.CISCO_XR
-    running = get_hconfig(
+    running = HConfig.from_text(
         platform,
         """\
 telemetry model-driven
@@ -479,7 +479,7 @@ telemetry model-driven
    protocol tcp
 """,
     )
-    intended = get_hconfig(
+    intended = HConfig.from_text(
         platform,
         """\
 telemetry model-driven
@@ -501,7 +501,7 @@ telemetry model-driven
 def test_differing_bang_comment_text_produces_no_remediation() -> None:
     """Differing ! comment text between running and intended produces no remediation."""
     platform = Platform.CISCO_XR
-    running = get_hconfig(
+    running = HConfig.from_text(
         platform,
         """\
 router isis backbone
@@ -509,7 +509,7 @@ router isis backbone
  net 49.0001.1921.2022.0222.00
 """,
     )
-    intended = get_hconfig(
+    intended = HConfig.from_text(
         platform,
         """\
 router isis backbone

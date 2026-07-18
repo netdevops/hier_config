@@ -5,29 +5,24 @@ from pathlib import Path
 
 import pytest
 
-from hier_config import (
-    get_hconfig,
-    get_hconfig_driver,
-    get_hconfig_fast_load,
-    get_hconfig_from_dump,
-)
+from hier_config import HConfig, get_hconfig_driver
 from hier_config.models import Platform
 
 
 def test_bool(platform_a: Platform) -> None:
-    config = get_hconfig(platform_a)
+    config = HConfig.from_text(platform_a)
     assert config
 
 
 def test_hash(platform_a: Platform) -> None:
-    config = get_hconfig_fast_load(platform_a, ("interface 1/1", "  untagged vlan 5"))
+    config = HConfig.from_lines(platform_a, ("interface 1/1", "  untagged vlan 5"))
     assert hash(config)
 
 
 def test_merge(platform_a: Platform, platform_b: Platform) -> None:
-    hier1 = get_hconfig(platform_a)
+    hier1 = HConfig.from_text(platform_a)
     hier1.add_child("interface Vlan2")
-    hier2 = get_hconfig(platform_b)
+    hier2 = HConfig.from_text(platform_b)
     hier2.add_child("interface Vlan3")
 
     assert len(tuple(hier1.all_children())) == 1
@@ -49,7 +44,7 @@ def test_load_from_file(platform_a: Platform) -> None:
         myfile.file.write(config)
         myfile.file.flush()
         myfile.close()
-        hier = get_hconfig(get_hconfig_driver(platform_a), Path(myfile.name))
+        hier = HConfig.from_text(get_hconfig_driver(platform_a), Path(myfile.name))
         Path(myfile.name).unlink()
 
     assert len(tuple(hier.all_children())) == 2
@@ -57,12 +52,12 @@ def test_load_from_file(platform_a: Platform) -> None:
 
 def test_load_from_config_text(platform_a: Platform) -> None:
     config = "interface Vlan2\n ip address 1.1.1.1 255.255.255.0"
-    hier = get_hconfig(get_hconfig_driver(platform_a), config)
+    hier = HConfig.from_text(get_hconfig_driver(platform_a), config)
     assert len(tuple(hier.all_children())) == 2
 
 
 def test_dump_and_load_from_dump_and_compare(platform_a: Platform) -> None:
-    hier_pre_dump = get_hconfig(platform_a)
+    hier_pre_dump = HConfig.from_text(platform_a)
     b2 = hier_pre_dump.add_children_deep(("a1", "b2"))
 
     b2.order_weight = 400
@@ -71,7 +66,7 @@ def test_dump_and_load_from_dump_and_compare(platform_a: Platform) -> None:
     b2.new_in_config = True
 
     dump = hier_pre_dump.dump()
-    hier_post_dump = get_hconfig_from_dump(hier_pre_dump.driver, dump)
+    hier_post_dump = HConfig.from_dump(hier_pre_dump.driver, dump)
 
     assert hier_pre_dump == hier_post_dump
 
@@ -79,8 +74,8 @@ def test_dump_and_load_from_dump_and_compare(platform_a: Platform) -> None:
 def test_unified_diff() -> None:
     platform = Platform.CISCO_IOS
 
-    config_a = get_hconfig(platform)
-    config_b = get_hconfig(platform)
+    config_a = HConfig.from_text(platform)
+    config_b = HConfig.from_text(platform)
     # deep differences
     config_a.add_children_deep(("a", "aa", "aaa", "aaaa"))
     config_b.add_children_deep(("a", "aa", "aab", "aaba"))
@@ -108,7 +103,7 @@ def test_unified_diff() -> None:
 def test_hconfig_str() -> None:
     """Test HConfig __str__ method."""
     platform = Platform.CISCO_IOS
-    config = get_hconfig(platform)
+    config = HConfig.from_text(platform)
     config.add_child("hostname router1")
     config.add_child("interface GigabitEthernet0/0")
     str_output = str(config)
@@ -121,7 +116,7 @@ def test_hconfig_str() -> None:
 def test_hconfig_eq_not_hconfig() -> None:
     """Test HConfig __eq__ with non-HConfig object."""
     platform = Platform.CISCO_IOS
-    config = get_hconfig(platform)
+    config = HConfig.from_text(platform)
     result = config == "not an HConfig"
 
     assert not result
@@ -130,7 +125,7 @@ def test_hconfig_eq_not_hconfig() -> None:
 def test_hconfig_real_indent_level() -> None:
     """Test HConfig real_indent_level property."""
     platform = Platform.CISCO_IOS
-    config = get_hconfig(platform)
+    config = HConfig.from_text(platform)
 
     assert config.real_indent_level == -1
 
@@ -138,7 +133,7 @@ def test_hconfig_real_indent_level() -> None:
 def test_hconfig_parent_property() -> None:
     """Test HConfig parent property returns self."""
     platform = Platform.CISCO_IOS
-    config = get_hconfig(platform)
+    config = HConfig.from_text(platform)
 
     assert config.parent is config
 
@@ -146,7 +141,7 @@ def test_hconfig_parent_property() -> None:
 def test_hconfig_is_leaf() -> None:
     """Test HConfig is_leaf property."""
     platform = Platform.CISCO_IOS
-    config = get_hconfig(platform)
+    config = HConfig.from_text(platform)
 
     assert config.is_leaf is False
 
@@ -154,7 +149,7 @@ def test_hconfig_is_leaf() -> None:
 def test_hconfig_tags_setter() -> None:
     """Test HConfig tags setter."""
     platform = Platform.CISCO_IOS
-    config = get_hconfig(platform)
+    config = HConfig.from_text(platform)
     interface = config.add_child("interface GigabitEthernet0/0")
     desc = interface.add_child("description test")
     config.tags = frozenset(["production", "core"])
@@ -166,7 +161,7 @@ def test_hconfig_tags_setter() -> None:
 def test_hconfig_add_children_deep_typeerror() -> None:
     """Test HConfig add_children_deep raises TypeError."""
     platform = Platform.CISCO_IOS
-    config = get_hconfig(platform)
+    config = HConfig.from_text(platform)
 
     with pytest.raises(TypeError, match="base was an HConfig object"):
         config.add_children_deep([])
@@ -175,7 +170,7 @@ def test_hconfig_add_children_deep_typeerror() -> None:
 def test_hconfig_deep_copy() -> None:
     """Test HConfig deep_copy method)."""
     platform = Platform.CISCO_IOS
-    config = get_hconfig(platform)
+    config = HConfig.from_text(platform)
     interface = config.add_child("interface GigabitEthernet0/0")
     interface.add_child("description test")
     config.add_child("hostname router1")
@@ -195,7 +190,7 @@ def test_hconfig_deep_copy() -> None:
 
 def test_len_counts_all_descendants() -> None:
     """__len__ counts every descendant node, not just direct children (#188)."""
-    config = get_hconfig(Platform.CISCO_IOS)
+    config = HConfig.from_text(Platform.CISCO_IOS)
     assert len(config) == 0
 
     interface = config.add_child("interface GigabitEthernet0/0")

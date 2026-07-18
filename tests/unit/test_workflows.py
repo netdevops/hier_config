@@ -1,6 +1,6 @@
 import pytest
 
-from hier_config import WorkflowRemediation, get_hconfig
+from hier_config import HConfig, WorkflowRemediation
 from hier_config.exceptions import IncompatibleDriverError
 from hier_config.models import Platform, TagRule
 
@@ -10,8 +10,8 @@ def workflow_remediation(
     running_config: str, generated_config: str
 ) -> WorkflowRemediation:
     return WorkflowRemediation(
-        running_config=get_hconfig(Platform.CISCO_IOS, running_config),
-        generated_config=get_hconfig(Platform.CISCO_IOS, generated_config),
+        running_config=HConfig.from_text(Platform.CISCO_IOS, running_config),
+        generated_config=HConfig.from_text(Platform.CISCO_IOS, generated_config),
     )
 
 
@@ -47,8 +47,8 @@ def test_remediation_config_filtered_text(
 
 def test_remediation_config_driver_mismatch() -> None:
     # Test to ensure ValueError is raised for mismatched drivers
-    running_config = get_hconfig(Platform.CISCO_IOS, "dummy_config")
-    generated_config = get_hconfig(Platform.JUNIPER_JUNOS, "dummy_config")
+    running_config = HConfig.from_text(Platform.CISCO_IOS, "dummy_config")
+    generated_config = HConfig.from_text(Platform.JUNIPER_JUNOS, "dummy_config")
 
     with pytest.raises(
         IncompatibleDriverError,

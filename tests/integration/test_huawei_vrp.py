@@ -1,14 +1,13 @@
-from hier_config import get_hconfig_fast_load
-from hier_config.constructors import get_hconfig
+from hier_config import HConfig
 from hier_config.models import Platform
 
 
 def test_merge_with_undo() -> None:
     platform = Platform.HUAWEI_VRP
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform, ("test_for_undo", "undo test_for_redo")
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform, ("undo test_for_undo", "test_for_redo")
     )
     remediation_config = running_config.remediation(generated_config)
@@ -17,10 +16,10 @@ def test_merge_with_undo() -> None:
 
 def test_negate_description() -> None:
     platform = Platform.HUAWEI_VRP
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform, ("interface GigabitEthernet0/0/0", " description some old blabla")
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform, ("interface GigabitEthernet0/0/0",)
     )
     remediation_config = running_config.remediation(generated_config)
@@ -32,10 +31,10 @@ def test_negate_description() -> None:
 
 def test_negate_remark() -> None:
     platform = Platform.HUAWEI_VRP
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform, ("acl number 2000", " rule 5 remark some old remark")
     )
-    generated_config = get_hconfig_fast_load(platform, ("acl number 2000",))
+    generated_config = HConfig.from_lines(platform, ("acl number 2000",))
     remediation_config = running_config.remediation(generated_config)
     assert remediation_config.to_lines() == (
         "acl number 2000",
@@ -45,10 +44,10 @@ def test_negate_remark() -> None:
 
 def test_negate_alias() -> None:
     platform = Platform.HUAWEI_VRP
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform, ("interface GigabitEthernet0/0/0", " alias some old alias")
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform, ("interface GigabitEthernet0/0/0",)
     )
     remediation_config = running_config.remediation(generated_config)
@@ -60,10 +59,10 @@ def test_negate_alias() -> None:
 
 def test_negate_snmp_agent_community() -> None:
     platform = Platform.HUAWEI_VRP
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform, ("snmp-agent community read cipher %^%#blabla%^%# acl 2000",)
     )
-    generated_config = get_hconfig(platform)
+    generated_config = HConfig.from_text(platform)
     remediation_config = running_config.remediation(generated_config)
     assert remediation_config.to_lines() == (
         "undo snmp-agent community read cipher %^%#blabla%^%#",
@@ -72,7 +71,7 @@ def test_negate_snmp_agent_community() -> None:
 
 def test_comments_stripped() -> None:
     platform = Platform.HUAWEI_VRP
-    config = get_hconfig_fast_load(
+    config = HConfig.from_lines(
         platform,
         (
             "#",
@@ -91,7 +90,7 @@ def test_comments_stripped() -> None:
 
 def test_multiple_peer_public_keys_no_duplicate_child_error() -> None:
     platform = Platform.HUAWEI_VRP
-    config = get_hconfig(
+    config = HConfig.from_text(
         platform,
         "rsa peer-public-key user1 encoding-type openssh\n"
         " public-key-code begin\n"
@@ -124,7 +123,7 @@ def test_multiple_peer_public_keys_no_duplicate_child_error() -> None:
 
 def test_sectional_exit_is_quit() -> None:
     platform = Platform.HUAWEI_VRP
-    config = get_hconfig_fast_load(
+    config = HConfig.from_lines(
         platform,
         (
             "interface GigabitEthernet0/0/0",

@@ -14,7 +14,7 @@ generating features by validating a circular workflow:
 
 import pytest
 
-from hier_config import WorkflowRemediation, get_hconfig
+from hier_config import HConfig, WorkflowRemediation
 from hier_config.models import Platform
 
 
@@ -66,7 +66,7 @@ class TestConfigWorkflows:  # pylint: disable=too-few-public-methods
         )
 
         # Step 1: Load running config and assert it matches the file
-        running_config = get_hconfig(platform, running_config_text)
+        running_config = HConfig.from_text(platform, running_config_text)
         assert running_config is not None
         assert running_config.children
         loaded_running_text = "\n".join(
@@ -77,7 +77,7 @@ class TestConfigWorkflows:  # pylint: disable=too-few-public-methods
         )
 
         # Step 2: Load generated config and assert it matches the file
-        generated_config = get_hconfig(platform, generated_config_text)
+        generated_config = HConfig.from_text(platform, generated_config_text)
         assert generated_config is not None
         assert generated_config.children
         loaded_generated_text = "\n".join(

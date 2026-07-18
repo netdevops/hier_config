@@ -133,7 +133,7 @@ class RemediationReporter:  # noqa: PLR0904
 
         Example:
             ```python
-            merged = get_hconfig(Platform.CISCO_IOS)
+            merged = HConfig.from_text(Platform.CISCO_IOS)
             merged.merge([device1, device2])
             reporter = RemediationReporter.from_merged_config(merged)
             ```

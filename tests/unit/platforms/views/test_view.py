@@ -1,13 +1,13 @@
 """Tests for view_base.py ConfigViewInterfaceBase and HConfigViewBase classes."""
 
-from hier_config import Platform, get_hconfig, get_hconfig_view
+from hier_config import HConfig, Platform, get_hconfig_view
 from hier_config.platforms.models import InterfaceDot1qMode
 from hier_config.platforms.view_base import ConfigViewInterfaceBase, HConfigViewBase
 
 
 def test_interface_dot1q_mode_tagged() -> None:
     """Test dot1q_mode returns TAGGED (covers view_base.py line 45)."""
-    config = get_hconfig(Platform.CISCO_IOS)
+    config = HConfig.from_text(Platform.CISCO_IOS)
     config.add_children_deep(("interface GigabitEthernet0/0", "switchport mode trunk"))
     config.add_children_deep(
         ("interface GigabitEthernet0/0", "switchport trunk allowed vlan 10,20")
@@ -21,7 +21,7 @@ def test_interface_dot1q_mode_tagged() -> None:
 
 def test_interface_dot1q_mode_access() -> None:
     """Test dot1q_mode returns ACCESS (covers view_base.py line 47)."""
-    config = get_hconfig(Platform.CISCO_IOS)
+    config = HConfig.from_text(Platform.CISCO_IOS)
     config.add_children_deep(
         ("interface GigabitEthernet0/0", "switchport", "switchport mode access")
     )
@@ -34,7 +34,7 @@ def test_interface_dot1q_mode_access() -> None:
 
 def test_interface_dot1q_mode_none() -> None:
     """Test dot1q_mode returns None (covers view_base.py line 49)."""
-    config = get_hconfig(Platform.CISCO_IOS)
+    config = HConfig.from_text(Platform.CISCO_IOS)
     config.add_children_deep(("interface GigabitEthernet0/0", "no switchport"))
 
     view = get_hconfig_view(config)
@@ -45,7 +45,7 @@ def test_interface_dot1q_mode_none() -> None:
 
 def test_interface_ipv4_interface_none() -> None:
     """Test ipv4_interface returns None when no IP (covers view_base.py line 69)."""
-    config = get_hconfig(Platform.CISCO_IOS)
+    config = HConfig.from_text(Platform.CISCO_IOS)
     config.add_child("interface GigabitEthernet0/0")
 
     view = get_hconfig_view(config)
@@ -56,7 +56,7 @@ def test_interface_ipv4_interface_none() -> None:
 
 def test_interface_is_subinterface_true() -> None:
     """Test is_subinterface returns True (covers view_base.py line 89)."""
-    config = get_hconfig(Platform.CISCO_IOS)
+    config = HConfig.from_text(Platform.CISCO_IOS)
     config.add_child("interface GigabitEthernet0/0.100")
 
     view = get_hconfig_view(config)
@@ -67,7 +67,7 @@ def test_interface_is_subinterface_true() -> None:
 
 def test_hconfig_view_interface_view_by_name_none() -> None:
     """Test interface_view_by_name returns None (covers view_base.py line 221)."""
-    config = get_hconfig(Platform.CISCO_IOS)
+    config = HConfig.from_text(Platform.CISCO_IOS)
     config.add_child("interface GigabitEthernet0/0")
 
     view = get_hconfig_view(config)
@@ -78,7 +78,7 @@ def test_hconfig_view_interface_view_by_name_none() -> None:
 
 def test_hconfig_view_interfaces_names() -> None:
     """Test interfaces_names property (covers view_base.py line 236)."""
-    config = get_hconfig(Platform.CISCO_IOS)
+    config = HConfig.from_text(Platform.CISCO_IOS)
     config.add_child("interface GigabitEthernet0/0")
     config.add_child("interface GigabitEthernet0/1")
     config.add_child("interface Port-channel1")
@@ -94,7 +94,7 @@ def test_hconfig_view_interfaces_names() -> None:
 
 def test_hconfig_view_module_numbers_none() -> None:
     """Test module_numbers when module_number is None (covers view_base.py line 250)."""
-    config = get_hconfig(Platform.CISCO_IOS)
+    config = HConfig.from_text(Platform.CISCO_IOS)
     config.add_child("interface Port-channel1")
     config.add_child("interface Loopback0")
 
@@ -106,7 +106,7 @@ def test_hconfig_view_module_numbers_none() -> None:
 
 def test_hconfig_view_module_numbers_duplicate() -> None:
     """Test module_numbers skips duplicates (covers view_base.py lines 251-252)."""
-    config = get_hconfig(Platform.CISCO_IOS)
+    config = HConfig.from_text(Platform.CISCO_IOS)
     config.add_child("interface GigabitEthernet1/0/1")
     config.add_child("interface GigabitEthernet1/0/2")
     config.add_child("interface GigabitEthernet2/0/1")
@@ -121,7 +121,7 @@ def test_hconfig_view_module_numbers_duplicate() -> None:
 
 def test_hconfig_view_module_numbers_yield() -> None:
     """Test module_numbers yields values (covers view_base.py lines 253-254)."""
-    config = get_hconfig(Platform.CISCO_IOS)
+    config = HConfig.from_text(Platform.CISCO_IOS)
     config.add_child("interface GigabitEthernet1/0/1")
     config.add_child("interface GigabitEthernet2/0/1")
     config.add_child("interface GigabitEthernet3/0/1")
@@ -134,7 +134,7 @@ def test_hconfig_view_module_numbers_yield() -> None:
 
 def test_hconfig_view_vlan_ids() -> None:
     """Test vlan_ids property (covers view_base.py line 266)."""
-    config = get_hconfig(Platform.CISCO_IOS)
+    config = HConfig.from_text(Platform.CISCO_IOS)
     config.add_child("vlan 10")
     config.add_child("vlan 20")
     config.add_child("vlan 30")
@@ -175,7 +175,7 @@ def test_interface_view_abstract_properties_coverage() -> None:
 
 def test_dot1q_mode_from_vlans_tagged_all() -> None:
     """tagged_all wins over any other VLAN data (#228)."""
-    view = get_hconfig_view(get_hconfig(Platform.CISCO_IOS))
+    view = get_hconfig_view(HConfig.from_text(Platform.CISCO_IOS))
     assert (
         view.dot1q_mode_from_vlans(
             untagged_vlan=10, tagged_vlans=(20,), tagged_all=True
@@ -186,7 +186,7 @@ def test_dot1q_mode_from_vlans_tagged_all() -> None:
 
 def test_dot1q_mode_from_vlans_tagged() -> None:
     """Explicit tagged VLANs mean TAGGED mode (#228)."""
-    view = get_hconfig_view(get_hconfig(Platform.CISCO_IOS))
+    view = get_hconfig_view(HConfig.from_text(Platform.CISCO_IOS))
     assert (
         view.dot1q_mode_from_vlans(tagged_vlans=(20, 30)) == InterfaceDot1qMode.TAGGED
     )
@@ -198,13 +198,13 @@ def test_dot1q_mode_from_vlans_tagged() -> None:
 
 def test_dot1q_mode_from_vlans_access() -> None:
     """An untagged VLAN alone means ACCESS mode (#228)."""
-    view = get_hconfig_view(get_hconfig(Platform.CISCO_IOS))
+    view = get_hconfig_view(HConfig.from_text(Platform.CISCO_IOS))
     assert view.dot1q_mode_from_vlans(untagged_vlan=10) == InterfaceDot1qMode.ACCESS
 
 
 def test_dot1q_mode_from_vlans_none() -> None:
     """No VLAN data means no 802.1Q mode (#228)."""
-    view = get_hconfig_view(get_hconfig(Platform.CISCO_IOS))
+    view = get_hconfig_view(HConfig.from_text(Platform.CISCO_IOS))
     assert view.dot1q_mode_from_vlans() is None
 
 
@@ -217,5 +217,5 @@ def test_dot1q_mode_from_vlans_available_on_all_views() -> None:
         Platform.CISCO_XR,
         Platform.HP_PROCURVE,
     ):
-        view = get_hconfig_view(get_hconfig(platform))
+        view = get_hconfig_view(HConfig.from_text(platform))
         assert view.dot1q_mode_from_vlans(untagged_vlan=1) == InterfaceDot1qMode.ACCESS

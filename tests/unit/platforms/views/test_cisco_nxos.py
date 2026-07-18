@@ -4,12 +4,12 @@ from ipaddress import IPv4Interface
 
 import pytest
 
-from hier_config import Platform, get_hconfig, get_hconfig_view
+from hier_config import HConfig, Platform, get_hconfig_view
 
 
 def test_bundle_id_not_implemented() -> None:
     """Test bundle_id raises NotImplementedError (covers line 22)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface port-channel1")
 
     view = get_hconfig_view(config)
@@ -22,7 +22,7 @@ def test_bundle_id_not_implemented() -> None:
 
 def test_bundle_member_interfaces_not_implemented() -> None:
     """Test bundle_member_interfaces raises NotImplementedError (covers line 26)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
     view = get_hconfig_view(config)
@@ -35,7 +35,7 @@ def test_bundle_member_interfaces_not_implemented() -> None:
 
 def test_bundle_name_not_implemented() -> None:
     """Test bundle_name raises NotImplementedError (covers line 30)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
     view = get_hconfig_view(config)
@@ -48,7 +48,7 @@ def test_bundle_name_not_implemented() -> None:
 
 def test_description() -> None:
     """Test description returns description text (covers lines 34-36)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     interface = config.add_child("interface Ethernet1/1")
     interface.add_child("description Uplink to Core")
 
@@ -60,7 +60,7 @@ def test_description() -> None:
 
 def test_description_empty() -> None:
     """Test description returns empty string (covers line 36)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
     view = get_hconfig_view(config)
@@ -71,7 +71,7 @@ def test_description_empty() -> None:
 
 def test_duplex_not_implemented() -> None:
     """Test duplex raises NotImplementedError (covers line 40)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
     view = get_hconfig_view(config)
@@ -84,7 +84,7 @@ def test_duplex_not_implemented() -> None:
 
 def test_enabled_not_implemented() -> None:
     """Test enabled raises NotImplementedError (covers line 44)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
     view = get_hconfig_view(config)
@@ -97,7 +97,7 @@ def test_enabled_not_implemented() -> None:
 
 def test_has_nac_not_implemented() -> None:
     """Test has_nac raises NotImplementedError (covers line 49)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
     view = get_hconfig_view(config)
@@ -110,7 +110,7 @@ def test_has_nac_not_implemented() -> None:
 
 def test_ipv4_interface_none() -> None:
     """Test ipv4_interface returns None (covers line 53)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
     view = get_hconfig_view(config)
@@ -121,7 +121,7 @@ def test_ipv4_interface_none() -> None:
 
 def test_ipv4_interfaces() -> None:
     """Test ipv4_interfaces returns IP addresses (covers lines 57-62)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     interface = config.add_child("interface Ethernet1/1")
     interface.add_child("ip address 10.1.1.1 255.255.255.0")
 
@@ -136,7 +136,7 @@ def test_ipv4_interfaces() -> None:
 
 def test_ipv4_interfaces_invalid() -> None:
     """Test ipv4_interfaces skips invalid addresses (covers line 62)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     interface = config.add_child("interface Ethernet1/1")
     interface.add_child("ip address dhcp")
 
@@ -150,7 +150,7 @@ def test_ipv4_interfaces_invalid() -> None:
 
 def test_is_bundle_true() -> None:
     """Test is_bundle returns True (covers line 66)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface port-channel10")
 
     view = get_hconfig_view(config)
@@ -161,7 +161,7 @@ def test_is_bundle_true() -> None:
 
 def test_is_bundle_false() -> None:
     """Test is_bundle returns False (covers line 66)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
     view = get_hconfig_view(config)
@@ -172,7 +172,7 @@ def test_is_bundle_false() -> None:
 
 def test_is_loopback_true() -> None:
     """Test is_loopback returns True (covers line 70)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface loopback0")
 
     view = get_hconfig_view(config)
@@ -183,7 +183,7 @@ def test_is_loopback_true() -> None:
 
 def test_is_loopback_false() -> None:
     """Test is_loopback returns False (covers line 70)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
     view = get_hconfig_view(config)
@@ -194,7 +194,7 @@ def test_is_loopback_false() -> None:
 
 def test_is_subinterface_true() -> None:
     """Test is_subinterface returns True (covers line 74)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1.100")
 
     view = get_hconfig_view(config)
@@ -205,7 +205,7 @@ def test_is_subinterface_true() -> None:
 
 def test_is_subinterface_false() -> None:
     """Test is_subinterface returns False (covers line 74)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
     view = get_hconfig_view(config)
@@ -216,7 +216,7 @@ def test_is_subinterface_false() -> None:
 
 def test_is_svi_true() -> None:
     """Test is_svi returns True (covers line 78)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface vlan100")
 
     view = get_hconfig_view(config)
@@ -227,7 +227,7 @@ def test_is_svi_true() -> None:
 
 def test_is_svi_false() -> None:
     """Test is_svi returns False (covers line 78)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
     view = get_hconfig_view(config)
@@ -238,7 +238,7 @@ def test_is_svi_false() -> None:
 
 def test_module_number() -> None:
     """Test module_number returns module (covers lines 82-85)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet2/15")
 
     view = get_hconfig_view(config)
@@ -249,7 +249,7 @@ def test_module_number() -> None:
 
 def test_module_number_none() -> None:
     """Test module_number returns None (covers lines 84-85)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface loopback0")
 
     view = get_hconfig_view(config)
@@ -260,7 +260,7 @@ def test_module_number_none() -> None:
 
 def test_nac_control_direction_in_not_implemented() -> None:
     """Test nac_control_direction_in raises NotImplementedError (covers line 90)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
     view = get_hconfig_view(config)
@@ -273,7 +273,7 @@ def test_nac_control_direction_in_not_implemented() -> None:
 
 def test_nac_host_mode_not_implemented() -> None:
     """Test nac_host_mode raises NotImplementedError (covers line 95)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
     view = get_hconfig_view(config)
@@ -286,7 +286,7 @@ def test_nac_host_mode_not_implemented() -> None:
 
 def test_nac_mab_first_not_implemented() -> None:
     """Test nac_mab_first raises NotImplementedError (covers line 100)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
     view = get_hconfig_view(config)
@@ -299,7 +299,7 @@ def test_nac_mab_first_not_implemented() -> None:
 
 def test_nac_max_dot1x_clients_not_implemented() -> None:
     """Test nac_max_dot1x_clients raises NotImplementedError (covers line 105)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
     view = get_hconfig_view(config)
@@ -312,7 +312,7 @@ def test_nac_max_dot1x_clients_not_implemented() -> None:
 
 def test_nac_max_mab_clients_not_implemented() -> None:
     """Test nac_max_mab_clients raises NotImplementedError (covers line 110)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
     view = get_hconfig_view(config)
@@ -325,7 +325,7 @@ def test_nac_max_mab_clients_not_implemented() -> None:
 
 def test_name() -> None:
     """Test name returns interface name (covers line 114)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/10")
 
     view = get_hconfig_view(config)
@@ -336,7 +336,7 @@ def test_name() -> None:
 
 def test_native_vlan_not_implemented() -> None:
     """Test native_vlan raises NotImplementedError (covers line 118)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
     view = get_hconfig_view(config)
@@ -349,7 +349,7 @@ def test_native_vlan_not_implemented() -> None:
 
 def test_number() -> None:
     """Test number returns interface number (covers line 122)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet3/25")
 
     view = get_hconfig_view(config)
@@ -360,7 +360,7 @@ def test_number() -> None:
 
 def test_parent_name() -> None:
     """Test parent_name returns parent interface (covers lines 126-128)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1.200")
 
     view = get_hconfig_view(config)
@@ -371,7 +371,7 @@ def test_parent_name() -> None:
 
 def test_parent_name_none() -> None:
     """Test parent_name returns None (covers line 128)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
     view = get_hconfig_view(config)
@@ -382,7 +382,7 @@ def test_parent_name_none() -> None:
 
 def test_poe_not_implemented() -> None:
     """Test poe raises NotImplementedError (covers line 132)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
     view = get_hconfig_view(config)
@@ -395,7 +395,7 @@ def test_poe_not_implemented() -> None:
 
 def test_port_number() -> None:
     """Test port_number returns port number (covers line 136)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet2/48")
 
     view = get_hconfig_view(config)
@@ -406,7 +406,7 @@ def test_port_number() -> None:
 
 def test_port_number_with_subinterface() -> None:
     """Test port_number with subinterface (covers line 136)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/5.300")
 
     view = get_hconfig_view(config)
@@ -417,7 +417,7 @@ def test_port_number_with_subinterface() -> None:
 
 def test_speed_not_implemented() -> None:
     """Test speed raises NotImplementedError (covers line 140)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
     view = get_hconfig_view(config)
@@ -430,7 +430,7 @@ def test_speed_not_implemented() -> None:
 
 def test_subinterface_number() -> None:
     """Test subinterface_number returns number (covers line 144)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1.999")
 
     view = get_hconfig_view(config)
@@ -441,7 +441,7 @@ def test_subinterface_number() -> None:
 
 def test_subinterface_number_none() -> None:
     """Test subinterface_number returns None (covers line 144)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
     view = get_hconfig_view(config)
@@ -452,7 +452,7 @@ def test_subinterface_number_none() -> None:
 
 def test_tagged_all_not_implemented() -> None:
     """Test tagged_all raises NotImplementedError (covers line 148)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
     view = get_hconfig_view(config)
@@ -465,7 +465,7 @@ def test_tagged_all_not_implemented() -> None:
 
 def test_tagged_vlans_not_implemented() -> None:
     """Test tagged_vlans raises NotImplementedError (covers line 152)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
     view = get_hconfig_view(config)
@@ -478,7 +478,7 @@ def test_tagged_vlans_not_implemented() -> None:
 
 def test_vrf_not_implemented() -> None:
     """Test vrf raises NotImplementedError (covers line 156)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
     view = get_hconfig_view(config)
@@ -491,7 +491,7 @@ def test_vrf_not_implemented() -> None:
 
 def test_bundle_prefix() -> None:
     """Test _bundle_prefix returns 'port-channel' (covers line 160)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface port-channel1")
 
     view = get_hconfig_view(config)
@@ -502,7 +502,7 @@ def test_bundle_prefix() -> None:
 
 def test_hostname() -> None:
     """Test hostname returns hostname (covers lines 175-177)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("hostname NEXUS-CORE-01")
 
     view = get_hconfig_view(config)
@@ -511,7 +511,7 @@ def test_hostname() -> None:
 
 def test_hostname_none() -> None:
     """Test hostname returns None (covers line 177)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
 
     view = get_hconfig_view(config)
     assert view.hostname is None
@@ -519,7 +519,7 @@ def test_hostname_none() -> None:
 
 def test_interface_names_mentioned_not_implemented() -> None:
     """Test interface_names_mentioned raises NotImplementedError (covers line 182)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
 
     view = get_hconfig_view(config)
@@ -530,7 +530,7 @@ def test_interface_names_mentioned_not_implemented() -> None:
 
 def test_interface_views() -> None:
     """Test interface_views yields interface views (covers lines 186-187)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
     config.add_child("interface Ethernet1/2")
     config.add_child("interface loopback0")
@@ -546,7 +546,7 @@ def test_interface_views() -> None:
 
 def test_interfaces() -> None:
     """Test interfaces returns interface children (covers line 191)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
     config.add_child("interface Ethernet1/1")
     config.add_child("interface Ethernet1/2")
     config.add_child("interface port-channel1")
@@ -559,7 +559,7 @@ def test_interfaces() -> None:
 
 def test_ipv4_default_gw_not_implemented() -> None:
     """Test ipv4_default_gw raises NotImplementedError (covers line 195)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
 
     view = get_hconfig_view(config)
 
@@ -569,7 +569,7 @@ def test_ipv4_default_gw_not_implemented() -> None:
 
 def test_location_not_implemented() -> None:
     """Test location raises NotImplementedError (covers line 199)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
 
     view = get_hconfig_view(config)
 
@@ -579,7 +579,7 @@ def test_location_not_implemented() -> None:
 
 def test_stack_members_not_implemented() -> None:
     """Test stack_members raises NotImplementedError (covers line 203)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
 
     view = get_hconfig_view(config)
 
@@ -589,7 +589,7 @@ def test_stack_members_not_implemented() -> None:
 
 def test_vlans_not_implemented() -> None:
     """Test vlans raises NotImplementedError (covers line 207)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
+    config = HConfig.from_text(Platform.CISCO_NXOS)
 
     view = get_hconfig_view(config)
 
