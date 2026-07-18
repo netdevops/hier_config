@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `HConfigBase.__len__()` now counts descendants with a generator instead of
+  materializing a tuple of every node, avoiding a large temporary allocation on
+  big configuration trees (#188).
 - Changed `style` parameter on `indented_text()` and `RemediationReporter.to_text()` from `str` to `Literal["without_comments", "merged", "with_comments"]` via new `TextStyle` type alias (#189).
 - Renamed `load_hconfig_v2_options` to `load_driver_rules` (#221).
 - Renamed `load_hconfig_v2_tags` to `load_tag_rules` (#221).

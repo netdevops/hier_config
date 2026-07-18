@@ -191,3 +191,17 @@ def test_hconfig_deep_copy() -> None:
     assert original_interface is not None
     assert copied_interface is not None
     assert original_interface is not copied_interface
+
+
+def test_len_counts_all_descendants() -> None:
+    """__len__ counts every descendant node, not just direct children (#188)."""
+    config = get_hconfig(Platform.CISCO_IOS)
+    assert len(config) == 0
+
+    interface = config.add_child("interface GigabitEthernet0/0")
+    interface.add_child("description test")
+    interface.add_child("ip address 192.0.2.1 255.255.255.0")
+    config.add_child("hostname router1")
+
+    assert len(config) == 4
+    assert len(interface) == 2
