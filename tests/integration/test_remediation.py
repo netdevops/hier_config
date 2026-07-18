@@ -162,9 +162,7 @@ def test_sectional_overwrite_no_negate() -> None:
     platform = Platform.CISCO_XR
     running_config = HConfig.from_lines(platform, "as-path-set test\n  a\n  b")
     generated_config = HConfig.from_lines(platform, "as-path-set test\n  a")
-    expected_remediation_config = HConfig.from_lines(
-        platform, "as-path-set test\n  a"
-    )
+    expected_remediation_config = HConfig.from_lines(platform, "as-path-set test\n  a")
     workflow_remediation = WorkflowRemediation(running_config, generated_config)
     remediation_config = workflow_remediation.remediation_config
     assert remediation_config == expected_remediation_config

@@ -126,34 +126,35 @@ class Instance(BaseModel):
     tags: frozenset[str]
 
 
-class NegationDefaultWhenRule(BaseModel):
-    """Rule specifying when negation should use the ``default`` form."""
+class NegationStrategy(str, Enum):
+    """How a matching command is negated (#220)."""
 
-    match_rules: tuple[MatchRule, ...]
-
-
-class NegationDefaultWithRule(BaseModel):
-    """Rule replacing negation with a fixed custom command string."""
-
-    match_rules: tuple[MatchRule, ...]
-    use: str
+    #: Replace the command with the fixed string in ``use``.
+    REPLACE = "replace"
+    #: Rewrite the command to its ``default`` form.
+    DEFAULT = "default"
+    #: Apply ``re.sub(search, replace, ...)`` to the already-negated text.
+    REGEX_SUB = "regex_sub"
 
 
-class NegationSubRule(BaseModel):
-    r"""Regex substitution applied to a command during negation.
+class NegationRule(BaseModel):
+    r"""Unified negation rule (#220).
 
-    When a negated command matches ``match_rules``, ``re.sub(search, replace, text)``
-    is applied to transform the negation line.  Useful when a platform requires
-    truncated or reformatted negation commands — e.g. NX-OS SNMP user removal
-    must drop everything after the username.
+    Replaces the former ``NegationDefaultWithRule`` (``strategy=REPLACE``),
+    ``NegationDefaultWhenRule`` (``strategy=DEFAULT``), and ``NegationSubRule``
+    (``strategy=REGEX_SUB``). Rules are evaluated in list order; the first
+    matching rule wins.
 
-    The regex is applied to the **already-negated** text (with ``no `` prepended).
-    ``replace`` supports back-references such as ``\1``.
+    For ``REGEX_SUB``, the regex is applied to the **already-negated** text
+    (with the negation prefix prepended) and ``replace`` supports
+    back-references such as ``\1``.
     """
 
     match_rules: tuple[MatchRule, ...]
-    search: str
-    replace: str
+    strategy: NegationStrategy
+    use: str = ""
+    search: str = ""
+    replace: str = ""
 
 
 class ReferenceLocation(BaseModel):

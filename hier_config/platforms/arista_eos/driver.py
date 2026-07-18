@@ -1,7 +1,8 @@
 from hier_config.models import (
     IdempotentCommandsRule,
     MatchRule,
-    NegationDefaultWhenRule,
+    NegationRule,
+    NegationStrategy,
     PerLineSubRule,
     SectionalExitingRule,
 )
@@ -231,8 +232,9 @@ class HConfigDriverAristaEOS(HConfigDriverBase):
                     ),
                 ),
             ],
-            negation_default_when=[
-                NegationDefaultWhenRule(
+            negation=[
+                NegationRule(
+                    strategy=NegationStrategy.DEFAULT,
                     match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(equals="logging event link-status"),

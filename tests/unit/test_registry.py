@@ -26,25 +26,33 @@ class _CustomDriver(HConfigDriverBase):
         return HConfigDriverRules()
 
 
+def _assert_custom_platform_works() -> None:
+    driver = get_hconfig_driver("MY_NOS")
+    assert isinstance(driver, _CustomDriver)
+
+    config = HConfig.from_text("MY_NOS", "hostname test\n")
+    assert config.get_child(equals="hostname test") is not None
+
+
 def test_register_custom_platform() -> None:
     """A registered string platform works with driver lookup and constructors."""
     register_driver("MY_NOS", _CustomDriver)
     try:
-        driver = get_hconfig_driver("MY_NOS")
-        assert isinstance(driver, _CustomDriver)
-
-        config = HConfig.from_text("MY_NOS", "hostname test\n")
-        assert config.get_child(equals="hostname test") is not None
+        _assert_custom_platform_works()
     finally:
         unregister_driver("MY_NOS")
+
+
+def _assert_case_insensitive_lookup() -> None:
+    assert isinstance(get_hconfig_driver("MY_NOS"), _CustomDriver)
+    assert isinstance(get_hconfig_driver("my_nos"), _CustomDriver)
 
 
 def test_register_custom_platform_is_case_insensitive() -> None:
     """Custom platform names are normalized to uppercase."""
     register_driver("my_nos", _CustomDriver)
     try:
-        assert isinstance(get_hconfig_driver("MY_NOS"), _CustomDriver)
-        assert isinstance(get_hconfig_driver("my_nos"), _CustomDriver)
+        _assert_case_insensitive_lookup()
     finally:
         unregister_driver("MY_NOS")
 
@@ -63,7 +71,13 @@ def test_override_builtin_driver() -> None:
 
     # Unregistering an overridden built-in restores the default driver.
     driver = get_hconfig_driver(Platform.CISCO_IOS)
-    assert type(driver) is HConfigDriverCiscoIOS
+    assert driver.__class__ is HConfigDriverCiscoIOS
+
+
+def _assert_custom_view_resolves() -> None:
+    config = HConfig.from_text("CUSTOM_IOS", "hostname test\n")
+    view = get_hconfig_view(config)
+    assert isinstance(view, HConfigViewCiscoIOS)
 
 
 def test_registered_driver_view_follows_driver() -> None:
@@ -74,9 +88,7 @@ def test_registered_driver_view_follows_driver() -> None:
 
     register_driver("CUSTOM_IOS", CustomIOSDriver)
     try:
-        config = HConfig.from_text("CUSTOM_IOS", "hostname test\n")
-        view = get_hconfig_view(config)
-        assert isinstance(view, HConfigViewCiscoIOS)
+        _assert_custom_view_resolves()
     finally:
         unregister_driver("CUSTOM_IOS")
 

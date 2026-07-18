@@ -21,7 +21,7 @@ from hier_config.platforms.juniper_junos.driver import HConfigDriverJuniperJUNOS
 from hier_config.platforms.nokia_srl.driver import HConfigDriverNokiaSRL
 from hier_config.platforms.vyos.driver import HConfigDriverVYOS
 
-_BUILTIN_DRIVERS: dict[Platform, type[HConfigDriverBase]] = {
+_BUILTIN_DRIVERS: dict[Platform | str, type[HConfigDriverBase]] = {
     Platform.ARISTA_EOS: HConfigDriverAristaEOS,
     Platform.CISCO_IOS: HConfigDriverCiscoIOS,
     Platform.CISCO_NXOS: HConfigDriverCiscoNXOS,

@@ -34,7 +34,7 @@ def test_duplicate_child_error_on_duplicate_section() -> None:
 def test_driver_not_found_error_invalid_platform() -> None:
     """get_hconfig_driver raises DriverNotFoundError for unsupported platforms."""
     with pytest.raises(DriverNotFoundError, match="Unsupported platform"):
-        get_hconfig_driver("bogus_platform")  # type: ignore[arg-type]
+        get_hconfig_driver("bogus_platform")
 
 
 def test_incompatible_driver_error_mismatched_drivers() -> None:

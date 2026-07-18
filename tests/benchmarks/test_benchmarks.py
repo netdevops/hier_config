@@ -4,12 +4,12 @@ These tests are skipped by default. Run with:
     poetry run pytest -m benchmark -v
 """
 
-from hier_config import HConfig
 import time
 from collections.abc import Callable
 
 import pytest
 
+from hier_config import HConfig
 from hier_config.models import Platform
 
 pytestmark = pytest.mark.benchmark

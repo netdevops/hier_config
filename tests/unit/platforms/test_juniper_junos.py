@@ -1,6 +1,6 @@
-from hier_config import HConfig
 import pytest
 
+from hier_config import HConfig
 from hier_config.child import HConfigChild
 from hier_config.models import Platform
 from hier_config.platforms.juniper_junos.driver import HConfigDriverJuniperJUNOS

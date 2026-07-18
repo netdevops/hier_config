@@ -10,9 +10,9 @@ from hier_config import (
     get_hconfig_view,
 )
 from hier_config.constructors import (
-    _adjust_indent,
-    _config_from_string_lines_end_of_banner_test,
-    _load_from_string_lines,
+    _adjust_indent,  # pyright: ignore[reportPrivateUsage]
+    _config_from_string_lines_end_of_banner_test,  # pyright: ignore[reportPrivateUsage]
+    _load_from_string_lines,  # pyright: ignore[reportPrivateUsage]
 )
 from hier_config.exceptions import DriverNotFoundError, InvalidConfigError
 from hier_config.models import Platform
@@ -30,7 +30,7 @@ def test_get_hconfig_driver_unsupported_platform() -> None:
     with pytest.raises(
         DriverNotFoundError, match="Unsupported platform: invalid_platform"
     ):
-        get_hconfig_driver("invalid_platform")  # type: ignore[arg-type]
+        get_hconfig_driver("invalid_platform")
 
 
 def test_get_hconfig_view_unsupported_platform() -> None:

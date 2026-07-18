@@ -5,7 +5,8 @@ from hier_config.child import HConfigChild
 from hier_config.models import (
     IdempotentCommandsRule,
     MatchRule,
-    NegationDefaultWithRule,
+    NegationRule,
+    NegationStrategy,
     OrderingRule,
     PerLineSubRule,
 )
@@ -226,15 +227,17 @@ class HConfigDriverHPProcurve(HConfigDriverBase):
     @staticmethod
     def _instantiate_rules() -> HConfigDriverRules:
         return HConfigDriverRules(
-            negate_with=[
-                NegationDefaultWithRule(
+            negation=[
+                NegationRule(
+                    strategy=NegationStrategy.REPLACE,
                     match_rules=(
                         MatchRule(startswith="interface "),
                         MatchRule(equals="disable"),
                     ),
                     use="enable",
                 ),
-                NegationDefaultWithRule(
+                NegationRule(
+                    strategy=NegationStrategy.REPLACE,
                     match_rules=(
                         MatchRule(startswith="interface "),
                         MatchRule(startswith="name "),

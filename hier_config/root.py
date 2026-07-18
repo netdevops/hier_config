@@ -37,9 +37,9 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         config_text: Path | str = "",
     ) -> HConfig:
         """Create an HConfig from raw configuration text (or a Path to it)."""
-        from .constructors import _hconfig_from_text  # noqa: PLC0415
+        from .constructors import hconfig_from_text  # noqa: PLC0415
 
-        return _hconfig_from_text(platform_or_driver, config_text)
+        return hconfig_from_text(platform_or_driver, config_text)
 
     @classmethod
     def from_lines(
@@ -48,9 +48,9 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         lines: list[str] | tuple[str, ...] | str,
     ) -> HConfig:
         """Create an HConfig from pre-split configuration lines (fast load)."""
-        from .constructors import _hconfig_from_lines  # noqa: PLC0415
+        from .constructors import hconfig_from_lines  # noqa: PLC0415
 
-        return _hconfig_from_lines(platform_or_driver, lines)
+        return hconfig_from_lines(platform_or_driver, lines)
 
     @classmethod
     def from_dump(
@@ -59,9 +59,9 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         dump: Dump,
     ) -> HConfig:
         """Reconstruct an HConfig from a serialized Dump."""
-        from .constructors import _hconfig_from_dump  # noqa: PLC0415
+        from .constructors import hconfig_from_dump  # noqa: PLC0415
 
-        return _hconfig_from_dump(platform_or_driver, dump)
+        return hconfig_from_dump(platform_or_driver, dump)
 
     def __str__(self) -> str:
         return "\n".join(str(c) for c in sorted(self.children))

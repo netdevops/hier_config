@@ -19,9 +19,7 @@ def test_negate_description() -> None:
     running_config = HConfig.from_lines(
         platform, ("interface GigabitEthernet0/0/0", " description some old blabla")
     )
-    generated_config = HConfig.from_lines(
-        platform, ("interface GigabitEthernet0/0/0",)
-    )
+    generated_config = HConfig.from_lines(platform, ("interface GigabitEthernet0/0/0",))
     remediation_config = running_config.remediation(generated_config)
     assert remediation_config.to_lines() == (
         "interface GigabitEthernet0/0/0",
@@ -47,9 +45,7 @@ def test_negate_alias() -> None:
     running_config = HConfig.from_lines(
         platform, ("interface GigabitEthernet0/0/0", " alias some old alias")
     )
-    generated_config = HConfig.from_lines(
-        platform, ("interface GigabitEthernet0/0/0",)
-    )
+    generated_config = HConfig.from_lines(platform, ("interface GigabitEthernet0/0/0",))
     remediation_config = running_config.remediation(generated_config)
     assert remediation_config.to_lines() == (
         "interface GigabitEthernet0/0/0",

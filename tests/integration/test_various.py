@@ -13,7 +13,9 @@ def test_issue104() -> None:
 
     platform = Platform.CISCO_NXOS
     running_config = HConfig.from_text(get_hconfig_driver(platform), running_config_raw)
-    generated_config = HConfig.from_text(get_hconfig_driver(platform), generated_config_raw)
+    generated_config = HConfig.from_text(
+        get_hconfig_driver(platform), generated_config_raw
+    )
     remediation_config = running_config.remediation(generated_config)
     expected_rem_lines = {
         "no tacacs-server deadtime 3",

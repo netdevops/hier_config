@@ -2,8 +2,8 @@ from hier_config.models import (
     IdempotentCommandsAvoidRule,
     IdempotentCommandsRule,
     MatchRule,
-    NegationDefaultWhenRule,
-    NegationDefaultWithRule,
+    NegationRule,
+    NegationStrategy,
     PerLineSubRule,
 )
 from hier_config.platforms.cisco_nxos.view import HConfigViewCiscoNXOS
@@ -362,8 +362,9 @@ class HConfigDriverCiscoNXOS(HConfigDriverBase):
                     ),
                 ),
             ],
-            negation_default_when=[
-                NegationDefaultWhenRule(
+            negation=[
+                NegationRule(
+                    strategy=NegationStrategy.DEFAULT,
                     match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(
@@ -372,7 +373,8 @@ class HConfigDriverCiscoNXOS(HConfigDriverBase):
                         ),
                     ),
                 ),
-                NegationDefaultWhenRule(
+                NegationRule(
+                    strategy=NegationStrategy.DEFAULT,
                     match_rules=(
                         MatchRule(startswith="router bgp"),
                         MatchRule(startswith="neighbor"),
@@ -380,21 +382,22 @@ class HConfigDriverCiscoNXOS(HConfigDriverBase):
                         MatchRule(equals="send-community"),
                     ),
                 ),
-                NegationDefaultWhenRule(
+                NegationRule(
+                    strategy=NegationStrategy.DEFAULT,
                     match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(contains="ip ospf passive-interface"),
                     ),
                 ),
-                NegationDefaultWhenRule(
+                NegationRule(
+                    strategy=NegationStrategy.DEFAULT,
                     match_rules=(
                         MatchRule(startswith="interface"),
                         MatchRule(contains="ospfv3 passive-interface"),
                     ),
                 ),
-            ],
-            negate_with=[
-                NegationDefaultWithRule(
+                NegationRule(
+                    strategy=NegationStrategy.REPLACE,
                     match_rules=(
                         MatchRule(startswith="router bgp"),
                         MatchRule(startswith="address-family"),
@@ -402,7 +405,8 @@ class HConfigDriverCiscoNXOS(HConfigDriverBase):
                     ),
                     use="default maximum-paths ibgp",
                 ),
-                NegationDefaultWithRule(
+                NegationRule(
+                    strategy=NegationStrategy.REPLACE,
                     match_rules=(
                         MatchRule(startswith="router bgp"),
                         MatchRule(startswith="vrf"),
@@ -411,7 +415,8 @@ class HConfigDriverCiscoNXOS(HConfigDriverBase):
                     ),
                     use="default maximum-paths ibgp",
                 ),
-                NegationDefaultWithRule(
+                NegationRule(
+                    strategy=NegationStrategy.REPLACE,
                     match_rules=(
                         MatchRule(equals="line vty"),
                         MatchRule(startswith="session-limit"),

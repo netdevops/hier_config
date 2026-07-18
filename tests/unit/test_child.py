@@ -482,15 +482,14 @@ def test_child_is_match_contains_tuple() -> None:
     assert not interface.is_match(contains=("TenGigabit", "FastEthernet"))
 
 
-def test_child_use_default_for_negation() -> None:
-    """Test use_default_for_negation."""
-    platform = Platform.CISCO_IOS
+def test_child_negate_default_strategy() -> None:
+    """A DEFAULT-strategy negation rule rewrites to the default form (#220)."""
+    platform = Platform.ARISTA_EOS
     config = HConfig.from_text(platform)
-    interface = config.add_child("interface GigabitEthernet0/0")
-    description = interface.add_child("description test")
-    uses_default = description.use_default_for_negation(description)
+    interface = config.add_child("interface Ethernet1")
+    logging_event = interface.add_child("logging event link-status")
 
-    assert isinstance(uses_default, bool)
+    assert logging_event.negate().text == "default logging event link-status"
 
 
 def test_child_remove_tags_leaf_iterable() -> None:
@@ -705,15 +704,14 @@ def test_child_sectional_exit_with_exit_text() -> None:
     assert exit_text == "exit"
 
 
-def test_child_use_default_for_negation_true() -> None:
-    """Test use_default_for_negation returns True."""
+def test_child_negate_swap_fallback() -> None:
+    """A command matching no negation rule falls back to swap_negation (#220)."""
     platform = Platform.CISCO_IOS
     config = HConfig.from_text(platform)
     interface = config.add_child("interface GigabitEthernet0/0")
     description = interface.add_child("description test")
-    result = description.use_default_for_negation(description)
 
-    assert isinstance(result, bool)
+    assert description.negate().text == "no description test"
 
 
 def test_child_lt_comparison() -> None:

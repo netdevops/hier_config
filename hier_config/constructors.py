@@ -29,7 +29,7 @@ def get_hconfig_view(config: HConfig) -> HConfigViewBase:
     raise DriverNotFoundError(message)
 
 
-def _hconfig_from_text(
+def hconfig_from_text(
     platform_or_driver: Platform | str | HConfigDriverBase,
     config_raw: Path | str = "",
 ) -> HConfig:
@@ -51,11 +51,11 @@ def _hconfig_from_text(
     return config
 
 
-def _hconfig_from_dump(
+def hconfig_from_dump(
     platform_or_driver: Platform | str | HConfigDriverBase, dump: Dump
 ) -> HConfig:
     """Load an HConfig dump."""
-    config = _hconfig_from_text(_get_driver(platform_or_driver))
+    config = hconfig_from_text(_get_driver(platform_or_driver))
     last_item: HConfig | HConfigChild = config
     for item in dump.lines:
         # parent is the root
@@ -79,12 +79,12 @@ def _hconfig_from_dump(
     return config
 
 
-def _hconfig_from_lines(
+def hconfig_from_lines(
     platform_or_driver: Platform | str | HConfigDriverBase,
     lines: list[str] | tuple[str, ...] | str,
 ) -> HConfig:
     driver = _get_driver(platform_or_driver)
-    config = _hconfig_from_text(driver)
+    config = hconfig_from_text(driver)
     if isinstance(lines, str):
         lines = lines.splitlines()
 
