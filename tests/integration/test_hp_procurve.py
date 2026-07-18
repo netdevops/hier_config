@@ -1,11 +1,10 @@
-from hier_config import get_hconfig_fast_load
-from hier_config.constructors import get_hconfig
+from hier_config import HConfig
 from hier_config.models import Platform
 
 
 def test_negate_with() -> None:
     platform = Platform.HP_PROCURVE
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         (
             "aaa port-access authenticator 1/1 tx-period 3",
@@ -16,7 +15,7 @@ def test_negate_with() -> None:
             'aaa port-access 1/1 critical-auth user-role "allowall"',
         ),
     )
-    generated_config = get_hconfig(platform)
+    generated_config = HConfig.from_text(platform)
     remediation_config = running_config.remediation(generated_config)
     assert remediation_config.to_lines() == (
         "aaa port-access authenticator 1/1 tx-period 30",
@@ -30,7 +29,7 @@ def test_negate_with() -> None:
 
 def test_idempotent_for() -> None:
     platform = Platform.HP_PROCURVE
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         (
             "aaa port-access authenticator 1/1 tx-period 3",
@@ -41,7 +40,7 @@ def test_idempotent_for() -> None:
             'aaa port-access 1/1 critical-auth user-role "allowall"',
         ),
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform,
         (
             "aaa port-access authenticator 1/1 tx-period 4",
@@ -65,8 +64,8 @@ def test_idempotent_for() -> None:
 
 def test_future() -> None:
     platform = Platform.HP_PROCURVE
-    running_config = get_hconfig(platform)
-    remediation_config = get_hconfig_fast_load(
+    running_config = HConfig.from_text(platform)
+    remediation_config = HConfig.from_lines(
         platform,
         (
             "aaa port-access authenticator 3/34",
@@ -85,14 +84,14 @@ def test_future() -> None:
 def test_negate_with_child_config() -> None:
     """Test negate_with returns None for non-root config without special rule (covers line 166)."""
     platform = Platform.HP_PROCURVE
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         (
             "interface 1/1",
             "   speed-duplex auto",
         ),
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform,
         ("interface 1/1",),
     )
@@ -107,14 +106,14 @@ def test_negate_with_child_config() -> None:
 def test_negate_with_from_base_driver() -> None:
     """Test negate_with uses parent driver rule when applicable (covers line 163)."""
     platform = Platform.HP_PROCURVE
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         (
             "interface 1/1",
             "   disable",
         ),
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform,
         ("interface 1/1",),
     )

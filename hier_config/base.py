@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from itertools import chain
 from logging import getLogger
-from typing import TYPE_CHECKING, TypeVar
+from typing import TYPE_CHECKING
 
 from .children import HConfigChildren
 from .exceptions import DuplicateChildError
@@ -16,18 +16,17 @@ if TYPE_CHECKING:
     from .platforms.driver_base import HConfigDriverBase
     from .root import HConfig
 
-    _HConfigRootOrChildT = TypeVar("_HConfigRootOrChildT", bound=HConfig | HConfigChild)
 
 logger = getLogger(__name__)
 
 
-class HConfigBase(ABC):  # noqa: PLR0904
+class HConfigBase(ABC):  # ruff:ignore[too-many-public-methods]
     """Abstract base class for the hierarchical configuration tree.
 
     Both `HConfig` (the root) and `HConfigChild` (individual nodes) inherit from
     this class.  It provides the shared tree-manipulation API: adding, searching,
-    and diffing children, as well as the `_future` / `_remediation` algorithms
-    that power `WorkflowRemediation`.
+    and diffing children. The diff/remediation/future algorithms live in
+    `hier_config.tree_algorithms` and are invoked from `HConfig`.
     """
 
     __slots__ = ("children",)
@@ -98,7 +97,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
         self.children.append(new_child)
         return new_child
 
-    def path(self) -> Iterator[str]:  # noqa: PLR6301
+    def path(self) -> Iterator[str]:  # ruff:ignore[no-self-use]
         yield from ()
 
     def add_deep_copy_of(
@@ -274,84 +273,6 @@ class HConfigBase(ABC):  # noqa: PLR0904
                     for c in target_child.all_children_sorted()
                 )
 
-    def _future_pre(self, config: HConfig | HConfigChild) -> tuple[set[str], set[str]]:
-        negated_or_recursed: set[str] = set()
-        config_children_ignore: set[str] = set()
-        for self_child in self.children:
-            # Is the command effectively negating a command in self.children?
-            if (negation_text := self.root.driver.negate_with(self_child)) and (
-                config_child := config.get_child(equals=negation_text)
-            ):
-                negated_or_recursed.add(self_child.text)
-                config_children_ignore.add(config_child.text)
-        return negated_or_recursed, config_children_ignore
-
-    def _future(  # noqa: C901
-        self,
-        config: HConfig | HConfigChild,
-        future_config: HConfig | HConfigChild,
-    ) -> None:
-        """Recursively compute the future configuration subtree.
-
-        Called by :meth:`HConfig.future` to walk the config tree and merge
-        ``config`` on top of ``self``, applying driver-specific rules for
-        sectional overwrite, idempotency, and negation.  The result is written
-        into ``future_config``.
-
-        Known gaps (not yet accounted for):
-
-        - Negating a numbered ACL when removing a single entry
-        - Idempotent command avoid list
-        - And likely other edge cases
-        """
-        negated_or_recursed, config_children_ignore = self._future_pre(config)
-
-        for config_child in config.children:
-            if config_child.text in config_children_ignore:
-                continue
-            # sectional_overwrite
-            # sectional_overwrite_no_negate
-            if (
-                config_child.use_sectional_overwrite()
-                or config_child.use_sectional_overwrite_without_negation()
-            ):
-                future_config.add_deep_copy_of(config_child)
-            # Idempotent commands
-            elif self_child := self.root.driver.idempotent_for(
-                config_child,
-                self.children,
-            ):
-                future_config.add_deep_copy_of(config_child)
-                negated_or_recursed.add(self_child.text)
-            # config_child is already in self
-            elif self_child := self.get_child(equals=config_child.text):
-                future_child = future_config.add_shallow_copy_of(self_child)
-                self_child._future(config_child, future_child)  # noqa: SLF001
-                negated_or_recursed.add(config_child.text)
-            # config_child is being negated
-            elif config_child.text.startswith(self.driver.negation_prefix):
-                unnegated_command = config_child.text_without_negation
-                if self.get_child(equals=unnegated_command):
-                    negated_or_recursed.add(unnegated_command)
-                # Account for "no ..." commands in the running config
-                else:
-                    future_config.add_shallow_copy_of(config_child)
-            # The negated form of config_child is in self.children
-            elif self_child := self.get_child(
-                equals=f"{self.driver.negation_prefix}{config_child.text}",
-            ):
-                negated_or_recursed.add(self_child.text)
-            # config_child is not in self and doesn't match a special case
-            else:
-                future_config.add_deep_copy_of(config_child)
-
-        for self_child in self.children:
-            # self_child matched an above special case and should be ignored
-            if self_child.text in negated_or_recursed:
-                continue
-            # self_child was not modified above and should be present in the future config
-            future_config.add_deep_copy_of(self_child)
-
     @abstractmethod
     def instantiate_child(self, text: str) -> HConfigChild:
         pass
@@ -359,143 +280,3 @@ class HConfigBase(ABC):  # noqa: PLR0904
     @abstractmethod
     def _is_duplicate_child_allowed(self) -> bool:
         pass
-
-    def _with_tags(
-        self,
-        tags: frozenset[str],
-        new_instance: _HConfigRootOrChildT,
-    ) -> _HConfigRootOrChildT:
-        """Adds children recursively that have a subset of tags."""
-        for child in self.children:
-            if tags.issubset(child.tags):
-                new_child = new_instance.add_shallow_copy_of(child)
-                child._with_tags(tags, new_instance=new_child)  # noqa: SLF001
-
-        return new_instance
-
-    def _remediation(
-        self,
-        target: _HConfigRootOrChildT,
-        delta: _HConfigRootOrChildT,
-    ) -> _HConfigRootOrChildT:
-        """Figures out what commands need to be executed to transition from self to target.
-        self is the source data structure(i.e. the running_config),
-        target is the destination(i.e. generated_config).
-
-        """
-        self._remediation_left(target, delta)
-        self._remediation_right(target, delta)
-
-        return delta
-
-    @staticmethod
-    def _strip_acl_sequence_number(hier_child: HConfigChild) -> str:
-        words = hier_child.text.split()
-        if words[0].isdecimal():
-            words.pop(0)
-        return " ".join(words)
-
-    def _difference(
-        self,
-        target: _HConfigRootOrChildT,
-        delta: _HConfigRootOrChildT,
-        target_acl_children: dict[str, HConfigChild] | None = None,
-        *,
-        in_acl: bool = False,
-    ) -> _HConfigRootOrChildT:
-        acl_sw_matches = tuple(f"ip{x} access-list " for x in ("", "v4", "v6"))
-
-        for self_child in self.children:
-            # Not dealing with negations and defaults for now
-            if self_child.text.startswith((self.driver.negation_prefix, "default ")):
-                continue
-
-            if in_acl:
-                # Ignore ACL sequence numbers
-                if target_acl_children is None:
-                    message = "target_acl_children cannot be None"
-                    raise TypeError(message)
-                target_child = target_acl_children.get(
-                    self._strip_acl_sequence_number(self_child),
-                )
-            else:
-                target_child = target.get_child(equals=self_child.text)
-
-            if target_child is None:
-                delta.add_deep_copy_of(self_child)
-            else:
-                delta_child = delta.add_child(self_child.text)
-                if self_child.text.startswith(acl_sw_matches):
-                    self_child._difference(  # noqa: SLF001
-                        target_child,
-                        delta_child,
-                        target_acl_children={
-                            self._strip_acl_sequence_number(c): c
-                            for c in target_child.children
-                        },
-                        in_acl=True,
-                    )
-                else:
-                    self_child._difference(target_child, delta_child)  # noqa: SLF001
-                if not delta_child.children:
-                    delta_child.delete()
-
-        return delta
-
-    def _remediation_left(
-        self,
-        target: HConfig | HConfigChild,
-        delta: HConfig | HConfigChild,
-    ) -> None:
-        # find self.children that are not in target.children
-        # i.e. what needs to be negated or defaulted
-        # Also, find out if another command in self.children will overwrite
-        # i.e. be idempotent
-        for self_child in self.children:
-            if self_child.text in target.children:
-                continue
-            if self_child.is_idempotent_command(target.children):
-                continue
-
-            # in other but not self
-            # add this node but not any children
-            negated = delta.add_child(self_child.text).negate()
-            if self_child.children:
-                negated.comments.add(f"removes {len(self_child.children) + 1} lines")
-
-    def _remediation_right(
-        self,
-        target: HConfig | HConfigChild,
-        delta: HConfig | HConfigChild,
-    ) -> None:
-        # Find what would need to be added to source_config to get to self
-        for target_child in target.children:
-            # If the child exist, recurse into its children
-            if self_child := self.children.get(target_child.text):
-                # Do we need to rewrite the child and its children as well?
-                if self_child.use_sectional_overwrite():
-                    self_child.overwrite_with(target_child, delta)
-                    continue
-                if self_child.use_sectional_overwrite_without_negation():
-                    self_child.overwrite_with(target_child, delta, negate=False)
-                    continue
-                # Matched leaves can never produce delta lines - neither pass
-                # has children to visit - so skip the subtree allocation (#191).
-                if not (self_child.children or target_child.children):
-                    continue
-                subtree = delta.instantiate_child(target_child.text)
-                self_child._remediation(target_child, subtree)  # noqa: SLF001
-                if subtree.children:
-                    delta.children.append(subtree)
-            # The child is absent, add it.
-            else:
-                # If the target_child is already in the delta, that means it was negated in the target config
-                if target_child.text in delta.children:
-                    continue
-                new_item = delta.add_deep_copy_of(target_child)
-                # Mark the new item and all of its children as new_in_config.
-                new_item.new_in_config = True
-                for child in new_item.all_children():
-                    child.new_in_config = True
-                if new_item.children:
-                    new_item.comments.add("new section")

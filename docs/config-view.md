@@ -4,6 +4,24 @@ A Config View is an abstraction layer for network device configurations. It prov
 
 The framework uses a combination of abstract base classes (e.g., `ConfigViewInterfaceBase`, `HConfigViewBase`) and platform-specific implementations (e.g., `ConfigViewInterfaceCiscoIOS`, `HConfigViewCiscoIOS`) to provide a unified interface for interacting with configurations while accounting for the unique syntax and semantics of each vendor or platform.
 
+`ConfigViewInterfaceBase` carries only the core interface properties that every platform supports. Optional capabilities are modeled as mixins that platform views inherit when they genuinely support them:
+
+- `InterfaceBundleViewMixin` — bundle / port-channel properties (`bundle_id`, `bundle_name`, `bundle_member_interfaces`, `is_bundle`).
+- `InterfaceVlanViewMixin` — 802.1Q VLAN properties (`native_vlan`, `tagged_vlans`, `tagged_all`, `dot1q_mode`).
+- `InterfaceNACViewMixin` — NAC properties (`has_nac`, `nac_host_mode`, `nac_mab_first`, ...).
+- `InterfacePhysicalViewMixin` — physical-layer properties (`duplex`, `speed`, `poe`, `module_number`).
+
+Check whether a platform supports a capability with `isinstance()`:
+
+```python
+from hier_config import InterfaceVlanViewMixin
+
+if isinstance(interface_view, InterfaceVlanViewMixin):
+    print(interface_view.native_vlan)
+```
+
+Current platform capabilities: Cisco IOS and HP ProCurve inherit all four mixins; Arista EOS, Cisco NX-OS, and Cisco IOS XR inherit the bundle and VLAN mixins.
+
 ## Why Use Config Views?
 
 1. **Vendor Abstraction:** Network devices from different vendors (Cisco, Arista, Juniper, etc.) have varied configuration formats. Config Views standardize access, making it easier to work across platforms.
@@ -114,7 +132,7 @@ The framework uses a combination of abstract base classes (e.g., `ConfigViewInte
 Assume we have a Cisco IOS configuration file as a string.
 
 ```python
-from hier_config import Platform, get_hconfig
+from hier_config import Platform, HConfig
 
 
 raw_config = """
@@ -129,7 +147,7 @@ vlan 10
  name DATA
 """
 
-hconfig = get_hconfig(Platform.CISCO_IOS, raw_config)
+hconfig = HConfig.from_text(Platform.CISCO_IOS, raw_config)
 ```
 
 ### Step 2: Create Config View
@@ -169,7 +187,7 @@ for vlan in config_view.vlans:
 Assume we have a Cisco IOS configuration file as a string.
 
 ```python
-from hier_config import Platform, get_hconfig
+from hier_config import Platform, HConfig
 
 
 raw_config = """
@@ -186,7 +204,7 @@ interface GigabitEthernet0/2
 !
 """
 
-hconfig = get_hconfig(Platform.CISCO_IOS, raw_config)
+hconfig = HConfig.from_text(Platform.CISCO_IOS, raw_config)
 ```
 
 ### Step 2: Create Config View and Access Interface Views

@@ -12,9 +12,8 @@ from hier_config.models import (
     IdempotentCommandsRule,
     IndentAdjustRule,
     MatchRule,
-    NegationDefaultWhenRule,
-    NegationDefaultWithRule,
-    NegationSubRule,
+    NegationRule,
+    NegationStrategy,
     OrderingRule,
     ParentAllowsDuplicateChildRule,
     PerLineSubRule,
@@ -134,15 +133,20 @@ def _process_custom_rules(options: dict[str, Any], driver: HConfigDriverBase) ->
 
     for rule in options.get("negation_negate_with", ()):
         match_rules = _collect_match_rules(rule.get("lineage", []))
-        driver.rules.negate_with.append(
-            NegationDefaultWithRule(match_rules=match_rules, use=rule.get("use", "")),
+        driver.rules.negation.append(
+            NegationRule(
+                match_rules=match_rules,
+                strategy=NegationStrategy.REPLACE,
+                use=rule.get("use", ""),
+            ),
         )
 
     for rule in options.get("negation_sub", ()):
         match_rules = _collect_match_rules(rule.get("lineage", []))
-        driver.rules.negation_sub.append(
-            NegationSubRule(
+        driver.rules.negation.append(
+            NegationRule(
                 match_rules=match_rules,
+                strategy=NegationStrategy.REGEX_SUB,
                 search=rule.get("search", ""),
                 replace=rule.get("replace", ""),
             ),
@@ -216,14 +220,15 @@ def load_driver_rules(
             IdempotentCommandsRule,
             driver.rules.idempotent_commands.append,
         ),
-        (
-            "negation_default_when",
-            NegationDefaultWhenRule,
-            driver.rules.negation_default_when.append,
-        ),
     )
     for key, rule_class, append_to in simple_rules:
         _process_simple_rules(options, key, rule_class, append_to)
+
+    for rule in options.get("negation_default_when", ()):
+        match_rules = _collect_match_rules(rule.get("lineage", []))
+        driver.rules.negation.append(
+            NegationRule(match_rules=match_rules, strategy=NegationStrategy.DEFAULT),
+        )
 
     # Process rules that require custom handling
     _process_custom_rules(options, driver)

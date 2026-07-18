@@ -57,7 +57,7 @@ driver = get_hconfig_driver(Platform.CISCO_IOS)
 Cisco IOS is hier_config's primary reference platform and the most thoroughly tested driver. The `CISCO_IOS` driver ships with a comprehensive set of rules covering common IOS configuration patterns:
 
 - **[Idempotent commands](glossary.md#idempotent-command)**: `hostname`, `ip address`, `ip access-group`, `description`, `banner`, and many others are treated as last-write-wins — applying the same command twice leaves only the final value in place.
-- **Negation**: standard `no ` [negation prefix](glossary.md#negation-prefix). Several commands (such as `logging console`) use [`NegationDefaultWithRule`](glossary.md#negation-negate-with) overrides to emit a specific reset form.
+- **Negation**: standard `no ` [negation prefix](glossary.md#negation-prefix). Several commands (such as `logging console`) use REPLACE-strategy [`NegationRule`](glossary.md#negation-negate-with) overrides to emit a specific reset form.
 - **[Sectional exiting](glossary.md#sectional-exiting)**: BGP `peer-policy` and `peer-session` blocks require `exit-peer-policy` and `exit-peer-session` closure tokens.
 - **Per-line substitutions**: strips `Building configuration…` banners and timestamp headers.
 - **VLAN id list splitting**: IOS can render unnamed VLANs collapsed onto a single comma/range line (e.g. `vlan 69,381`, `vlan 10-12`), depending on how the VLANs were created — named VLANs always get their own block, and the grouping shifts as VLANs are named or unnamed. When such a collapsed line is present, a post-load callback splits it into one `vlan <id>` block each so the VLANs diff block-to-block against an intended config that lists them separately — avoiding a destructive `no vlan 69,381`.
@@ -114,7 +114,7 @@ driver = get_hconfig_driver(Platform.CISCO_XR)
 Cisco NX-OS is similar to IOS in CLI structure but has NX-OS-specific idempotency requirements:
 
 - **TCAM region idempotency**: `hardware access-list tcam region` commands are treated as last-write-wins.
-- Some BGP commands use different negation forms; the driver includes `NegationDefaultWithRule` entries for affected commands.
+- Some BGP commands use different negation forms; the driver includes REPLACE-strategy `NegationRule` entries for affected commands.
 - [Negation prefix](glossary.md#negation-prefix): `no ` (default).
 
 Platform enum: `Platform.CISCO_NXOS`
@@ -166,10 +166,10 @@ driver = get_hconfig_driver(Platform.NOKIA_SRL)
 **Remediation example:**
 
 ```python
-from hier_config import WorkflowRemediation, get_hconfig, Platform
+from hier_config import WorkflowRemediation, HConfig, Platform
 
-running = get_hconfig(Platform.NOKIA_SRL, running_text)
-intended = get_hconfig(Platform.NOKIA_SRL, intended_text)
+running = HConfig.from_text(Platform.NOKIA_SRL, running_text)
+intended = HConfig.from_text(Platform.NOKIA_SRL, intended_text)
 workflow = WorkflowRemediation(running, intended)
 
 for line in workflow.remediation_config.all_children_sorted():
@@ -238,10 +238,10 @@ driver = get_hconfig_driver(Platform.HP_PROCURVE)
 **Remediation example:**
 
 ```python
-from hier_config import WorkflowRemediation, get_hconfig, Platform
+from hier_config import WorkflowRemediation, HConfig, Platform
 
-running = get_hconfig(Platform.HP_PROCURVE, running_text)
-intended = get_hconfig(Platform.HP_PROCURVE, intended_text)
+running = HConfig.from_text(Platform.HP_PROCURVE, running_text)
+intended = HConfig.from_text(Platform.HP_PROCURVE, intended_text)
 workflow = WorkflowRemediation(running, intended)
 
 for line in workflow.remediation_config.all_children_sorted():
@@ -267,10 +267,10 @@ driver = get_hconfig_driver(Platform.HP_COMWARE5)
 **Remediation example:**
 
 ```python
-from hier_config import WorkflowRemediation, get_hconfig, Platform
+from hier_config import WorkflowRemediation, HConfig, Platform
 
-running = get_hconfig(Platform.HP_COMWARE5, running_text)
-intended = get_hconfig(Platform.HP_COMWARE5, intended_text)
+running = HConfig.from_text(Platform.HP_COMWARE5, running_text)
+intended = HConfig.from_text(Platform.HP_COMWARE5, intended_text)
 workflow = WorkflowRemediation(running, intended)
 
 for line in workflow.remediation_config.all_children_sorted():
@@ -299,10 +299,10 @@ driver = get_hconfig_driver(Platform.HUAWEI_VRP)
 **Remediation example:**
 
 ```python
-from hier_config import WorkflowRemediation, get_hconfig, Platform
+from hier_config import WorkflowRemediation, HConfig, Platform
 
-running = get_hconfig(Platform.HUAWEI_VRP, running_text)
-intended = get_hconfig(Platform.HUAWEI_VRP, intended_text)
+running = HConfig.from_text(Platform.HUAWEI_VRP, running_text)
+intended = HConfig.from_text(Platform.HUAWEI_VRP, intended_text)
 workflow = WorkflowRemediation(running, intended)
 
 for line in workflow.remediation_config.all_children_sorted():
@@ -346,13 +346,11 @@ In Hier Config, the rules within a driver are organized into sections, each targ
 
 **Purpose**: Define how to negate commands or reset them to a default state.
 
-- **Models**:
-  - **`NegationDefaultWithRule`**:
+- **Model**: **`NegationRule`** — a single unified model with a `NegationStrategy` enum. Rules are evaluated in list order; the first matching rule wins.
     - `match_rules`: A tuple of `MatchRule` objects defining the conditions under which the rule applies.
-    - `use`: The text to use as the negation command.
-
-  - **`NegationDefaultWhenRule`**:
-    - `match_rules`: A tuple of `MatchRule` objects for matching conditions where negation is default.
+    - `strategy`: `NegationStrategy.REPLACE` (replace the command with the fixed string in `use`), `NegationStrategy.DEFAULT` (rewrite the command to its `default` form), or `NegationStrategy.REGEX_SUB` (apply `re.sub(search, replace, ...)` to the already-negated text).
+    - `use`: The replacement negation command (REPLACE strategy).
+    - `search` / `replace`: The regex substitution (REGEX_SUB strategy).
 
 ---
 
@@ -512,7 +510,8 @@ In this approach, you create a new class that subclasses the base Cisco IOS driv
 ```python
 from hier_config.models import (
     MatchRule,
-    NegationDefaultWithRule,
+    NegationRule,
+    NegationStrategy,
     SectionalExitingRule,
     OrderingRule,
     PerLineSubRule,
@@ -528,10 +527,11 @@ class ExtendedHConfigDriverCiscoIOS(HConfigDriverCiscoIOS):
         base_rules = HConfigDriverCiscoIOS._instantiate_rules()
 
         # Extend negation rules
-        base_rules.negate_with.append(
-            NegationDefaultWithRule(
+        base_rules.negation.append(
+            NegationRule(
+                strategy=NegationStrategy.REPLACE,
                 match_rules=(MatchRule(startswith="ip route "),),
-                use="no ip route"
+                use="no ip route",
             )
         )
 
@@ -600,7 +600,8 @@ If you already have the driver instantiated, you can modify its rules dynamicall
 from hier_config import get_hconfig_driver, Platform
 from hier_config.models import (
     MatchRule,
-    NegationDefaultWithRule,
+    NegationRule,
+    NegationStrategy,
     SectionalExitingRule,
     OrderingRule,
     PerLineSubRule,
@@ -611,10 +612,11 @@ from hier_config.models import (
 driver = get_hconfig_driver(Platform.CISCO_IOS)
 
 # Dynamically extend negation rules
-driver.rules.negate_with.append(
-    NegationDefaultWithRule(
+driver.rules.negation.append(
+    NegationRule(
+        strategy=NegationStrategy.REPLACE,
         match_rules=(MatchRule(startswith="ip route "),),
-        use="no ip route"
+        use="no ip route",
     )
 )
 
@@ -677,7 +679,7 @@ You can add unused object rules dynamically or via `load_driver_rules`:
 #### Dynamic Extension
 
 ```python
-from hier_config import get_hconfig, get_hconfig_driver, Platform
+from hier_config import HConfig, get_hconfig_driver, Platform
 from hier_config.models import MatchRule, ReferenceLocation, UnusedObjectRule
 
 driver = get_hconfig_driver(Platform.CISCO_XR)
@@ -696,7 +698,7 @@ driver.rules.unused_objects.append(
     )
 )
 
-config = get_hconfig(driver, running_config_text)
+config = HConfig.from_text(driver, running_config_text)
 for unused in config.unused_objects():
     print(f"Unused: {unused.text}")
 ```
@@ -704,7 +706,7 @@ for unused in config.unused_objects():
 #### Via `load_driver_rules`
 
 ```python
-from hier_config import get_hconfig, Platform
+from hier_config import HConfig, Platform
 from hier_config.utils import load_driver_rules
 
 options = {
@@ -722,7 +724,7 @@ options = {
     ],
 }
 driver = load_driver_rules(options, Platform.CISCO_XR)
-config = get_hconfig(driver, running_config_text)
+config = HConfig.from_text(driver, running_config_text)
 
 for unused in config.unused_objects():
     print(f"Unused: {unused.text}")
@@ -736,23 +738,64 @@ Each `UnusedObjectRule` requires:
 
 ### Example 4: Adding Negation Substitution
 
-Some platforms require negation commands to be truncated or transformed. Use `NegationSubRule` for regex-based negation transformations:
+Some platforms require negation commands to be truncated or transformed. Use a REGEX_SUB-strategy `NegationRule` for regex-based negation transformations:
 
 ```python
 from hier_config import get_hconfig_driver, Platform
-from hier_config.models import MatchRule, NegationSubRule
+from hier_config.models import MatchRule, NegationRule, NegationStrategy
 
 driver = get_hconfig_driver(Platform.CISCO_NXOS)
 
 # Truncate SNMP user negation after the username
-driver.rules.negation_sub.append(
-    NegationSubRule(
+driver.rules.negation.append(
+    NegationRule(
+        strategy=NegationStrategy.REGEX_SUB,
         match_rules=(MatchRule(startswith="snmp-server user "),),
         search=r"(no snmp-server user \S+).*",
         replace=r"\1",
     )
 )
 ```
+
+## Registering a Custom Driver
+
+Custom drivers (and overrides of built-in drivers) plug into the standard API
+via the driver registry:
+
+```python
+from hier_config import (
+    HConfig,
+    HConfigDriverBase,
+    HConfigDriverRules,
+    Platform,
+    register_driver,
+    unregister_driver,
+)
+
+
+class MyNOSDriver(HConfigDriverBase):
+    """Driver for a custom network operating system."""
+
+    @staticmethod
+    def _instantiate_rules() -> HConfigDriverRules:
+        return HConfigDriverRules()
+
+
+# Register a new platform by name (case-insensitive)
+register_driver("MY_NOS", MyNOSDriver)
+config = HConfig.from_text("MY_NOS", config_text)
+
+# Override a built-in driver
+register_driver(Platform.CISCO_IOS, MyCustomIOSDriver)
+
+# Restore the built-in default
+unregister_driver(Platform.CISCO_IOS)
+```
+
+If the driver class sets a `view_class`, `get_hconfig_view()` resolves the
+view automatically for the registered platform.
+
+---
 
 ## Creating a Custom Driver
 
@@ -782,7 +825,8 @@ Begin by subclassing `HConfigDriverBase` to define a new driver.
 from hier_config.platforms.driver_base import HConfigDriverBase, HConfigDriverRules
 from hier_config.models import (
     MatchRule,
-    NegationDefaultWithRule,
+    NegationRule,
+    NegationStrategy,
     SectionalExitingRule,
     OrderingRule,
     PerLineSubRule,
@@ -797,8 +841,9 @@ class CustomHConfigDriver(HConfigDriverBase):
     def _instantiate_rules() -> HConfigDriverRules:
         """Define the rules for this custom driver."""
         return HConfigDriverRules(
-            negate_with=[
-                NegationDefaultWithRule(
+            negation=[
+                NegationRule(
+                    strategy=NegationStrategy.REPLACE,
                     match_rules=(MatchRule(startswith="ip route "),),
                     use="no ip route"
                 )
@@ -884,7 +929,7 @@ class CustomPlatform(str, Enum):
 
 ```python
 from .custom_platform import CustomPlatform
-from hier_config import get_hconfig
+from hier_config import HConfig
 from hier_config.utils import read_text_from_file
 
 # Load running and intended configurations from files
@@ -892,8 +937,8 @@ running_config_text = read_text_from_file("./tests/fixtures/running_config.conf"
 generated_config_text = read_text_from_file("./tests/fixtures/remediation_config.conf")
 
 # Create HConfig objects for running and intended configurations
-running_config = get_hconfig(CustomPlatform.CUSTOM_DRIVER, running_config_text)
-generated_config = get_hconfig(CustomPlatform.CUSTOM_DRIVER, generated_config_text)
+running_config = HConfig.from_text(CustomPlatform.CUSTOM_DRIVER, running_config_text)
+generated_config = HConfig.from_text(CustomPlatform.CUSTOM_DRIVER, generated_config_text)
 ```
 
 ##### 4. Instantiate a `WorkflowRemediation`
@@ -947,8 +992,9 @@ def swap_negation(self, child: HConfigChild) -> HConfigChild:
 Define commands that require specific negation handling:
 
 ```python
-negate_with=[
-    NegationDefaultWithRule(
+negation=[
+    NegationRule(
+        strategy=NegationStrategy.REPLACE,
         match_rules=(MatchRule(startswith="ip route "),),
         use="no ip route"
     )

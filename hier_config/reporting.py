@@ -18,7 +18,7 @@ from hier_config.models import ChangeDetail, ReportSummary, TagRule, TextStyle
 from hier_config.root import HConfig
 
 
-class RemediationReporter:  # noqa: PLR0904
+class RemediationReporter:  # ruff:ignore[too-many-public-methods]
     """A reporting tool for aggregating and analyzing remediation configurations.
 
     This class provides methods to merge multiple device remediations,
@@ -49,7 +49,7 @@ class RemediationReporter:  # noqa: PLR0904
 
     @property
     def merged_config(self) -> HConfig:
-        """Get the merged configuration.
+        """The merged configuration.
 
         Raises:
             ValueError: If no remediations have been added yet.
@@ -62,7 +62,7 @@ class RemediationReporter:  # noqa: PLR0904
 
     @property
     def device_count(self) -> int:
-        """Get the number of unique devices that have been added."""
+        """The number of unique devices that have been added."""
         return self._device_count
 
     def add_remediation(self, remediation: HConfig) -> None:
@@ -133,7 +133,7 @@ class RemediationReporter:  # noqa: PLR0904
 
         Example:
             ```python
-            merged = get_hconfig(Platform.CISCO_IOS)
+            merged = HConfig.from_text(Platform.CISCO_IOS)
             merged.merge([device1, device2])
             reporter = RemediationReporter.from_merged_config(merged)
             ```

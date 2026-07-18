@@ -12,19 +12,27 @@ from hier_config.platforms.models import (
     Vlan,
 )
 from hier_config.platforms.view_base import (
-    ConfigViewInterfaceBase,
     HConfigViewBase,
+    InterfaceBundleViewMixin,
+    InterfaceNACViewMixin,
+    InterfacePhysicalViewMixin,
+    InterfaceVlanViewMixin,
 )
 
 
-class ConfigViewInterfaceHPProcurve(  # noqa: PLR0904 pylint: disable=abstract-method
-    ConfigViewInterfaceBase,
+class ConfigViewInterfaceHPProcurve(
+    InterfaceBundleViewMixin,
+    InterfaceNACViewMixin,
+    InterfacePhysicalViewMixin,
+    InterfaceVlanViewMixin,
 ):
     """Interface config view for HP ProCurve / Aruba AOSS."""
 
     @property
     def bundle_id(self) -> str | None:
-        raise NotImplementedError
+        if bundle_name := self.bundle_name:
+            return bundle_name.lower().removeprefix(self._bundle_prefix.lower())
+        return None
 
     @property
     def bundle_member_interfaces(self) -> Iterable[str]:
@@ -81,10 +89,6 @@ class ConfigViewInterfaceHPProcurve(  # noqa: PLR0904 pylint: disable=abstract-m
         )
 
     @property
-    def ipv4_interface(self) -> IPv4Interface | None:
-        return next(iter(self.ipv4_interfaces), None)
-
-    @property
     def ipv4_interfaces(self) -> Iterable[IPv4Interface]:
         for ipv4_address_obj in self.config.get_children(startswith="ip address "):
             ipv4_address = ipv4_address_obj.text.split()
@@ -92,29 +96,6 @@ class ConfigViewInterfaceHPProcurve(  # noqa: PLR0904 pylint: disable=abstract-m
                 yield IPv4Interface("/".join(ipv4_address[2:4]))
             except AddressValueError:
                 continue
-
-    @property
-    def is_bundle(self) -> bool:
-        return self.name.lower().startswith(self._bundle_prefix)
-
-    @property
-    def is_loopback(self) -> bool:
-        return self.name.lower().startswith("loopback")
-
-    @property
-    def is_subinterface(self) -> bool:
-        return "." in self.name
-
-    @property
-    def is_svi(self) -> bool:
-        return self.name.lower().startswith("vlan")
-
-    @property
-    def module_number(self) -> int | None:
-        words = self.number.split("/", 1)
-        if len(words) == 1:
-            return None
-        return int(words[0])
 
     @property
     def nac_control_direction_in(self) -> bool:
@@ -170,32 +151,14 @@ class ConfigViewInterfaceHPProcurve(  # noqa: PLR0904 pylint: disable=abstract-m
         return None
 
     @property
-    def number(self) -> str:
-        return re.sub(r"^[a-zA-Z-]+", "", self.name)
-
-    @property
-    def parent_name(self) -> str | None:
-        if self.is_subinterface:
-            return self.name.split(".")[0]
-        return None
-
-    @property
     def poe(self) -> bool:
         return not self.config.get_child(equals="no power-over-ethernet")
-
-    @property
-    def port_number(self) -> int:
-        return int(self.name.split("/")[-1].split(".")[0])
 
     @property
     def speed(self) -> tuple[int, ...] | None:
         if speed := self.config.get_child(startswith="speed-duplex "):
             return _speed_from_speed_duplex(speed.text)
         return None
-
-    @property
-    def subinterface_number(self) -> int | None:
-        return int(self.name.split(".")[0 - 1]) if self.is_subinterface else None
 
     @property
     def tagged_all(self) -> bool:
@@ -276,12 +239,6 @@ class HConfigViewHPProcurve(HConfigViewBase):
         if gateway := self.config.get_child(startswith="ip default-gateway "):
             return IPv4Address(gateway.text.split()[2])
         return None
-
-    @property
-    def location(self) -> str:
-        if location := self.config.get_child(startswith="snmp-server location "):
-            return location.text.split(maxsplit=2)[2].replace('"', "")
-        return ""
 
     @property
     def stack_members(self) -> Iterable[StackMember]:

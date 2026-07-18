@@ -1,5 +1,6 @@
 from contextlib import suppress
 from itertools import islice
+from json import JSONDecodeError, loads
 from logging import getLogger
 from pathlib import Path
 from re import search, sub
@@ -9,47 +10,11 @@ from hier_config.platforms.driver_base import HConfigDriverBase
 from .child import HConfigChild
 from .exceptions import DriverNotFoundError, InvalidConfigError
 from .models import Dump, Platform
-from .platforms.arista_eos.driver import HConfigDriverAristaEOS
-from .platforms.cisco_ios.driver import HConfigDriverCiscoIOS
-from .platforms.cisco_nxos.driver import HConfigDriverCiscoNXOS
-from .platforms.cisco_xr.driver import HConfigDriverCiscoIOSXR
-from .platforms.fortinet_fortios.driver import HConfigDriverFortinetFortiOS
-from .platforms.generic.driver import HConfigDriverGeneric
-from .platforms.hp_comware5.driver import HConfigDriverHPComware5
-from .platforms.hp_procurve.driver import HConfigDriverHPProcurve
-from .platforms.huawei_vrp.driver import HConfigDriverHuaweiVrp
-from .platforms.juniper_junos.driver import HConfigDriverJuniperJUNOS
-from .platforms.nokia_srl.driver import HConfigDriverNokiaSRL
 from .platforms.view_base import HConfigViewBase
-from .platforms.vyos.driver import HConfigDriverVYOS
+from .registry import get_hconfig_driver
 from .root import HConfig
 
 logger = getLogger(__name__)
-
-
-def get_hconfig_driver(platform: Platform) -> HConfigDriverBase:
-    """Create base options on an OS level."""
-    platform_drivers: dict[Platform, type[HConfigDriverBase]] = {
-        Platform.ARISTA_EOS: HConfigDriverAristaEOS,
-        Platform.CISCO_IOS: HConfigDriverCiscoIOS,
-        Platform.CISCO_NXOS: HConfigDriverCiscoNXOS,
-        Platform.CISCO_XR: HConfigDriverCiscoIOSXR,
-        Platform.FORTINET_FORTIOS: HConfigDriverFortinetFortiOS,
-        Platform.GENERIC: HConfigDriverGeneric,
-        Platform.HP_PROCURVE: HConfigDriverHPProcurve,
-        Platform.HP_COMWARE5: HConfigDriverHPComware5,
-        Platform.HUAWEI_VRP: HConfigDriverHuaweiVrp,
-        Platform.JUNIPER_JUNOS: HConfigDriverJuniperJUNOS,
-        Platform.NOKIA_SRL: HConfigDriverNokiaSRL,
-        Platform.VYOS: HConfigDriverVYOS,
-    }
-    driver_cls = platform_drivers.get(platform)
-
-    if driver_cls is None:
-        message = f"Unsupported platform: {platform}"
-        raise DriverNotFoundError(message)
-
-    return driver_cls()
 
 
 def get_hconfig_view(config: HConfig) -> HConfigViewBase:
@@ -65,12 +30,41 @@ def get_hconfig_view(config: HConfig) -> HConfigViewBase:
     raise DriverNotFoundError(message)
 
 
-def get_hconfig(
-    platform_or_driver: Platform | HConfigDriverBase,
+def _detect_structured_format(config_text: str) -> str | None:
+    """Detect structured config formats that the text parser cannot ingest (#232).
+
+    Guards the raw-text entry points (from_text() and the str form of
+    from_lines()); pre-split lines are assumed to be CLI text.
+    """
+    prefix = config_text[:64].lstrip()
+    if prefix.startswith("<"):
+        return "XML"
+    if prefix.startswith(("{", "[")):
+        with suppress(JSONDecodeError):
+            loads(config_text)
+            return "JSON"
+    return None
+
+
+def _reject_structured_format(config_text: str) -> None:
+    if detected := _detect_structured_format(config_text):
+        message = (
+            f"The config appears to be {detected}, which hier_config does not"
+            " parse. Convert it to the platform's indented CLI text first"
+            " (set-style configs are supported natively by the Juniper JunOS,"
+            " VyOS, and Nokia SRL drivers)."
+        )
+        raise InvalidConfigError(message)
+
+
+def hconfig_from_text(
+    platform_or_driver: Platform | str | HConfigDriverBase,
     config_raw: Path | str = "",
 ) -> HConfig:
     if isinstance(config_raw, Path):
         config_raw = config_raw.read_text(encoding="utf8")
+
+    _reject_structured_format(config_raw)
 
     config = HConfig(_get_driver(platform_or_driver))
     for rule in config.driver.rules.full_text_sub:
@@ -87,11 +81,11 @@ def get_hconfig(
     return config
 
 
-def get_hconfig_from_dump(
-    platform_or_driver: Platform | HConfigDriverBase, dump: Dump
+def hconfig_from_dump(
+    platform_or_driver: Platform | str | HConfigDriverBase, dump: Dump
 ) -> HConfig:
     """Load an HConfig dump."""
-    config = get_hconfig(_get_driver(platform_or_driver))
+    config = HConfig(_get_driver(platform_or_driver))
     last_item: HConfig | HConfigChild = config
     for item in dump.lines:
         # parent is the root
@@ -115,19 +109,14 @@ def get_hconfig_from_dump(
     return config
 
 
-def get_hconfig_fast_generic_load(
-    lines: list[str] | tuple[str, ...] | str,
-) -> HConfig:
-    return get_hconfig_fast_load(Platform.GENERIC, lines)
-
-
-def get_hconfig_fast_load(
-    platform_or_driver: Platform | HConfigDriverBase,
+def hconfig_from_lines(
+    platform_or_driver: Platform | str | HConfigDriverBase,
     lines: list[str] | tuple[str, ...] | str,
 ) -> HConfig:
     driver = _get_driver(platform_or_driver)
-    config = get_hconfig(driver)
+    config = HConfig(driver)
     if isinstance(lines, str):
+        _reject_structured_format(lines)
         lines = lines.splitlines()
 
     current_section: HConfig | HConfigChild = config
@@ -164,9 +153,9 @@ def get_hconfig_fast_load(
 
 
 def _get_driver(
-    platform_or_driver: Platform | HConfigDriverBase,
+    platform_or_driver: Platform | str | HConfigDriverBase,
 ) -> HConfigDriverBase:
-    if isinstance(platform_or_driver, Platform):
+    if isinstance(platform_or_driver, (Platform, str)):
         return get_hconfig_driver(platform_or_driver)
     return platform_or_driver
 
@@ -215,86 +204,103 @@ def _config_from_string_lines_end_of_banner_test(
     return any(c in config_line for c in banner_end_contains)
 
 
-def _load_from_string_lines(config: HConfig, config_text: str) -> None:  # noqa: C901
-    config_text = config.driver.config_preprocessor(config_text)
-    current_section: HConfig | HConfigChild = config
-    most_recent_item: HConfig | HConfigChild = current_section
-    indent_adjust = 0
-    end_indent_adjust: list[str] = []
-    temp_banner: list[str] = []
-    banner_end_lines = {"EOF", "%", "!"}
-    banner_end_contains: list[str] = []
-    in_banner = False
+class _ConfigTextLoader:  # pylint: disable=too-many-instance-attributes,too-few-public-methods
+    """Stateful parser turning raw config text into an HConfig tree (#186).
 
-    for line in config_text.splitlines():
-        # Process banners in configuration into one line
-        if in_banner:
-            if line != "!":
-                temp_banner.append(line)
+    Splits the three responsibilities of the former monolithic loader into
+    focused methods: banner detection/aggregation, line normalization, and
+    indentation-based hierarchy construction.
+    """
 
-            # Test if this line is the end of a banner
-            if _config_from_string_lines_end_of_banner_test(
-                line,
-                frozenset(banner_end_lines),
-                banner_end_contains,
-            ):
-                in_banner = False
-                most_recent_item = config.add_child(
-                    "\n".join(temp_banner),
-                )
-                most_recent_item.real_indent_level = 0
-                current_section = config
-                temp_banner = []
-            continue
+    def __init__(self, config: HConfig) -> None:
+        self.config = config
+        self.current_section: HConfig | HConfigChild = config
+        self.most_recent_item: HConfig | HConfigChild = config
+        self.indent_adjust = 0
+        self.end_indent_adjust: list[str] = []
+        self.temp_banner: list[str] = []
+        self.banner_end_lines = {"EOF", "%", "!"}
+        self.banner_end_contains: list[str] = []
+        self.in_banner = False
 
-        # Test if this line is the start of a banner and not an empty banner
+    def load(self, config_text: str) -> None:
+        config_text = self.config.driver.config_preprocessor(config_text)
+        for line in config_text.splitlines():
+            if self.in_banner:
+                self._process_banner_line(line)
+            elif not self._detect_banner_start(line):
+                self._process_config_line(line)
+        if self.in_banner:
+            message = "we are still in a banner for some reason"
+            raise InvalidConfigError(message)
+
+    def _process_banner_line(self, line: str) -> None:
+        """Aggregate banner content until the end marker, then emit one child."""
+        if line != "!":
+            self.temp_banner.append(line)
+
+        if _config_from_string_lines_end_of_banner_test(
+            line,
+            frozenset(self.banner_end_lines),
+            self.banner_end_contains,
+        ):
+            self.in_banner = False
+            self.most_recent_item = self.config.add_child("\n".join(self.temp_banner))
+            self.most_recent_item.real_indent_level = 0
+            self.current_section = self.config
+            self.temp_banner = []
+
+    def _detect_banner_start(self, line: str) -> bool:
+        """Detect banner start markers and record the expected end markers."""
         # Empty banners matching the below expression have been seen on NX-OS
-        if line.startswith("banner ") and line != "banner motd ##":
-            in_banner = True
-            temp_banner.append(line)
-            banner_words = line.split()
-            with suppress(IndexError):
-                banner_end_contains.append(banner_words[2])
-                # Handle banner on ArubaOS-Switch
-                if banner_words[2].startswith('"'):
-                    banner_end_contains.append('"')
-                banner_end_lines.add(banner_words[2][:1])
-                banner_end_lines.add(banner_words[2][:2])
+        if not line.startswith("banner ") or line == "banner motd ##":
+            return False
+        self.in_banner = True
+        self.temp_banner.append(line)
+        banner_words = line.split()
+        with suppress(IndexError):
+            self.banner_end_contains.append(banner_words[2])
+            # Handle banner on ArubaOS-Switch
+            if banner_words[2].startswith('"'):
+                self.banner_end_contains.append('"')
+            self.banner_end_lines.add(banner_words[2][:1])
+            self.banner_end_lines.add(banner_words[2][:2])
+        return True
 
-            continue
-
+    def _normalize_line(self, line: str) -> str:
+        """Collapse repeated whitespace and apply per-line substitutions."""
         actual_indent = len(line) - len(line.lstrip())
-        line = " " * actual_indent + " ".join(line.split())  # noqa: PLW2901
-        for rule in config.driver.rules.per_line_sub:
-            line = sub(rule.search, rule.replace, line)  # noqa: PLW2901
-        line = line.rstrip()  # noqa: PLW2901
+        line = " " * actual_indent + " ".join(line.split())
+        for rule in self.config.driver.rules.per_line_sub:
+            line = sub(rule.search, rule.replace, line)
+        return line.rstrip()
 
-        # If line is now empty, move to the next
+    def _process_config_line(self, line: str) -> None:
+        """Attach a normalized config line to the correct place in the tree."""
+        line = self._normalize_line(line)
         if not line:
-            continue
+            return
 
         # Determine indentation level (after per_line_sub rules are applied)
-        this_indent = len(line) - len(line.lstrip()) + indent_adjust
+        this_indent = len(line) - len(line.lstrip()) + self.indent_adjust
+        line = line.lstrip()
 
-        line = line.lstrip()  # noqa: PLW2901
-
-        # Determine parent in hierarchy
-        most_recent_item, current_section = _analyze_indent(
-            most_recent_item,
-            current_section,
+        self.most_recent_item, self.current_section = _analyze_indent(
+            self.most_recent_item,
+            self.current_section,
             this_indent,
             line,
         )
-        indent_adjust, end_indent_adjust = _adjust_indent(
-            config.driver,
+        self.indent_adjust, self.end_indent_adjust = _adjust_indent(
+            self.config.driver,
             line,
-            indent_adjust,
-            end_indent_adjust,
+            self.indent_adjust,
+            self.end_indent_adjust,
         )
+        if self.end_indent_adjust and search(self.end_indent_adjust[0], line):
+            self.indent_adjust -= 1
+            self.end_indent_adjust.pop(0)
 
-        if end_indent_adjust and search(end_indent_adjust[0], line):
-            indent_adjust -= 1
-            end_indent_adjust.pop(0)
-    if in_banner:
-        message = "we are still in a banner for some reason"
-        raise InvalidConfigError(message)
+
+def _load_from_string_lines(config: HConfig, config_text: str) -> None:
+    _ConfigTextLoader(config).load(config_text)

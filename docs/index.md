@@ -38,10 +38,10 @@
 ## Quick Example
 
 ```python
-from hier_config import WorkflowRemediation, get_hconfig, Platform
+from hier_config import WorkflowRemediation, HConfig, Platform
 
-running = get_hconfig(Platform.CISCO_IOS, running_config_text)
-intended = get_hconfig(Platform.CISCO_IOS, intended_config_text)
+running = HConfig.from_text(Platform.CISCO_IOS, running_config_text)
+intended = HConfig.from_text(Platform.CISCO_IOS, intended_config_text)
 workflow = WorkflowRemediation(running, intended)
 
 for line in workflow.remediation_config.all_children_sorted():

@@ -1,4 +1,4 @@
-from hier_config import WorkflowRemediation, get_hconfig, get_hconfig_fast_load
+from hier_config import HConfig, WorkflowRemediation
 from hier_config.models import Platform
 
 
@@ -10,8 +10,8 @@ def test_vyos_basic_remediation() -> None:
     remediation_str = "delete interfaces ethernet eth0 address 192.168.1.1/24\nset interfaces ethernet eth0 address 192.168.2.1/24"
 
     workflow_remediation = WorkflowRemediation(
-        get_hconfig_fast_load(platform, running_config_str),
-        get_hconfig_fast_load(platform, generated_config_str),
+        HConfig.from_lines(platform, running_config_str),
+        HConfig.from_lines(platform, generated_config_str),
     )
 
     assert workflow_remediation.remediation_config_filtered_text() == remediation_str
@@ -20,11 +20,11 @@ def test_vyos_basic_remediation() -> None:
 def test_interface_address_addition_scenario() -> None:
     """Test adding an interface address."""
     platform = Platform.VYOS
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         ("set interfaces ethernet eth0 address 192.168.1.1/24",),
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform,
         (
             "set interfaces ethernet eth0 address 192.168.1.1/24",
@@ -40,14 +40,14 @@ def test_interface_address_addition_scenario() -> None:
 def test_interface_description_modification_scenario() -> None:
     """Test modifying interface description."""
     platform = Platform.VYOS
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         (
             "set interfaces ethernet eth0 address 192.168.1.1/24",
             "set interfaces ethernet eth0 description Old Description",
         ),
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform,
         (
             "set interfaces ethernet eth0 address 192.168.1.1/24",
@@ -64,7 +64,7 @@ def test_interface_description_modification_scenario() -> None:
 def test_interface_removal_scenario() -> None:
     """Test removing an interface configuration."""
     platform = Platform.VYOS
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         (
             "set interfaces ethernet eth0 address 192.168.1.1/24",
@@ -72,7 +72,7 @@ def test_interface_removal_scenario() -> None:
             "set interfaces ethernet eth1 address 10.0.0.1/24",
         ),
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform,
         (
             "set interfaces ethernet eth0 address 192.168.1.1/24",
@@ -88,14 +88,14 @@ def test_interface_removal_scenario() -> None:
 def test_system_configuration_scenario() -> None:
     """Test system configuration changes."""
     platform = Platform.VYOS
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         (
             "set system host-name old-vyos-router",
             "set system domain-name example.com",
         ),
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform,
         (
             "set system host-name new-vyos-router",
@@ -114,8 +114,8 @@ def test_system_configuration_scenario() -> None:
 def test_empty_to_basic_config_scenario() -> None:
     """Test building configuration from empty state."""
     platform = Platform.VYOS
-    running_config = get_hconfig(platform)
-    generated_config = get_hconfig_fast_load(
+    running_config = HConfig.from_text(platform)
+    generated_config = HConfig.from_lines(
         platform,
         (
             "set system host-name test-router",
@@ -137,7 +137,7 @@ def test_empty_to_basic_config_scenario() -> None:
 def test_nat_configuration_scenario() -> None:
     """Test NAT configuration changes."""
     platform = Platform.VYOS
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         (
             "set nat source rule 10 outbound-interface eth0",
@@ -145,7 +145,7 @@ def test_nat_configuration_scenario() -> None:
             "set nat source rule 10 translation address masquerade",
         ),
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform,
         (
             "set nat source rule 10 outbound-interface eth0",
@@ -163,7 +163,7 @@ def test_nat_configuration_scenario() -> None:
 def test_firewall_rule_scenario() -> None:
     """Test firewall rule configuration."""
     platform = Platform.VYOS
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         (
             "set firewall name WAN_LOCAL default-action drop",
@@ -171,7 +171,7 @@ def test_firewall_rule_scenario() -> None:
             "set firewall name WAN_LOCAL rule 10 state established enable",
         ),
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform,
         (
             "set firewall name WAN_LOCAL default-action drop",
@@ -189,11 +189,11 @@ def test_firewall_rule_scenario() -> None:
 def test_ipv6_address_configuration_scenario() -> None:
     """Test configuring IPv6 addresses on interfaces."""
     platform = Platform.VYOS
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         ("set interfaces ethernet eth0 address 2001:db8:1::1/64",),
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform,
         ("set interfaces ethernet eth0 address 2001:db8:2::1/64",),
     )

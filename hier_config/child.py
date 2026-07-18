@@ -6,7 +6,7 @@ from re import search, sub
 from typing import TYPE_CHECKING, Any
 
 from .base import HConfigBase
-from .models import Instance, MatchRule, SetLikeOfStr, TextStyle
+from .models import Instance, MatchRule, NegationStrategy, SetLikeOfStr, TextStyle
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Iterator
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 logger = getLogger(__name__)
 
 
-class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attributes
+class HConfigChild(  # ruff:ignore[too-many-public-methods]  pylint: disable=too-many-instance-attributes
     HConfigBase,
 ):
     """A single node in the hierarchical configuration tree.
@@ -110,7 +110,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
 
     @property
     def root(self) -> HConfig:
-        """Returns the HConfig object at the base of the tree."""
+        """The HConfig object at the base of the tree."""
         return self.parent.root
 
     def lines(self, *, sectional_exiting: bool = False) -> Iterable[str]:
@@ -147,7 +147,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
 
     @property
     def depth(self) -> int:
-        """Returns the distance to the root HConfig object i.e. indent level."""
+        """The distance to the root HConfig object i.e. indent level."""
         return self.parent.depth + 1
 
     def move(self, new_parent: HConfig | HConfigChild) -> None:
@@ -238,16 +238,15 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
     def negate(self) -> HConfigChild:
         """Negate self.text using driver-specific negation rules.
 
-        Negation is resolved in the following priority order:
+        Negation is resolved via the driver's unified ``negation`` rule list
+        (#220). ``driver.negate_with()`` is consulted first (REPLACE-strategy
+        rules plus any imperative driver override), then the remaining rules
+        are evaluated in list order — first match wins:
 
-        1. ``negate_with`` rule — replaces ``self.text`` with a custom
-           negation string defined in the driver (e.g. ``no ip route``).
-        2. ``negation_default_when`` rule — rewrites the command to its
-           ``default`` form (e.g. ``no shutdown`` → ``default shutdown``).
-        3. ``negation_sub`` rule — applies a regex substitution to the
-           negated text (e.g. truncating after a specific token).
-        4. ``swap_negation`` — toggles the negation prefix/declaration
-           prefix (e.g. ``shutdown`` ↔ ``no shutdown``).
+        - ``DEFAULT`` — rewrites the command to its ``default`` form.
+        - ``REGEX_SUB`` — applies a regex substitution to the negated text.
+
+        Falls back to ``swap_negation`` (e.g. ``shutdown`` ↔ ``no shutdown``).
 
         Returns self so that callers can chain further operations.
         """
@@ -255,11 +254,12 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
             self.text = negate_with
             return self
 
-        if self.use_default_for_negation(self):
-            return self._default()
-
-        for rule in self.driver.rules.negation_sub:
+        for rule in self.driver.rules.negation:
+            if rule.strategy is NegationStrategy.REPLACE:
+                continue
             if self.is_lineage_match(rule.match_rules):
+                if rule.strategy is NegationStrategy.DEFAULT:
+                    return self._default()
                 self.text = sub(
                     rule.search,
                     rule.replace,
@@ -269,20 +269,14 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
 
         return self.driver.swap_negation(self)
 
-    def use_default_for_negation(self, config: HConfigChild) -> bool:
-        return any(
-            config.is_lineage_match(rule.match_rules)
-            for rule in self.driver.rules.negation_default_when
-        )
-
     @property
     def is_leaf(self) -> bool:
-        """Returns True if there are no children and is not an instance of HConfig."""
+        """True if there are no children and is not an instance of HConfig."""
         return not self.is_branch
 
     @property
     def is_branch(self) -> bool:
-        """Returns True if there are children or is an instance of HConfig."""
+        """True if there are children or is an instance of HConfig."""
         return bool(self.children)
 
     @property
@@ -425,7 +419,7 @@ class HConfigChild(  # noqa: PLR0904  pylint: disable=too-many-instance-attribut
             for (child, rule) in zip(reversed(lineage), reversed(rules), strict=True)
         )
 
-    def is_match(  # noqa: PLR0911
+    def is_match(  # ruff:ignore[too-many-return-statements]
         self,
         *,
         equals: str | SetLikeOfStr | None = None,

@@ -1,6 +1,5 @@
 import pytest
 
-from hier_config import get_hconfig_fast_load
 from hier_config.exceptions import DuplicateChildError
 from hier_config.models import Platform
 from hier_config.root import HConfig
@@ -9,8 +8,8 @@ from hier_config.utils import load_driver_rules
 
 def test_generic_snmp_scenario_1() -> None:
     platform = Platform.GENERIC
-    running_config = get_hconfig_fast_load(platform, ("snmp-server community public",))
-    generated_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(platform, ("snmp-server community public",))
+    generated_config = HConfig.from_lines(
         platform,
         (
             "snmp-server community examplekey1",
@@ -42,7 +41,7 @@ def test_generic_snmp_scenario_2() -> None:
         platform,
     )
     with pytest.raises(DuplicateChildError):
-        get_hconfig_fast_load(
+        HConfig.from_lines(
             driver,
             (
                 "snmp-server community <credentials_removed>",
@@ -56,7 +55,7 @@ def test_generic_snmp_scenario_2() -> None:
 
 def test_generic_aaa_scenario_1() -> None:
     platform = Platform.GENERIC
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         (
             "aaa group server tacacs TACACS_GROUP1",
@@ -66,7 +65,7 @@ def test_generic_aaa_scenario_1() -> None:
             "  server 192.2.0.121",
         ),
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform,
         (
             "aaa group server tacacs TACACS_GROUP2",
@@ -90,7 +89,7 @@ def test_generic_aaa_scenario_1() -> None:
 
 def test_generic_aaa_scenario_2() -> None:
     platform = Platform.GENERIC
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         (
             "aaa group server tacacs TACACS_GROUP1",
@@ -100,7 +99,7 @@ def test_generic_aaa_scenario_2() -> None:
             "  server 192.2.0.121",
         ),
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform,
         (
             "aaa group server tacacs TACACS_GROUP2",

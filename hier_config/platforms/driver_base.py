@@ -13,9 +13,8 @@ from hier_config.models import (
     IdempotentCommandsRule,
     IndentAdjustRule,
     MatchRule,
-    NegationDefaultWhenRule,
-    NegationDefaultWithRule,
-    NegationSubRule,
+    NegationRule,
+    NegationStrategy,
     OrderingRule,
     ParentAllowsDuplicateChildRule,
     PerLineSubRule,
@@ -46,11 +45,7 @@ def _indent_adjust_rules_default() -> list[IndentAdjustRule]:
     return []
 
 
-def _negation_default_when_rules_default() -> list[NegationDefaultWhenRule]:
-    return []
-
-
-def _negate_with_rules_default() -> list[NegationDefaultWithRule]:
+def _negation_rules_default() -> list[NegationRule]:
     return []
 
 
@@ -86,10 +81,6 @@ def _sectional_overwrite_no_negate_rules_default() -> list[
     return []
 
 
-def _negation_sub_rules_default() -> list[NegationSubRule]:
-    return []
-
-
 def _unused_object_rules_default() -> list[UnusedObjectRule]:
     return []
 
@@ -115,12 +106,7 @@ class HConfigDriverRules(BaseModel):  # pylint: disable=too-many-instance-attrib
         default_factory=_indent_adjust_rules_default
     )
     indentation: PositiveInt = 2
-    negation_default_when: list[NegationDefaultWhenRule] = Field(
-        default_factory=_negation_default_when_rules_default
-    )
-    negate_with: list[NegationDefaultWithRule] = Field(
-        default_factory=_negate_with_rules_default
-    )
+    negation: list[NegationRule] = Field(default_factory=_negation_rules_default)
     ordering: list[OrderingRule] = Field(default_factory=_ordering_rules_default)
     parent_allows_duplicate_child: list[ParentAllowsDuplicateChildRule] = Field(
         default_factory=_parent_allows_duplicate_child_rules_default
@@ -131,6 +117,9 @@ class HConfigDriverRules(BaseModel):  # pylint: disable=too-many-instance-attrib
     post_load_callbacks: list[Callable[[HConfig], None]] = Field(
         default_factory=_post_load_callbacks_default
     )
+    remediation_transform_callbacks: list[Callable[[HConfig], None]] = Field(
+        default_factory=_post_load_callbacks_default
+    )
     sectional_exiting: list[SectionalExitingRule] = Field(
         default_factory=_sectional_exiting_rules_default
     )
@@ -139,9 +128,6 @@ class HConfigDriverRules(BaseModel):  # pylint: disable=too-many-instance-attrib
     )
     sectional_overwrite_no_negate: list[SectionalOverwriteNoNegateRule] = Field(
         default_factory=_sectional_overwrite_no_negate_rules_default
-    )
-    negation_sub: list[NegationSubRule] = Field(
-        default_factory=_negation_sub_rules_default
     )
     unused_objects: list[UnusedObjectRule] = Field(
         default_factory=_unused_object_rules_default
@@ -182,9 +168,16 @@ class HConfigDriverBase(ABC):
         return None
 
     def negate_with(self, config: HConfigChild) -> str | None:
-        for with_rule in self.rules.negate_with:
-            if config.is_lineage_match(with_rule.match_rules):
-                return with_rule.use
+        """Return a fixed replacement negation string for `config`, if any.
+
+        Reads REPLACE-strategy rules from the unified `negation` rule list.
+        Drivers may override this method for imperative negation logic.
+        """
+        for rule in self.rules.negation:
+            if rule.strategy is NegationStrategy.REPLACE and config.is_lineage_match(
+                rule.match_rules
+            ):
+                return rule.use
         return None
 
     def sectional_exit(self, config: HConfigChild) -> str | None:

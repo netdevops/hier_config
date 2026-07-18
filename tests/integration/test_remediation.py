@@ -1,20 +1,19 @@
 """Integration tests for remediation, future, difference, and sectional overwrite."""
 
 from hier_config import (
+    HConfig,
     HConfigChild,
     WorkflowRemediation,
-    get_hconfig,
     get_hconfig_driver,
-    get_hconfig_fast_load,
 )
 from hier_config.models import Platform
 
 
 def test_remediation(platform_a: Platform) -> None:
-    running_config_hier = get_hconfig(platform_a)
+    running_config_hier = HConfig.from_text(platform_a)
     interface = running_config_hier.add_child("interface Vlan2")
     interface.add_child("ip address 192.168.1.1/24")
-    generated_config_hier = get_hconfig(platform_a)
+    generated_config_hier = HConfig.from_text(platform_a)
     generated_config_hier.add_child("interface Vlan3")
     remediation_config_hier = running_config_hier.remediation(
         generated_config_hier,
@@ -23,12 +22,12 @@ def test_remediation(platform_a: Platform) -> None:
 
 
 def test_remediation2(platform_a: Platform) -> None:
-    running_config_hier = get_hconfig(platform_a)
+    running_config_hier = HConfig.from_text(platform_a)
     running_config_hier.add_child("do not add me")
-    generated_config_hier = get_hconfig(platform_a)
+    generated_config_hier = HConfig.from_text(platform_a)
     generated_config_hier.add_child("do not add me")
     generated_config_hier.add_child("add me")
-    delta = get_hconfig(platform_a)
+    delta = HConfig.from_text(platform_a)
     running_config_hier.remediation(
         generated_config_hier,
         delta,
@@ -38,10 +37,10 @@ def test_remediation2(platform_a: Platform) -> None:
 
 
 def test_future_config(platform_a: Platform) -> None:
-    running_config = get_hconfig(platform_a)
+    running_config = HConfig.from_text(platform_a)
     running_config.add_children_deep(("a", "aa", "aaa", "aaaa"))
     running_config.add_children_deep(("a", "ab", "aba", "abaa"))
-    config = get_hconfig(platform_a)
+    config = HConfig.from_text(platform_a)
     config.add_children_deep(("a", "ac"))
     config.add_children_deep(("a", "no ab"))
     config.add_children_deep(("a", "no az"))
@@ -75,8 +74,8 @@ def test_future_preserves_bgp_neighbor_description() -> None:
   neighbor 3.3.3.3 remote-as 3
 """
 
-    running_config = get_hconfig(platform, running_raw)
-    change_config = get_hconfig(platform, change_raw)
+    running_config = HConfig.from_text(platform, running_raw)
+    change_config = HConfig.from_text(platform, change_raw)
 
     future_config = running_config.future(change_config)
     expected_future = (
@@ -101,8 +100,8 @@ def test_future_preserves_bgp_neighbor_description() -> None:
 
 def test_idempotent_commands() -> None:
     platform = Platform.HP_PROCURVE
-    config_a = get_hconfig(platform)
-    config_b = get_hconfig(platform)
+    config_a = HConfig.from_text(platform)
+    config_b = HConfig.from_text(platform)
     interface_name = "interface 1/1"
     config_a.add_children_deep((interface_name, "untagged vlan 1"))
     config_b.add_children_deep((interface_name, "untagged vlan 2"))
@@ -114,8 +113,8 @@ def test_idempotent_commands() -> None:
 
 def test_idempotent_commands2() -> None:
     platform = Platform.CISCO_IOS
-    config_a = get_hconfig(platform)
-    config_b = get_hconfig(platform)
+    config_a = HConfig.from_text(platform)
+    config_b = HConfig.from_text(platform)
     interface_name = "interface 1/1"
     config_a.add_children_deep((interface_name, "authentication host-mode multi-auth"))
     config_b.add_children_deep(
@@ -129,8 +128,8 @@ def test_idempotent_commands2() -> None:
 
 def test_future_config_no_command_in_source() -> None:
     platform = Platform.HP_PROCURVE
-    running_config = get_hconfig(platform)
-    generated_config = get_hconfig(platform)
+    running_config = HConfig.from_text(platform)
+    generated_config = HConfig.from_text(platform)
     generated_config.add_child("no service dhcp")
 
     remediation_config = running_config.remediation(generated_config)
@@ -149,9 +148,9 @@ def test_future_config_no_command_in_source() -> None:
 def test_sectional_overwrite() -> None:
     platform = Platform.CISCO_XR
     # There is a sectional_overwrite rules in the CISCO_XR driver for "template".
-    running_config = get_hconfig_fast_load(platform, "template test\n  a\n  b")
-    generated_config = get_hconfig_fast_load(platform, "template test\n  a")
-    expected_remediation_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(platform, "template test\n  a\n  b")
+    generated_config = HConfig.from_lines(platform, "template test\n  a")
+    expected_remediation_config = HConfig.from_lines(
         platform, "no template test\ntemplate test\n  a"
     )
     workflow_remediation = WorkflowRemediation(running_config, generated_config)
@@ -161,11 +160,9 @@ def test_sectional_overwrite() -> None:
 
 def test_sectional_overwrite_no_negate() -> None:
     platform = Platform.CISCO_XR
-    running_config = get_hconfig_fast_load(platform, "as-path-set test\n  a\n  b")
-    generated_config = get_hconfig_fast_load(platform, "as-path-set test\n  a")
-    expected_remediation_config = get_hconfig_fast_load(
-        platform, "as-path-set test\n  a"
-    )
+    running_config = HConfig.from_lines(platform, "as-path-set test\n  a\n  b")
+    generated_config = HConfig.from_lines(platform, "as-path-set test\n  a")
+    expected_remediation_config = HConfig.from_lines(platform, "as-path-set test\n  a")
     workflow_remediation = WorkflowRemediation(running_config, generated_config)
     remediation_config = workflow_remediation.remediation_config
     assert remediation_config == expected_remediation_config
@@ -173,14 +170,14 @@ def test_sectional_overwrite_no_negate() -> None:
 
 def test_sectional_overwrite_no_negate2() -> None:
     platform = Platform.CISCO_XR
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         "route-policy test\n  duplicate\n  not_duplicate1\n  duplicate\n  not_duplicate2",
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform, "route-policy test\n  duplicate\n  not_duplicate1"
     )
-    expected_remediation_config = get_hconfig_fast_load(
+    expected_remediation_config = HConfig.from_lines(
         platform, "route-policy test\n  duplicate\n  not_duplicate1"
     )
     workflow_remediation = WorkflowRemediation(running_config, generated_config)
@@ -190,17 +187,17 @@ def test_sectional_overwrite_no_negate2() -> None:
 
 def test_overwrite_with_negate() -> None:
     platform = Platform.CISCO_XR
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform, "route-policy test\n  duplicate\n  not_duplicate\n  duplicate"
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform, "route-policy test\n  duplicate\n  not_duplicate"
     )
-    expected_config = get_hconfig_fast_load(
+    expected_config = HConfig.from_lines(
         platform,
         "no route-policy test\nroute-policy test\n  duplicate\n  not_duplicate",
     )
-    delta_config = get_hconfig(platform)
+    delta_config = HConfig.from_text(platform)
     running_config.children["route-policy test"].overwrite_with(
         generated_config.children["route-policy test"], delta_config
     )
@@ -209,18 +206,18 @@ def test_overwrite_with_negate() -> None:
 
 def test_overwrite_with_no_negate() -> None:
     platform = Platform.CISCO_XR
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         platform,
         "route-policy test\n  duplicate\n  not-duplicate\n  duplicate\n  duplicate",
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         platform, "route-policy test\n  duplicate\n  not-duplicate\n  duplicate"
     )
-    expected_config = get_hconfig_fast_load(
+    expected_config = HConfig.from_lines(
         platform,
         "route-policy test\n  duplicate\n  not-duplicate\n  duplicate",
     )
-    delta_config = get_hconfig(platform)
+    delta_config = HConfig.from_text(platform)
     running_config.children["route-policy test"].overwrite_with(
         generated_config.children["route-policy test"], delta_config, negate=False
     )
@@ -230,11 +227,11 @@ def test_overwrite_with_no_negate() -> None:
 def test_remediation_parent_identity() -> None:
     interface_vlan2 = "interface Vlan2"
     platform = Platform.CISCO_IOS
-    running_config_hier = get_hconfig(platform)
+    running_config_hier = HConfig.from_text(platform)
     running_config_hier.add_children_deep(
         (interface_vlan2, "ip address 192.168.1.1/24")
     )
-    generated_config_hier = get_hconfig(platform)
+    generated_config_hier = HConfig.from_text(platform)
     generated_config_hier.add_child(interface_vlan2)
     remediation_config_hier = running_config_hier.remediation(
         generated_config_hier,
@@ -250,9 +247,9 @@ def test_remediation_parent_identity() -> None:
 def test_difference1(platform_a: Platform) -> None:
     rc = ("a", " a1", " a2", " a3", "b")
     step = ("a", " a1", " a2", " a3", " a4", " a5", "b", "c", "d", " d1")
-    rc_hier = get_hconfig(get_hconfig_driver(platform_a), "\n".join(rc))
+    rc_hier = HConfig.from_text(get_hconfig_driver(platform_a), "\n".join(rc))
 
-    difference = get_hconfig(
+    difference = HConfig.from_text(
         get_hconfig_driver(platform_a), "\n".join(step)
     ).difference(rc_hier)
     difference_children = tuple(
@@ -275,8 +272,8 @@ def test_difference2() -> None:
     platform = Platform.CISCO_IOS
     rc = ("a", " a1", " a2", " a3", "b")
     step = ("a", " a1", " a2", " a3", " a4", " a5", "b", "c", "d", " d1")
-    rc_hier = get_hconfig(get_hconfig_driver(platform), "\n".join(rc))
-    step_hier = get_hconfig(get_hconfig_driver(platform), "\n".join(step))
+    rc_hier = HConfig.from_text(get_hconfig_driver(platform), "\n".join(rc))
+    step_hier = HConfig.from_text(get_hconfig_driver(platform), "\n".join(step))
 
     difference_children = tuple(
         c.indented_text() for c in step_hier.difference(rc_hier).all_children_sorted()
@@ -288,8 +285,8 @@ def test_difference3() -> None:
     platform = Platform.CISCO_IOS
     rc = ("ip access-list extended test", " 10 a", " 20 b")
     step = ("ip access-list extended test", " 10 a", " 20 b", " 30 c")
-    rc_hier = get_hconfig(get_hconfig_driver(platform), "\n".join(rc))
-    step_hier = get_hconfig(get_hconfig_driver(platform), "\n".join(step))
+    rc_hier = HConfig.from_text(get_hconfig_driver(platform), "\n".join(rc))
+    step_hier = HConfig.from_text(get_hconfig_driver(platform), "\n".join(step))
 
     difference_children = tuple(
         c.indented_text() for c in step_hier.difference(rc_hier).all_children_sorted()
@@ -300,11 +297,11 @@ def test_difference3() -> None:
 def test_difference_with_acl_none_target() -> None:
     """Test _difference with ACL when target_acl_children is None."""
     platform = Platform.CISCO_IOS
-    running_config = get_hconfig(platform)
+    running_config = HConfig.from_text(platform)
 
     acl = running_config.add_child("ip access-list extended test")
     acl.add_child("10 permit ip any any")
-    target_config = get_hconfig(platform)
+    target_config = HConfig.from_text(platform)
     difference = running_config.difference(target_config)
 
     assert difference.get_child(equals="ip access-list extended test") is not None
@@ -313,10 +310,10 @@ def test_difference_with_acl_none_target() -> None:
 def test_difference_with_negation() -> None:
     """Test _difference with negation prefix."""
     platform = Platform.CISCO_IOS
-    running_config = get_hconfig(platform)
+    running_config = HConfig.from_text(platform)
     running_config.add_child("interface GigabitEthernet0/0")
     running_config.add_child("logging console")
-    generated_config = get_hconfig(platform)
+    generated_config = HConfig.from_text(platform)
     generated_config.add_child("interface GigabitEthernet0/0")
     difference = running_config.difference(generated_config)
 
@@ -326,10 +323,10 @@ def test_difference_with_negation() -> None:
 def test_difference_with_default_prefix() -> None:
     """Test _difference skips lines with 'default' prefix."""
     platform = Platform.CISCO_IOS
-    running_config = get_hconfig(platform)
+    running_config = HConfig.from_text(platform)
     running_config.add_child("interface GigabitEthernet0/0")
     running_config.add_child("default interface GigabitEthernet0/1")
-    generated_config = get_hconfig(platform)
+    generated_config = HConfig.from_text(platform)
     generated_config.add_child("interface GigabitEthernet0/0")
     difference = running_config.difference(generated_config)
 
@@ -339,9 +336,9 @@ def test_difference_with_default_prefix() -> None:
 def test_future_with_negated_command_in_config() -> None:
     """Test _future with negated command."""
     platform = Platform.CISCO_IOS
-    running_config = get_hconfig(platform)
+    running_config = HConfig.from_text(platform)
     running_config.add_child("interface GigabitEthernet0/0")
-    remediation_config = get_hconfig(platform)
+    remediation_config = HConfig.from_text(platform)
     remediation_config.add_child("no interface GigabitEthernet0/0")
     future_config = running_config.future(remediation_config)
 
@@ -351,9 +348,9 @@ def test_future_with_negated_command_in_config() -> None:
 def test_future_with_negation_prefix_match() -> None:
     """Test _future when negated form exists."""
     platform = Platform.CISCO_IOS
-    running_config = get_hconfig(platform)
+    running_config = HConfig.from_text(platform)
     running_config.add_child("no logging console")
-    remediation_config = get_hconfig(platform)
+    remediation_config = HConfig.from_text(platform)
     remediation_config.add_child("logging console")
     future_config = running_config.future(remediation_config)
 
@@ -364,9 +361,9 @@ def test_future_with_negation_prefix_match() -> None:
 def test_future_with_negation_prefix() -> None:
     """Test _future with negation prefix in self."""
     platform = Platform.CISCO_IOS
-    running_config = get_hconfig(platform)
+    running_config = HConfig.from_text(platform)
     running_config.add_child("no ip routing")
-    remediation_config = get_hconfig(platform)
+    remediation_config = HConfig.from_text(platform)
     remediation_config.add_child("ip routing")
     future_config = running_config.future(remediation_config)
 
@@ -377,10 +374,10 @@ def test_future_with_negation_prefix() -> None:
 def test_future_self_child_not_in_negated_or_recursed() -> None:
     """Test _future when self_child is not in negated_or_recursed."""
     platform = Platform.CISCO_IOS
-    running_config = get_hconfig(platform)
+    running_config = HConfig.from_text(platform)
     running_config.add_child("hostname router1")
     running_config.add_child("interface GigabitEthernet0/0")
-    remediation_config = get_hconfig(platform)
+    remediation_config = HConfig.from_text(platform)
     remediation_config.add_child("hostname router2")
     future_config = running_config.future(remediation_config)
 
@@ -391,10 +388,10 @@ def test_future_self_child_not_in_negated_or_recursed() -> None:
 def test_future_with_idempotent_command() -> None:
     """Test _future with idempotent command."""
     platform = Platform.HP_PROCURVE
-    running_config = get_hconfig(platform)
+    running_config = HConfig.from_text(platform)
     interface = running_config.add_child("interface 1/1")
     interface.add_child("untagged vlan 1")
-    remediation_config = get_hconfig(platform)
+    remediation_config = HConfig.from_text(platform)
     remediation_interface = remediation_config.add_child("interface 1/1")
     remediation_interface.add_child("untagged vlan 2")
     future_config = running_config.future(remediation_config)
@@ -407,7 +404,7 @@ def test_future_with_idempotent_command() -> None:
 def test_sectional_exit_text_parent_level_cisco_xr() -> None:
     """Test sectional_exit_text_parent_level returns True for Cisco XR configs with parent-level exit text."""
     platform = Platform.CISCO_XR
-    config = get_hconfig(platform)
+    config = HConfig.from_text(platform)
 
     # Test route-policy which has exit_text_parent_level=True
     route_policy = config.add_child("route-policy TEST")
@@ -441,7 +438,7 @@ def test_sectional_exit_text_parent_level_cisco_xr() -> None:
 def test_sectional_exit_text_parent_level_cisco_xr_false() -> None:
     """Test sectional_exit_text_parent_level returns False for Cisco XR configs without parent-level exit text."""
     platform = Platform.CISCO_XR
-    config = get_hconfig(platform)
+    config = HConfig.from_text(platform)
 
     # Test interface which has exit_text_parent_level=False (default)
     interface = config.add_child("interface GigabitEthernet0/0/0/0")
@@ -455,7 +452,7 @@ def test_sectional_exit_text_parent_level_cisco_xr_false() -> None:
 def test_sectional_exit_text_parent_level_cisco_ios() -> None:
     """Test sectional_exit_text_parent_level returns False for standard Cisco IOS configs."""
     platform = Platform.CISCO_IOS
-    config = get_hconfig(platform)
+    config = HConfig.from_text(platform)
 
     # Cisco IOS interfaces don't have exit_text_parent_level=True
     interface = config.add_child("interface GigabitEthernet0/0")
@@ -473,7 +470,7 @@ def test_sectional_exit_text_parent_level_cisco_ios() -> None:
 def test_sectional_exit_text_parent_level_no_match() -> None:
     """Test sectional_exit_text_parent_level returns False when no rules match."""
     platform = Platform.CISCO_IOS
-    config = get_hconfig(platform)
+    config = HConfig.from_text(platform)
 
     # A child that doesn't match any sectional_exiting rules
     hostname = config.add_child("hostname TEST")
@@ -487,7 +484,7 @@ def test_sectional_exit_text_parent_level_no_match() -> None:
 def test_sectional_exit_text_parent_level_with_nested_children() -> None:
     """Test sectional_exit_text_parent_level with nested child configurations."""
     platform = Platform.CISCO_XR
-    config = get_hconfig(platform)
+    config = HConfig.from_text(platform)
 
     # Create a route-policy with nested children
     route_policy = config.add_child("route-policy TEST")
@@ -503,7 +500,7 @@ def test_sectional_exit_text_parent_level_with_nested_children() -> None:
 def test_sectional_exit_text_parent_level_indentation_in_lines() -> None:
     """Test that sectional_exit_text_parent_level affects indentation in lines output."""
     platform = Platform.CISCO_XR
-    config = get_hconfig(platform)
+    config = HConfig.from_text(platform)
 
     # Create a route-policy with children - exit text should be at parent level (depth - 1)
     route_policy = config.add_child("route-policy TEST")
@@ -522,8 +519,30 @@ def test_sectional_exit_text_parent_level_indentation_in_lines() -> None:
 def test_sectional_exit_text_parent_level_generic_platform() -> None:
     """Test sectional_exit_text_parent_level with generic platform."""
     platform = Platform.GENERIC
-    config = get_hconfig(platform)
+    config = HConfig.from_text(platform)
 
     # Generic platform has no specific sectional_exiting rules with parent_level=True
     section = config.add_child("section test")
     assert section.sectional_exit_text_parent_level is False
+
+
+def test_remediation_does_not_mutate_inputs() -> None:
+    """remediation() must not modify the running or generated configs (#224)."""
+    running_text = (
+        "hostname old\ninterface GigabitEthernet0/0\n description keep\n shutdown\n"
+    )
+    generated_text = (
+        "hostname new\n"
+        "interface GigabitEthernet0/0\n"
+        " description keep\n"
+        " ip address 10.0.0.1 255.255.255.0\n"
+    )
+    running_config = HConfig.from_text(Platform.CISCO_IOS, running_text)
+    generated_config = HConfig.from_text(Platform.CISCO_IOS, generated_text)
+    running_before = running_config.to_lines()
+    generated_before = generated_config.to_lines()
+
+    running_config.remediation(generated_config)
+
+    assert running_config.to_lines() == running_before
+    assert generated_config.to_lines() == generated_before

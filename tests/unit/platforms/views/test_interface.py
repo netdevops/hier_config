@@ -1,5 +1,6 @@
-from hier_config import get_hconfig, get_hconfig_view
+from hier_config import HConfig, get_hconfig_view
 from hier_config.models import Platform
+from hier_config.platforms.cisco_ios.view import ConfigViewInterfaceCiscoIOS
 from hier_config.platforms.hp_procurve.functions import hp_procurve_expand_range
 
 
@@ -34,12 +35,12 @@ def test_hp_procurve_expand_range() -> None:
 
 
 def test_bundle_name() -> None:
-    config = get_hconfig(Platform.CISCO_IOS)
+    config = HConfig.from_text(Platform.CISCO_IOS)
     config.add_children_deep(("interface GigabitEthernet1/1/3", "channel-group 1"))
     config.add_child("interface Port-channel1")
 
     interface_view = get_hconfig_view(config).interface_view_by_name(
         "GigabitEthernet1/1/3"
     )
-    assert interface_view is not None
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
     assert interface_view.bundle_name == "Port-channel1"

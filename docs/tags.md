@@ -109,7 +109,7 @@ With the tags loaded, you can create a targeted remediation based on those tags 
 #!/usr/bin/env python3
 
 # Import necessary libraries
-from hier_config import WorkflowRemediation, get_hconfig, Platform
+from hier_config import WorkflowRemediation, HConfig, Platform
 from hier_config.utils import read_text_from_file, load_hier_config_tags
 
 # Load the running and generated configurations from files
@@ -121,8 +121,8 @@ tags = load_hier_config_tags("./tests/fixtures/tag_rules_ios.yml")
 
 # Initialize a WorkflowRemediation object with the running and intended configurations
 wfr = WorkflowRemediation(
-    running_config=get_hconfig(Platform.CISCO_IOS, running_config),
-    generated_config=get_hconfig(Platform.CISCO_IOS, generated_config)
+    running_config=HConfig.from_text(Platform.CISCO_IOS, running_config),
+    generated_config=HConfig.from_text(Platform.CISCO_IOS, generated_config)
 )
 
 # Apply the tag rules to filter remediation steps by tags

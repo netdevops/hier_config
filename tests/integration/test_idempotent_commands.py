@@ -1,4 +1,4 @@
-from hier_config import get_hconfig_fast_load
+from hier_config import HConfig
 from hier_config.models import (
     IdempotentCommandsRule,
     MatchRule,
@@ -26,11 +26,11 @@ def test_parameterized_regex_same_key_is_idempotent() -> None:
             ),
         ],
     )
-    running = get_hconfig_fast_load(
+    running = HConfig.from_lines(
         driver,
         ("client 10.1.1.1 server-key KEY_OLD",),
     )
-    generated = get_hconfig_fast_load(
+    generated = HConfig.from_lines(
         driver,
         ("client 10.1.1.1 server-key KEY_NEW",),
     )
@@ -47,14 +47,14 @@ def test_parameterized_regex_different_key_not_idempotent() -> None:
             ),
         ],
     )
-    running = get_hconfig_fast_load(
+    running = HConfig.from_lines(
         driver,
         (
             "client 10.1.1.1 server-key KEY1",
             "client 10.2.2.2 server-key KEY2",
         ),
     )
-    generated = get_hconfig_fast_load(
+    generated = HConfig.from_lines(
         driver,
         ("client 10.1.1.1 server-key KEY1",),
     )
@@ -66,7 +66,7 @@ def test_parameterized_regex_different_key_not_idempotent() -> None:
 def test_bgp_neighbor_regex_idempotent() -> None:
     """BGP neighbor remote-as is idempotent per neighbor IP via regex capture group."""
     platform = Platform.CISCO_XR
-    running = get_hconfig_fast_load(
+    running = HConfig.from_lines(
         platform,
         (
             "router bgp 1001",
@@ -75,7 +75,7 @@ def test_bgp_neighbor_regex_idempotent() -> None:
             "  neighbor 40.0.0.8 remote-as 2002",
         ),
     )
-    generated = get_hconfig_fast_load(
+    generated = HConfig.from_lines(
         platform,
         (
             "router bgp 1001",
@@ -108,14 +108,14 @@ def test_startswith_rules_do_not_cross_contaminate() -> None:
             ),
         ],
     )
-    running = get_hconfig_fast_load(
+    running = HConfig.from_lines(
         driver,
         (
             "hardware access-list tcam region arp-ether 0",
             "hardware profile tcam region racl 0",
         ),
     )
-    generated = get_hconfig_fast_load(
+    generated = HConfig.from_lines(
         driver,
         (
             "hardware access-list tcam region arp-ether 256",

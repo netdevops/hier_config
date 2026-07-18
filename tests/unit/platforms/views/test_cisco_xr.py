@@ -1,584 +1,386 @@
 """Tests for Cisco IOS-XR view.py ConfigViewInterfaceCiscoIOSXR and HConfigViewCiscoIOSXR classes."""
 
-from ipaddress import IPv4Interface
+from ipaddress import IPv4Address, IPv4Interface
 
-import pytest
-
-from hier_config import Platform, get_hconfig, get_hconfig_view
-
-
-def test_bundle_id_not_implemented() -> None:
-    """Test bundle_id raises NotImplementedError (covers line 26)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface Bundle-Ether1")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Bundle-Ether1")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.bundle_id
+from hier_config import (
+    HConfig,
+    InterfaceBundleViewMixin,
+    InterfaceNACViewMixin,
+    InterfacePhysicalViewMixin,
+    InterfaceVlanViewMixin,
+    Platform,
+    get_hconfig_view,
+)
+from hier_config.platforms.cisco_xr.view import ConfigViewInterfaceCiscoIOSXR
+from hier_config.platforms.models import Vlan
 
 
-def test_bundle_member_interfaces_not_implemented() -> None:
-    """Test bundle_member_interfaces raises NotImplementedError (covers line 30)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/0")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/0")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = list(interface_view.bundle_member_interfaces)
+def _interface_view(
+    config: HConfig, name: str = "GigabitEthernet0/0/0/1"
+) -> ConfigViewInterfaceCiscoIOSXR:
+    interface_view = get_hconfig_view(config).interface_view_by_name(name)
+    assert isinstance(interface_view, ConfigViewInterfaceCiscoIOSXR)
+    return interface_view
 
 
-def test_bundle_name_with_bundle_id() -> None:
-    """Test bundle_name returns formatted name (covers lines 34-36)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface Bundle-Ether1")
+def test_capabilities() -> None:
+    """IOS XR interface views support bundles and VLANs but not NAC or physical."""
+    config = HConfig.from_text(Platform.CISCO_XR)
+    config.add_child("interface GigabitEthernet0/0/0/1")
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Bundle-Ether1")
-    assert interface_view is not None
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.bundle_name
+    interface_view = _interface_view(config)
+    assert isinstance(interface_view, InterfaceBundleViewMixin)
+    assert isinstance(interface_view, InterfaceVlanViewMixin)
+    assert not isinstance(interface_view, InterfaceNACViewMixin)
+    assert not isinstance(interface_view, InterfacePhysicalViewMixin)
+
+
+def test_bundle_id() -> None:
+    config = HConfig.from_text(Platform.CISCO_XR)
+    config.add_children_deep(
+        ("interface GigabitEthernet0/0/0/1", "bundle id 42 mode active")
+    )
+
+    assert _interface_view(config).bundle_id == "42"
+
+
+def test_bundle_id_none() -> None:
+    config = HConfig.from_text(Platform.CISCO_XR)
+    config.add_child("interface GigabitEthernet0/0/0/1")
+
+    assert _interface_view(config).bundle_id is None
+
+
+def test_bundle_name() -> None:
+    config = HConfig.from_text(Platform.CISCO_XR)
+    config.add_children_deep(
+        ("interface GigabitEthernet0/0/0/1", "bundle id 42 mode active")
+    )
+
+    assert _interface_view(config).bundle_name == "Bundle-Ether42"
 
 
 def test_bundle_name_none() -> None:
-    """Test bundle_name returns None when not bundle (covers line 36)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/0")
+    config = HConfig.from_text(Platform.CISCO_XR)
+    config.add_child("interface GigabitEthernet0/0/0/1")
+
+    assert _interface_view(config).bundle_name is None
+
+
+def test_bundle_member_interfaces() -> None:
+    config = HConfig.from_text(Platform.CISCO_XR)
+    config.add_child("interface Bundle-Ether42")
+    config.add_children_deep(
+        ("interface GigabitEthernet0/0/0/1", "bundle id 42 mode active")
+    )
+    config.add_children_deep(
+        ("interface GigabitEthernet0/0/0/2", "bundle id 42 mode active")
+    )
+    config.add_children_deep(
+        ("interface GigabitEthernet0/0/0/3", "bundle id 43 mode active")
+    )
+
+    interface_view = _interface_view(config, "Bundle-Ether42")
+    assert list(interface_view.bundle_member_interfaces) == [
+        "GigabitEthernet0/0/0/1",
+        "GigabitEthernet0/0/0/2",
+    ]
+
+
+def test_bundle_member_interfaces_not_a_bundle() -> None:
+    config = HConfig.from_text(Platform.CISCO_XR)
+    config.add_child("interface GigabitEthernet0/0/0/1")
+
+    assert not list(_interface_view(config).bundle_member_interfaces)
+
+
+def test_is_bundle() -> None:
+    config = HConfig.from_text(Platform.CISCO_XR)
+    config.add_child("interface Bundle-Ether42")
+    config.add_child("interface GigabitEthernet0/0/0/1")
+
+    assert _interface_view(config, "Bundle-Ether42").is_bundle is True
+    assert _interface_view(config).is_bundle is False
 
     view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/0")
-    assert interface_view is not None
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.bundle_name
+    assert [iv.name for iv in view.bundle_interface_views] == ["Bundle-Ether42"]
 
 
 def test_description() -> None:
-    """Test description returns description text (covers lines 40-42)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    interface = config.add_child("interface GigabitEthernet0/0/0/0")
-    interface.add_child("description Uplink to Core")
+    """Test description returns description text."""
+    config = HConfig.from_text(Platform.CISCO_XR)
+    config.add_children_deep(("interface GigabitEthernet0/0/0/1", "description Uplink"))
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/0")
-    assert interface_view is not None
-    assert interface_view.description == "Uplink to Core"
+    assert _interface_view(config).description == "Uplink"
 
 
 def test_description_empty() -> None:
-    """Test description returns empty string (covers line 42)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/0")
+    """Test description returns empty string."""
+    config = HConfig.from_text(Platform.CISCO_XR)
+    config.add_child("interface GigabitEthernet0/0/0/1")
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/0")
-    assert interface_view is not None
-    assert not interface_view.description
+    assert not _interface_view(config).description
 
 
-def test_duplex_not_implemented() -> None:
-    """Test duplex raises NotImplementedError (covers line 46)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/0")
+def test_enabled() -> None:
+    config = HConfig.from_text(Platform.CISCO_XR)
+    config.add_child("interface GigabitEthernet0/0/0/1")
+    config.add_children_deep(("interface GigabitEthernet0/0/0/2", "shutdown"))
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/0")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.duplex
+    assert _interface_view(config).enabled is True
+    assert _interface_view(config, "GigabitEthernet0/0/0/2").enabled is False
 
 
-def test_enabled_not_implemented() -> None:
-    """Test enabled raises NotImplementedError (covers line 50)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/0")
+def test_ipv4_interfaces_netmask() -> None:
+    config = HConfig.from_text(Platform.CISCO_XR)
+    config.add_children_deep(
+        ("interface GigabitEthernet0/0/0/1", "ipv4 address 10.1.1.1 255.255.255.0")
+    )
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/0")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.enabled
+    assert list(_interface_view(config).ipv4_interfaces) == [
+        IPv4Interface("10.1.1.1/24")
+    ]
 
 
-def test_has_nac_not_implemented() -> None:
-    """Test has_nac raises NotImplementedError (covers line 55)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/0")
+def test_ipv4_interfaces_cidr() -> None:
+    config = HConfig.from_text(Platform.CISCO_XR)
+    config.add_children_deep(
+        ("interface GigabitEthernet0/0/0/1", "ipv4 address 10.1.1.1/24")
+    )
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/0")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.has_nac
+    assert _interface_view(config).ipv4_interface == IPv4Interface("10.1.1.1/24")
 
 
-def test_ipv4_interface_none() -> None:
-    """Test ipv4_interface returns None (covers line 59)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/0")
+def test_ipv4_interfaces_cidr_with_space() -> None:
+    config = HConfig.from_text(Platform.CISCO_XR)
+    config.add_children_deep(
+        ("interface GigabitEthernet0/0/0/1", "ipv4 address 10.1.1.1 /24")
+    )
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/0")
-    assert interface_view is not None
-    assert interface_view.ipv4_interface is None
-
-
-def test_ipv4_interfaces() -> None:
-    """Test ipv4_interfaces returns IP addresses (covers lines 63-68)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    interface = config.add_child("interface GigabitEthernet0/0/0/0")
-    interface.add_child("ipv4 address 192.168.1.1 255.255.255.0")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/0")
-    assert interface_view is not None
-
-    ips = list(interface_view.ipv4_interfaces)
-    assert len(ips) == 1
-    assert ips[0] == IPv4Interface("192.168.1.1/24")
+    assert _interface_view(config).ipv4_interface == IPv4Interface("10.1.1.1/24")
 
 
 def test_ipv4_interfaces_invalid() -> None:
-    """Test ipv4_interfaces skips invalid addresses (covers line 68)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    interface = config.add_child("interface GigabitEthernet0/0/0/0")
-    interface.add_child("ipv4 address dhcp")
+    config = HConfig.from_text(Platform.CISCO_XR)
+    config.add_children_deep(("interface GigabitEthernet0/0/0/1", "ipv4 address dhcp"))
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/0")
-    assert interface_view is not None
-
-    ips = list(interface_view.ipv4_interfaces)
-    assert len(ips) == 0
+    assert not list(_interface_view(config).ipv4_interfaces)
 
 
-def test_is_bundle_false() -> None:
-    """Test is_bundle returns False (covers line 72)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/0")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/0")
-    assert interface_view is not None
-    assert interface_view.is_bundle is False
-
-
-def test_is_loopback_true() -> None:
-    """Test is_loopback returns True (covers line 76)."""
-    config = get_hconfig(Platform.CISCO_XR)
+def test_is_loopback() -> None:
+    config = HConfig.from_text(Platform.CISCO_XR)
     config.add_child("interface Loopback0")
+    config.add_child("interface GigabitEthernet0/0/0/1")
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Loopback0")
-    assert interface_view is not None
-    assert interface_view.is_loopback is True
-
-
-def test_is_loopback_false() -> None:
-    """Test is_loopback returns False (covers line 76)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/0")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/0")
-    assert interface_view is not None
-    assert interface_view.is_loopback is False
+    assert _interface_view(config, "Loopback0").is_loopback is True
+    assert _interface_view(config).is_loopback is False
 
 
-def test_is_subinterface_true() -> None:
-    """Test is_subinterface returns True (covers line 80)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/0.100")
+def test_is_svi() -> None:
+    config = HConfig.from_text(Platform.CISCO_XR)
+    config.add_child("interface GigabitEthernet0/0/0/1")
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/0.100")
-    assert interface_view is not None
-    assert interface_view.is_subinterface is True
+    assert _interface_view(config).is_svi is False
 
 
-def test_is_subinterface_false() -> None:
-    """Test is_subinterface returns False (covers line 80)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/0")
+def test_name_and_number() -> None:
+    config = HConfig.from_text(Platform.CISCO_XR)
+    config.add_child("interface GigabitEthernet0/1/2/3")
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/0")
-    assert interface_view is not None
+    interface_view = _interface_view(config, "GigabitEthernet0/1/2/3")
+    assert interface_view.name == "GigabitEthernet0/1/2/3"
+    assert interface_view.number == "0/1/2/3"
+    assert interface_view.port_number == 3
+
+
+def test_subinterface() -> None:
+    config = HConfig.from_text(Platform.CISCO_XR)
+    config.add_child("interface GigabitEthernet0/0/0/1.100")
+    config.add_child("interface GigabitEthernet0/0/0/1")
+
+    subinterface_view = _interface_view(config, "GigabitEthernet0/0/0/1.100")
+    assert subinterface_view.is_subinterface is True
+    assert subinterface_view.parent_name == "GigabitEthernet0/0/0/1"
+    assert subinterface_view.subinterface_number == 100
+
+    interface_view = _interface_view(config)
     assert interface_view.is_subinterface is False
-
-
-def test_is_svi_true() -> None:
-    """Test is_svi returns True (covers line 84)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface vlan100")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("vlan100")
-    assert interface_view is not None
-    assert interface_view.is_svi is True
-
-
-def test_is_svi_false() -> None:
-    """Test is_svi returns False (covers line 84)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/0")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/0")
-    assert interface_view is not None
-    assert interface_view.is_svi is False
-
-
-def test_module_number() -> None:
-    """Test module_number returns module (covers lines 88-91)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/2/0/5")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/2/0/5")
-    assert interface_view is not None
-    assert interface_view.module_number == 0
-
-
-def test_module_number_none() -> None:
-    """Test module_number returns None (covers lines 90-91)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface Loopback0")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("Loopback0")
-    assert interface_view is not None
-    assert interface_view.module_number is None
-
-
-def test_nac_control_direction_in_not_implemented() -> None:
-    """Test nac_control_direction_in raises NotImplementedError (covers line 96)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/0")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/0")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.nac_control_direction_in
-
-
-def test_nac_host_mode_not_implemented() -> None:
-    """Test nac_host_mode raises NotImplementedError (covers line 101)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/0")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/0")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.nac_host_mode
-
-
-def test_nac_mab_first_not_implemented() -> None:
-    """Test nac_mab_first raises NotImplementedError (covers line 106)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/0")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/0")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.nac_mab_first
-
-
-def test_nac_max_dot1x_clients_not_implemented() -> None:
-    """Test nac_max_dot1x_clients raises NotImplementedError (covers line 111)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/0")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/0")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.nac_max_dot1x_clients
-
-
-def test_nac_max_mab_clients_not_implemented() -> None:
-    """Test nac_max_mab_clients raises NotImplementedError (covers line 116)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/0")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/0")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.nac_max_mab_clients
-
-
-def test_name() -> None:
-    """Test name returns interface name (covers line 120)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/10")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/10")
-    assert interface_view is not None
-    assert interface_view.name == "GigabitEthernet0/0/0/10"
-
-
-def test_native_vlan_not_implemented() -> None:
-    """Test native_vlan raises NotImplementedError (covers line 124)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/0")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/0")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.native_vlan
-
-
-def test_number() -> None:
-    """Test number returns interface number (covers line 128)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/1/2/15")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/1/2/15")
-    assert interface_view is not None
-    assert interface_view.number == "0/1/2/15"
-
-
-def test_parent_name() -> None:
-    """Test parent_name returns parent interface (covers lines 132-134)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/0.100")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/0.100")
-    assert interface_view is not None
-    assert interface_view.parent_name == "GigabitEthernet0/0/0/0"
-
-
-def test_parent_name_none() -> None:
-    """Test parent_name returns None (covers line 134)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/0")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/0")
-    assert interface_view is not None
     assert interface_view.parent_name is None
-
-
-def test_poe_not_implemented() -> None:
-    """Test poe raises NotImplementedError (covers line 138)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/0")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/0")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.poe
-
-
-def test_port_number() -> None:
-    """Test port_number returns port number (covers line 142)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/2/1/25")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/2/1/25")
-    assert interface_view is not None
-    assert interface_view.port_number == 25
-
-
-def test_port_number_with_subinterface() -> None:
-    """Test port_number with subinterface (covers line 142)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/5.200")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/5.200")
-    assert interface_view is not None
-    assert interface_view.port_number == 5
-
-
-def test_speed_not_implemented() -> None:
-    """Test speed raises NotImplementedError (covers line 146)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/0")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/0")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.speed
-
-
-def test_subinterface_number() -> None:
-    """Test subinterface_number returns number (covers line 150)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/0.500")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/0.500")
-    assert interface_view is not None
-    assert interface_view.subinterface_number == 500
-
-
-def test_subinterface_number_none() -> None:
-    """Test subinterface_number returns None (covers line 150)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/0")
-
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/0")
-    assert interface_view is not None
     assert interface_view.subinterface_number is None
 
 
-def test_tagged_all_not_implemented() -> None:
-    """Test tagged_all raises NotImplementedError (covers line 154)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/0")
+def test_native_vlan_subinterface() -> None:
+    config = HConfig.from_text(Platform.CISCO_XR)
+    config.add_children_deep(
+        ("interface GigabitEthernet0/0/0/1.100", "encapsulation dot1q 100")
+    )
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/0")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.tagged_all
+    assert _interface_view(config, "GigabitEthernet0/0/0/1.100").native_vlan == 100
 
 
-def test_tagged_vlans_not_implemented() -> None:
-    """Test tagged_vlans raises NotImplementedError (covers line 158)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/0")
+def test_native_vlan_none() -> None:
+    config = HConfig.from_text(Platform.CISCO_XR)
+    config.add_child("interface GigabitEthernet0/0/0/1")
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/0")
-    assert interface_view is not None
-
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.tagged_vlans
+    assert _interface_view(config).native_vlan is None
 
 
-def test_vrf_not_implemented() -> None:
-    """Test vrf raises NotImplementedError (covers line 162)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/0")
+def test_tagged_all_and_tagged_vlans() -> None:
+    """IOS XR interfaces never carry switchport-style tagged VLANs."""
+    config = HConfig.from_text(Platform.CISCO_XR)
+    config.add_child("interface GigabitEthernet0/0/0/1")
 
-    view = get_hconfig_view(config)
-    interface_view = view.interface_view_by_name("GigabitEthernet0/0/0/0")
-    assert interface_view is not None
+    interface_view = _interface_view(config)
+    assert interface_view.tagged_all is False
+    assert interface_view.tagged_vlans == ()
+    assert interface_view.dot1q_mode is None
 
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.vrf
+
+def test_vrf() -> None:
+    config = HConfig.from_text(Platform.CISCO_XR)
+    config.add_children_deep(("interface GigabitEthernet0/0/0/1", "vrf RED"))
+    config.add_child("interface GigabitEthernet0/0/0/2")
+
+    assert _interface_view(config).vrf == "RED"
+    assert not _interface_view(config, "GigabitEthernet0/0/0/2").vrf
 
 
 def test_hostname() -> None:
-    """Test hostname returns hostname (covers lines 177-179)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("hostname CORE-ROUTER-01")
+    """Test hostname returns hostname."""
+    config = HConfig.from_text(Platform.CISCO_XR)
+    config.add_child("hostname XR-PE-01")
 
     view = get_hconfig_view(config)
-    assert view.hostname == "core-router-01"
+    assert view.hostname == "xr-pe-01"
 
 
 def test_hostname_none() -> None:
-    """Test hostname returns None (covers line 179)."""
-    config = get_hconfig(Platform.CISCO_XR)
+    """Test hostname returns None."""
+    config = HConfig.from_text(Platform.CISCO_XR)
 
     view = get_hconfig_view(config)
     assert view.hostname is None
 
 
-def test_interface_names_mentioned_not_implemented() -> None:
-    """Test interface_names_mentioned raises NotImplementedError (covers line 183)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/0")
+def test_interface_names_mentioned() -> None:
+    config = HConfig.from_text(Platform.CISCO_XR)
+    config.add_child("interface GigabitEthernet0/0/0/1")
+    config.add_child("interface Bundle-Ether42")
 
     view = get_hconfig_view(config)
-
-    with pytest.raises(NotImplementedError):
-        _ = view.interface_names_mentioned
+    assert view.interface_names_mentioned == frozenset(
+        {"GigabitEthernet0/0/0/1", "Bundle-Ether42"}
+    )
 
 
 def test_interface_views() -> None:
-    """Test interface_views yields interface views (covers lines 187-188)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/0")
+    """Test interface_views yields interface views."""
+    config = HConfig.from_text(Platform.CISCO_XR)
     config.add_child("interface GigabitEthernet0/0/0/1")
+    config.add_child("interface GigabitEthernet0/0/0/2")
+    config.add_child("interface Loopback0")
 
     view = get_hconfig_view(config)
     interface_views = list(view.interface_views)
 
-    assert len(interface_views) == 2
-    assert any(iv.name == "GigabitEthernet0/0/0/0" for iv in interface_views)
-    assert any(iv.name == "GigabitEthernet0/0/0/1" for iv in interface_views)
+    assert len(interface_views) == 3
 
 
 def test_interfaces() -> None:
-    """Test interfaces returns interface children (covers line 192)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    config.add_child("interface GigabitEthernet0/0/0/0")
+    """Test interfaces returns interface children."""
+    config = HConfig.from_text(Platform.CISCO_XR)
     config.add_child("interface GigabitEthernet0/0/0/1")
-    config.add_child("interface Loopback0")
+    config.add_child("interface GigabitEthernet0/0/0/2")
 
     view = get_hconfig_view(config)
     interfaces = list(view.interfaces)
 
-    assert len(interfaces) == 3
+    assert len(interfaces) == 2
 
 
-def test_ipv4_default_gw_not_implemented() -> None:
-    """Test ipv4_default_gw raises NotImplementedError (covers line 196)."""
-    config = get_hconfig(Platform.CISCO_XR)
-
-    view = get_hconfig_view(config)
-
-    with pytest.raises(NotImplementedError):
-        _ = view.ipv4_default_gw
-
-
-def test_location_not_implemented() -> None:
-    """Test location raises NotImplementedError (covers line 200)."""
-    config = get_hconfig(Platform.CISCO_XR)
+def test_ipv4_default_gw() -> None:
+    config = HConfig.from_text(Platform.CISCO_XR)
+    config.add_children_deep(
+        (
+            "router static",
+            "address-family ipv4 unicast",
+            "0.0.0.0/0 192.0.2.254",
+        )
+    )
 
     view = get_hconfig_view(config)
-
-    with pytest.raises(NotImplementedError):
-        _ = view.location
+    assert view.ipv4_default_gw == IPv4Address("192.0.2.254")
 
 
-def test_stack_members_not_implemented() -> None:
-    """Test stack_members raises NotImplementedError (covers line 204)."""
-    config = get_hconfig(Platform.CISCO_XR)
+def test_ipv4_default_gw_none() -> None:
+    config = HConfig.from_text(Platform.CISCO_XR)
 
     view = get_hconfig_view(config)
-
-    with pytest.raises(NotImplementedError):
-        _ = list(view.stack_members)
+    assert view.ipv4_default_gw is None
 
 
-def test_vlans_not_implemented() -> None:
-    """Test vlans raises NotImplementedError (covers line 208)."""
-    config = get_hconfig(Platform.CISCO_XR)
+def test_ipv4_default_gw_none_without_default_route() -> None:
+    config = HConfig.from_text(Platform.CISCO_XR)
+    config.add_children_deep(
+        (
+            "router static",
+            "address-family ipv4 unicast",
+            "10.0.0.0/8 192.0.2.1",
+        )
+    )
 
     view = get_hconfig_view(config)
+    assert view.ipv4_default_gw is None
 
-    with pytest.raises(NotImplementedError):
-        _ = list(view.vlans)
+
+def test_location() -> None:
+    config = HConfig.from_text(Platform.CISCO_XR)
+    config.add_child('snmp-server location "Data Center 1"')
+
+    view = get_hconfig_view(config)
+    assert view.location == "Data Center 1"
+
+
+def test_location_empty() -> None:
+    config = HConfig.from_text(Platform.CISCO_XR)
+
+    view = get_hconfig_view(config)
+    assert not view.location
+
+
+def test_stack_members() -> None:
+    """IOS XR has no stacking, so stack_members is always empty."""
+    config = HConfig.from_text(Platform.CISCO_XR)
+
+    view = get_hconfig_view(config)
+    assert not list(view.stack_members)
+
+
+def test_vlans() -> None:
+    """VLANs are derived from sub-interface encapsulations."""
+    config = HConfig.from_text(Platform.CISCO_XR)
+    config.add_children_deep(
+        ("interface GigabitEthernet0/0/0/1.100", "encapsulation dot1q 100")
+    )
+    config.add_children_deep(
+        ("interface GigabitEthernet0/0/0/1.200", "encapsulation dot1q 200")
+    )
+    config.add_children_deep(
+        ("interface GigabitEthernet0/0/0/2.100", "encapsulation dot1q 100")
+    )
+
+    view = get_hconfig_view(config)
+    assert list(view.vlans) == [
+        Vlan(id=100, name=None),
+        Vlan(id=200, name=None),
+    ]
+    assert view.vlan_ids == frozenset({100, 200})
+
+
+def test_port_number_on_bundle_interface() -> None:
+    """port_number must not crash on slash-less names like Bundle-Ether10 (#278 review)."""
+    config = HConfig.from_text(Platform.CISCO_XR, "interface Bundle-Ether10\n")
+    view = get_hconfig_view(config)
+    interface_view = view.interface_view_by_name("Bundle-Ether10")
+    assert interface_view is not None
+    assert interface_view.port_number == 10

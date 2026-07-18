@@ -1,4 +1,4 @@
-from hier_config import get_hconfig
+from hier_config import HConfig
 from hier_config.child import HConfigChild
 from hier_config.models import Platform
 from hier_config.platforms.nokia_srl.driver import HConfigDriverNokiaSRL
@@ -8,7 +8,7 @@ def test_swap_negation_delete_to_set() -> None:
     """Test swapping from 'delete' to 'set' prefix."""
     platform = Platform.NOKIA_SRL
     driver = HConfigDriverNokiaSRL()
-    root = get_hconfig(platform)
+    root = HConfig.from_text(platform)
 
     child = HConfigChild(
         root, "delete interface ethernet-1/1 subinterface 0 ipv4 address 192.168.1.1/24"
@@ -26,7 +26,7 @@ def test_swap_negation_set_to_delete() -> None:
     """Test swapping from 'set' to 'delete' prefix."""
     platform = Platform.NOKIA_SRL
     driver = HConfigDriverNokiaSRL()
-    root = get_hconfig(platform)
+    root = HConfig.from_text(platform)
 
     child = HConfigChild(
         root, "set interface ethernet-1/1 subinterface 0 ipv4 address 192.168.1.1/24"
@@ -43,7 +43,7 @@ def test_swap_negation_set_to_delete() -> None:
 def test_swap_negation_no_prefix() -> None:
     """Test swap_negation when text has neither prefix."""
     driver = HConfigDriverNokiaSRL()
-    root = get_hconfig(Platform.NOKIA_SRL)
+    root = HConfig.from_text(Platform.NOKIA_SRL)
 
     child = HConfigChild(
         root, "interface ethernet-1/1 subinterface 0 ipv4 address 192.168.1.1/24"

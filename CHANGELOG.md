@@ -11,21 +11,88 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Interface view capability mixins (#227): `ConfigViewInterfaceBase` now
+  carries only the core interface properties (`name`, `description`,
+  `enabled`, `ipv4_interfaces`, `is_loopback`, `is_svi`, `number`,
+  `port_number`, `vrf`, plus concrete helpers `ipv4_interface`,
+  `is_subinterface`, `parent_name`, `subinterface_number`). Optional
+  capabilities moved to new ABC mixins in
+  `hier_config.platforms.view_base` — `InterfaceBundleViewMixin`,
+  `InterfaceVlanViewMixin` (owns the concrete `dot1q_mode`),
+  `InterfaceNACViewMixin`, and `InterfacePhysicalViewMixin` (owns a concrete
+  `module_number`) — all exported from the package root. Platform views
+  inherit only the mixins they support, and users check capability with
+  `isinstance(view, InterfaceVlanViewMixin)` instead of catching
+  `NotImplementedError`. `HConfigViewBase.bundle_interface_views` and
+  `module_numbers` are now capability-aware.
+- Completed the Arista EOS, Cisco NX-OS, and Cisco IOS XR config views (#230):
+  all three now implement the full core interface property set plus the VLAN
+  and bundle mixins (EOS/NX-OS switchport, trunk, and channel-group parsing;
+  XR `encapsulation dot1q`, `ipv4 address x.x.x.x/nn | x.x.x.x y.y.y.y`, and
+  `Bundle-Ether`/`bundle id <N>` parsing), along with the root view
+  properties `interface_names_mentioned`, `ipv4_default_gw`, `location`,
+  `stack_members`, and `vlans`.
+- Cisco IOS `bundle_member_interfaces` and HP ProCurve `bundle_id` are now
+  implemented (previously `NotImplementedError` stubs) (#230).
+
+- Driver registration system (#226): `register_driver()`, `unregister_driver()`,
+  and `get_registered_platforms()`. Custom platforms are registered by string
+  name (case-insensitive) and work anywhere a `Platform` is accepted; built-in
+  drivers can be overridden and later restored. `HConfigDriverBase` and
+  `HConfigDriverRules` are now exported as public API.
+- View registration follows driver registration (#187, #229): drivers declare
+  their view via the `view_class` attribute, `get_hconfig_view()` resolves it
+  from the driver, and registered custom drivers get views without extra
+  wiring.
+- `HConfig.from_text()`, `HConfig.from_lines()`, and `HConfig.from_dump()`
+  classmethod constructors (#218).
+- `remediation_transform_callbacks` on `HConfigDriverRules` (#180): drivers can
+  transform the remediation config after diff computation, before it is
+  returned by `WorkflowRemediation.remediation_config`.
+- `RemediationPlugin` ABC (`hier_config.plugins`) and a `plugins` parameter on
+  `WorkflowRemediation` (#181): users can package custom remediation
+  transforms outside hier_config and apply them per workflow.
+- Root-level duplicate children (#215): a `ParentAllowsDuplicateChildRule`
+  with empty `match_rules` now applies to the root `HConfig`.
+- `NegationRule` validates its per-strategy fields at construction time:
+  `REPLACE` requires `use` and `REGEX_SUB` requires `search` (#220).
+- Structured config format detection (#232): `HConfig.from_text()` rejects XML
+  and JSON input with a clear `InvalidConfigError`; set-style configs remain
+  natively supported via the JunOS, VyOS, and Nokia SRL driver preprocessors.
+  Full XML/JSON ingestion is additive, post-4.0 roadmap work.
 - Custom exception hierarchy: `HierConfigError` base, `DriverNotFoundError`,
   `InvalidConfigError`, `IncompatibleDriverError` (#219). `DuplicateChildError`
   reparented under `HierConfigError`.
-- `view_class` attribute on `HConfigDriverBase`: drivers now declare their own
-  config view, so custom drivers can register or override views (#187, #229).
 
 ### Changed
 
+- Shared interface-view logic hoisted out of the five platform view files into
+  concrete defaults on `ConfigViewInterfaceBase`, the capability mixins
+  (parameterized by `_bundle_membership_prefix` / `_encapsulation_prefix`
+  hooks), `HConfigViewBase`, and a new `parse_ipv4_interface()` helper in
+  `hier_config.platforms.functions` — removing ~390 duplicated lines (#227).
+- `WorkflowRemediation(plugins=...)` accepts any `Callable[[HConfig], None]`;
+  `RemediationPlugin` instances are now callable (#181).
+- The structured-format guard (#232) also covers the raw-`str` form of
+  `HConfig.from_lines()`, inspects only a bounded prefix of the input, and
+  `from_lines()`/`from_dump()` no longer route empty-tree construction through
+  the full text-parsing pipeline.
+- `HConfig` calls the `tree_algorithms` functions directly; the pass-through
+  delegation shims on `HConfigBase` were removed (#217).
+- Negation rules are unified into a single `NegationRule` model with a
+  `NegationStrategy` enum — `REPLACE` (was `negate_with`), `DEFAULT` (was
+  `negation_default_when`), and `REGEX_SUB` (was `negation_sub`) — in one
+  ordered `negation` list on `HConfigDriverRules`; first matching rule wins
+  (#220). `load_driver_rules()` still accepts the v2 dict keys.
+- Tree algorithms (difference, remediation, future, with_tags) extracted from
+  `HConfigBase` into `hier_config.tree_algorithms` as standalone functions;
+  `HConfigBase` retains thin delegating methods (#217).
+- `_load_from_string_lines()` refactored into a stateful `_ConfigTextLoader`
+  parser class with focused banner/normalize/hierarchy methods (#186).
 - Remediation right pass no longer allocates a probe `HConfigChild` for matched
   leaf lines, where the delta subtree is provably empty. Speeds up remediation
   of mostly-identical configs by ~30% and resolves the long-standing TODO in
   `_remediation_right()` (#191).
-- `get_hconfig_view()` resolves the view from the driver's `view_class`
-  attribute instead of a hardcoded `isinstance` chain; drivers without a view
-  raise `DriverNotFoundError` with a `No view registered for driver` message (#187).
 - `HConfigBase.__len__()` now counts descendants with a generator instead of
   materializing a tuple of every node, avoiding a large temporary allocation on
   big configuration trees (#188).
@@ -44,6 +111,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- `get_hconfig()`, `get_hconfig_fast_load()`, `get_hconfig_from_dump()`, and
+  `get_hconfig_fast_generic_load()` — replaced by the `HConfig.from_*`
+  classmethods (#218). `get_hconfig_driver()` and `get_hconfig_view()` remain.
+- `NegationDefaultWithRule`, `NegationDefaultWhenRule`, and `NegationSubRule`
+  models and their `HConfigDriverRules` fields (#220).
+- `HConfigChild.use_default_for_negation()` — subsumed by the unified
+  negation rule evaluation (#220).
 - Removed `HCONFIG_PLATFORM_V2_TO_V3_MAPPING` constant (#221).
 - Removed `hconfig_v2_os_v3_platform_mapper()` function (#221).
 - Removed `hconfig_v3_platform_v2_os_mapper()` function (#221).
@@ -51,10 +125,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `port_number` no longer raises `ValueError` on slash-less interface names
+  such as `Port-channel10`, `port-channel10`, `Bundle-Ether10`, and `Trk1`;
+  it now derives from the letter-stripped `number` property on all platform
+  views (IOS, EOS, NX-OS, XR, ProCurve).
 - Fortinet FortiOS: hardened `swap_negation()` and `idempotent_for()` against
   `IndexError` on degenerate single-word commands, and documented that dropping
   parameters when negating (`set description "Port 1"` → `unset description`) is
   intentional FortiOS semantics (#225).
+
+### v4 design decisions
+
+- `HConfig.remediation()` stays public (#223): it was deliberately renamed
+  from `config_to_get_to()` in #216 as the tree-level primitive;
+  `WorkflowRemediation` remains the recommended workflow API and already
+  validates driver compatibility (`IncompatibleDriverError`).
+- Drivers remain declaratively-configured with sanctioned imperative
+  extension points (#222): #220 removed the negation-related override needs;
+  `idempotent_for()`, `negate_with()`, and `config_preprocessor()` stay
+  overridable for logic that rules cannot express.
+- Config trees stay mutable (#224): full immutability would break the
+  callback/plugin mutation model for marginal benefit. The remediation
+  algorithms are guaranteed (and now tested) not to mutate their input
+  configs.
 
 ---
 

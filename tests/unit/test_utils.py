@@ -6,7 +6,7 @@ import yaml
 from pydantic import ValidationError
 
 from hier_config import Platform
-from hier_config.models import MatchRule, TagRule
+from hier_config.models import MatchRule, NegationStrategy, TagRule
 from hier_config.utils import (
     _set_match_rule,  # pyright: ignore[reportPrivateUsage]
     load_driver_rules,
@@ -190,14 +190,13 @@ def test_load_driver_rules(platform_generic: Platform) -> None:
     assert len(driver.rules.idempotent_commands) == 1
     assert driver.rules.idempotent_commands[0].match_rules[0].startswith == "interface"
 
-    # Assert negation_negate_with -> negate_with
-    assert len(driver.rules.negate_with) == 1
-    assert driver.rules.negate_with[0].match_rules[0].startswith == "interface Ethernet"
-    assert (
-        driver.rules.negate_with[0].match_rules[1].startswith
-        == "spanning-tree port type"
-    )
-    assert driver.rules.negate_with[0].use == "no spanning-tree port type"
+    # Assert negation_negate_with -> unified negation rule (REPLACE)
+    assert len(driver.rules.negation) == 1
+    negation_rule = driver.rules.negation[0]
+    assert negation_rule.strategy == NegationStrategy.REPLACE
+    assert negation_rule.match_rules[0].startswith == "interface Ethernet"
+    assert negation_rule.match_rules[1].startswith == "spanning-tree port type"
+    assert negation_rule.use == "no spanning-tree port type"
 
 
 def test_load_tag_rules_valid_input() -> None:

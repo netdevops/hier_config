@@ -1,4 +1,4 @@
-from hier_config import get_hconfig, get_hconfig_fast_load
+from hier_config import HConfig
 from hier_config.models import Platform
 
 
@@ -18,7 +18,7 @@ group edge
  !
 end-group
 """
-    hconfig = get_hconfig(platform, config_text)
+    hconfig = HConfig.from_text(platform, config_text)
     children = [child.text for child in hconfig.children]
     assert "hostname router1" in children
     assert "group core" in children
@@ -28,7 +28,7 @@ end-group
 def test_sectional_exit_text_parent_level_route_policy() -> None:
     """Test that route-policy exit text appears at parent level (no indentation)."""
     platform = Platform.CISCO_XR
-    config = get_hconfig_fast_load(
+    config = HConfig.from_lines(
         platform,
         (
             "route-policy TEST",
@@ -53,7 +53,7 @@ def test_sectional_exit_text_parent_level_route_policy() -> None:
 def test_sectional_exit_text_parent_level_prefix_set() -> None:
     """Test that prefix-set exit text appears at parent level (no indentation)."""
     platform = Platform.CISCO_XR
-    config = get_hconfig_fast_load(
+    config = HConfig.from_lines(
         platform,
         (
             "prefix-set TEST_PREFIX",
@@ -78,7 +78,7 @@ def test_sectional_exit_text_parent_level_prefix_set() -> None:
 def test_sectional_exit_text_parent_level_policy_map() -> None:
     """Test that policy-map exit text appears at parent level (no indentation)."""
     platform = Platform.CISCO_XR
-    config = get_hconfig_fast_load(
+    config = HConfig.from_lines(
         platform,
         (
             "policy-map TEST_POLICY",
@@ -104,7 +104,7 @@ def test_sectional_exit_text_parent_level_policy_map() -> None:
 def test_sectional_exit_text_parent_level_class_map() -> None:
     """Test that class-map exit text appears at parent level (no indentation)."""
     platform = Platform.CISCO_XR
-    config = get_hconfig_fast_load(
+    config = HConfig.from_lines(
         platform,
         (
             "class-map match-any TEST_CLASS",
@@ -127,7 +127,7 @@ def test_sectional_exit_text_parent_level_class_map() -> None:
 def test_sectional_exit_text_parent_level_community_set() -> None:
     """Test that community-set exit text appears at parent level (no indentation)."""
     platform = Platform.CISCO_XR
-    config = get_hconfig_fast_load(
+    config = HConfig.from_lines(
         platform,
         (
             "community-set TEST_COMM",
@@ -152,7 +152,7 @@ def test_sectional_exit_text_parent_level_community_set() -> None:
 def test_sectional_exit_text_parent_level_extcommunity_set() -> None:
     """Test that extcommunity-set exit text appears at parent level (no indentation)."""
     platform = Platform.CISCO_XR
-    config = get_hconfig_fast_load(
+    config = HConfig.from_lines(
         platform,
         (
             "extcommunity-set rt TEST_RT",
@@ -177,7 +177,7 @@ def test_sectional_exit_text_parent_level_extcommunity_set() -> None:
 def test_sectional_exit_text_parent_level_template() -> None:
     """Test that template exit text appears at parent level (no indentation)."""
     platform = Platform.CISCO_XR
-    config = get_hconfig_fast_load(
+    config = HConfig.from_lines(
         platform,
         (
             "template TEST_TEMPLATE",
@@ -200,7 +200,7 @@ def test_sectional_exit_text_parent_level_template() -> None:
 def test_sectional_exit_text_current_level_interface() -> None:
     """Test that interface exit text appears at current level (with indentation)."""
     platform = Platform.CISCO_XR
-    config = get_hconfig_fast_load(
+    config = HConfig.from_lines(
         platform,
         (
             "interface GigabitEthernet0/0/0/0",
@@ -225,7 +225,7 @@ def test_sectional_exit_text_current_level_interface() -> None:
 def test_sectional_exit_text_current_level_router_bgp() -> None:
     """Test that router bgp exit text appears at current level (with indentation)."""
     platform = Platform.CISCO_XR
-    config = get_hconfig_fast_load(
+    config = HConfig.from_lines(
         platform,
         (
             "router bgp 65000",
@@ -250,7 +250,7 @@ def test_sectional_exit_text_current_level_router_bgp() -> None:
 def test_sectional_exit_text_multiple_sections() -> None:
     """Test multiple sections with different exit text level behaviors."""
     platform = Platform.CISCO_XR
-    config = get_hconfig_fast_load(
+    config = HConfig.from_lines(
         platform,
         (
             "route-policy TEST1",
@@ -316,7 +316,7 @@ telemetry model-driven
  !
 !
 """
-    hconfig = get_hconfig(platform, config_text)
+    hconfig = HConfig.from_text(platform, config_text)
     telemetry = hconfig.get_child(equals="telemetry model-driven")
     assert telemetry is not None
     child_texts = [child.text for child in telemetry.children]
@@ -328,7 +328,7 @@ telemetry model-driven
 
 def test_xr_comment_attached_to_next_sibling() -> None:
     """IOS-XR inline comments are attached to the next sibling's comments set."""
-    config = get_hconfig(
+    config = HConfig.from_text(
         Platform.CISCO_XR,
         """\
 router isis backbone
@@ -350,7 +350,7 @@ router isis backbone
 
 def test_xr_multiple_comments_before_line() -> None:
     """Multiple consecutive comment lines are all attached to the next sibling."""
-    config = get_hconfig(
+    config = HConfig.from_text(
         Platform.CISCO_XR,
         """\
 router isis backbone
@@ -369,7 +369,7 @@ router isis backbone
 
 def test_xr_comment_lines_not_parsed_as_children() -> None:
     """Comment lines starting with ! should not appear as config children."""
-    config = get_hconfig(
+    config = HConfig.from_text(
         Platform.CISCO_XR,
         """\
 router isis backbone
@@ -385,7 +385,7 @@ router isis backbone
 
 def test_xr_top_level_bang_delimiters_stripped() -> None:
     """Top-level ! delimiters (with no comment text) are stripped."""
-    config = get_hconfig(
+    config = HConfig.from_text(
         Platform.CISCO_XR,
         """\
 hostname router1
@@ -403,7 +403,7 @@ interface GigabitEthernet0/0/0/0
 
 def test_xr_comment_preservation_with_fast_load() -> None:
     """Comments are also preserved when using get_hconfig_fast_load."""
-    config = get_hconfig_fast_load(
+    config = HConfig.from_lines(
         Platform.CISCO_XR,
         (
             "router isis backbone",
@@ -420,7 +420,7 @@ def test_xr_comment_preservation_with_fast_load() -> None:
 
 def test_xr_hash_comments_still_stripped() -> None:
     """Lines starting with # are still stripped (not preserved)."""
-    config = get_hconfig(
+    config = HConfig.from_text(
         Platform.CISCO_XR,
         """\
 hostname router1
@@ -434,7 +434,7 @@ interface GigabitEthernet0/0/0/0
 
 def test_xr_comment_with_leading_bang_preserved() -> None:
     """A comment containing ! in its body is preserved correctly."""
-    config = get_hconfig(
+    config = HConfig.from_text(
         Platform.CISCO_XR,
         """\
 router isis backbone
@@ -451,7 +451,7 @@ router isis backbone
 
 def test_xr_trailing_comment_with_no_following_sibling_is_dropped() -> None:
     """A trailing ! comment at the end of a section with no following sibling is silently dropped."""
-    config = get_hconfig(
+    config = HConfig.from_text(
         Platform.CISCO_XR,
         """\
 router isis backbone

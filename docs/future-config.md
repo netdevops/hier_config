@@ -44,7 +44,7 @@ The `future()` algorithm is a best-effort simulation.  The following cases are n
 
 3. **Negate-with rules.**
    When a command has a custom [negation string](glossary.md#negation-negate-with) defined by the driver (e.g.
-   `NegationDefaultWithRule`), the `future()` algorithm may not apply that string when
+   a REPLACE-strategy `NegationRule`), the `future()` algorithm may not apply that string when
    processing removal of that command.
 
 4. **Idempotent command avoid list.**
@@ -80,15 +80,15 @@ configuration because their identities differ within the `neighbor` hierarchy.
 > such as IP address or description text.
 
 ```bash
->>> from hier_config import get_hconfig, Platform
+>>> from hier_config import HConfig, Platform
 >>> from hier_config.utils import read_text_from_file
 >>>
 
 >>> running_config_text = read_text_from_file("./tests/fixtures/running_config.conf")
 >>> generated_config_text = read_text_from_file("./tests/fixtures/remediation_config_without_tags.conf")
 >>>
->>> running_config = get_hconfig(Platform.CISCO_IOS, running_config_text)
->>> remediation_config = get_hconfig(Platform.CISCO_IOS, remediation_config_text)
+>>> running_config = HConfig.from_text(Platform.CISCO_IOS, running_config_text)
+>>> remediation_config = HConfig.from_text(Platform.CISCO_IOS, remediation_config_text)
 >>>
 >>> print("Running Config")
 Running Config
@@ -181,14 +181,14 @@ This is useful when comparing configurations from two network devices (such as r
 > **Note:** The unified diff algorithm shares the same limitations as `future()` regarding duplicate child entries (e.g., multiple `endif` statements in an IOS XR route-policy) and command ordering in sections where sequence matters (such as ACLs). For accurate ACL ordering, use sequence numbers.
 
 ```python
->>> from hier_config import get_hconfig, Platform
+>>> from hier_config import HConfig, Platform
 >>> from pprint import pprint
 >>>
 >>> running_config_text = read_text_from_file("./tests/fixtures/running_config.conf")
 >>> generated_config_text = read_text_from_file("./tests/fixtures/generated_config.conf")
 >>>
->>> running_config = get_hconfig(Platform.CISCO_IOS, running_config_text)
->>> generated_config = get_hconfig(Platform.CISCO_IOS, generated_config_text)
+>>> running_config = HConfig.from_text(Platform.CISCO_IOS, running_config_text)
+>>> generated_config = HConfig.from_text(Platform.CISCO_IOS, generated_config_text)
 >>>
 >>> pprint(list(running_config.unified_diff(generated_config)))
 ['vlan 3',

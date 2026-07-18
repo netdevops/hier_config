@@ -1,6 +1,5 @@
-from hier_config import get_hconfig_driver
+from hier_config import HConfig, get_hconfig_driver
 from hier_config.child import HConfigChild
-from hier_config.constructors import get_hconfig
 from hier_config.models import Platform
 from hier_config.platforms.arista_eos.driver import HConfigDriverAristaEOS
 from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
@@ -30,7 +29,7 @@ def test_driver_base_properties() -> None:
     assert not driver.declaration_prefix
     assert driver.negation_prefix == "no "
 
-    config = get_hconfig(Platform.GENERIC)
+    config = HConfig.from_text(Platform.GENERIC)
     child = HConfigChild(config, "interface GigabitEthernet0/0")
     result = driver.swap_negation(child)
     assert result.text == "no interface GigabitEthernet0/0"

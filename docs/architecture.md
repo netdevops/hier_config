@@ -31,9 +31,9 @@ The tree layer lives in `hier_config/base.py`, `hier_config/root.py`, `hier_conf
 Create an `HConfig` object via the constructor function:
 
 ```python
-from hier_config import get_hconfig, Platform
+from hier_config import HConfig, Platform
 
-hconfig = get_hconfig(Platform.CISCO_IOS, config_text)
+hconfig = HConfig.from_text(Platform.CISCO_IOS, config_text)
 ```
 
 ### `HConfigChild` (tree node)
@@ -84,8 +84,7 @@ A frozen Pydantic model holding lists of typed rule objects:
 
 | Field | Rule type | Effect |
 |-------|-----------|--------|
-| `negate_with` | `NegationDefaultWithRule` | Replace negation with a fixed command |
-| `negation_default_when` | `NegationDefaultWhenRule` | Use `default` form instead of `no` |
+| `negation` | `NegationRule` | Unified negation: REPLACE a fixed command, use the DEFAULT form, or REGEX_SUB the negated text (#220) |
 | `sectional_exiting` | `SectionalExitingRule` | Emit an exit token at end of section (optionally at parent indent level) |
 | `sectional_overwrite` | `SectionalOverwriteRule` | Negate + re-create whole section |
 | `sectional_overwrite_no_negate` | `SectionalOverwriteNoNegateRule` | Re-create without prior negation |
@@ -158,7 +157,8 @@ See [Future Config](future-config.md) for known limitations.
 The view layer (`hier_config/platforms/view_base.py` and platform-specific `view.py` files) provides structured, typed access to configuration elements without modifying the underlying tree.
 
 - `HConfigViewBase` — abstract base; subclasses implement `interface_views` and `dot1q_mode_from_vlans`.
-- `ConfigViewInterfaceBase` — abstract base for per-interface views; exposes properties like `ip_address`, `native_vlan`, `tagged_vlans`, `description`, `duplex`, `bundle_id`.
+- `ConfigViewInterfaceBase` — abstract base for per-interface views; exposes core properties like `name`, `description`, `enabled`, `ipv4_interfaces`, and `vrf`.
+- Optional capability mixins — `InterfaceBundleViewMixin` (`bundle_id`, `bundle_member_interfaces`, ...), `InterfaceVlanViewMixin` (`native_vlan`, `tagged_vlans`, `dot1q_mode`, ...), `InterfaceNACViewMixin` (`has_nac`, `nac_host_mode`, ...), and `InterfacePhysicalViewMixin` (`duplex`, `speed`, `poe`, `module_number`). Platform views inherit only the mixins they support; check capability with `isinstance(view, InterfaceVlanViewMixin)`.
 
 Instantiate a view with:
 

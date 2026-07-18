@@ -3,7 +3,8 @@ from logging import getLogger
 from hier_config.models import (
     IdempotentCommandsRule,
     MatchRule,
-    NegationDefaultWithRule,
+    NegationRule,
+    NegationStrategy,
     OrderingRule,
     ParentAllowsDuplicateChildRule,
     PerLineSubRule,
@@ -90,8 +91,9 @@ class HConfigDriverCiscoIOS(HConfigDriverBase):
     @staticmethod
     def _instantiate_rules() -> HConfigDriverRules:
         return HConfigDriverRules(
-            negate_with=[
-                NegationDefaultWithRule(
+            negation=[
+                NegationRule(
+                    strategy=NegationStrategy.REPLACE,
                     match_rules=(MatchRule(startswith="logging console "),),
                     use="logging console debugging",
                 ),

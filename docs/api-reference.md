@@ -4,11 +4,27 @@ Auto-generated reference documentation for the `hier_config` public API.
 
 ---
 
-## Constructor Functions
+## Constructors
 
-::: hier_config.get_hconfig
+::: hier_config.HConfig.from_text
+
+::: hier_config.HConfig.from_lines
+
+::: hier_config.HConfig.from_dump
 
 ::: hier_config.get_hconfig_driver
+
+::: hier_config.get_hconfig_view
+
+---
+
+## Driver Registry
+
+::: hier_config.register_driver
+
+::: hier_config.unregister_driver
+
+::: hier_config.get_registered_platforms
 
 ---
 
@@ -54,9 +70,9 @@ Auto-generated reference documentation for the `hier_config` public API.
 
 ::: hier_config.models.IdempotentCommandsRule
 
-::: hier_config.models.NegationDefaultWithRule
+::: hier_config.models.NegationRule
 
-::: hier_config.models.NegationDefaultWhenRule
+::: hier_config.models.NegationStrategy
 
 ::: hier_config.models.SectionalExitingRule
 

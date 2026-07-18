@@ -2,7 +2,7 @@ from enum import Enum, auto
 from typing import Literal
 
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import ConfigDict, NonNegativeInt, PositiveInt
+from pydantic import ConfigDict, NonNegativeInt, PositiveInt, model_validator
 
 TextStyle = Literal["without_comments", "merged", "with_comments"]
 
@@ -126,34 +126,47 @@ class Instance(BaseModel):
     tags: frozenset[str]
 
 
-class NegationDefaultWhenRule(BaseModel):
-    """Rule specifying when negation should use the ``default`` form."""
+class NegationStrategy(str, Enum):
+    """How a matching command is negated (#220)."""
 
-    match_rules: tuple[MatchRule, ...]
-
-
-class NegationDefaultWithRule(BaseModel):
-    """Rule replacing negation with a fixed custom command string."""
-
-    match_rules: tuple[MatchRule, ...]
-    use: str
+    #: Replace the command with the fixed string in ``use``.
+    REPLACE = "replace"
+    #: Rewrite the command to its ``default`` form.
+    DEFAULT = "default"
+    #: Apply ``re.sub(search, replace, ...)`` to the already-negated text.
+    REGEX_SUB = "regex_sub"
 
 
-class NegationSubRule(BaseModel):
-    r"""Regex substitution applied to a command during negation.
+class NegationRule(BaseModel):
+    r"""Unified negation rule (#220).
 
-    When a negated command matches ``match_rules``, ``re.sub(search, replace, text)``
-    is applied to transform the negation line.  Useful when a platform requires
-    truncated or reformatted negation commands — e.g. NX-OS SNMP user removal
-    must drop everything after the username.
+    Replaces the former ``NegationDefaultWithRule`` (``strategy=REPLACE``),
+    ``NegationDefaultWhenRule`` (``strategy=DEFAULT``), and ``NegationSubRule``
+    (``strategy=REGEX_SUB``). REPLACE rules are consulted first (via
+    ``driver.negate_with()``, which imperative driver overrides also hook
+    into); the remaining rules are then evaluated in list order and the
+    first matching rule wins.
 
-    The regex is applied to the **already-negated** text (with ``no `` prepended).
-    ``replace`` supports back-references such as ``\1``.
+    For ``REGEX_SUB``, the regex is applied to the **already-negated** text
+    (with the negation prefix prepended) and ``replace`` supports
+    back-references such as ``\1``.
     """
 
     match_rules: tuple[MatchRule, ...]
-    search: str
-    replace: str
+    strategy: NegationStrategy
+    use: str = ""
+    search: str = ""
+    replace: str = ""
+
+    @model_validator(mode="after")
+    def _validate_strategy_fields(self) -> "NegationRule":
+        if self.strategy is NegationStrategy.REPLACE and not self.use:
+            message = "REPLACE strategy requires `use`"
+            raise ValueError(message)
+        if self.strategy is NegationStrategy.REGEX_SUB and not self.search:
+            message = "REGEX_SUB strategy requires `search`"
+            raise ValueError(message)
+        return self
 
 
 class ReferenceLocation(BaseModel):

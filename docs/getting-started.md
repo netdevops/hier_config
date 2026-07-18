@@ -4,10 +4,10 @@ Hier Config is a Python library that assists with remediating network configurat
 
 ## Step 1: Import Required Classes
 
-To use `WorkflowRemediation`, you’ll import it along with `get_hconfig` (for generating configuration objects) and `Platform` (for specifying the operating system driver).
+To use `WorkflowRemediation`, you’ll import it along with `HConfig` (for generating configuration objects) and `Platform` (for specifying the operating system driver).
 
 ```python
->>> from hier_config import WorkflowRemediation, get_hconfig, Platform
+>>> from hier_config import WorkflowRemediation, HConfig, Platform
 >>> from hier_config.utils import read_text_from_file
 >>>
 ```
@@ -16,7 +16,7 @@ With these imports, you can create HConfig objects and compare them.
 
 ## Step 2: Creating HConfig Objects for Configurations
 
-Use `get_hconfig` to create HConfig objects for both the running and intended configurations. Specify the platform with `Platform.CISCO_IOS`, `Platform.CISCO_NXOS`, etc., based on the device type.
+Use `HConfig.from_text` to create HConfig objects for both the running and intended configurations. Specify the platform with `Platform.CISCO_IOS`, `Platform.CISCO_NXOS`, etc., based on the device type.
 
 ```python
 # Define running and intended configurations as strings
@@ -25,8 +25,8 @@ Use `get_hconfig` to create HConfig objects for both the running and intended co
 >>>
 
 # Create HConfig objects for running and intended configurations
->>> running_config = get_hconfig(Platform.CISCO_IOS, running_config_text)
->>> generated_config = get_hconfig(Platform.CISCO_IOS, generated_config_text)
+>>> running_config = HConfig.from_text(Platform.CISCO_IOS, running_config_text)
+>>> generated_config = HConfig.from_text(Platform.CISCO_IOS, generated_config_text)
 >>>
 ```
 

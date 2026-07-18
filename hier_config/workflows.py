@@ -1,4 +1,4 @@
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from logging import getLogger
 
 from .exceptions import IncompatibleDriverError
@@ -29,8 +29,10 @@ class WorkflowRemediation:
         from hier_config.model import Platform
 
         # Create running and generated configurations as HConfig objects
-        running_config = get_hconfig(Platform.CISCO_IOS, "running_config_text")
-        generated_config = get_hconfig(Platform.CISCO_IOS, "generated_config_text")
+        running_config = HConfig.from_text(Platform.CISCO_IOS, "running_config_text")
+        generated_config = HConfig.from_text(
+            Platform.CISCO_IOS, "generated_config_text"
+        )
 
         # Initialize WorkflowRemediation with running and generated configurations
         workflow = WorkflowRemediation(running_config, generated_config)
@@ -54,9 +56,11 @@ class WorkflowRemediation:
         self,
         running_config: HConfig,
         generated_config: HConfig,
+        plugins: Iterable[Callable[[HConfig], None]] = (),
     ) -> None:
         self.running_config = running_config
         self.generated_config = generated_config
+        self.plugins = tuple(plugins)
 
         if running_config.driver.__class__ is not generated_config.driver.__class__:
             message = "The running and generated configs must use the same driver."
@@ -83,6 +87,12 @@ class WorkflowRemediation:
         remediation_config = self.running_config.remediation(
             self.generated_config
         ).set_order_weight()
+
+        # Driver-level transforms (#180), then user plugins (#181).
+        for callback in remediation_config.driver.rules.remediation_transform_callbacks:
+            callback(remediation_config)
+        for plugin in self.plugins:
+            plugin(remediation_config)
 
         self._remediation_config = remediation_config
 

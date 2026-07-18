@@ -2,146 +2,39 @@ from collections.abc import Iterable
 from ipaddress import IPv4Address, IPv4Interface
 
 from hier_config.child import HConfigChild
-from hier_config.platforms.models import (
-    InterfaceDuplex,
-    NACHostMode,
-    StackMember,
-    Vlan,
-)
+from hier_config.platforms.functions import parse_ipv4_interface
 from hier_config.platforms.view_base import (
-    ConfigViewInterfaceBase,
     HConfigViewBase,
+    InterfaceBundleViewMixin,
+    InterfaceVlanViewMixin,
 )
 
 
-class ConfigViewInterfaceAristaEOS(ConfigViewInterfaceBase):  # noqa: PLR0904
+class ConfigViewInterfaceAristaEOS(
+    InterfaceBundleViewMixin,
+    InterfaceVlanViewMixin,
+):
     """Interface config view for Arista EOS."""
 
-    @property
-    def bundle_id(self) -> str | None:
-        raise NotImplementedError
-
-    @property
-    def bundle_member_interfaces(self) -> Iterable[str]:
-        raise NotImplementedError
-
-    @property
-    def bundle_name(self) -> str | None:
-        raise NotImplementedError
-
-    @property
-    def description(self) -> str:
-        raise NotImplementedError
-
-    @property
-    def duplex(self) -> InterfaceDuplex:
-        raise NotImplementedError
-
-    @property
-    def enabled(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def has_nac(self) -> bool:
-        """Determine if the interface has NAC configured."""
-        raise NotImplementedError
+    _bundle_membership_prefix = "channel-group "
+    _encapsulation_prefix = "encapsulation dot1q vlan "
 
     @property
     def ipv4_interfaces(self) -> Iterable[IPv4Interface]:
-        raise NotImplementedError
-
-    @property
-    def is_bundle(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def is_loopback(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def is_subinterface(self) -> bool:
-        return "." in self.name
-
-    @property
-    def is_svi(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def module_number(self) -> int | None:
-        raise NotImplementedError
-
-    @property
-    def nac_control_direction_in(self) -> bool:
-        """Determine if the interface has NAC control direction in configured."""
-        raise NotImplementedError
-
-    @property
-    def nac_host_mode(self) -> NACHostMode | None:
-        """Determine the NAC host mode."""
-        raise NotImplementedError
-
-    @property
-    def nac_mab_first(self) -> bool:
-        """Determine if the interface has NAC configured for MAB first."""
-        raise NotImplementedError
-
-    @property
-    def nac_max_dot1x_clients(self) -> int:
-        """Determine the max dot1x clients."""
-        raise NotImplementedError
-
-    @property
-    def nac_max_mab_clients(self) -> int:
-        """Determine the max mab clients."""
-        raise NotImplementedError
-
-    @property
-    def name(self) -> str:
-        raise NotImplementedError
-
-    @property
-    def native_vlan(self) -> int | None:
-        raise NotImplementedError
-
-    @property
-    def number(self) -> str:
-        raise NotImplementedError
-
-    @property
-    def parent_name(self) -> str | None:
-        raise NotImplementedError
-
-    @property
-    def poe(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def port_number(self) -> int:
-        return int(self.name.split("/")[-1].split(".")[0])
-
-    @property
-    def speed(self) -> tuple[int, ...] | None:
-        raise NotImplementedError
-
-    @property
-    def subinterface_number(self) -> int | None:
-        raise NotImplementedError
-
-    @property
-    def tagged_all(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def tagged_vlans(self) -> tuple[int, ...]:
-        raise NotImplementedError
+        for ipv4_address_obj in self.config.get_children(startswith="ip address "):
+            if interface := parse_ipv4_interface(ipv4_address_obj.text.split()[2:]):
+                yield interface
 
     @property
     def vrf(self) -> str:
-        raise NotImplementedError
+        if vrf := self.config.get_child(startswith="vrf "):
+            words = vrf.text.split()
+            return words[2] if words[1] == "forwarding" else words[1]
+        return ""
 
     @property
     def _bundle_prefix(self) -> str:
-        raise NotImplementedError
+        return "Port-Channel"
 
 
 class HConfigViewAristaEOS(HConfigViewBase):
@@ -154,11 +47,6 @@ class HConfigViewAristaEOS(HConfigViewBase):
         return None
 
     @property
-    def interface_names_mentioned(self) -> frozenset[str]:
-        """Returns a set with all the interface names mentioned in the config."""
-        raise NotImplementedError
-
-    @property
     def interface_views(self) -> Iterable[ConfigViewInterfaceAristaEOS]:
         for interface in self.interfaces:
             yield ConfigViewInterfaceAristaEOS(interface)
@@ -169,16 +57,6 @@ class HConfigViewAristaEOS(HConfigViewBase):
 
     @property
     def ipv4_default_gw(self) -> IPv4Address | None:
-        raise NotImplementedError
-
-    @property
-    def location(self) -> str:
-        raise NotImplementedError
-
-    @property
-    def stack_members(self) -> Iterable[StackMember]:
-        raise NotImplementedError
-
-    @property
-    def vlans(self) -> Iterable[Vlan]:
-        raise NotImplementedError
+        if gateway := self.config.get_child(startswith="ip route 0.0.0.0/0 "):
+            return IPv4Address(gateway.text.split()[3])
+        return None
