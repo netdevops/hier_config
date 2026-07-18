@@ -195,8 +195,7 @@ class HConfigViewBase(ABC):
     """Abstract base providing a structured view over a full HConfig tree.
 
     Platform-specific subclasses (e.g. ``HConfigViewCiscoIOS``) implement
-    ``interface_views`` to yield :class:`ConfigViewInterfaceBase` objects and
-    ``dot1q_mode_from_vlans`` to interpret 802.1Q mode from VLAN data.
+    ``interface_views`` to yield :class:`ConfigViewInterfaceBase` objects.
     """
 
     def __init__(self, config: HConfig) -> None:
@@ -208,15 +207,21 @@ class HConfigViewBase(ABC):
             if interface_view.is_bundle:
                 yield interface_view
 
-    @abstractmethod
+    @staticmethod
     def dot1q_mode_from_vlans(
-        self,
         untagged_vlan: int | None = None,
         tagged_vlans: tuple[int, ...] = (),
         *,
         tagged_all: bool = False,
     ) -> InterfaceDot1qMode | None:
-        pass
+        """Derive the 802.1Q mode implied by the given VLAN membership data."""
+        if tagged_all:
+            return InterfaceDot1qMode.TAGGED_ALL
+        if tagged_vlans:
+            return InterfaceDot1qMode.TAGGED
+        if untagged_vlan is not None:
+            return InterfaceDot1qMode.ACCESS
+        return None
 
     @property
     @abstractmethod

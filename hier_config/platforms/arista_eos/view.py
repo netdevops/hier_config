@@ -3,7 +3,6 @@ from ipaddress import IPv4Address, IPv4Interface
 
 from hier_config.child import HConfigChild
 from hier_config.platforms.models import (
-    InterfaceDot1qMode,
     InterfaceDuplex,
     NACHostMode,
     StackMember,
@@ -147,15 +146,6 @@ class ConfigViewInterfaceAristaEOS(ConfigViewInterfaceBase):  # noqa: PLR0904
 
 class HConfigViewAristaEOS(HConfigViewBase):
     """Full-tree config view for Arista EOS."""
-
-    def dot1q_mode_from_vlans(
-        self,
-        untagged_vlan: int | None = None,
-        tagged_vlans: tuple[int, ...] = (),
-        *,
-        tagged_all: bool = False,
-    ) -> InterfaceDot1qMode | None:
-        raise NotImplementedError
 
     @property
     def hostname(self) -> str | None:

@@ -6,7 +6,6 @@ from hier_config.child import HConfigChild
 from hier_config.platforms.functions import expand_range
 from hier_config.platforms.hp_procurve.functions import hp_procurve_expand_range
 from hier_config.platforms.models import (
-    InterfaceDot1qMode,
     InterfaceDuplex,
     NACHostMode,
     StackMember,
@@ -236,15 +235,6 @@ def _duplex_from_speed_duplex(speed_duplex: str) -> InterfaceDuplex:
 
 class HConfigViewHPProcurve(HConfigViewBase):
     """Full-tree config view for HP ProCurve / Aruba AOSS."""
-
-    def dot1q_mode_from_vlans(
-        self,
-        untagged_vlan: int | None = None,
-        tagged_vlans: tuple[int, ...] = (),
-        *,
-        tagged_all: bool = False,
-    ) -> InterfaceDot1qMode | None:
-        raise NotImplementedError
 
     @property
     def hostname(self) -> str | None:

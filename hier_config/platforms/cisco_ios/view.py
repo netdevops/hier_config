@@ -5,7 +5,6 @@ from re import sub
 from hier_config.child import HConfigChild
 from hier_config.platforms.functions import expand_range
 from hier_config.platforms.models import (
-    InterfaceDot1qMode,
     InterfaceDuplex,
     NACHostMode,
     StackMember,
@@ -233,15 +232,6 @@ class ConfigViewInterfaceCiscoIOS(ConfigViewInterfaceBase):  # noqa: PLR0904
 
 class HConfigViewCiscoIOS(HConfigViewBase):
     """Full-tree config view for Cisco IOS / IOS-XE."""
-
-    def dot1q_mode_from_vlans(
-        self,
-        untagged_vlan: int | None = None,
-        tagged_vlans: tuple[int, ...] = (),
-        *,
-        tagged_all: bool = False,
-    ) -> InterfaceDot1qMode | None:
-        raise NotImplementedError
 
     @property
     def hostname(self) -> str | None:

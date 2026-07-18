@@ -489,15 +489,6 @@ def test_vrf_not_implemented() -> None:
         _ = interface_view.vrf
 
 
-def test_dot1q_mode_from_vlans_not_implemented() -> None:
-    """Test dot1q_mode_from_vlans raises NotImplementedError (covers line 173)."""
-    config = get_hconfig(Platform.CISCO_XR)
-    view = get_hconfig_view(config)
-
-    with pytest.raises(NotImplementedError):
-        view.dot1q_mode_from_vlans(untagged_vlan=10)
-
-
 def test_hostname() -> None:
     """Test hostname returns hostname (covers lines 177-179)."""
     config = get_hconfig(Platform.CISCO_XR)
