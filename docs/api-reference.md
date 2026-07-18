@@ -46,6 +46,8 @@ Auto-generated reference documentation for the `hier_config` public API.
 
 ::: hier_config.models.Platform
 
+::: hier_config.models.TextStyle
+
 ::: hier_config.models.MatchRule
 
 ::: hier_config.models.TagRule
