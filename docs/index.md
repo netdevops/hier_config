@@ -29,6 +29,7 @@
 | HP ProCurve (Aruba AOSS) | `Platform.HP_PROCURVE` | Fully supported |
 | HP Comware5 / H3C | `Platform.HP_COMWARE5` | Fully supported |
 | Juniper JunOS | `Platform.JUNIPER_JUNOS` | Experimental |
+| Nokia SRL | `Platform.NOKIA_SRL` | Experimental |
 | VyOS | `Platform.VYOS` | Experimental |
 | Generic | `Platform.GENERIC` | Base for custom drivers |
 

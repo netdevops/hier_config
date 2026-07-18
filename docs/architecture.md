@@ -111,6 +111,7 @@ A frozen Pydantic model holding lists of typed rule objects:
 | `HP_COMWARE5` | `HConfigDriverHPComware5` | `platforms/hp_comware5/driver.py` |
 | `HP_PROCURVE` | `HConfigDriverHPProcurve` | `platforms/hp_procurve/driver.py` |
 | `JUNIPER_JUNOS` | `HConfigDriverJuniperJUNOS` | `platforms/juniper_junos/driver.py` |
+| `NOKIA_SRL` | `HConfigDriverNokiaSRL` | `platforms/nokia_srl/driver.py` |
 | `VYOS` | `HConfigDriverVYOS` | `platforms/vyos/driver.py` |
 
 See [Drivers](drivers.md) for full documentation on customising or creating drivers.

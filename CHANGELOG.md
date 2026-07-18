@@ -11,14 +11,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `TextStyle` type alias (`Literal["without_comments", "merged", "with_comments"]`) for
-  the `style` parameter on `HConfigChild.cisco_style_text()` and
-  `RemediationReporter.to_text()`, replacing the unconstrained `str` type (#189).
-
-- Performance benchmarks for parsing, remediation, and iteration (#202).
-  Skipped by default; run with `poetry run pytest -m benchmark -v -s`.
-
-- Added support for Huawei VRP with a new driver and test suite (#238).
 - Custom exception hierarchy: `HierConfigError` base, `DriverNotFoundError`,
   `InvalidConfigError`, `IncompatibleDriverError` (#219). `DuplicateChildError`
   reparented under `HierConfigError`.
@@ -44,12 +36,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed `hconfig_v3_platform_v2_os_mapper()` function (#221).
 - Removed `load_hconfig_v2_options_from_file()` function (#221).
 
+---
+
+## [3.6.2] - 2026-07-13
+
+### Fixed
+
+- Cisco IOS-XR: the `indent_adjust` rule no longer misfires on the
+  `template data timeout` and `template options timeout` leaves inside a
+  `flow exporter-map` version block. Because no `end-template` follows these
+  leaves, the parser previously nested every subsequent configuration line
+  under them, silently collapsing the tree. Follow-up to #205 (#268).
+
+---
+
+## [3.6.1] - 2026-07-04
+
+### Added
+
+- Nokia SRL platform driver (`Platform.NOKIA_SRL`) (#245)
+
+### Changed
+
+- Renovate bot configuration (`.github/renovate.json`) to automate Poetry and
+  GitHub Actions dependency updates, with weekly lock-file maintenance, grouped
+  non-major updates, and immediate vulnerability alerts.
+
+### Fixed
+
+- Huawei VRP: parsing configs with multiple `peer-public-key` blocks no longer
+  raises `DuplicateChildError`. The closing `peer-public-key end` line (printed
+  at the same indent as the opening `rsa/dsa/ecc peer-public-key ...` line) is
+  now nested under its opener via an `IndentAdjustRule` (#266).
+
+- Collapsed VLAN lines can produce a destructive `no vlan x,y` remediation in Cisco IOS (#264, #265).
+
+---
+
+## [3.6.0] - 2026-03-26
+
+### Added
+
+- `TextStyle` type alias (`Literal["without_comments", "merged", "with_comments"]`) for
+  the `style` parameter on `HConfigChild.cisco_style_text()` and
+  `RemediationReporter.to_text()`, replacing the unconstrained `str` type (#189).
+
+- Performance benchmarks for parsing, remediation, and iteration (#202).
+  Skipped by default; run with `poetry run pytest -m benchmark -v -s`.
+
+- Added support for Huawei VRP with a new driver and test suite (#238).
+
 ### Fixed
 
 - `DuplicateChildError` raised when parsing IOS-XR configs with indented `!` section
   separators (e.g., ` !`, `  !`). The `per_line_sub` regex was changed from `^!\s*$`
   to `^\s*!\s*$` so bare `!` lines at any indentation level are stripped, restoring
   v3.4.2 behavior (#231).
+
+- `__hash__` and `__eq__` inconsistency in `HConfigChild`: `__hash__` included
+  `new_in_config` and `order_weight` but `__eq__` excluded them, and `__eq__` checked
+  `tags` but `__hash__` did not, violating the Python invariant that `a == b` implies
+  `hash(a) == hash(b)`. Both methods now use the same fields: `text`, `tags`, and
+  `children` (#185).
 
 ---
 
@@ -250,7 +298,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/netdevops/hier_config/compare/v3.4.1...HEAD
+[Unreleased]: https://github.com/netdevops/hier_config/compare/v3.6.0...HEAD
+[3.6.0]: https://github.com/netdevops/hier_config/compare/v3.5.1...v3.6.0
+[3.5.1]: https://github.com/netdevops/hier_config/compare/v3.5.0...v3.5.1
+[3.5.0]: https://github.com/netdevops/hier_config/compare/v3.4.3...v3.5.0
+[3.4.3]: https://github.com/netdevops/hier_config/compare/v3.4.2...v3.4.3
+[3.4.2]: https://github.com/netdevops/hier_config/compare/v3.4.1...v3.4.2
 [3.4.1]: https://github.com/netdevops/hier_config/compare/v3.4.0...v3.4.1
 [3.4.0]: https://github.com/netdevops/hier_config/compare/v3.3.0...v3.4.0
 [3.3.0]: https://github.com/netdevops/hier_config/compare/v3.2.2...v3.3.0

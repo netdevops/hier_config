@@ -34,11 +34,13 @@ The following drivers are included in Hier Config:
 - **CISCO_IOS**
 - **CISCO_XR**
 - **CISCO_NXOS**
-- **GENERIC**
 - **FORTINET_FORTIOS**
+- **GENERIC**
 - **HP_COMWARE5**
 - **HP_PROCURVE**
+- **HUAWEI_VRP**
 - **JUNIPER_JUNOS**
+- **NOKIA_SRL**
 - **VYOS**
 
 To activate a driver, use the `get_hconfig_driver` utility provided by Hier Config:
@@ -58,6 +60,7 @@ Cisco IOS is hier_config's primary reference platform and the most thoroughly te
 - **Negation**: standard `no ` [negation prefix](glossary.md#negation-prefix). Several commands (such as `logging console`) use [`NegationDefaultWithRule`](glossary.md#negation-negate-with) overrides to emit a specific reset form.
 - **[Sectional exiting](glossary.md#sectional-exiting)**: BGP `peer-policy` and `peer-session` blocks require `exit-peer-policy` and `exit-peer-session` closure tokens.
 - **Per-line substitutions**: strips `Building configuration…` banners and timestamp headers.
+- **VLAN id list splitting**: IOS can render unnamed VLANs collapsed onto a single comma/range line (e.g. `vlan 69,381`, `vlan 10-12`), depending on how the VLANs were created — named VLANs always get their own block, and the grouping shifts as VLANs are named or unnamed. When such a collapsed line is present, a post-load callback splits it into one `vlan <id>` block each so the VLANs diff block-to-block against an intended config that lists them separately — avoiding a destructive `no vlan 69,381`.
 
 Platform enum: `Platform.CISCO_IOS`
 
@@ -139,6 +142,38 @@ Platform enum: `Platform.VYOS`
 from hier_config import Platform, get_hconfig_driver
 
 driver = get_hconfig_driver(Platform.VYOS)
+```
+
+---
+
+### Nokia SRL (Service Router Linux) Driver
+
+Nokia SR Linux uses `set` and `delete` command syntax, similar to VyOS and JunOS. The driver converts hierarchical SRL configuration (from `info` output) into flat `set`/`delete` commands via a preprocessor.
+
+> **Experimental:** Nokia SRL support has not been tested extensively in production environments. Use with caution.
+
+- **[Declaration prefix](glossary.md#declaration-prefix)**: `set ` (prepended to each positive command).
+- **[Negation prefix](glossary.md#negation-prefix)**: `delete ` (replaces `no `).
+
+Platform enum: `Platform.NOKIA_SRL`
+
+```python
+from hier_config import Platform, get_hconfig_driver
+
+driver = get_hconfig_driver(Platform.NOKIA_SRL)
+```
+
+**Remediation example:**
+
+```python
+from hier_config import WorkflowRemediation, get_hconfig, Platform
+
+running = get_hconfig(Platform.NOKIA_SRL, running_text)
+intended = get_hconfig(Platform.NOKIA_SRL, intended_text)
+workflow = WorkflowRemediation(running, intended)
+
+for line in workflow.remediation_config.all_children_sorted():
+    print(line.indented_text())
 ```
 
 ---
@@ -236,6 +271,38 @@ from hier_config import WorkflowRemediation, get_hconfig, Platform
 
 running = get_hconfig(Platform.HP_COMWARE5, running_text)
 intended = get_hconfig(Platform.HP_COMWARE5, intended_text)
+workflow = WorkflowRemediation(running, intended)
+
+for line in workflow.remediation_config.all_children_sorted():
+    print(line.indented_text())
+```
+
+---
+
+### Huawei VRP Driver
+
+Huawei VRP (Versatile Routing Platform) uses `undo` as the negation prefix rather than `no`. The `HUAWEI_VRP` driver customises negation handling for several command families:
+
+- **[Negation prefix](glossary.md#negation-prefix)**: `undo ` (replaces `no `).
+- **Smart negation**: `description` and `alias` commands are negated without their argument; `remark` commands strip the remark text; `snmp-agent community` commands truncate to the community name.
+- **Sectional exiting**: section exit text `exit` is translated to `quit` as VRP requires.
+- **Per-line substitutions**: strips `#` and `!` comment lines during parsing.
+
+Platform enum: `Platform.HUAWEI_VRP`
+
+```python
+from hier_config import Platform, get_hconfig_driver
+
+driver = get_hconfig_driver(Platform.HUAWEI_VRP)
+```
+
+**Remediation example:**
+
+```python
+from hier_config import WorkflowRemediation, get_hconfig, Platform
+
+running = get_hconfig(Platform.HUAWEI_VRP, running_text)
+intended = get_hconfig(Platform.HUAWEI_VRP, intended_text)
 workflow = WorkflowRemediation(running, intended)
 
 for line in workflow.remediation_config.all_children_sorted():

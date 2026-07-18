@@ -1,7 +1,7 @@
 import re
 
 from hier_config.child import HConfigChild
-from hier_config.models import PerLineSubRule
+from hier_config.models import IndentAdjustRule, PerLineSubRule
 from hier_config.platforms.driver_base import HConfigDriverBase, HConfigDriverRules
 
 
@@ -46,6 +46,17 @@ class HConfigDriverHuaweiVrp(HConfigDriverBase):
     @staticmethod
     def _instantiate_rules() -> HConfigDriverRules:
         return HConfigDriverRules(
+            indent_adjust=[
+                # Huawei prints public-key blocks with the closing
+                # ``peer-public-key end`` line at the same indentation as the
+                # opening ``(rsa|dsa|ecc) peer-public-key ...`` line. Nest the
+                # whole block under its opener so multiple keys don't collide as
+                # duplicate root-level ``peer-public-key end`` children.
+                IndentAdjustRule(
+                    start_expression="^\\s*(rsa|dsa|ecc) peer-public-key ",
+                    end_expression="^\\s*peer-public-key end",
+                ),
+            ],
             per_line_sub=[
                 PerLineSubRule(search="^\\s*[#!].*", replace=""),
             ],
