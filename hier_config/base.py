@@ -479,8 +479,10 @@ class HConfigBase(ABC):  # noqa: PLR0904
                 if self_child.use_sectional_overwrite_without_negation():
                     self_child.overwrite_with(target_child, delta, negate=False)
                     continue
-                # This creates a new HConfigChild object just in case there are some delta children.
-                # This is not very efficient, think of a way to not do this.
+                # Matched leaves can never produce delta lines - neither pass
+                # has children to visit - so skip the subtree allocation (#191).
+                if not (self_child.children or target_child.children):
+                    continue
                 subtree = delta.instantiate_child(target_child.text)
                 self_child._remediation(target_child, subtree)  # noqa: SLF001
                 if subtree.children:

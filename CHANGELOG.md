@@ -17,6 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Remediation right pass no longer allocates a probe `HConfigChild` for matched
+  leaf lines, where the delta subtree is provably empty. Speeds up remediation
+  of mostly-identical configs by ~30% and resolves the long-standing TODO in
+  `_remediation_right()` (#191).
 - `HConfigBase.__len__()` now counts descendants with a generator instead of
   materializing a tuple of every node, avoiding a large temporary allocation on
   big configuration trees (#188).
