@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Custom exception hierarchy: `HierConfigError` base, `DriverNotFoundError`,
   `InvalidConfigError`, `IncompatibleDriverError` (#219). `DuplicateChildError`
   reparented under `HierConfigError`.
+- `view_class` attribute on `HConfigDriverBase`: drivers now declare their own
+  config view, so custom drivers can register or override views (#187, #229).
 
 ### Changed
 
@@ -21,9 +23,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   leaf lines, where the delta subtree is provably empty. Speeds up remediation
   of mostly-identical configs by ~30% and resolves the long-standing TODO in
   `_remediation_right()` (#191).
+- `get_hconfig_view()` resolves the view from the driver's `view_class`
+  attribute instead of a hardcoded `isinstance` chain; drivers without a view
+  raise `DriverNotFoundError` with a `No view registered for driver` message (#187).
 - `HConfigBase.__len__()` now counts descendants with a generator instead of
   materializing a tuple of every node, avoiding a large temporary allocation on
   big configuration trees (#188).
+- `dot1q_mode_from_vlans()` is now a concrete static method on `HConfigViewBase`
+  implementing the same semantics as `ConfigViewInterfaceBase.dot1q_mode`
+  (`tagged_all` → `TAGGED_ALL`, tagged VLANs → `TAGGED`, untagged only →
+  `ACCESS`); the per-platform `NotImplementedError` stubs were removed (#228).
 - Changed `style` parameter on `indented_text()` and `RemediationReporter.to_text()` from `str` to `Literal["without_comments", "merged", "with_comments"]` via new `TextStyle` type alias (#189).
 - Renamed `load_hconfig_v2_options` to `load_driver_rules` (#221).
 - Renamed `load_hconfig_v2_tags` to `load_tag_rules` (#221).

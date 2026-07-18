@@ -14,6 +14,7 @@ from hier_config.models import (
     SectionalOverwriteNoNegateRule,
     SectionalOverwriteRule,
 )
+from hier_config.platforms.cisco_xr.view import HConfigViewCiscoIOSXR
 from hier_config.platforms.driver_base import HConfigDriverBase, HConfigDriverRules
 
 if TYPE_CHECKING:
@@ -49,6 +50,8 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
     duplicate-child allowances inside ``route-policy`` blocks.
     Platform enum: ``Platform.CISCO_XR``.
     """
+
+    view_class = HConfigViewCiscoIOSXR
 
     def idempotent_for(
         self,

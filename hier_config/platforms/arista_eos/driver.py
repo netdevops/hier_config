@@ -5,6 +5,7 @@ from hier_config.models import (
     PerLineSubRule,
     SectionalExitingRule,
 )
+from hier_config.platforms.arista_eos.view import HConfigViewAristaEOS
 from hier_config.platforms.driver_base import HConfigDriverBase, HConfigDriverRules
 
 
@@ -16,6 +17,8 @@ class HConfigDriverAristaEOS(HConfigDriverBase):
     and a comprehensive set of idempotency rules for interface, BGP, and OSPF
     commands.  Platform enum: ``Platform.ARISTA_EOS``.
     """
+
+    view_class = HConfigViewAristaEOS
 
     @staticmethod
     def _instantiate_rules() -> HConfigDriverRules:

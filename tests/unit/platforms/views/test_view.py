@@ -171,3 +171,51 @@ def test_interface_view_abstract_properties_coverage() -> None:
     assert hasattr(HConfigViewBase, "location")
     assert hasattr(HConfigViewBase, "stack_members")
     assert hasattr(HConfigViewBase, "vlans")
+
+
+def test_dot1q_mode_from_vlans_tagged_all() -> None:
+    """tagged_all wins over any other VLAN data (#228)."""
+    view = get_hconfig_view(get_hconfig(Platform.CISCO_IOS))
+    assert (
+        view.dot1q_mode_from_vlans(
+            untagged_vlan=10, tagged_vlans=(20,), tagged_all=True
+        )
+        == InterfaceDot1qMode.TAGGED_ALL
+    )
+
+
+def test_dot1q_mode_from_vlans_tagged() -> None:
+    """Explicit tagged VLANs mean TAGGED mode (#228)."""
+    view = get_hconfig_view(get_hconfig(Platform.CISCO_IOS))
+    assert (
+        view.dot1q_mode_from_vlans(tagged_vlans=(20, 30)) == InterfaceDot1qMode.TAGGED
+    )
+    assert (
+        view.dot1q_mode_from_vlans(untagged_vlan=10, tagged_vlans=(20, 30))
+        == InterfaceDot1qMode.TAGGED
+    )
+
+
+def test_dot1q_mode_from_vlans_access() -> None:
+    """An untagged VLAN alone means ACCESS mode (#228)."""
+    view = get_hconfig_view(get_hconfig(Platform.CISCO_IOS))
+    assert view.dot1q_mode_from_vlans(untagged_vlan=10) == InterfaceDot1qMode.ACCESS
+
+
+def test_dot1q_mode_from_vlans_none() -> None:
+    """No VLAN data means no 802.1Q mode (#228)."""
+    view = get_hconfig_view(get_hconfig(Platform.CISCO_IOS))
+    assert view.dot1q_mode_from_vlans() is None
+
+
+def test_dot1q_mode_from_vlans_available_on_all_views() -> None:
+    """Every platform view shares the base implementation (#228)."""
+    for platform in (
+        Platform.ARISTA_EOS,
+        Platform.CISCO_IOS,
+        Platform.CISCO_NXOS,
+        Platform.CISCO_XR,
+        Platform.HP_PROCURVE,
+    ):
+        view = get_hconfig_view(get_hconfig(platform))
+        assert view.dot1q_mode_from_vlans(untagged_vlan=1) == InterfaceDot1qMode.ACCESS

@@ -5,15 +5,6 @@ import pytest
 from hier_config import Platform, get_hconfig, get_hconfig_view
 
 
-def test_dot1q_mode_from_vlans_not_implemented() -> None:
-    """Test dot1q_mode_from_vlans raises NotImplementedError (covers line 154)."""
-    config = get_hconfig(Platform.ARISTA_EOS)
-    view = get_hconfig_view(config)
-
-    with pytest.raises(NotImplementedError):
-        view.dot1q_mode_from_vlans(untagged_vlan=10)
-
-
 def test_hostname() -> None:
     """Test hostname returns hostname (covers lines 158-160)."""
     config = get_hconfig(Platform.ARISTA_EOS)

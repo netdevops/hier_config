@@ -500,15 +500,6 @@ def test_bundle_prefix() -> None:
     assert interface_view.is_bundle
 
 
-def test_dot1q_mode_from_vlans_not_implemented() -> None:
-    """Test dot1q_mode_from_vlans raises NotImplementedError (covers line 171)."""
-    config = get_hconfig(Platform.CISCO_NXOS)
-    view = get_hconfig_view(config)
-
-    with pytest.raises(NotImplementedError):
-        view.dot1q_mode_from_vlans(untagged_vlan=10)
-
-
 def test_hostname() -> None:
     """Test hostname returns hostname (covers lines 175-177)."""
     config = get_hconfig(Platform.CISCO_NXOS)

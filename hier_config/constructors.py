@@ -10,18 +10,13 @@ from .child import HConfigChild
 from .exceptions import DriverNotFoundError, InvalidConfigError
 from .models import Dump, Platform
 from .platforms.arista_eos.driver import HConfigDriverAristaEOS
-from .platforms.arista_eos.view import HConfigViewAristaEOS
 from .platforms.cisco_ios.driver import HConfigDriverCiscoIOS
-from .platforms.cisco_ios.view import HConfigViewCiscoIOS
 from .platforms.cisco_nxos.driver import HConfigDriverCiscoNXOS
-from .platforms.cisco_nxos.view import HConfigViewCiscoNXOS
 from .platforms.cisco_xr.driver import HConfigDriverCiscoIOSXR
-from .platforms.cisco_xr.view import HConfigViewCiscoIOSXR
 from .platforms.fortinet_fortios.driver import HConfigDriverFortinetFortiOS
 from .platforms.generic.driver import HConfigDriverGeneric
 from .platforms.hp_comware5.driver import HConfigDriverHPComware5
 from .platforms.hp_procurve.driver import HConfigDriverHPProcurve
-from .platforms.hp_procurve.view import HConfigViewHPProcurve
 from .platforms.huawei_vrp.driver import HConfigDriverHuaweiVrp
 from .platforms.juniper_junos.driver import HConfigDriverJuniperJUNOS
 from .platforms.nokia_srl.driver import HConfigDriverNokiaSRL
@@ -58,23 +53,15 @@ def get_hconfig_driver(platform: Platform) -> HConfigDriverBase:
 
 
 def get_hconfig_view(config: HConfig) -> HConfigViewBase:
-    """Instantiates the appropriate HConfigView.
+    """Instantiates the HConfigView declared by the config's driver.
 
-    If you implement your own HConfigView, you will likely need to create a function like this one locally.
+    Drivers declare their view via the `view_class` attribute, so a custom
+    driver can register its own view by setting `view_class` on the subclass.
     """
-    driver = config.driver
-    if isinstance(driver, HConfigDriverAristaEOS):
-        return HConfigViewAristaEOS(config)
-    if isinstance(driver, HConfigDriverCiscoIOS):
-        return HConfigViewCiscoIOS(config)
-    if isinstance(driver, HConfigDriverCiscoNXOS):
-        return HConfigViewCiscoNXOS(config)
-    if isinstance(driver, HConfigDriverCiscoIOSXR):
-        return HConfigViewCiscoIOSXR(config)
-    if isinstance(driver, HConfigDriverHPProcurve):
-        return HConfigViewHPProcurve(config)
+    if view_class := config.driver.view_class:
+        return view_class(config)
 
-    message = f"Unsupported platform: {config.driver.__class__.__name__}"
+    message = f"No view registered for driver: {config.driver.__class__.__name__}"
     raise DriverNotFoundError(message)
 
 
