@@ -627,3 +627,12 @@ def test_vlans_from_interfaces() -> None:
     vlans = list(view.vlans)
 
     assert any(v.id == 100 for v in vlans)
+
+
+def test_port_number_on_bundle_interface() -> None:
+    """port_number must not crash on slash-less names like Port-channel10 (#278 review)."""
+    config = HConfig.from_text(Platform.CISCO_IOS, "interface Port-channel10\n")
+    view = get_hconfig_view(config)
+    interface_view = view.interface_view_by_name("Port-channel10")
+    assert interface_view is not None
+    assert interface_view.port_number == 10

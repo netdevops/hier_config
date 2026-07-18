@@ -31,7 +31,11 @@ def get_hconfig_view(config: HConfig) -> HConfigViewBase:
 
 
 def _detect_structured_format(config_text: str) -> str | None:
-    """Detect structured config formats that the text parser cannot ingest (#232)."""
+    """Detect structured config formats that the text parser cannot ingest (#232).
+
+    Only guards the from_text() path; from_lines() assumes pre-processed CLI
+    lines and performs no detection.
+    """
     stripped = config_text.lstrip()
     if stripped.startswith("<"):
         return "XML"

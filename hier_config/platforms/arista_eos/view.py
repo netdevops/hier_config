@@ -105,7 +105,7 @@ class ConfigViewInterfaceAristaEOS(
 
     @property
     def port_number(self) -> int:
-        return int(self.name.split("/")[-1].split(".")[0])
+        return int(self.number.split("/")[-1].split(".")[0])
 
     @property
     def tagged_all(self) -> bool:

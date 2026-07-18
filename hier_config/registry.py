@@ -3,6 +3,9 @@
 Built-in drivers are registered at import time. Users can register drivers for
 custom platforms (by string name), override built-in drivers, and restore
 built-in defaults by unregistering the override.
+
+The registry is not synchronized; register drivers at application startup,
+before configs are parsed concurrently.
 """
 
 from hier_config.exceptions import DriverNotFoundError

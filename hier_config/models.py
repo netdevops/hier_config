@@ -2,7 +2,7 @@ from enum import Enum, auto
 from typing import Literal
 
 from pydantic import BaseModel as PydanticBaseModel
-from pydantic import ConfigDict, NonNegativeInt, PositiveInt
+from pydantic import ConfigDict, NonNegativeInt, PositiveInt, model_validator
 
 TextStyle = Literal["without_comments", "merged", "with_comments"]
 
@@ -142,8 +142,10 @@ class NegationRule(BaseModel):
 
     Replaces the former ``NegationDefaultWithRule`` (``strategy=REPLACE``),
     ``NegationDefaultWhenRule`` (``strategy=DEFAULT``), and ``NegationSubRule``
-    (``strategy=REGEX_SUB``). Rules are evaluated in list order; the first
-    matching rule wins.
+    (``strategy=REGEX_SUB``). REPLACE rules are consulted first (via
+    ``driver.negate_with()``, which imperative driver overrides also hook
+    into); the remaining rules are then evaluated in list order and the
+    first matching rule wins.
 
     For ``REGEX_SUB``, the regex is applied to the **already-negated** text
     (with the negation prefix prepended) and ``replace`` supports
@@ -155,6 +157,16 @@ class NegationRule(BaseModel):
     use: str = ""
     search: str = ""
     replace: str = ""
+
+    @model_validator(mode="after")
+    def _validate_strategy_fields(self) -> "NegationRule":
+        if self.strategy is NegationStrategy.REPLACE and not self.use:
+            message = "REPLACE strategy requires `use`"
+            raise ValueError(message)
+        if self.strategy is NegationStrategy.REGEX_SUB and not self.search:
+            message = "REGEX_SUB strategy requires `search`"
+            raise ValueError(message)
+        return self
 
 
 class ReferenceLocation(BaseModel):

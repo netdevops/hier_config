@@ -168,7 +168,7 @@ class ConfigViewInterfaceHPProcurve(  # noqa: PLR0904
 
     @property
     def port_number(self) -> int:
-        return int(self.name.split("/")[-1].split(".")[0])
+        return int(self.number.split("/")[-1].split(".")[0])
 
     @property
     def speed(self) -> tuple[int, ...] | None:

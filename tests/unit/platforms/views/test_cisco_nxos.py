@@ -435,3 +435,12 @@ def test_vlans() -> None:
         Vlan(id=30, name=None),
     ]
     assert view.vlan_ids == frozenset({10, 20, 30})
+
+
+def test_port_number_on_bundle_interface() -> None:
+    """port_number must not crash on slash-less names like port-channel10 (#278 review)."""
+    config = HConfig.from_text(Platform.CISCO_NXOS, "interface port-channel10\n")
+    view = get_hconfig_view(config)
+    interface_view = view.interface_view_by_name("port-channel10")
+    assert interface_view is not None
+    assert interface_view.port_number == 10

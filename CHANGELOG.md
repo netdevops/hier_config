@@ -54,6 +54,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   transforms outside hier_config and apply them per workflow.
 - Root-level duplicate children (#215): a `ParentAllowsDuplicateChildRule`
   with empty `match_rules` now applies to the root `HConfig`.
+- `NegationRule` validates its per-strategy fields at construction time:
+  `REPLACE` requires `use` and `REGEX_SUB` requires `search` (#220).
 - Structured config format detection (#232): `HConfig.from_text()` rejects XML
   and JSON input with a clear `InvalidConfigError`; set-style configs remain
   natively supported via the JunOS, VyOS, and Nokia SRL driver preprocessors.
@@ -110,6 +112,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `port_number` no longer raises `ValueError` on slash-less interface names
+  such as `Port-channel10`, `port-channel10`, `Bundle-Ether10`, and `Trk1`;
+  it now derives from the letter-stripped `number` property on all platform
+  views (IOS, EOS, NX-OS, XR, ProCurve).
 - Fortinet FortiOS: hardened `swap_negation()` and `idempotent_for()` against
   `IndexError` on degenerate single-word commands, and documented that dropping
   parameters when negating (`set description "Port 1"` → `unset description`) is
