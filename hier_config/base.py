@@ -36,7 +36,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
         self.children = HConfigChildren()
 
     def __len__(self) -> int:
-        return len(tuple(self.all_children()))
+        return sum(1 for _ in self.all_children())
 
     def __bool__(self) -> bool:
         return True

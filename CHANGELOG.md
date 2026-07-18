@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `get_hconfig_view()` resolves the view from the driver's `view_class`
   attribute instead of a hardcoded `isinstance` chain; drivers without a view
   raise `DriverNotFoundError` with a `No view registered for driver` message (#187).
+- `HConfigBase.__len__()` now counts descendants with a generator instead of
+  materializing a tuple of every node, avoiding a large temporary allocation on
+  big configuration trees (#188).
 - Changed `style` parameter on `indented_text()` and `RemediationReporter.to_text()` from `str` to `Literal["without_comments", "merged", "with_comments"]` via new `TextStyle` type alias (#189).
 - Renamed `load_hconfig_v2_options` to `load_driver_rules` (#221).
 - Renamed `load_hconfig_v2_tags` to `load_tag_rules` (#221).
@@ -37,6 +40,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed `hconfig_v2_os_v3_platform_mapper()` function (#221).
 - Removed `hconfig_v3_platform_v2_os_mapper()` function (#221).
 - Removed `load_hconfig_v2_options_from_file()` function (#221).
+
+### Fixed
+
+- Fortinet FortiOS: hardened `swap_negation()` and `idempotent_for()` against
+  `IndexError` on degenerate single-word commands, and documented that dropping
+  parameters when negating (`set description "Port 1"` → `unset description`) is
+  intentional FortiOS semantics (#225).
 
 ---
 
