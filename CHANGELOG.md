@@ -48,6 +48,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to `^\s*!\s*$` so bare `!` lines at any indentation level are stripped, restoring
   v3.4.2 behavior (#231).
 
+- Fortinet FortiOS: hardened `swap_negation()` and `idempotent_for()` against
+  `IndexError` on degenerate single-word commands, and documented that dropping
+  parameters when negating (`set description "Port 1"` → `unset description`) is
+  intentional FortiOS semantics (#225).
+
 ---
 
 ## [3.5.0] - 2026-03-19
