@@ -11,6 +11,7 @@ from hier_config.models import (
 )
 from hier_config.platforms.driver_base import HConfigDriverBase, HConfigDriverRules
 from hier_config.platforms.hp_procurve.functions import hp_procurve_expand_range
+from hier_config.platforms.hp_procurve.view import HConfigViewHPProcurve
 from hier_config.root import HConfig
 
 
@@ -120,6 +121,8 @@ class HConfigDriverHPProcurve(HConfigDriverBase):
     port-access interface ranges, and split device-profile tagged-VLAN lists.
     Platform enum: ``Platform.HP_PROCURVE``.
     """
+
+    view_class = HConfigViewHPProcurve
 
     def idempotent_for(
         self,

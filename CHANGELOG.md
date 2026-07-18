@@ -14,9 +14,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Custom exception hierarchy: `HierConfigError` base, `DriverNotFoundError`,
   `InvalidConfigError`, `IncompatibleDriverError` (#219). `DuplicateChildError`
   reparented under `HierConfigError`.
+- `view_class` attribute on `HConfigDriverBase`: drivers now declare their own
+  config view, so custom drivers can register or override views (#187, #229).
 
 ### Changed
 
+- `get_hconfig_view()` resolves the view from the driver's `view_class`
+  attribute instead of a hardcoded `isinstance` chain; drivers without a view
+  raise `DriverNotFoundError` with a `No view registered for driver` message (#187).
 - `HConfigBase.__len__()` now counts descendants with a generator instead of
   materializing a tuple of every node, avoiding a large temporary allocation on
   big configuration trees (#188).

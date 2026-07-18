@@ -20,6 +20,12 @@ from hier_config.constructors import (
 )
 from hier_config.exceptions import DriverNotFoundError, InvalidConfigError
 from hier_config.models import Platform
+from hier_config.platforms.arista_eos.view import HConfigViewAristaEOS
+from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
+from hier_config.platforms.cisco_ios.view import HConfigViewCiscoIOS
+from hier_config.platforms.cisco_nxos.view import HConfigViewCiscoNXOS
+from hier_config.platforms.cisco_xr.view import HConfigViewCiscoIOSXR
+from hier_config.platforms.hp_procurve.view import HConfigViewHPProcurve
 from hier_config.root import HConfig
 
 
@@ -32,13 +38,57 @@ def test_get_hconfig_driver_unsupported_platform() -> None:
 
 
 def test_get_hconfig_view_unsupported_platform() -> None:
-    """Test DriverNotFoundError when platform is not supported (lines 72-73)."""
+    """Test DriverNotFoundError when the driver declares no view."""
     driver = get_hconfig_driver(Platform.FORTINET_FORTIOS)
     config = HConfig(driver=driver)
     with pytest.raises(
-        DriverNotFoundError, match="Unsupported platform: HConfigDriverFortinetFortiOS"
+        DriverNotFoundError,
+        match="No view registered for driver: HConfigDriverFortinetFortiOS",
     ):
         get_hconfig_view(config)
+
+
+def test_get_hconfig_view_dispatches_on_driver_view_class() -> None:
+    """Each built-in driver with a view resolves it via view_class (#187)."""
+    for platform, view_cls in (
+        (Platform.ARISTA_EOS, HConfigViewAristaEOS),
+        (Platform.CISCO_IOS, HConfigViewCiscoIOS),
+        (Platform.CISCO_NXOS, HConfigViewCiscoNXOS),
+        (Platform.CISCO_XR, HConfigViewCiscoIOSXR),
+        (Platform.HP_PROCURVE, HConfigViewHPProcurve),
+    ):
+        config = HConfig(driver=get_hconfig_driver(platform))
+        view = get_hconfig_view(config)
+        assert isinstance(view, view_cls)
+
+
+def test_get_hconfig_view_inherited_by_driver_subclass() -> None:
+    """A driver subclass inherits its parent's view_class (#187)."""
+
+    class ExtendedIOSDriver(HConfigDriverCiscoIOS):
+        """Driver subclass without its own view_class."""
+
+    config = HConfig(driver=ExtendedIOSDriver())
+    view = get_hconfig_view(config)
+
+    assert isinstance(view, HConfigViewCiscoIOS)
+
+
+def test_get_hconfig_view_custom_driver_view_class() -> None:
+    """A user-defined driver can supply its own view via view_class (#187, #229)."""
+
+    class CustomView(HConfigViewCiscoIOS):
+        """User-defined view."""
+
+    class CustomDriver(HConfigDriverCiscoIOS):
+        """User-defined driver registering its own view."""
+
+        view_class = CustomView
+
+    config = HConfig(driver=CustomDriver())
+    view = get_hconfig_view(config)
+
+    assert isinstance(view, CustomView)
 
 
 def test_get_hconfig_from_path() -> None:
