@@ -546,3 +546,114 @@ def test_remediation_does_not_mutate_inputs() -> None:
 
     assert running_config.to_lines() == running_before
     assert generated_config.to_lines() == generated_before
+
+
+def test_future_value_carrying_negation_on_idempotent_line() -> None:
+    """A negation matching an existing line removes it and does not survive (#269)."""
+    running_config = HConfig.from_text(
+        Platform.ARISTA_EOS,
+        "router bgp 65000\n"
+        "   neighbor 10.0.0.1 peer group PEERS\n"
+        "   neighbor 10.0.0.1 description spine1\n",
+    )
+    change = HConfig.from_text(
+        Platform.ARISTA_EOS,
+        "router bgp 65000\n"
+        " no neighbor 10.0.0.1 peer group PEERS\n"
+        " no neighbor 10.0.0.1 description spine1\n",
+    )
+    future_config = running_config.future(change)
+
+    assert future_config.to_lines() == ("router bgp 65000",)
+
+
+def test_future_value_differing_negation_replaces_via_idempotency() -> None:
+    """A stale-valued negation displaces the tracked line but stays visible.
+
+    Idempotency rules declare interchangeable forms of one setting, so the
+    negation replaces the matched line; keeping it in the render preserves
+    the did-not-apply-cleanly signal (#269).
+    """
+    running_config = HConfig.from_text(
+        Platform.ARISTA_EOS,
+        "router bgp 65000\n   neighbor 10.0.0.1 description spine1\n",
+    )
+    change = HConfig.from_text(
+        Platform.ARISTA_EOS,
+        "router bgp 65000\n no neighbor 10.0.0.1 description stale-value\n",
+    )
+    future_config = running_config.future(change)
+
+    assert future_config.to_lines() == (
+        "router bgp 65000",
+        "  no neighbor 10.0.0.1 description stale-value",
+    )
+
+
+def test_future_bare_shorthand_negation_removes_valued_line() -> None:
+    """`no description` removes `description foo` as devices do (#269)."""
+    running_config = HConfig.from_text(
+        Platform.ARISTA_EOS,
+        "interface Ethernet1\n"
+        "   description foo\n"
+        "   switchport access vlan 10\n",
+    )
+    change = HConfig.from_text(
+        Platform.ARISTA_EOS, "interface Ethernet1\n no description\n"
+    )
+    future_config = running_config.future(change)
+
+    assert future_config.to_lines() == (
+        "interface Ethernet1",
+        "  switchport access vlan 10",
+    )
+
+
+def test_future_unmatched_negation_is_kept_as_signal() -> None:
+    """A negation matching nothing still surfaces in the render (#269)."""
+    running_config = HConfig.from_text(
+        Platform.ARISTA_EOS, "interface Ethernet1\n   switchport access vlan 10\n"
+    )
+    change = HConfig.from_text(
+        Platform.ARISTA_EOS, "interface Ethernet1\n no description\n"
+    )
+    future_config = running_config.future(change)
+
+    assert future_config.to_lines() == (
+        "interface Ethernet1",
+        "  no description",
+        "  switchport access vlan 10",
+    )
+
+
+def test_future_prune_emptied_parents() -> None:
+    """Removing the last child can prune the emptied ancestors (#269)."""
+    running_config = HConfig.from_text(
+        Platform.CISCO_XR,
+        "router static\n address-family ipv4 unicast\n  192.0.2.0/24 Null0\n",
+    )
+    change = HConfig.from_text(
+        Platform.CISCO_XR,
+        "router static\n address-family ipv4 unicast\n  no 192.0.2.0/24 Null0\n",
+    )
+
+    assert running_config.future(change, prune_empty_branches=True).to_lines() == ()
+    # Default keeps the emptied parents (spurious-diff behavior is opt-out only).
+    assert running_config.future(change).to_lines() == (
+        "router static",
+        "  address-family ipv4 unicast",
+    )
+
+
+def test_future_prune_keeps_originally_empty_parents() -> None:
+    """Pruning only removes parents that had children in the running config (#269)."""
+    running_config = HConfig.from_text(
+        Platform.CISCO_XR, "interface GigabitEthernet0/0/0/0\n"
+    )
+    change = HConfig.from_text(Platform.CISCO_XR, "hostname r1\n")
+    future_config = running_config.future(change, prune_empty_branches=True)
+
+    assert future_config.to_lines() == (
+        "hostname r1",
+        "interface GigabitEthernet0/0/0/0",
+    )

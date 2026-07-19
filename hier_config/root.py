@@ -11,6 +11,7 @@ from .tree_algorithms import (
     compute_future,
     compute_remediation,
     compute_with_tags,
+    prune_emptied_branches,
 )
 
 if TYPE_CHECKING:
@@ -280,15 +281,26 @@ class HConfig(HConfigBase):  # ruff:ignore[too-many-public-methods]
                     child.order_weight = rule.weight
         return self
 
-    def future(self, config: HConfig) -> HConfig:
+    def future(
+        self,
+        config: HConfig,
+        *,
+        prune_empty_branches: bool = False,
+    ) -> HConfig:
         """EXPERIMENTAL - predict the future config after config is applied to self.
 
         The quality of this method's output will in part depend on how well
         the OS options are tuned. Ensuring that idempotency rules are accurate is
         especially important.
+
+        With `prune_empty_branches`, sections that the change emptied out are
+        removed, matching devices that prune empty stanzas on commit; sections
+        that were already empty are kept.
         """
         future_config = HConfig(self.driver)
         compute_future(self, config, future_config)
+        if prune_empty_branches:
+            prune_emptied_branches(self, future_config)
         return future_config
 
     def with_tags(self, tags: Iterable[str]) -> HConfig:
