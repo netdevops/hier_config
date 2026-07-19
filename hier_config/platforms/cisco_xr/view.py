@@ -16,7 +16,7 @@ from hier_config.platforms.view_base import (
 )
 
 
-class ConfigViewInterfaceCiscoIOSXR(ConfigViewInterfaceBase):  # noqa: PLR0904
+class ConfigViewInterfaceCiscoIOSXR(ConfigViewInterfaceBase):  # ruff:ignore[too-many-public-methods]
     """Interface config view for Cisco IOS XR."""
 
     @property

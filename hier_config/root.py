@@ -18,7 +18,7 @@ logger = getLogger(__name__)
 # - Cases of children.index() could be replaced with an identity based approach.
 
 
-class HConfig(HConfigBase):  # noqa: PLR0904
+class HConfig(HConfigBase):  # ruff:ignore[too-many-public-methods]
     """A class for representing and comparing Cisco like configurations in a
     hierarchical tree data structure.
     """
@@ -58,17 +58,17 @@ class HConfig(HConfigBase):  # noqa: PLR0904
 
     @property
     def root(self) -> HConfig:
-        """Returns the HConfig object at the base of the tree."""
+        """The HConfig object at the base of the tree."""
         return self
 
     @property
     def is_leaf(self) -> bool:
-        """Returns True if there are no children and is not an instance of HConfig."""
+        """True if there are no children and is not an instance of HConfig."""
         return False
 
     @property
     def is_branch(self) -> bool:
-        """Returns True if there are children or is an instance of HConfig."""
+        """True if there are children or is an instance of HConfig."""
         return True
 
     def instantiate_child(self, text: str) -> HConfigChild:
@@ -108,7 +108,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
             raise TypeError(message)
         return base
 
-    def lineage(self) -> Iterator[HConfigChild]:  # noqa: PLR6301
+    def lineage(self) -> Iterator[HConfigChild]:  # ruff:ignore[no-self-use]
         """Yields the lineage of parent objects, up to but excluding the root."""
         yield from ()
 
@@ -134,8 +134,8 @@ class HConfig(HConfigBase):  # noqa: PLR0904
             ),
         )
 
-    def depth(self) -> int:  # noqa: PLR6301
-        """Returns the distance to the root HConfig object i.e. indent level."""
+    def depth(self) -> int:  # ruff:ignore[no-self-use]
+        """The distance to the root HConfig object i.e. indent level."""
         return 0
 
     def difference(self, target: HConfig) -> HConfig:
@@ -177,15 +177,26 @@ class HConfig(HConfigBase):  # noqa: PLR0904
                     child.order_weight = rule.weight
         return self
 
-    def future(self, config: HConfig) -> HConfig:
+    def future(
+        self,
+        config: HConfig,
+        *,
+        prune_empty_branches: bool = False,
+    ) -> HConfig:
         """EXPERIMENTAL - predict the future config after config is applied to self.
 
         The quality of this method's output will in part depend on how well
         the OS options are tuned. Ensuring that idempotency rules are accurate is
         especially important.
+
+        With `prune_empty_branches`, sections that the change emptied out are
+        removed, matching devices that prune empty stanzas on commit; sections
+        that were already empty are kept.
         """
         future_config = HConfig(self.driver)
         self._future(config, future_config)
+        if prune_empty_branches:
+            self._prune_emptied_branches(future_config)
         return future_config
 
     def with_tags(self, tags: Iterable[str]) -> HConfig:
@@ -215,7 +226,7 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         extract their names, and search for references across the config tree.
         Objects with zero references are yielded.
         """
-        from re import search as _re_search  # noqa: PLC0415
+        from re import search as _re_search  # ruff:ignore[import-outside-top-level]
 
         for rule in self.driver.rules.unused_objects:
             seen_names: set[str] = set()
@@ -237,8 +248,8 @@ class HConfig(HConfigBase):  # noqa: PLR0904
         reference_locations: tuple[ReferenceLocation, ...],
     ) -> bool:
         """Return True if *name* is found in any reference location."""
-        from re import escape as _re_escape  # noqa: PLC0415
-        from re import search as _re_search  # noqa: PLC0415
+        from re import escape as _re_escape  # ruff:ignore[import-outside-top-level]
+        from re import search as _re_search  # ruff:ignore[import-outside-top-level]
 
         for ref_location in reference_locations:
             pattern = ref_location.reference_re.format(name=_re_escape(name))
@@ -247,6 +258,6 @@ class HConfig(HConfigBase):  # noqa: PLR0904
                     return True
         return False
 
-    def _is_duplicate_child_allowed(self) -> bool:  # noqa: PLR6301
+    def _is_duplicate_child_allowed(self) -> bool:  # ruff:ignore[no-self-use]
         """Determine if duplicate(identical text) children are allowed under the parent."""
         return False

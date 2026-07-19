@@ -21,7 +21,7 @@ if TYPE_CHECKING:
 logger = getLogger(__name__)
 
 
-class HConfigBase(ABC):  # noqa: PLR0904
+class HConfigBase(ABC):  # ruff:ignore[too-many-public-methods]
     """Abstract base class for the hierarchical configuration tree.
 
     Both `HConfig` (the root) and `HConfigChild` (individual nodes) inherit from
@@ -97,7 +97,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
         self.children.append(new_child)
         return new_child
 
-    def path(self) -> Iterator[str]:  # noqa: PLR6301
+    def path(self) -> Iterator[str]:  # ruff:ignore[no-self-use]
         yield from ()
 
     def add_deep_copy_of(
@@ -285,7 +285,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
                 config_children_ignore.add(config_child.text)
         return negated_or_recursed, config_children_ignore
 
-    def _future(  # noqa: C901
+    def _future(  # ruff:ignore[complex-structure]
         self,
         config: HConfig | HConfigChild,
         future_config: HConfig | HConfigChild,
@@ -308,6 +308,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
         for config_child in config.children:
             if config_child.text in config_children_ignore:
                 continue
+            is_negation = config_child.text.startswith(self.driver.negation_prefix)
             # sectional_overwrite
             # sectional_overwrite_no_negate
             if (
@@ -315,26 +316,46 @@ class HConfigBase(ABC):  # noqa: PLR0904
                 or config_child.use_sectional_overwrite_without_negation()
             ):
                 future_config.add_deep_copy_of(config_child)
-            # Idempotent commands
+            # A negation whose positive form exists removes it; neither line
+            # survives. Evaluated before the idempotency rules, which can
+            # match the negation line itself and keep it as a literal child
+            # (#269).
+            elif is_negation and (
+                exact := self.get_child(equals=config_child.text_without_negation)
+            ):
+                negated_or_recursed.add(exact.text)
+            # Idempotent commands: interchangeable forms of one setting
+            # replace each other. This deliberately covers negated forms
+            # tracked by a rule (e.g. IOS `no logging console`), which
+            # persist in the render.
             elif self_child := self.root.driver.idempotent_for(
                 config_child,
                 self.children,
             ):
                 future_config.add_deep_copy_of(config_child)
                 negated_or_recursed.add(self_child.text)
+            # Shorthand negation: `no description` removes `description foo`,
+            # as devices do (#269).
+            elif is_negation and (
+                prefix_matches := [
+                    child
+                    for child in self.children
+                    if child.text.startswith(
+                        f"{config_child.text_without_negation} ",
+                    )
+                ]
+            ):
+                negated_or_recursed.update(child.text for child in prefix_matches)
             # config_child is already in self
             elif self_child := self.get_child(equals=config_child.text):
                 future_child = future_config.add_shallow_copy_of(self_child)
-                self_child._future(config_child, future_child)  # noqa: SLF001
+                self_child._future(config_child, future_child)  # ruff:ignore[private-member-access]
                 negated_or_recursed.add(config_child.text)
-            # config_child is being negated
-            elif config_child.text.startswith(self.driver.negation_prefix):
-                unnegated_command = config_child.text_without_negation
-                if self.get_child(equals=unnegated_command):
-                    negated_or_recursed.add(unnegated_command)
-                # Account for "no ..." commands in the running config
-                else:
-                    future_config.add_shallow_copy_of(config_child)
+            # A negation matching nothing is kept: it accounts for "no ..."
+            # lines native to the running config and doubles as a
+            # did-not-apply-cleanly signal for callers (#269).
+            elif is_negation:
+                future_config.add_shallow_copy_of(config_child)
             # The negated form of config_child is in self.children
             elif self_child := self.get_child(
                 equals=f"{self.driver.negation_prefix}{config_child.text}",
@@ -350,6 +371,20 @@ class HConfigBase(ABC):  # noqa: PLR0904
                 continue
             # self_child was not modified above and should be present in the future config
             future_config.add_deep_copy_of(self_child)
+
+    def _prune_emptied_branches(self, future_node: HConfigBase) -> None:
+        """Remove branches that a change emptied out, as devices do (#269).
+
+        Only prunes nodes whose counterpart in ``self`` (the running config)
+        had children; sections that were already empty (or are newly added
+        empty) are kept.  Cascades upward via post-order traversal.
+        """
+        for child in tuple(future_node.children):
+            source_child = self.get_child(equals=child.text)
+            if source_child is not None:
+                source_child._prune_emptied_branches(child)  # ruff:ignore[private-member-access]
+                if not child.children and source_child.children:
+                    child.delete()
 
     @abstractmethod
     def instantiate_child(self, text: str) -> HConfigChild:
@@ -368,7 +403,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
         for child in self.children:
             if tags.issubset(child.tags):
                 new_child = new_instance.add_shallow_copy_of(child)
-                child._with_tags(tags, new_instance=new_child)  # noqa: SLF001
+                child._with_tags(tags, new_instance=new_child)  # ruff:ignore[private-member-access]
 
         return new_instance
 
@@ -425,7 +460,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
             else:
                 delta_child = delta.add_child(self_child.text)
                 if self_child.text.startswith(acl_sw_matches):
-                    self_child._difference(  # noqa: SLF001
+                    self_child._difference(  # ruff:ignore[private-member-access]
                         target_child,
                         delta_child,
                         target_acl_children={
@@ -435,7 +470,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
                         in_acl=True,
                     )
                 else:
-                    self_child._difference(target_child, delta_child)  # noqa: SLF001
+                    self_child._difference(target_child, delta_child)  # ruff:ignore[private-member-access]
                 if not delta_child.children:
                     delta_child.delete()
 
@@ -481,7 +516,7 @@ class HConfigBase(ABC):  # noqa: PLR0904
                 # This creates a new HConfigChild object just in case there are some delta children.
                 # This is not very efficient, think of a way to not do this.
                 subtree = delta.instantiate_child(target_child.text)
-                self_child._config_to_get_to(target_child, subtree)  # noqa: SLF001
+                self_child._config_to_get_to(target_child, subtree)  # ruff:ignore[private-member-access]
                 if subtree.children:
                     delta.children.append(subtree)
             # The child is absent, add it.
