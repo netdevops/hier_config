@@ -594,9 +594,7 @@ def test_future_bare_shorthand_negation_removes_valued_line() -> None:
     """`no description` removes `description foo` as devices do (#269)."""
     running_config = HConfig.from_text(
         Platform.ARISTA_EOS,
-        "interface Ethernet1\n"
-        "   description foo\n"
-        "   switchport access vlan 10\n",
+        "interface Ethernet1\n   description foo\n   switchport access vlan 10\n",
     )
     change = HConfig.from_text(
         Platform.ARISTA_EOS, "interface Ethernet1\n no description\n"
@@ -637,7 +635,7 @@ def test_future_prune_emptied_parents() -> None:
         "router static\n address-family ipv4 unicast\n  no 192.0.2.0/24 Null0\n",
     )
 
-    assert running_config.future(change, prune_empty_branches=True).to_lines() == ()
+    assert not running_config.future(change, prune_empty_branches=True).to_lines()
     # Default keeps the emptied parents (spurious-diff behavior is opt-out only).
     assert running_config.future(change).to_lines() == (
         "router static",
