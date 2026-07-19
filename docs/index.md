@@ -1,62 +1,50 @@
 # Hierarchical Configuration (hier_config)
 
-`hier_config` is a Python library that compares a network device's running configuration against its intended configuration and generates the exact remediation commands needed to bring it into compliance — without connecting to any device.
+`hier_config` is a Python library that compares a network device's running configuration against its intended configuration and generates the exact commands needed to bring the device into compliance — without ever connecting to it. Configurations are parsed into hierarchical trees, diffed with full awareness of vendor-specific syntax rules (negation, idempotency, section exiting, command ordering), and rendered back out as minimal, ready-to-apply remediation.
 
-**New to hier_config?** → [Get started in 5 minutes](getting-started.md)
-
----
-
-## What can hier_config do?
-
-- **Compute remediation** — diff running vs intended config and produce the minimum set of commands to close the gap. See [Getting Started](getting-started.md).
-- **Generate rollbacks** — automatically produce the inverse change so you can revert safely. See [Getting Started → Rollback](getting-started.md#generating-the-rollback-configuration).
-- **Preview future state** — simulate what the running config will look like after a change set is applied. See [Future Config](future-config.md).
-- **Tag-based filtering** — annotate remediation lines with tags and deploy only a subset of changes (e.g., interfaces only, or BGP only). See [Working with Tags](tags.md).
-- **Structured config access** — query interface properties, VLANs, hostnames, and more through a typed Python API without writing regex. See [Config View](config-view.md).
-- **Multi-device reporting** — aggregate remediation stats across a fleet and export to JSON or CSV. See [Remediation Reporting](remediation-reporting.md).
-
----
-
-## Supported Platforms
-
-| Platform | `Platform` enum | Status |
-|----------|-----------------|--------|
-| Cisco IOS | `Platform.CISCO_IOS` | Fully supported |
-| Arista EOS | `Platform.ARISTA_EOS` | Fully supported |
-| Cisco IOS XR | `Platform.CISCO_XR` | Fully supported |
-| Cisco NX-OS | `Platform.CISCO_NXOS` | Fully supported |
-| Fortinet FortiOS | `Platform.FORTINET_FORTIOS` | Fully supported |
-| HP ProCurve (Aruba AOSS) | `Platform.HP_PROCURVE` | Fully supported |
-| HP Comware5 / H3C | `Platform.HP_COMWARE5` | Fully supported |
-| Juniper JunOS | `Platform.JUNIPER_JUNOS` | Experimental |
-| Nokia SRL | `Platform.NOKIA_SRL` | Experimental |
-| VyOS | `Platform.VYOS` | Experimental |
-| Generic | `Platform.GENERIC` | Base for custom drivers |
-
----
-
-## Quick Example
+## Quick example
 
 ```python
-from hier_config import WorkflowRemediation, HConfig, Platform
+from hier_config import HConfig, Platform, WorkflowRemediation
+
+running_config_text = """
+hostname old-name
+interface Vlan2
+ shutdown
+"""
+
+intended_config_text = """
+hostname new-name
+interface Vlan2
+ no shutdown
+"""
 
 running = HConfig.from_text(Platform.CISCO_IOS, running_config_text)
 intended = HConfig.from_text(Platform.CISCO_IOS, intended_config_text)
-workflow = WorkflowRemediation(running, intended)
 
+workflow = WorkflowRemediation(running, intended)
 for line in workflow.remediation_config.all_children_sorted():
     print(line.indented_text())
+# no hostname old-name
+# hostname new-name
+# interface Vlan2
+#   no shutdown
 ```
-
----
 
 ## Where to go next
 
-| Goal | Page |
-|------|------|
-| Install the library | [Install](install.md) |
-| Walk through a first diff | [Getting Started](getting-started.md) |
-| Learn about platform drivers | [Drivers](drivers.md) |
-| Understand the architecture | [Architecture](architecture.md) |
-| Browse the full API | [API Reference](api-reference.md) |
-| Look up terminology | [Glossary](glossary.md) |
+### I want to generate remediation → [User Guide](user/getting-started.md)
+
+Install the library, walk through your first diff, and learn the everyday workflows: [loading configurations](user/loading-configs.md) from text, JSON, or XML; [remediation and rollback](user/remediation-workflows.md); [tag-based filtering](user/tags.md); [future-state prediction](user/future-config.md); [multi-device reporting](user/remediation-reporting.md); and [typed config views](user/config-views.md).
+
+### I need to tune platform behavior → [Administrator Guide](admin/platforms.md)
+
+Review the [supported platforms](admin/platforms.md) and their quirks, [customize driver rules](admin/customizing-rules.md) (idempotency, negation, ordering, post-load callbacks), [register custom drivers](admin/custom-drivers.md), or [load rules from YAML files](admin/rules-from-files.md).
+
+### I want to extend hier_config → [Developer Guide](dev/architecture.md)
+
+Understand the [architecture](dev/architecture.md) (tree, driver, and workflow layers), browse the [driver rule reference](dev/rule-reference.md), [create a new platform driver](dev/creating-drivers.md) from scratch, or [contribute](dev/contributing.md) to the project. The full [API reference](dev/api-reference.md) documents every public class and function.
+
+---
+
+Unsure what a term means? Check the [Glossary](glossary.md).

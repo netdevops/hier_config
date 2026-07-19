@@ -1,38 +1,63 @@
-# Config View
+# Config Views
 
-A Config View is an abstraction layer for network device configurations. It provides a structured, Pythonic way to interact with and extract information from raw configuration data. Config Views are especially useful for standardizing how configuration elements are accessed across different platforms and devices.
+This page covers config views — a typed, Pythonic layer for extracting structured data (hostnames, interfaces, VLANs, IP addresses) from a parsed configuration without writing regex. Use it when you need to *read* facts out of a config rather than remediate it.
 
-The framework uses a combination of abstract base classes (e.g., `ConfigViewInterfaceBase`, `HConfigViewBase`) and platform-specific implementations (e.g., `ConfigViewInterfaceCiscoIOS`, `HConfigViewCiscoIOS`) to provide a unified interface for interacting with configurations while accounting for the unique syntax and semantics of each vendor or platform.
+A config view wraps an `HConfig` tree and exposes Python properties in a platform-independent way: the framework combines abstract base classes (`HConfigViewBase`, `ConfigViewInterfaceBase`) with platform-specific implementations (e.g. `HConfigViewCiscoIOS`, `ConfigViewInterfaceCiscoIOS`) so the same code works across vendors.
 
-`ConfigViewInterfaceBase` carries only the core interface properties that every platform supports. Optional capabilities are modeled as mixins that platform views inherit when they genuinely support them:
+## Why use config views?
+
+1. **Vendor abstraction:** devices from different vendors have varied configuration formats; views standardize access across platforms.
+2. **Simplified interface:** structured properties instead of hand-rolled text parsing.
+3. **Extensibility:** support new platforms by implementing platform-specific subclasses.
+4. **Error reduction:** parsing logic is encapsulated and tested once.
+
+## Getting a view
+
+Use `get_hconfig_view()`; it instantiates the view class declared by the config's driver:
+
+```python
+from hier_config import HConfig, Platform, get_hconfig_view
+
+raw_config = """
+hostname router1
+interface GigabitEthernet0/1
+ description Uplink to Switch
+ switchport access vlan 10
+ ip address 192.168.1.1 255.255.255.0
+ shutdown
+!
+vlan 10
+ name DATA
+"""
+
+hconfig = HConfig.from_text(Platform.CISCO_IOS, raw_config)
+config_view = get_hconfig_view(hconfig)
+```
+
+Platforms without a view raise `DriverNotFoundError`. Views are currently provided for Cisco IOS, Arista EOS, Cisco NX-OS, Cisco IOS XR, and HP ProCurve. (You can also import a platform view class directly, e.g. `from hier_config.platforms.cisco_ios.view import HConfigViewCiscoIOS`.)
+
+## The capability mixin model
+
+`ConfigViewInterfaceBase` carries only the core interface properties that every platform supports. Optional capabilities are modeled as mixins that a platform view inherits *only when it genuinely supports them*:
 
 - `InterfaceBundleViewMixin` — bundle / port-channel properties (`bundle_id`, `bundle_name`, `bundle_member_interfaces`, `is_bundle`).
 - `InterfaceVlanViewMixin` — 802.1Q VLAN properties (`native_vlan`, `tagged_vlans`, `tagged_all`, `dot1q_mode`).
 - `InterfaceNACViewMixin` — NAC properties (`has_nac`, `nac_host_mode`, `nac_mab_first`, ...).
 - `InterfacePhysicalViewMixin` — physical-layer properties (`duplex`, `speed`, `poe`, `module_number`).
 
-Check whether a platform supports a capability with `isinstance()`:
+Check whether an interface view supports a capability with `isinstance()`:
 
 ```python
 from hier_config import InterfaceVlanViewMixin
 
-if isinstance(interface_view, InterfaceVlanViewMixin):
-    print(interface_view.native_vlan)
+for interface_view in config_view.interface_views:
+    if isinstance(interface_view, InterfaceVlanViewMixin):
+        print(interface_view.name, interface_view.native_vlan)
 ```
 
 Current platform capabilities: Cisco IOS and HP ProCurve inherit all four mixins; Arista EOS, Cisco NX-OS, and Cisco IOS XR inherit the bundle and VLAN mixins.
 
-## Why Use Config Views?
-
-1. **Vendor Abstraction:** Network devices from different vendors (Cisco, Arista, Juniper, etc.) have varied configuration formats. Config Views standardize access, making it easier to work across platforms.
-
-2. **Simplified Interface:** Accessing configuration data becomes more intuitive through Python properties and methods rather than manually parsing text.
-
-3. **Extensibility:** Easily extendable to support new platforms or devices by implementing platform-specific subclasses.
-
-4. **Error Reduction:** Encapsulates parsing logic, reducing the risk of errors due to configuration syntax differences.
-
-## Available Config Views
+## Device-level view properties
 
 | **Property/Method**         | **Type**                       | **Description**                                                              |
 |-----------------------------|--------------------------------|------------------------------------------------------------------------------|
@@ -52,116 +77,65 @@ Current platform capabilities: Cisco IOS and HP ProCurve inherit all four mixins
 | `vlan_ids`                  | `frozenset[int]`              | Set of VLAN IDs configured.                                                 |
 | `vlans`                     | `Iterable[Vlan]`              | Yields VLAN objects, including ID and name.                                 |
 
-## Available Config Interface Views
+## Interface view properties
 
-### Basic Identity
-
-| **Property** | **Type** | **Description** |
-|--------------|----------|-----------------|
-| `name` | `str` | Returns the name of the interface (e.g. `GigabitEthernet0/1`). |
-| `number` | `str` | Extracts the numeric portion of the interface name. |
-| `description` | `str` | Returns the configured description of the interface. |
-| `parent_name` | `Optional[str]` | Retrieves the name of the parent bundle interface, if any. |
-
-### Operational State
+### Core properties (`ConfigViewInterfaceBase` — all platforms)
 
 | **Property** | **Type** | **Description** |
 |--------------|----------|-----------------|
+| `name` | `str` | The name of the interface (e.g. `GigabitEthernet0/1`). |
+| `number` | `str` | The numeric portion of the interface name. |
+| `description` | `str` | The configured description of the interface. |
 | `enabled` | `bool` | `True` if the interface is not shut down. |
-| `poe` | `bool` | `True` if Power over Ethernet (PoE) is enabled on the interface. |
+| `ipv4_interface` | `Optional[IPv4Interface]` | The first configured IPv4 address and prefix. |
+| `ipv4_interfaces` | `Iterable[IPv4Interface]` | All IPv4 addresses and prefixes configured on the interface. |
+| `vrf` | `str` | The VRF associated with the interface. |
+| `is_loopback` | `bool` | `True` if the interface is a loopback. |
+| `is_subinterface` | `bool` | `True` if the interface is a subinterface (e.g. `Gi0/1.100`). |
+| `is_svi` | `bool` | `True` if the interface is a switched virtual interface (SVI / VLAN interface). |
+| `parent_name` | `Optional[str]` | The parent interface name of a subinterface. |
+| `port_number` | `int` | The port number of the interface. |
+| `subinterface_number` | `Optional[int]` | The subinterface number, if applicable. |
 
-### IP Addressing
-
-| **Property** | **Type** | **Description** |
-|--------------|----------|-----------------|
-| `ipv4_interface` | `Optional[IPv4Interface]` | Retrieves the first configured IPv4 address and prefix. |
-| `ipv4_interfaces` | `Iterable[IPv4Interface]` | Lists all IPv4 addresses and prefixes configured on the interface. |
-| `vrf` | `str` | Retrieves the VRF (Virtual Routing and Forwarding) associated with the interface. |
-
-### VLAN and 802.1Q
-
-| **Property** | **Type** | **Description** |
-|--------------|----------|-----------------|
-| `dot1q_mode` | `Optional[InterfaceDot1qMode]` | Determines the 802.1Q mode (`ACCESS`, `TAGGED`, `TRUNK`, etc.) based on VLAN tagging configuration. |
-| `native_vlan` | `Optional[int]` | Retrieves the native VLAN of the interface. |
-| `tagged_vlans` | `tuple[int, ...]` | Lists the VLANs that are tagged on the interface. |
-| `tagged_all` | `bool` | `True` if all VLANs are tagged on the interface. |
-
-### Interface Type Flags
+### Bundle / port-channel (`InterfaceBundleViewMixin`)
 
 | **Property** | **Type** | **Description** |
 |--------------|----------|-----------------|
 | `is_bundle` | `bool` | `True` if the interface is a bundle (port-channel / LAG). |
-| `is_loopback` | `bool` | `True` if the interface is a loopback. |
-| `is_subinterface` | `bool` | `True` if the interface is a subinterface (e.g. `Gi0/1.100`). |
-| `is_svi` | `bool` | `True` if the interface is a switched virtual interface (SVI / VLAN interface). |
+| `bundle_id` | `Optional[str]` | The bundle ID of the interface. |
+| `bundle_name` | `Optional[str]` | The name of the bundle to which the interface belongs. |
+| `bundle_member_interfaces` | `Iterable[str]` | The member interfaces of a bundle. |
 
-### Bundle / Port Channel
-
-| **Property** | **Type** | **Description** |
-|--------------|----------|-----------------|
-| `bundle_id` | `Optional[str]` | Retrieves the bundle ID of the interface. |
-| `bundle_name` | `Optional[str]` | Retrieves the name of the bundle to which the interface belongs. |
-| `bundle_member_interfaces` | `Iterable[str]` | Lists the member interfaces of a bundle. |
-
-### Physical Layer
+### VLAN and 802.1Q (`InterfaceVlanViewMixin`)
 
 | **Property** | **Type** | **Description** |
 |--------------|----------|-----------------|
-| `duplex` | `InterfaceDuplex` | Determines the duplex mode of the interface (`FULL`, `HALF`, `AUTO`). |
-| `speed` | `Optional[tuple[int, ...]]` | Lists the static speeds (in Mbps) at which the interface can operate. |
-| `port_number` | `int` | Retrieves the port number of the interface. |
-| `module_number` | `Optional[int]` | Retrieves the module number of the interface. |
-| `subinterface_number` | `Optional[int]` | Retrieves the subinterface number, if applicable. |
+| `dot1q_mode` | `Optional[InterfaceDot1qMode]` | The 802.1Q mode (`ACCESS`, `TAGGED`, `TAGGED_ALL`, ...) based on VLAN tagging configuration. |
+| `native_vlan` | `Optional[int]` | The native VLAN of the interface. |
+| `tagged_vlans` | `tuple[int, ...]` | The VLANs that are tagged on the interface. |
+| `tagged_all` | `bool` | `True` if all VLANs are tagged on the interface. |
 
-### NAC (Network Admission Control)
+### NAC (`InterfaceNACViewMixin`)
 
 | **Property** | **Type** | **Description** |
 |--------------|----------|-----------------|
 | `has_nac` | `bool` | `True` if NAC is configured on the interface. |
 | `nac_control_direction_in` | `bool` | `True` if NAC is configured with `control direction in`. |
-| `nac_host_mode` | `Optional[NACHostMode]` | Retrieves the NAC host mode (`SINGLE_HOST`, `MULTI_AUTH`, etc.). |
-| `nac_mab_first` | `bool` | `True` if NAC is configured to try MAB (MAC Authentication Bypass) before 802.1X. |
+| `nac_host_mode` | `Optional[NACHostMode]` | The NAC host mode (`SINGLE_HOST`, `MULTI_AUTH`, ...). |
+| `nac_mab_first` | `bool` | `True` if NAC tries MAB (MAC Authentication Bypass) before 802.1X. |
 | `nac_max_dot1x_clients` | `int` | Maximum number of 802.1X clients allowed on the interface. |
 | `nac_max_mab_clients` | `int` | Maximum number of MAB clients allowed on the interface. |
 
-## Example: Cisco IOS Config View
+### Physical layer (`InterfacePhysicalViewMixin`)
 
-### Step 1: Parse Configuration
+| **Property** | **Type** | **Description** |
+|--------------|----------|-----------------|
+| `duplex` | `InterfaceDuplex` | The duplex mode of the interface (`FULL`, `HALF`, `AUTO`). |
+| `speed` | `Optional[tuple[int, ...]]` | The static speeds (in Mbps) at which the interface can operate. |
+| `poe` | `bool` | `True` if Power over Ethernet (PoE) is enabled on the interface. |
+| `module_number` | `Optional[int]` | The module number of the interface. |
 
-Assume we have a Cisco IOS configuration file as a string.
-
-```python
-from hier_config import Platform, HConfig
-
-
-raw_config = """
-hostname router1
-interface GigabitEthernet0/1
- description Uplink to Switch
- switchport access vlan 10
- ip address 192.168.1.1 255.255.255.0
- shutdown
-!
-vlan 10
- name DATA
-"""
-
-hconfig = HConfig.from_text(Platform.CISCO_IOS, raw_config)
-```
-
-### Step 2: Create Config View
-
-```python
-from hier_config.platforms.cisco_ios.view import HConfigViewCiscoIOS
-
-
-config_view = HConfigViewCiscoIOS(hconfig)
-```
-
-### Step 3: Access Configuration Details
-
-Access properties to interact with the configuration programmatically:
+## Example: device-level access
 
 ```python
 # Get the hostname
@@ -177,18 +151,12 @@ for interface_view in config_view.interface_views:
 # Get all VLANs
 for vlan in config_view.vlans:
     print(f"VLAN {vlan.id}: {vlan.name}")
-
 ```
 
-## Example: Cisco IOS Config Interface View
-
-### Step 1: Parse Configuration
-
-Assume we have a Cisco IOS configuration file as a string.
+## Example: interface-level access
 
 ```python
-from hier_config import Platform, HConfig
-
+from hier_config import HConfig, Platform, get_hconfig_view
 
 raw_config = """
 interface GigabitEthernet0/1
@@ -205,25 +173,8 @@ interface GigabitEthernet0/2
 """
 
 hconfig = HConfig.from_text(Platform.CISCO_IOS, raw_config)
-```
+config_view = get_hconfig_view(hconfig)
 
-### Step 2: Create Config View and Access Interface Views
-
-```python
-from hier_config.platforms.cisco_ios.view import HConfigViewCiscoIOS
-
-config_view = HConfigViewCiscoIOS(hconfig)
-```
-
-### Step 3: Access Interface Details
-
-Access properties and methods to interact with individual interface configurations programmatically:
-
-**Retrieve Interface Properties**
-
-#### Loop through all interface views and display their properties
-
-```python
 for interface_view in config_view.interface_views:
     print(f"Interface Name: {interface_view.name}")
     print(f"Description: {interface_view.description}")
@@ -236,9 +187,9 @@ for interface_view in config_view.interface_views:
     print("-" * 40)
 ```
 
-**Example Output:**
+Example output:
 
-```
+```text
 Interface Name: GigabitEthernet0/1
 Description: Uplink to Switch
 Enabled: False
@@ -258,3 +209,8 @@ IP Address: None
 Is Subinterface: False
 ----------------------------------------
 ```
+
+## Next steps
+
+- [Creating a Platform Driver](../dev/creating-drivers.md#adding-a-config-view) — implement a view for a new platform with the mixin model.
+- [API Reference](../dev/api-reference.md) — full view base-class documentation.

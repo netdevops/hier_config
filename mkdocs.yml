@@ -15,16 +15,26 @@ plugins:
 
 nav:
   - Home: index.md
-  - Install: install.md
-  - Getting Started: getting-started.md
-  - Utilities: utilities.md
-  - Drivers: drivers.md
-  - Future Config: future-config.md
-  - Working with Tags: tags.md
-  - Custom Workflows: custom-workflows.md
-  - Remediation Reporting: remediation-reporting.md
-  - JunOS Style Syntax Remediation: junos-style-syntax-remediation.md
-  - Config View: config-view.md
-  - Architecture: architecture.md
-  - API Reference: api-reference.md
+  - User Guide:
+      - Installation: user/install.md
+      - Getting Started: user/getting-started.md
+      - Loading Configurations: user/loading-configs.md
+      - Remediation Workflows: user/remediation-workflows.md
+      - Working with Tags: user/tags.md
+      - Predicting Future Configs: user/future-config.md
+      - Unified Diffs: user/unified-diff.md
+      - Remediation Reporting: user/remediation-reporting.md
+      - Config Views: user/config-views.md
+      - Set-Style Platforms: user/set-style-platforms.md
+  - Administrator Guide:
+      - Supported Platforms: admin/platforms.md
+      - Customizing Driver Rules: admin/customizing-rules.md
+      - Custom Drivers and Registration: admin/custom-drivers.md
+      - Loading Rules from Files: admin/rules-from-files.md
+  - Developer Guide:
+      - Architecture: dev/architecture.md
+      - Driver Rule Reference: dev/rule-reference.md
+      - Creating a Platform Driver: dev/creating-drivers.md
+      - Contributing: dev/contributing.md
+      - API Reference: dev/api-reference.md
   - Glossary: glossary.md

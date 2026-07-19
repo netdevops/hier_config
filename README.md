@@ -29,13 +29,13 @@ Network devices continuously drift from their intended state — VLANs appear, A
 
 ## Highlights
 
-- Predict the device state before deploying with [`future()`](https://hier-config.readthedocs.io/en/latest/future-config/) and generate accurate rollbacks that preserve distinct structural commands — BGP neighbor descriptions, for example, no longer collapse when multiple peers share a common prefix.
-- Build remediation workflows with deterministic diffs across [Cisco-style and Junos-style](https://hier-config.readthedocs.io/en/latest/drivers/) configuration syntaxes.
-- Tag remediation lines and filter output with [tag-based rules](https://hier-config.readthedocs.io/en/latest/tags/) for phased or conditional deployment.
-- Aggregate and analyse changes across a fleet with [RemediationReporter](https://hier-config.readthedocs.io/en/latest/remediation-reporting/).
-- Render structured, typed interface data with the [Config View](https://hier-config.readthedocs.io/en/latest/config-view/) abstraction.
+- Predict the device state before deploying with [`future()`](https://hier-config.readthedocs.io/en/latest/user/future-config/) and generate accurate rollbacks that preserve distinct structural commands — BGP neighbor descriptions, for example, no longer collapse when multiple peers share a common prefix.
+- Build remediation workflows with deterministic diffs across [Cisco-style](https://hier-config.readthedocs.io/en/latest/admin/platforms/) and [Junos-style](https://hier-config.readthedocs.io/en/latest/user/set-style-platforms/) configuration syntaxes.
+- Tag remediation lines and filter output with [tag-based rules](https://hier-config.readthedocs.io/en/latest/user/tags/) for phased or conditional deployment.
+- Aggregate and analyse changes across a fleet with [RemediationReporter](https://hier-config.readthedocs.io/en/latest/user/remediation-reporting/).
+- Render structured, typed interface data with the [Config View](https://hier-config.readthedocs.io/en/latest/user/config-views/) abstraction.
 
-See the [Architecture Overview](https://hier-config.readthedocs.io/en/latest/architecture/) for how the tree, driver, and workflow layers fit together.
+See the [Architecture Overview](https://hier-config.readthedocs.io/en/latest/dev/architecture/) for how the tree, driver, and workflow layers fit together.
 
 ## Installation
 

@@ -1,8 +1,10 @@
 # Working with Tags
 
+This page shows how to tag sections of a remediation and filter the output by tag — useful for deploying low-risk changes first or isolating high-risk changes for review. It builds on the basics from [Getting Started](getting-started.md).
+
 ## MatchRules
 
-[MatchRules](glossary.md#match-rule), written in YAML, help users identify either highly specific sections or more generalized lines within a configuration. For instance, if you want to target interface descriptions, you could set up MatchRules as follows:
+[MatchRules](../glossary.md#match-rule), written in YAML, help you identify either highly specific sections or more generalized lines within a configuration. For instance, if you want to target interface descriptions, you could set up MatchRules as follows:
 
 ```yaml
 - match_rules:
@@ -10,7 +12,7 @@
   - startswith: description
 ```
 
-This setup directs hier_config to search for configuration lines that begin with `interface` and, under each interface, locate lines that start with `description`​​.
+This setup directs hier_config to search for configuration lines that begin with `interface` and, under each interface, locate lines that start with `description`.
 
 With MatchRules, you can specify the level of detail needed, whether focusing on general configuration lines or diving into specific subsections. For example, to check for the presence or absence of HTTP, SSH, SNMP, and logging commands in a configuration, you could use a single rule as follows:
 
@@ -27,7 +29,7 @@ With MatchRules, you can specify the level of detail needed, whether focusing on
     - no logging
 ```
 
-This rule will look for configuration lines that start with any of the listed keywords​.
+This rule will look for configuration lines that start with any of the listed keywords.
 
 To check whether BGP IPv4 AFIs (Address Family Identifiers) are activated, you can use the following rule:
 
@@ -39,13 +41,14 @@ To check whether BGP IPv4 AFIs (Address Family Identifiers) are activated, you c
 ```
 
 In this example, the `activate` keyword is used to identify active BGP neighbors. Available keywords for MatchRules include:
-- startswith
-- endswith
-- contains
-- equals
-- re_search (for regular expressions)
 
-These options allow you to target configuration lines with precision based on the desired pattern​.
+- `startswith`
+- `endswith`
+- `contains`
+- `equals`
+- `re_search` (for regular expressions)
+
+When multiple fields are set on a single MatchRule, every criterion must match (AND logic). These options allow you to target configuration lines with precision based on the desired pattern.
 
 You can also combine the previous examples into a single set of MatchRules, like this:
 
@@ -69,11 +72,11 @@ You can also combine the previous examples into a single set of MatchRules, like
   - endswith: activate
 ```
 
-When `hier_config` processes MatchRules, it treats each as a separate rule, evaluating them individually to match the specified configuration patterns​.
+When hier_config processes MatchRules, it treats each as a separate rule, evaluating them individually to match the specified configuration patterns.
 
-## Working with Tags
+## Tagging remediation sections
 
-With a solid understanding of MatchRules, you can unlock more advanced capabilities in `hier_config`, such as tagging specific configuration sections to control remediation output based on tags. See [Tag rules](glossary.md#tag-rules) for a conceptual overview. This feature is particularly useful during maintenance, allowing you to focus on low-risk changes or isolate high-risk changes for detailed inspection.
+With a solid understanding of MatchRules, you can unlock more advanced capabilities, such as tagging specific configuration sections to control remediation output based on tags. See [Tag rules](../glossary.md#tag-rules) for a conceptual overview. This feature is particularly useful during maintenance, allowing you to focus on low-risk changes or isolate high-risk changes for detailed inspection.
 
 Tagging builds on MatchRules by adding the **apply_tags** keyword to target specific configurations.
 
@@ -108,7 +111,6 @@ With the tags loaded, you can create a targeted remediation based on those tags 
 ```python
 #!/usr/bin/env python3
 
-# Import necessary libraries
 from hier_config import WorkflowRemediation, HConfig, Platform
 from hier_config.utils import read_text_from_file, load_hier_config_tags
 
@@ -125,11 +127,8 @@ wfr = WorkflowRemediation(
     generated_config=HConfig.from_text(Platform.CISCO_IOS, generated_config)
 )
 
-# Apply the tag rules to filter remediation steps by tags
+# Apply the tag rules to label matching remediation sections
 wfr.apply_remediation_tag_rules(tags)
-
-# Generate the remediation steps
-wfr.remediation_config
 
 # Display remediation steps filtered to include only the "ntp" tag
 print(wfr.remediation_config_filtered_text(include_tags={"ntp"}, exclude_tags={}))
@@ -143,3 +142,25 @@ ip name-server 1.1.1.1
 ip name-server 8.8.8.8
 ntp server time.nist.gov
 ```
+
+`remediation_config_filtered_text()` accepts both `include_tags` and `exclude_tags`, so you can also render everything *except* a tag (for example, hold back `critical` changes).
+
+## Tagging lines directly
+
+Tag rules are the declarative path, but you can also manipulate tags on individual nodes with `HConfigChild.add_tags()` and `HConfigChild.remove_tags()`:
+
+```python
+from hier_config import MatchRule
+
+for child in wfr.remediation_config.get_children_deep(
+    (MatchRule(startswith="interface"),)
+):
+    child.add_tags("interfaces")
+```
+
+Both methods accept a single tag string or any iterable of tags.
+
+## Next steps
+
+- [Remediation Reporting](remediation-reporting.md) — tag-based reporting across many devices.
+- [Loading Rules from Files](../admin/rules-from-files.md) — the YAML formats for tag and driver rules.
