@@ -190,6 +190,7 @@ def compute_future(  # ruff:ignore[complex-structure]
     for config_child in config.children:
         if config_child.text in config_children_ignore:
             continue
+        is_negation = config_child.text.startswith(source.driver.negation_prefix)
         # sectional_overwrite
         # sectional_overwrite_no_negate
         if (
@@ -197,26 +198,44 @@ def compute_future(  # ruff:ignore[complex-structure]
             or config_child.use_sectional_overwrite_without_negation()
         ):
             future_config.add_deep_copy_of(config_child)
-        # Idempotent commands
+        # A negation whose positive form exists removes it; neither line
+        # survives. Evaluated before the idempotency rules, which can match
+        # the negation line itself and keep it as a literal child (#269).
+        elif is_negation and (
+            exact := source.get_child(equals=config_child.text_without_negation)
+        ):
+            negated_or_recursed.add(exact.text)
+        # Idempotent commands: interchangeable forms of one setting replace
+        # each other. This deliberately covers negated forms tracked by a
+        # rule (e.g. IOS `no logging console`), which persist in the render.
         elif self_child := source.root.driver.idempotent_for(
             config_child,
             source.children,
         ):
             future_config.add_deep_copy_of(config_child)
             negated_or_recursed.add(self_child.text)
+        # Shorthand negation: `no description` removes `description foo`, as
+        # devices do (#269).
+        elif is_negation and (
+            prefix_matches := [
+                child
+                for child in source.children
+                if child.text.startswith(
+                    f"{config_child.text_without_negation} ",
+                )
+            ]
+        ):
+            negated_or_recursed.update(child.text for child in prefix_matches)
         # config_child is already in source
         elif self_child := source.get_child(equals=config_child.text):
             future_child = future_config.add_shallow_copy_of(self_child)
             compute_future(self_child, config_child, future_child)
             negated_or_recursed.add(config_child.text)
-        # config_child is being negated
-        elif config_child.text.startswith(source.driver.negation_prefix):
-            unnegated_command = config_child.text_without_negation
-            if source.get_child(equals=unnegated_command):
-                negated_or_recursed.add(unnegated_command)
-            # Account for "no ..." commands in the running config
-            else:
-                future_config.add_shallow_copy_of(config_child)
+        # A negation matching nothing is kept: it accounts for "no ..." lines
+        # native to the running config and doubles as a did-not-apply-cleanly
+        # signal for callers (#269).
+        elif is_negation:
+            future_config.add_shallow_copy_of(config_child)
         # The negated form of config_child is in source.children
         elif self_child := source.get_child(
             equals=f"{source.driver.negation_prefix}{config_child.text}",
@@ -246,3 +265,21 @@ def compute_with_tags(
             compute_with_tags(child, tags, new_child)
 
     return new_instance
+
+
+def prune_emptied_branches(
+    source: HConfigBase,
+    future_node: HConfigBase,
+) -> None:
+    """Remove branches that a change emptied out, as devices do (#269).
+
+    Only prunes nodes whose counterpart in the running config had children;
+    sections that were already empty (or are newly added empty) are kept.
+    Cascades upward via post-order traversal.
+    """
+    for child in tuple(future_node.children):
+        source_child = source.get_child(equals=child.text) if source else None
+        if source_child is not None:
+            prune_emptied_branches(source_child, child)
+            if not child.children and source_child.children:
+                child.delete()
