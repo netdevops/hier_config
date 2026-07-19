@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Restructured the documentation into User, Administrator, and Developer
+  guides (`docs/user/`, `docs/admin/`, `docs/dev/`) with a rewritten landing
+  page, new pages for loading configurations and remediation workflows, and
+  content refreshed for the v4 API.
+
 ### Fixed
 
 - `future()` negation edge cases (#269): a negation whose positive form exists

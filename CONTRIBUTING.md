@@ -147,7 +147,7 @@ Where do changes belong?
 | New view property | `hier_config/platforms/view_base.py` (abstract) + each platform's `view.py` |
 | Core tree algorithm | `hier_config/base.py` (shared) or `hier_config/root.py` (`HConfig`-only) |
 
-Read the [Architecture Overview](docs/architecture.md) before making structural changes.
+Read the [Architecture Overview](docs/dev/architecture.md) before making structural changes.
 
 ---
 
