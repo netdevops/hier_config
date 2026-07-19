@@ -121,6 +121,27 @@ class WorkflowRemediation:
 
         return rollback_config
 
+    def remediation_netconf_xml(
+        self,
+        *,
+        list_keys: tuple[str, ...] | None = None,
+    ) -> str:
+        """Render the remediation as a NETCONF edit-config payload.
+
+        Requires running and generated configs built by `HConfig.from_xml()`.
+        Keyed list-entry deletions are expressed by their key leaf, resolved
+        against the running config via `list_keys`.
+        """
+        from .formats import (
+            hconfig_to_netconf_xml,
+        )
+
+        return hconfig_to_netconf_xml(
+            self.remediation_config,
+            running=self.running_config,
+            list_keys=list_keys,
+        )
+
     def apply_remediation_tag_rules(self, tag_rules: tuple[TagRule, ...]) -> None:
         """Applies tag rules to selectively label parts of the remediation configuration.
 

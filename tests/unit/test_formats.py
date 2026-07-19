@@ -1,11 +1,13 @@
 """Tests for hier_config/formats.py — JSON/XML ingestion and rendering (#232)."""
 
 import json
+import xml.etree.ElementTree as ET  # ruff:ignore[suspicious-xml-etree-import]
 
 import pytest
 
-from hier_config import HConfig, Platform
+from hier_config import HConfig, Platform, WorkflowRemediation
 from hier_config.exceptions import DuplicateChildError, InvalidConfigError
+from hier_config.formats import hconfig_to_netconf_xml
 
 OPENCONFIG_STYLE = {
     "system": {
@@ -211,3 +213,113 @@ def test_duplicate_list_items_raise_hier_config_error() -> None:
         HConfig.from_json(
             Platform.GENERIC, {"interface": [{"name": "e0"}, {"name": "e0"}]}
         )
+
+
+NC_OPERATION = "{urn:ietf:params:xml:ns:netconf:base:1.0}operation"
+
+NETCONF_RUNNING_XML = (
+    "<config>"
+    "<system><hostname>old</hostname><location>hq</location></system>"
+    "<interfaces>"
+    "<interface><name>eth0</name><mtu>9000</mtu></interface>"
+    "<interface><name>eth1</name><mtu>1500</mtu></interface>"
+    "</interfaces>"
+    "</config>"
+)
+NETCONF_GENERATED_XML = (
+    "<config>"
+    "<system><hostname>new</hostname><location>hq</location></system>"
+    "<interfaces>"
+    "<interface><name>eth0</name><mtu>9000</mtu></interface>"
+    "</interfaces>"
+    "</config>"
+)
+
+
+def test_netconf_remediation_payload() -> None:
+    """Remediation between from_xml trees renders as a NETCONF edit-config payload."""
+    running = HConfig.from_xml(Platform.GENERIC, NETCONF_RUNNING_XML)
+    generated = HConfig.from_xml(Platform.GENERIC, NETCONF_GENERATED_XML)
+    workflow = WorkflowRemediation(running, generated)
+    payload = workflow.remediation_netconf_xml()
+
+    assert 'xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0"' in payload
+    root = ET.fromstring(payload)  # ruff:ignore[suspicious-xml-element-tree-usage]
+    assert root.tag == "config"
+
+    system = root.find("system")
+    assert system is not None
+    hostnames = system.findall("hostname")
+    deleted = [e for e in hostnames if e.get(NC_OPERATION) == "delete"]
+    added = [e for e in hostnames if e.get(NC_OPERATION) is None]
+    assert len(deleted) == 1
+    assert added[0].text == "new"
+
+    # The removed keyed list entry deletes by key leaf, not by value text.
+    interfaces = root.find("interfaces")
+    assert interfaces is not None
+    removed = interfaces.find("interface")
+    assert removed is not None
+    assert removed.get(NC_OPERATION) == "delete"
+    name = removed.find("name")
+    assert name is not None
+    assert name.text == "eth1"
+    assert removed.find("mtu") is None
+
+
+def test_netconf_addition_renders_plain_subtree() -> None:
+    """Added sections carry no operation attribute (NETCONF merge default)."""
+    running = HConfig.from_xml(Platform.GENERIC, "<config><system/></config>")
+    generated = HConfig.from_xml(
+        Platform.GENERIC,
+        "<config><system/><ntp><enabled>true</enabled></ntp></config>",
+    )
+    workflow = WorkflowRemediation(running, generated)
+    root = ET.fromstring(workflow.remediation_netconf_xml())  # ruff:ignore[suspicious-xml-element-tree-usage]
+    ntp = root.find("ntp")
+    assert ntp is not None
+    assert ntp.get(NC_OPERATION) is None
+    enabled = ntp.find("enabled")
+    assert enabled is not None
+    assert enabled.text == "true"
+
+
+def test_netconf_attribute_negation_raises() -> None:
+    """Attribute removals cannot be expressed as NETCONF operations."""
+    running = HConfig.from_xml(Platform.GENERIC, '<config><system foo="bar"/></config>')
+    generated = HConfig.from_xml(Platform.GENERIC, "<config><system/></config>")
+    workflow = WorkflowRemediation(running, generated)
+    with pytest.raises(InvalidConfigError, match="Attribute"):
+        workflow.remediation_netconf_xml()
+
+
+def test_netconf_leaf_delete_without_running_context() -> None:
+    """The standalone function falls back to value-bearing leaf deletes."""
+    running = HConfig.from_xml(
+        Platform.GENERIC, "<config><system><hostname>old</hostname></system></config>"
+    )
+    generated = HConfig.from_xml(Platform.GENERIC, "<config><system/></config>")
+    remediation = running.remediation(generated)
+    root = ET.fromstring(hconfig_to_netconf_xml(remediation))  # ruff:ignore[suspicious-xml-element-tree-usage]
+    system = root.find("system")
+    assert system is not None
+    hostname = system.find("hostname")
+    assert hostname is not None
+    assert hostname.get(NC_OPERATION) == "delete"
+    assert hostname.text == "old"
+
+
+def test_xml_diff_is_surgical_across_entry_counts() -> None:
+    """A keyed entry keeps the same node text regardless of sibling count.
+
+    Removing one of two entries must not delete-and-re-add the survivor
+    (#232): identity suffixes apply whenever an identifying child exists,
+    not only when the tag repeats.
+    """
+    running = HConfig.from_xml(Platform.GENERIC, NETCONF_RUNNING_XML)
+    generated = HConfig.from_xml(Platform.GENERIC, NETCONF_GENERATED_XML)
+    remediation = running.remediation(generated)
+    interfaces_lines = [
+        line.strip() for line in remediation.to_lines() if "interface" in line
+    ]
+    assert interfaces_lines == ["interfaces", 'no interface "eth1"']

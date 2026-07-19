@@ -11,6 +11,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- NETCONF `edit-config` remediation rendering (#232):
+  `WorkflowRemediation.remediation_netconf_xml()` (and
+  `hier_config.formats.hconfig_to_netconf_xml()`) render a remediation
+  between `HConfig.from_xml()` trees as a NETCONF payload — deletions become
+  `nc:operation="delete"` elements (keyed list entries delete by their key
+  leaf, resolved against the running config), additions use the default merge
+  operation, and attribute-level changes raise `InvalidConfigError`.
+
+### Fixed
+
+- XML ingestion keys an element whenever an identifying `list_keys` child
+  exists, not only when the tag repeats among siblings, so configs with
+  different list-entry counts diff surgically instead of deleting and
+  re-adding surviving entries (#232).
+
 - Structured config ingestion and rendering (#232): `HConfig.from_json()` /
   `HConfig.from_xml()` build config trees from JSON (e.g. OpenConfig) and XML
   (e.g. NETCONF payloads), with OpenConfig-style keyed lists identified via

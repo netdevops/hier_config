@@ -150,9 +150,11 @@ parametrize-values-type = "tuple"
 [tool.ruff.lint.per-file-ignores]
 "**/tests/*" = ["PLC2701", "S101"]
 "tests/test_benchmarks.py" = ["T201", "PLR6301", "PERF401"]
-# HConfig's classmethod constructors defer their loader imports to call time
-# to avoid a circular import with constructors.py.
+# HConfig's classmethod constructors and WorkflowRemediation's format
+# renderers defer their loader imports to call time to avoid circular
+# imports and keep `import hier_config` light.
 "hier_config/root.py" = ["PLC0415"]
+"hier_config/workflows.py" = ["PLC0415"]
 
 [tool.pytest.ini_options]
 markers = [
