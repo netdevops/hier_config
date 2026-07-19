@@ -85,6 +85,15 @@ def get_registered_platforms() -> tuple[Platform | str, ...]:
     return tuple(_registry)
 
 
+def resolve_driver(
+    platform_or_driver: Platform | str | HConfigDriverBase,
+) -> HConfigDriverBase:
+    """Return the driver for a platform, platform name, or driver instance."""
+    if isinstance(platform_or_driver, HConfigDriverBase):
+        return platform_or_driver
+    return get_hconfig_driver(platform_or_driver)
+
+
 def get_hconfig_driver(platform: Platform | str) -> HConfigDriverBase:
     """Instantiate the driver registered for a platform."""
     driver_class = _registry.get(_normalize(platform))

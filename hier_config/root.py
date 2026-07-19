@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from logging import getLogger
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from .base import HConfigBase
 from .child import HConfigChild
@@ -74,6 +74,60 @@ class HConfig(HConfigBase):  # ruff:ignore[too-many-public-methods]
         )
 
         return hconfig_from_dump(platform_or_driver, dump)
+
+    @classmethod
+    def from_json(
+        cls,
+        platform_or_driver: Platform | str | HConfigDriverBase,
+        data: str | dict[str, Any],
+        *,
+        list_keys: tuple[str, ...] | None = None,
+    ) -> HConfig:
+        """Create an HConfig from a JSON object or JSON text.
+
+        See `hier_config.formats` for the tree mapping rules. `list_keys`
+        names the members that identify entries of keyed lists
+        (OpenConfig-style); None means `formats.DEFAULT_LIST_KEYS`.
+        """
+        from .formats import hconfig_from_json
+
+        return hconfig_from_json(platform_or_driver, data, list_keys=list_keys)
+
+    @classmethod
+    def from_xml(
+        cls,
+        platform_or_driver: Platform | str | HConfigDriverBase,
+        source: str,
+        *,
+        list_keys: tuple[str, ...] | None = None,
+    ) -> HConfig:
+        """Create an HConfig from an XML document.
+
+        See `hier_config.formats` for the tree mapping rules. `list_keys`
+        names the child elements that identify repeated sibling elements;
+        None means `formats.DEFAULT_LIST_KEYS`.
+        """
+        from .formats import hconfig_from_xml
+
+        return hconfig_from_xml(platform_or_driver, source, list_keys=list_keys)
+
+    def to_json(self, *, indent: int | None = 2) -> str:
+        """Render a tree built by `from_json` back to JSON text.
+
+        Output is undefined for trees built by other constructors.
+        """
+        from .formats import hconfig_to_json
+
+        return hconfig_to_json(self, indent=indent)
+
+    def to_xml(self) -> str:
+        """Render a tree built by `from_xml` back to XML text.
+
+        Output is undefined for trees built by other constructors.
+        """
+        from .formats import hconfig_to_xml
+
+        return hconfig_to_xml(self)
 
     def __str__(self) -> str:
         return "\n".join(str(c) for c in sorted(self.children))

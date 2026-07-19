@@ -11,7 +11,7 @@ from .child import HConfigChild
 from .exceptions import DriverNotFoundError, InvalidConfigError
 from .models import Dump, Platform
 from .platforms.view_base import HConfigViewBase
-from .registry import get_hconfig_driver
+from .registry import resolve_driver
 from .root import HConfig
 
 logger = getLogger(__name__)
@@ -49,10 +49,10 @@ def _detect_structured_format(config_text: str) -> str | None:
 def _reject_structured_format(config_text: str) -> None:
     if detected := _detect_structured_format(config_text):
         message = (
-            f"The config appears to be {detected}, which hier_config does not"
-            " parse. Convert it to the platform's indented CLI text first"
-            " (set-style configs are supported natively by the Juniper JunOS,"
-            " VyOS, and Nokia SRL drivers)."
+            f"The config appears to be {detected}. Use HConfig.from_xml() or"
+            " HConfig.from_json() for structured formats, or convert to the"
+            " platform's indented CLI text (set-style configs are supported"
+            " natively by the Juniper JunOS, VyOS, and Nokia SRL drivers)."
         )
         raise InvalidConfigError(message)
 
@@ -66,7 +66,7 @@ def hconfig_from_text(
 
     _reject_structured_format(config_raw)
 
-    config = HConfig(_get_driver(platform_or_driver))
+    config = HConfig(resolve_driver(platform_or_driver))
     for rule in config.driver.rules.full_text_sub:
         config_raw = sub(rule.search, rule.replace, config_raw)
 
@@ -85,7 +85,7 @@ def hconfig_from_dump(
     platform_or_driver: Platform | str | HConfigDriverBase, dump: Dump
 ) -> HConfig:
     """Load an HConfig dump."""
-    config = HConfig(_get_driver(platform_or_driver))
+    config = HConfig(resolve_driver(platform_or_driver))
     last_item: HConfig | HConfigChild = config
     for item in dump.lines:
         # parent is the root
@@ -113,7 +113,7 @@ def hconfig_from_lines(
     platform_or_driver: Platform | str | HConfigDriverBase,
     lines: list[str] | tuple[str, ...] | str,
 ) -> HConfig:
-    driver = _get_driver(platform_or_driver)
+    driver = resolve_driver(platform_or_driver)
     config = HConfig(driver)
     if isinstance(lines, str):
         _reject_structured_format(lines)
@@ -150,14 +150,6 @@ def hconfig_from_lines(
         callback(config)
 
     return config
-
-
-def _get_driver(
-    platform_or_driver: Platform | str | HConfigDriverBase,
-) -> HConfigDriverBase:
-    if isinstance(platform_or_driver, (Platform, str)):
-        return get_hconfig_driver(platform_or_driver)
-    return platform_or_driver
 
 
 def _analyze_indent(

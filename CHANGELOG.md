@@ -11,6 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Structured config ingestion and rendering (#232): `HConfig.from_json()` /
+  `HConfig.from_xml()` build config trees from JSON (e.g. OpenConfig) and XML
+  (e.g. NETCONF payloads), with OpenConfig-style keyed lists identified via
+  `list_keys` (default `("name", "id")`). `HConfig.to_json()` / `to_xml()`
+  invert the mapping, so structured configs can be diffed, predicted with
+  `future()`, and rendered back in their source format. The format-detection
+  error now points at the new constructors. NETCONF `edit-config` operation
+  attributes are not yet given remediation semantics.
+
 - Interface view capability mixins (#227): `ConfigViewInterfaceBase` now
   carries only the core interface properties (`name`, `description`,
   `enabled`, `ipv4_interfaces`, `is_loopback`, `is_svi`, `number`,
