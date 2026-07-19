@@ -81,13 +81,13 @@ class HConfig(HConfigBase):  # ruff:ignore[too-many-public-methods]
         platform_or_driver: Platform | str | HConfigDriverBase,
         data: str | dict[str, Any],
         *,
-        list_keys: tuple[str, ...] = ("name", "id"),
+        list_keys: tuple[str, ...] | None = None,
     ) -> HConfig:
-        """Create an HConfig from a JSON object or JSON text (#232).
+        """Create an HConfig from a JSON object or JSON text.
 
         See `hier_config.formats` for the tree mapping rules. `list_keys`
         names the members that identify entries of keyed lists
-        (OpenConfig-style).
+        (OpenConfig-style); None means `formats.DEFAULT_LIST_KEYS`.
         """
         from .formats import hconfig_from_json
 
@@ -99,25 +99,32 @@ class HConfig(HConfigBase):  # ruff:ignore[too-many-public-methods]
         platform_or_driver: Platform | str | HConfigDriverBase,
         source: str,
         *,
-        list_keys: tuple[str, ...] = ("name", "id"),
+        list_keys: tuple[str, ...] | None = None,
     ) -> HConfig:
-        """Create an HConfig from an XML document (#232).
+        """Create an HConfig from an XML document.
 
         See `hier_config.formats` for the tree mapping rules. `list_keys`
-        names the child elements that identify repeated sibling elements.
+        names the child elements that identify repeated sibling elements;
+        None means `formats.DEFAULT_LIST_KEYS`.
         """
         from .formats import hconfig_from_xml
 
         return hconfig_from_xml(platform_or_driver, source, list_keys=list_keys)
 
     def to_json(self, *, indent: int | None = 2) -> str:
-        """Render a tree built by `from_json` back to JSON text (#232)."""
+        """Render a tree built by `from_json` back to JSON text.
+
+        Output is undefined for trees built by other constructors.
+        """
         from .formats import hconfig_to_json
 
         return hconfig_to_json(self, indent=indent)
 
     def to_xml(self) -> str:
-        """Render a tree built by `from_xml` back to XML text (#232)."""
+        """Render a tree built by `from_xml` back to XML text.
+
+        Output is undefined for trees built by other constructors.
+        """
         from .formats import hconfig_to_xml
 
         return hconfig_to_xml(self)

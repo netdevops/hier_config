@@ -20,8 +20,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   error now points at the new constructors. NETCONF `edit-config` operation
   attributes are not yet given remediation semantics.
 
-### Added
-
 - Interface view capability mixins (#227): `ConfigViewInterfaceBase` now
   carries only the core interface properties (`name`, `description`,
   `enabled`, `ipv4_interfaces`, `is_loopback`, `is_svi`, `number`,

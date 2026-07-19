@@ -23,6 +23,10 @@ Mapping rules (XML):
   element, otherwise a ``#text <json string>`` child leaf
 - empty element -> single-word leaf ``tag``
 
+The ``@``/``#text`` line encoding is an implementation detail of the XML
+mapping and may change in a future release; treat the trees as opaque between
+``hconfig_from_xml`` and ``hconfig_to_xml``.
+
 Both mappings are invertible via ``hconfig_to_json`` / ``hconfig_to_xml``.
 Known caveats: a JSON list of scalars with exactly one item renders back as a
 bare scalar; empty JSON lists are dropped (the tree has no way to represent
@@ -34,50 +38,50 @@ yet given remediation semantics.
 from __future__ import annotations
 
 import xml.etree.ElementTree as ET  # ruff:ignore[suspicious-xml-etree-import]
+from collections import Counter
 from json import JSONDecodeError, dumps, loads
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any, TypeAlias, cast
 
 from .exceptions import InvalidConfigError
-from .platforms.driver_base import HConfigDriverBase
-from .registry import get_hconfig_driver
+from .registry import resolve_driver
 from .root import HConfig
 
 if TYPE_CHECKING:
     from .base import HConfigBase
     from .child import HConfigChild
     from .models import Platform
+    from .platforms.driver_base import HConfigDriverBase
 
 DEFAULT_LIST_KEYS = ("name", "id")
 
-
-def _resolve_driver(
-    platform_or_driver: Platform | str | HConfigDriverBase,
-) -> HConfigDriverBase:
-    if isinstance(platform_or_driver, HConfigDriverBase):
-        return platform_or_driver
-    return get_hconfig_driver(platform_or_driver)
+JsonValue: TypeAlias = (
+    "str | int | float | bool | list[JsonValue] | dict[str, JsonValue] | None"
+)
 
 
 def hconfig_from_json(
     platform_or_driver: Platform | str | HConfigDriverBase,
     data: str | dict[str, Any],
     *,
-    list_keys: tuple[str, ...] = DEFAULT_LIST_KEYS,
+    list_keys: tuple[str, ...] | None = None,
 ) -> HConfig:
     """Create an HConfig from a JSON object (or JSON text)."""
-    parsed: object = data
     if isinstance(data, str):
         try:
-            parsed = loads(data)
+            data = loads(data)
         except JSONDecodeError as exc:
             message = f"The config is not valid JSON: {exc}"
             raise InvalidConfigError(message) from exc
-    if not isinstance(parsed, dict):
+    if not isinstance(data, dict):
         message = "The top-level JSON value must be an object"
         raise InvalidConfigError(message)
 
-    config = HConfig(_resolve_driver(platform_or_driver))
-    _json_into(config, cast("dict[str, Any]", parsed), list_keys)
+    config = HConfig(resolve_driver(platform_or_driver))
+    _json_into(
+        config,
+        cast("dict[str, JsonValue]", data),
+        list_keys or DEFAULT_LIST_KEYS,
+    )
     return config
 
 
@@ -90,7 +94,7 @@ def hconfig_from_xml(
     platform_or_driver: Platform | str | HConfigDriverBase,
     source: str,
     *,
-    list_keys: tuple[str, ...] = DEFAULT_LIST_KEYS,
+    list_keys: tuple[str, ...] | None = None,
 ) -> HConfig:
     """Create an HConfig from an XML document."""
     try:
@@ -99,8 +103,8 @@ def hconfig_from_xml(
         message = f"The config is not valid XML: {exc}"
         raise InvalidConfigError(message) from exc
 
-    config = HConfig(_resolve_driver(platform_or_driver))
-    _xml_element_into(config, root_element, "", list_keys)
+    config = HConfig(resolve_driver(platform_or_driver))
+    _xml_element_into(config, root_element, list_keys or DEFAULT_LIST_KEYS)
     return config
 
 
@@ -124,17 +128,15 @@ def _json_key(key: object) -> str:
 
 def _json_into(
     parent: HConfigBase,
-    mapping: dict[str, Any],
+    mapping: dict[str, JsonValue],
     list_keys: tuple[str, ...],
 ) -> None:
     for raw_key, value in mapping.items():
         key = _json_key(raw_key)
         if isinstance(value, dict):
-            value_mapping: dict[str, Any] = value  # pyright: ignore[reportUnknownVariableType]
-            _json_into(parent.add_child(key), value_mapping, list_keys)
+            _json_into(parent.add_child(key), value, list_keys)
         elif isinstance(value, list):
-            value_items: list[Any] = value  # pyright: ignore[reportUnknownVariableType]
-            _json_list_into(parent, key, value_items, list_keys)
+            _json_list_into(parent, key, value, list_keys)
         else:
             parent.add_child(f"{key} {dumps(value)}")
 
@@ -142,13 +144,12 @@ def _json_into(
 def _json_list_into(
     parent: HConfigBase,
     key: str,
-    items: list[Any],
+    items: list[JsonValue],
     list_keys: tuple[str, ...],
 ) -> None:
     for item in items:
         if isinstance(item, dict):
-            entry_mapping: dict[str, Any] = item  # pyright: ignore[reportUnknownVariableType]
-            identity_key = next((k for k in list_keys if k in entry_mapping), None)
+            identity_key = next((k for k in list_keys if k in item), None)
             if identity_key is None:
                 message = (
                     f"List entries under {key!r} need one of {list_keys} to"
@@ -156,8 +157,8 @@ def _json_list_into(
                     " member"
                 )
                 raise InvalidConfigError(message)
-            entry = parent.add_child(f"{key} {dumps(entry_mapping[identity_key])}")
-            _json_into(entry, entry_mapping, list_keys)
+            entry = parent.add_child(f"{key} {dumps(item[identity_key])}")
+            _json_into(entry, item, list_keys)
         elif isinstance(item, list):
             message = f"Nested JSON arrays are not supported (under {key!r})"
             raise InvalidConfigError(message)
@@ -165,26 +166,24 @@ def _json_list_into(
             parent.add_child(f"{key} {dumps(item)}")
 
 
-def _leaf_value(raw: str | None) -> object:
-    if raw is None:
-        return None
+def _leaf_value(raw: str) -> JsonValue:
     try:
-        return loads(raw)
+        return cast("JsonValue", loads(raw))
     except JSONDecodeError:
         return raw
 
 
 def _store_json_member(
-    result: dict[str, Any],
+    result: dict[str, JsonValue],
     key: str,
-    value: object,
+    value: JsonValue,
     *,
     force_list: bool,
 ) -> None:
     if key in result:
         existing = result[key]
         if isinstance(existing, list):
-            cast("list[object]", existing).append(value)
+            existing.append(value)
         else:
             result[key] = [existing, value]
     elif force_list:
@@ -193,8 +192,8 @@ def _store_json_member(
         result[key] = value
 
 
-def _node_to_json_object(node: HConfigBase) -> dict[str, Any]:
-    result: dict[str, Any] = {}
+def _node_to_json_object(node: HConfigBase) -> dict[str, JsonValue]:
+    result: dict[str, JsonValue] = {}
     for child in node.children:
         words = child.text.split(maxsplit=1)
         key = words[0]
@@ -215,20 +214,6 @@ def _node_to_json_object(node: HConfigBase) -> dict[str, Any]:
     return result
 
 
-def _xml_element_into(
-    parent: HConfigBase,
-    element: ET.Element,
-    node_suffix: str,
-    list_keys: tuple[str, ...],
-) -> None:
-    node = parent.add_child(f"{element.tag}{node_suffix}")
-    for name, value in element.attrib.items():
-        node.add_child(f"@{name} {dumps(value)}")
-    if text := (element.text or "").strip():
-        node.add_child(f"#text {dumps(text)}")
-    _xml_children_into(node, element, list_keys)
-
-
 def _xml_identity_suffix(
     element: ET.Element,
     list_keys: tuple[str, ...],
@@ -244,27 +229,33 @@ def _xml_identity_suffix(
     raise InvalidConfigError(message)
 
 
-def _xml_children_into(
-    node: HConfigChild,
+def _xml_element_into(
+    parent: HConfigBase,
     element: ET.Element,
     list_keys: tuple[str, ...],
+    *,
+    node_suffix: str = "",
 ) -> None:
-    tag_counts: dict[str, int] = {}
-    for child in element:
-        tag_counts[child.tag] = tag_counts.get(child.tag, 0) + 1
+    node = parent.add_child(f"{element.tag}{node_suffix}")
+    for name, value in element.attrib.items():
+        node.add_child(f"@{name} {dumps(value)}")
+    if text := (element.text or "").strip():
+        node.add_child(f"#text {dumps(text)}")
 
+    tag_counts = Counter(child.tag for child in element)
     for child in element:
-        is_leaf = not (len(child) or child.attrib)
-        if is_leaf:
-            text = (child.text or "").strip()
-            node.add_child(f"{child.tag} {dumps(text)}" if text else child.tag)
+        if not (len(child) or child.attrib):
+            child_text = (child.text or "").strip()
+            node.add_child(
+                f"{child.tag} {dumps(child_text)}" if child_text else child.tag
+            )
         else:
             suffix = (
                 _xml_identity_suffix(child, list_keys)
                 if tag_counts[child.tag] > 1
                 else ""
             )
-            _xml_element_into(node, child, suffix, list_keys)
+            _xml_element_into(node, child, list_keys, node_suffix=suffix)
 
 
 def _node_to_xml_element(node: HConfigChild) -> ET.Element:
@@ -276,11 +267,13 @@ def _node_to_xml_element(node: HConfigChild) -> ET.Element:
             element.text = value if isinstance(value, str) else words[1]
         return element
     for child in node.children:
-        child_words = child.text.split(maxsplit=1)
-        if child_words[0].startswith("@") and not child.children:
-            element.set(child_words[0][1:], str(_leaf_value(child_words[1])))
-        elif child_words[0] == "#text" and not child.children:
-            element.text = str(_leaf_value(child_words[1]))
+        if child.children:
+            element.append(_node_to_xml_element(child))
+        elif child.text.startswith("@"):
+            name, _, raw = child.text.partition(" ")
+            element.set(name[1:], str(_leaf_value(raw)))
+        elif child.text.startswith("#text "):
+            element.text = str(_leaf_value(child.text[len("#text ") :]))
         else:
             element.append(_node_to_xml_element(child))
     return element
