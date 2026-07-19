@@ -31,8 +31,13 @@ Both mappings are invertible via ``hconfig_to_json`` / ``hconfig_to_xml``.
 Known caveats: a JSON list of scalars with exactly one item renders back as a
 bare scalar; empty JSON lists are dropped (the tree has no way to represent
 them); duplicate list items or duplicate list-entry identities raise
-``DuplicateChildError``; NETCONF ``edit-config`` operation attributes are not
-yet given remediation semantics.
+``DuplicateChildError``.
+
+Remediation between ``hconfig_from_xml`` trees can be rendered as a NETCONF
+``edit-config`` payload via ``hconfig_to_netconf_xml`` (deletions become
+``nc:operation="delete"`` elements; additions use the default merge
+operation). Attribute-level changes cannot be expressed as NETCONF
+operations and raise ``InvalidConfigError``.
 """
 
 from __future__ import annotations
@@ -53,6 +58,8 @@ if TYPE_CHECKING:
     from .platforms.driver_base import HConfigDriverBase
 
 DEFAULT_LIST_KEYS = ("name", "id")
+
+NETCONF_BASE_NS = "urn:ietf:params:xml:ns:netconf:base:1.0"
 
 JsonValue: TypeAlias = (
     "str | int | float | bool | list[JsonValue] | dict[str, JsonValue] | None"
@@ -217,16 +224,20 @@ def _node_to_json_object(node: HConfigBase) -> dict[str, JsonValue]:
 def _xml_identity_suffix(
     element: ET.Element,
     list_keys: tuple[str, ...],
+    *,
+    required: bool,
 ) -> str:
     for key in list_keys:
         if (identity := element.find(key)) is not None and identity.text:
             return f" {dumps(identity.text.strip())}"
-    message = (
-        f"Repeated <{element.tag}> elements need a child element named one of"
-        f" {list_keys} to identify them; pass list_keys= to name the"
-        " identifying element"
-    )
-    raise InvalidConfigError(message)
+    if required:
+        message = (
+            f"Repeated <{element.tag}> elements need a child element named one"
+            f" of {list_keys} to identify them; pass list_keys= to name the"
+            " identifying element"
+        )
+        raise InvalidConfigError(message)
+    return ""
 
 
 def _xml_element_into(
@@ -250,10 +261,14 @@ def _xml_element_into(
                 f"{child.tag} {dumps(child_text)}" if child_text else child.tag
             )
         else:
-            suffix = (
-                _xml_identity_suffix(child, list_keys)
-                if tag_counts[child.tag] > 1
-                else ""
+            # Key the node whenever an identifying child exists so entries get
+            # the same text regardless of sibling count - configs with
+            # different entry counts must still diff surgically. An identity
+            # is only mandatory when the tag actually repeats.
+            suffix = _xml_identity_suffix(
+                child,
+                list_keys,
+                required=tag_counts[child.tag] > 1,
             )
             _xml_element_into(node, child, list_keys, node_suffix=suffix)
 
@@ -263,8 +278,7 @@ def _node_to_xml_element(node: HConfigChild) -> ET.Element:
     element = ET.Element(words[0])
     if not node.children:
         if len(words) > 1:
-            value = _leaf_value(words[1])
-            element.text = value if isinstance(value, str) else words[1]
+            element.text = _xml_text(words[1])
         return element
     for child in node.children:
         if child.children:
@@ -276,4 +290,112 @@ def _node_to_xml_element(node: HConfigChild) -> ET.Element:
             element.text = str(_leaf_value(child.text[len("#text ") :]))
         else:
             element.append(_node_to_xml_element(child))
+    return element
+
+
+def _xml_text(raw: str) -> str:
+    value = _leaf_value(raw)
+    return value if isinstance(value, str) else raw
+
+
+def hconfig_to_netconf_xml(
+    remediation: HConfig,
+    *,
+    running: HConfig | None = None,
+    list_keys: tuple[str, ...] | None = None,
+) -> str:
+    """Render a remediation between `hconfig_from_xml` trees as NETCONF XML.
+
+    Negated nodes become elements with ``nc:operation="delete"``; everything
+    else uses the NETCONF default merge operation. When `running` is given,
+    deletions of keyed list entries are expressed by their key leaf (found
+    via `list_keys`); without it, deletions fall back to value-bearing leaf
+    elements.
+    """
+    if len(remediation.children) != 1:
+        message = "XML rendering requires a single root node"
+        raise InvalidConfigError(message)
+    root_node = next(iter(remediation.children))
+    running_root = (
+        running.get_child(equals=root_node.text) if running is not None else None
+    )
+    element = _netconf_element(
+        root_node,
+        remediation.driver.negation_prefix,
+        running_root,
+        list_keys or DEFAULT_LIST_KEYS,
+    )
+    element.set("xmlns:nc", NETCONF_BASE_NS)
+    ET.indent(element)
+    return ET.tostring(element, encoding="unicode")
+
+
+def _netconf_element(
+    node: HConfigChild,
+    negation_prefix: str,
+    running_node: HConfigChild | None,
+    list_keys: tuple[str, ...],
+) -> ET.Element:
+    if node.text.startswith(negation_prefix):
+        return _netconf_delete_element(
+            node.text.removeprefix(negation_prefix),
+            running_node,
+            list_keys,
+        )
+    words = node.text.split(maxsplit=1)
+    element = ET.Element(words[0])
+    if not node.children:
+        if len(words) > 1:
+            element.text = _xml_text(words[1])
+        return element
+    for child in node.children:
+        if not child.children and child.text.startswith("@"):
+            name, _, raw = child.text.partition(" ")
+            element.set(name[1:], str(_leaf_value(raw)))
+        elif not child.children and child.text.startswith("#text "):
+            element.text = _xml_text(child.text[len("#text ") :])
+        else:
+            # A negated child is looked up in the running parent by
+            # _netconf_delete_element, so it receives the parent context.
+            child_running = (
+                running_node
+                if child.text.startswith(negation_prefix)
+                else running_node.get_child(equals=child.text)
+                if running_node
+                else None
+            )
+            element.append(
+                _netconf_element(child, negation_prefix, child_running, list_keys)
+            )
+    return element
+
+
+def _netconf_delete_element(
+    positive_text: str,
+    running_parent: HConfigChild | None,
+    list_keys: tuple[str, ...],
+) -> ET.Element:
+    words = positive_text.split(maxsplit=1)
+    if words[0].startswith("@"):
+        message = (
+            "Attribute changes cannot be expressed as NETCONF operations:"
+            f" {positive_text!r}"
+        )
+        raise InvalidConfigError(message)
+    element = ET.Element(words[0])
+    element.set("nc:operation", "delete")
+    if len(words) == 1:
+        return element
+    # A keyed list entry (branch in the running config) deletes by key leaf.
+    if (
+        running_parent is not None
+        and (running_entry := running_parent.get_child(equals=positive_text))
+        is not None
+        and running_entry.children
+    ):
+        for key in list_keys:
+            if running_entry.get_child(equals=f"{key} {words[1]}") is not None:
+                ET.SubElement(element, key).text = _xml_text(words[1])
+                return element
+    element.text = _xml_text(words[1])
     return element
