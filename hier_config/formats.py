@@ -24,9 +24,11 @@ Mapping rules (XML):
 - empty element -> single-word leaf ``tag``
 
 Both mappings are invertible via ``hconfig_to_json`` / ``hconfig_to_xml``.
-Known caveat: a JSON list of scalars with exactly one item renders back as a
-bare scalar. NETCONF ``edit-config`` operation attributes are not yet given
-remediation semantics.
+Known caveats: a JSON list of scalars with exactly one item renders back as a
+bare scalar; empty JSON lists are dropped (the tree has no way to represent
+them); duplicate list items or duplicate list-entry identities raise
+``DuplicateChildError``; NETCONF ``edit-config`` operation attributes are not
+yet given remediation semantics.
 """
 
 from __future__ import annotations
@@ -204,9 +206,12 @@ def _node_to_json_object(node: HConfigBase) -> dict[str, Any]:
                 _node_to_json_object(child),
                 force_list=len(words) > 1,
             )
+        elif len(words) > 1:
+            _store_json_member(result, key, _leaf_value(words[1]), force_list=False)
         else:
-            raw = words[1] if len(words) > 1 else None
-            _store_json_member(result, key, _leaf_value(raw), force_list=False)
+            # from_json produces a single-word childless node only for an
+            # empty object (scalar leaves always carry a value word).
+            _store_json_member(result, key, {}, force_list=False)
     return result
 
 

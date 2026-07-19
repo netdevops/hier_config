@@ -5,7 +5,7 @@ import json
 import pytest
 
 from hier_config import HConfig, Platform
-from hier_config.exceptions import InvalidConfigError
+from hier_config.exceptions import DuplicateChildError, InvalidConfigError
 
 OPENCONFIG_STYLE = {
     "system": {
@@ -194,3 +194,20 @@ def test_detection_error_mentions_structured_constructors() -> None:
         HConfig.from_text(Platform.GENERIC, '{"a": 1}')
     with pytest.raises(InvalidConfigError, match="from_xml"):
         HConfig.from_text(Platform.GENERIC, "<config/>")
+
+
+def test_empty_object_round_trips() -> None:
+    """An empty JSON object must not collapse to null (#279 review)."""
+    data: dict[str, object] = {"system": {}, "count": 1, "missing": None}
+    config = HConfig.from_json(Platform.GENERIC, data)
+    assert json.loads(config.to_json()) == data
+
+
+def test_duplicate_list_items_raise_hier_config_error() -> None:
+    """Duplicate scalar items and duplicate identities surface as tree errors."""
+    with pytest.raises(DuplicateChildError):
+        HConfig.from_json(Platform.GENERIC, {"dns": ["192.0.2.1", "192.0.2.1"]})
+    with pytest.raises(DuplicateChildError):
+        HConfig.from_json(
+            Platform.GENERIC, {"interface": [{"name": "e0"}, {"name": "e0"}]}
+        )
