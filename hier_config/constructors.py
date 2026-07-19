@@ -227,7 +227,7 @@ def _config_from_string_lines_end_of_banner_test(
     return any(c in config_line for c in banner_end_contains)
 
 
-def _load_from_string_lines(config: HConfig, config_text: str) -> None:  # noqa: C901
+def _load_from_string_lines(config: HConfig, config_text: str) -> None:  # ruff:ignore[complex-structure]
     config_text = config.driver.config_preprocessor(config_text)
     current_section: HConfig | HConfigChild = config
     most_recent_item: HConfig | HConfigChild = current_section
@@ -276,10 +276,10 @@ def _load_from_string_lines(config: HConfig, config_text: str) -> None:  # noqa:
             continue
 
         actual_indent = len(line) - len(line.lstrip())
-        line = " " * actual_indent + " ".join(line.split())  # noqa: PLW2901
+        line = " " * actual_indent + " ".join(line.split())  # ruff:ignore[redefined-loop-name]
         for rule in config.driver.rules.per_line_sub:
-            line = sub(rule.search, rule.replace, line)  # noqa: PLW2901
-        line = line.rstrip()  # noqa: PLW2901
+            line = sub(rule.search, rule.replace, line)  # ruff:ignore[redefined-loop-name]
+        line = line.rstrip()  # ruff:ignore[redefined-loop-name]
 
         # If line is now empty, move to the next
         if not line:
@@ -288,7 +288,7 @@ def _load_from_string_lines(config: HConfig, config_text: str) -> None:  # noqa:
         # Determine indentation level (after per_line_sub rules are applied)
         this_indent = len(line) - len(line.lstrip()) + indent_adjust
 
-        line = line.lstrip()  # noqa: PLW2901
+        line = line.lstrip()  # ruff:ignore[redefined-loop-name]
 
         # Determine parent in hierarchy
         most_recent_item, current_section = _analyze_indent(

@@ -18,7 +18,7 @@ from hier_config.models import ChangeDetail, ReportSummary, TagRule, TextStyle
 from hier_config.root import HConfig
 
 
-class RemediationReporter:  # noqa: PLR0904
+class RemediationReporter:  # ruff:ignore[too-many-public-methods]
     """A reporting tool for aggregating and analyzing remediation configurations.
 
     This class provides methods to merge multiple device remediations,
@@ -49,7 +49,7 @@ class RemediationReporter:  # noqa: PLR0904
 
     @property
     def merged_config(self) -> HConfig:
-        """Get the merged configuration.
+        """The merged configuration.
 
         Raises:
             ValueError: If no remediations have been added yet.
@@ -62,7 +62,7 @@ class RemediationReporter:  # noqa: PLR0904
 
     @property
     def device_count(self) -> int:
-        """Get the number of unique devices that have been added."""
+        """The number of unique devices that have been added."""
         return self._device_count
 
     def add_remediation(self, remediation: HConfig) -> None:
@@ -286,7 +286,7 @@ class RemediationReporter:  # noqa: PLR0904
         )
 
     def get_device_count(self, line: str, *, tag: str | None = None) -> int:
-        """Get the number of devices that need a specific configuration line.
+        """The number of devices that need a specific configuration line.
 
         Args:
             line: The configuration line to search for.
@@ -360,7 +360,7 @@ class RemediationReporter:  # noqa: PLR0904
         include_tags: Iterable[str] = (),
         exclude_tags: Iterable[str] = (),
     ) -> tuple[tuple[HConfigChild, int], ...]:
-        """Get the top N most common changes across devices.
+        """The top N most common changes across devices.
 
         Args:
             n: Number of top changes to return.
@@ -579,7 +579,7 @@ class RemediationReporter:  # noqa: PLR0904
         self,
         bins: Sequence[int] = (1, 10, 25, 50, 100),
     ) -> dict[str, int]:
-        """Get the distribution of changes by device impact.
+        """The distribution of changes by device impact.
 
         Args:
             bins: Boundaries for impact ranges.
@@ -613,7 +613,7 @@ class RemediationReporter:  # noqa: PLR0904
         return dict(distribution)
 
     def get_tag_distribution(self) -> dict[str, int]:
-        """Get the distribution of tags across all changes.
+        """The distribution of tags across all changes.
 
         Returns:
             A dictionary mapping tag names to their occurrence count.

@@ -13,7 +13,7 @@ from hier_config.platforms.models import (
 from hier_config.root import HConfig
 
 
-class ConfigViewInterfaceBase:  # noqa: PLR0904
+class ConfigViewInterfaceBase:  # ruff:ignore[too-many-public-methods]
     """Abstract base providing a typed view over a single interface config node.
 
     Subclasses parse the child tree of one ``interface ...`` block and expose
@@ -226,7 +226,7 @@ class HConfigViewBase(ABC):
     @property
     @abstractmethod
     def interface_names_mentioned(self) -> frozenset[str]:
-        """Returns a set with all the interface names mentioned in the config."""
+        """A set with all the interface names mentioned in the config."""
 
     def interface_view_by_name(self, name: str) -> ConfigViewInterfaceBase | None:
         for interface_view in self.interface_views:

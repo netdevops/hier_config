@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `future()` negation edge cases (#269): a negation whose positive form exists
+  in the running config now removes it without surviving as a literal `no ...`
+  child (evaluated before the idempotency rules, which can match the negation
+  line itself); shorthand negations (`no description`) remove the valued lines
+  they match, as devices do. Negations matching nothing are still kept as a
+  did-not-apply-cleanly signal, and idempotency-tracked negated forms (e.g.
+  IOS `no logging console`) still replace their counterpart and persist.
+- Lint suppressions and property docstrings updated for ruff 0.15 (the
+  renovate toolchain bump left the tree failing its own lint gate).
+
+### Added
+
+- `HConfig.future(..., prune_empty_branches=True)` removes sections that a
+  change emptied out — matching devices that prune empty stanzas on commit —
+  while keeping sections that were already empty (#269).
+
 ---
 
 ## [3.6.2] - 2026-07-13

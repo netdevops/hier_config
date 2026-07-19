@@ -15,7 +15,7 @@ from hier_config.platforms.view_base import (
 )
 
 
-class ConfigViewInterfaceAristaEOS(ConfigViewInterfaceBase):  # noqa: PLR0904
+class ConfigViewInterfaceAristaEOS(ConfigViewInterfaceBase):  # ruff:ignore[too-many-public-methods]
     """Interface config view for Arista EOS."""
 
     @property
@@ -165,7 +165,7 @@ class HConfigViewAristaEOS(HConfigViewBase):
 
     @property
     def interface_names_mentioned(self) -> frozenset[str]:
-        """Returns a set with all the interface names mentioned in the config."""
+        """A set with all the interface names mentioned in the config."""
         raise NotImplementedError
 
     @property

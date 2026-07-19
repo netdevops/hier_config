@@ -18,7 +18,7 @@ from hier_config.platforms.view_base import (
 )
 
 
-class ConfigViewInterfaceHPProcurve(  # noqa: PLR0904 pylint: disable=abstract-method
+class ConfigViewInterfaceHPProcurve(  # ruff:ignore[too-many-public-methods] pylint: disable=abstract-method
     ConfigViewInterfaceBase,
 ):
     """Interface config view for HP ProCurve / Aruba AOSS."""

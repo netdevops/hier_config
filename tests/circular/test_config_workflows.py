@@ -35,7 +35,7 @@ class TestConfigWorkflows:  # pylint: disable=too-few-public-methods
             (Platform.HP_PROCURVE, "procurve"),
         ),
     )
-    def test_circular_workflow(  # pylint: disable=too-many-locals  # noqa: PLR0914,PLR6301
+    def test_circular_workflow(  # pylint: disable=too-many-locals  # ruff:ignore[too-many-locals, no-self-use]
         self,
         platform: Platform,
         fixture_prefix: str,

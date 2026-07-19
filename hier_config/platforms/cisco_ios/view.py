@@ -17,7 +17,7 @@ from hier_config.platforms.view_base import (
 )
 
 
-class ConfigViewInterfaceCiscoIOS(ConfigViewInterfaceBase):  # noqa: PLR0904
+class ConfigViewInterfaceCiscoIOS(ConfigViewInterfaceBase):  # ruff:ignore[too-many-public-methods]
     """Interface config view for Cisco IOS / IOS-XE."""
 
     @property
@@ -251,7 +251,7 @@ class HConfigViewCiscoIOS(HConfigViewBase):
 
     @property
     def interface_names_mentioned(self) -> frozenset[str]:
-        """Returns a set with all the interface names mentioned in the config."""
+        """A set with all the interface names mentioned in the config."""
         return frozenset(model.name for model in self.interface_views)
 
     @property

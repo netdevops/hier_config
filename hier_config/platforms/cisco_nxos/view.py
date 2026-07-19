@@ -16,7 +16,7 @@ from hier_config.platforms.view_base import (
 )
 
 
-class ConfigViewInterfaceCiscoNXOS(ConfigViewInterfaceBase):  # noqa: PLR0904
+class ConfigViewInterfaceCiscoNXOS(ConfigViewInterfaceBase):  # ruff:ignore[too-many-public-methods]
     """Interface config view for Cisco NX-OS."""
 
     @property
@@ -182,7 +182,7 @@ class HConfigViewCiscoNXOS(HConfigViewBase):
 
     @property
     def interface_names_mentioned(self) -> frozenset[str]:
-        """Returns a set with all the interface names mentioned in the config."""
+        """A set with all the interface names mentioned in the config."""
         raise NotImplementedError
 
     @property
