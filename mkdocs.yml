@@ -18,6 +18,7 @@ nav:
   - User Guide:
       - Installation: user/install.md
       - Getting Started: user/getting-started.md
+      - Migrating from v3: user/migrating-from-v3.md
       - Loading Configurations: user/loading-configs.md
       - Remediation Workflows: user/remediation-workflows.md
       - Working with Tags: user/tags.md
