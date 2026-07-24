@@ -102,6 +102,7 @@ A frozen Pydantic model holding lists of typed rule objects:
 
 | Platform enum | Driver class | Module |
 |--------------|-------------|--------|
+| `ARUBA_AOSCX` | `HConfigDriverArubaAOSCX` | `platforms/aruba_aoscx/driver.py` |
 | `ARISTA_EOS` | `HConfigDriverAristaEOS` | `platforms/arista_eos/driver.py` |
 | `CISCO_IOS` | `HConfigDriverCiscoIOS` | `platforms/cisco_ios/driver.py` |
 | `CISCO_NXOS` | `HConfigDriverCiscoNXOS` | `platforms/cisco_nxos/driver.py` |

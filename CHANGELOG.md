@@ -23,6 +23,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Aruba AOS-CX platform support (`Platform.ARUBA_AOSCX`): a new driver and
+  config view covering AOS-CX's Cisco/EOS-like hierarchical CLI. Collapsed
+  unnamed VLAN headers (`vlan 1,10`) and additive `vlan trunk allowed` lists
+  are normalized into one VLAN per line so remediation only adds the missing
+  VLANs, then re-collapsed on output. EVPN/VXLAN stanzas are treated as
+  partial intended sections during remediation and rollback.
+- Two driver hooks, `HConfigDriverBase.workflow_config_post_process()` and
+  `HConfigDriverBase.future_config_post_process()`, let a platform driver apply
+  cleanup to generated remediation/rollback and future configs. Both default to
+  a no-op, so existing drivers are unaffected.
 - `HConfig.future(..., prune_empty_branches=True)` removes sections that a
   change emptied out — matching devices that prune empty stanzas on commit —
   while keeping sections that were already empty (#269).

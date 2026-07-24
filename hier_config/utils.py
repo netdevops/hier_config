@@ -28,6 +28,8 @@ from hier_config.models import (
 from hier_config.platforms.driver_base import HConfigDriverBase
 
 HCONFIG_PLATFORM_V2_TO_V3_MAPPING = {
+    "aruba_aoscx": Platform.ARUBA_AOSCX,
+    "aoscx": Platform.ARUBA_AOSCX,
     "ios": Platform.CISCO_IOS,
     "iosxe": Platform.CISCO_IOS,
     "iosxr": Platform.CISCO_XR,
@@ -93,11 +95,11 @@ def load_hier_config_tags(tags_file: str) -> tuple[TagRule, ...]:
     return TypeAdapter(tuple[TagRule, ...]).validate_python(tags_data)
 
 
-def hconfig_v2_os_v3_platform_mapper(os_name: str) -> Platform:
+def hconfig_v2_os_v3_platform_mapper(os_name: object) -> Platform:
     """Map a Hier Config v2 operating system name to a v3 Platform enumeration.
 
     Args:
-        os_name (str): The name of the OS as defined in Hier Config v2.
+        os_name: The name of the OS as defined in Hier Config v2.
 
     Returns:
         Platform: The corresponding Platform enumeration for Hier Config v3.
@@ -107,7 +109,10 @@ def hconfig_v2_os_v3_platform_mapper(os_name: str) -> Platform:
         <Platform.CISCO_IOS: 'ios'>
 
     """
-    return HCONFIG_PLATFORM_V2_TO_V3_MAPPING.get(os_name, Platform.GENERIC)
+    return HCONFIG_PLATFORM_V2_TO_V3_MAPPING.get(
+        str(os_name).strip().lower(),
+        Platform.GENERIC,
+    )
 
 
 def hconfig_v3_platform_v2_os_mapper(platform: Platform) -> str:

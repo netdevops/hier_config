@@ -82,6 +82,12 @@ class WorkflowRemediation:
         remediation_config = self.running_config.config_to_get_to(
             self.generated_config
         ).set_order_weight()
+        remediation_config = self.running_config.driver.workflow_config_post_process(
+            remediation_config,
+            self.running_config,
+            self.generated_config,
+            "remediation",
+        )
 
         self._remediation_config = remediation_config
 
@@ -105,6 +111,12 @@ class WorkflowRemediation:
         rollback_config = self.generated_config.config_to_get_to(
             self.running_config, HConfig(self.running_config.driver)
         ).set_order_weight()
+        rollback_config = self.running_config.driver.workflow_config_post_process(
+            rollback_config,
+            self.generated_config,
+            self.running_config,
+            "rollback",
+        )
 
         self._rollback_config = rollback_config
 

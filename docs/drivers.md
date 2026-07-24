@@ -30,6 +30,7 @@ By defining these rules and behaviors in a reusable way, a driver enables Hier C
 
 The following drivers are included in Hier Config:
 
+- **ARUBA_AOSCX**
 - **ARISTA_EOS**
 - **CISCO_IOS**
 - **CISCO_XR**
@@ -51,6 +52,25 @@ from hier_config import get_hconfig_driver, Platform
 # Example: Activating the CISCO_IOS driver
 driver = get_hconfig_driver(Platform.CISCO_IOS)
 ```
+
+### Aruba AOS-CX Driver
+
+Aruba AOS-CX uses a Cisco IOS/EOS-like hierarchical CLI with `no ` as the negation prefix. The `ARUBA_AOSCX` driver keeps the IOS/EOS-style tree model while accounting for AOS-CX interface trunk behavior:
+
+- `vlan trunk allowed` is additive on AOS-CX. The driver splits comma/range VLAN lists into one command per VLAN and treats the command family as additive, so remediation adds missing VLANs without removing currently allowed VLANs.
+- Common one-value commands such as interface `description`, `ip address`, `vlan access`, `vlan trunk native`, and `vrf attach` are treated as idempotent replacements.
+- BGP address-family blocks close with `exit-address-family`.
+- Per-line substitutions strip comment lines and rendered `exit`/`end` markers during parsing.
+
+Platform enum: `Platform.ARUBA_AOSCX`
+
+```python
+from hier_config import Platform, get_hconfig_driver
+
+driver = get_hconfig_driver(Platform.ARUBA_AOSCX)
+```
+
+---
 
 ### Cisco IOS Driver
 

@@ -197,7 +197,7 @@ class HConfig(HConfigBase):  # ruff:ignore[too-many-public-methods]
         self._future(config, future_config)
         if prune_empty_branches:
             self._prune_emptied_branches(future_config)
-        return future_config
+        return self.driver.future_config_post_process(future_config)
 
     def with_tags(self, tags: Iterable[str]) -> HConfig:
         """Returns a new instance recursively containing children that only have a subset of tags."""

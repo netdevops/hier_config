@@ -94,14 +94,31 @@ def test_load_hier_config_tags_empty_file(tmp_path: Path) -> None:
 def test_hconfig_v2_os_v3_platform_mapper() -> None:
     # Valid mappings
     assert hconfig_v2_os_v3_platform_mapper("ios") == Platform.CISCO_IOS
+    assert hconfig_v2_os_v3_platform_mapper("aoscx") == Platform.ARUBA_AOSCX
+    assert hconfig_v2_os_v3_platform_mapper("aruba_aoscx") == Platform.ARUBA_AOSCX
     assert hconfig_v2_os_v3_platform_mapper("nxos") == Platform.CISCO_NXOS
     assert hconfig_v2_os_v3_platform_mapper("junos") == Platform.JUNIPER_JUNOS
     assert hconfig_v2_os_v3_platform_mapper("nokia_srl") == Platform.NOKIA_SRL
     assert hconfig_v2_os_v3_platform_mapper("invalid") == Platform.GENERIC
 
 
+def test_hconfig_v2_os_v3_platform_mapper_normalizes_input() -> None:
+    class StringLikePlatform:  # pylint: disable=too-few-public-methods
+        """Object whose str() carries surrounding whitespace, to test coercion."""
+
+        def __str__(self) -> str:
+            return " aruba_aoscx "
+
+    assert hconfig_v2_os_v3_platform_mapper("ARUBA_AOSCX") == Platform.ARUBA_AOSCX
+    assert hconfig_v2_os_v3_platform_mapper(" aruba_aoscx ") == Platform.ARUBA_AOSCX
+    assert (
+        hconfig_v2_os_v3_platform_mapper(StringLikePlatform()) == Platform.ARUBA_AOSCX
+    )
+
+
 def test_hconfig_v3_platform_v2_os_mapper() -> None:
     # Valid mappings
+    assert hconfig_v3_platform_v2_os_mapper(Platform.ARUBA_AOSCX) == "aruba_aoscx"
     assert hconfig_v3_platform_v2_os_mapper(Platform.CISCO_IOS) == "ios"
     assert hconfig_v3_platform_v2_os_mapper(Platform.CISCO_NXOS) == "nxos"
     assert hconfig_v3_platform_v2_os_mapper(Platform.JUNIPER_JUNOS) == "junos"

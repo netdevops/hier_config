@@ -187,6 +187,7 @@ SetLikeOfStr = frozenset[str] | set[str]
 class Platform(str, Enum):
     """Enumeration of supported network operating system platforms."""
 
+    ARUBA_AOSCX = auto()
     ARISTA_EOS = auto()
     CISCO_IOS = auto()
     CISCO_NXOS = auto()
