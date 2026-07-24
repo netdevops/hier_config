@@ -178,6 +178,22 @@ class HConfigDriverBase(ABC):
                 return with_rule.use
         return None
 
+    def workflow_config_post_process(  # ruff:ignore[no-self-use]
+        self,
+        config: HConfig,
+        _source_config: HConfig,
+        _target_config: HConfig,
+        _workflow: str = "remediation",
+    ) -> HConfig:
+        """Apply driver-specific cleanup to generated workflow configs."""
+        return config
+
+    def future_config_post_process(  # ruff:ignore[no-self-use]
+        self, config: HConfig
+    ) -> HConfig:
+        """Apply driver-specific cleanup to simulated future configs."""
+        return config
+
     def sectional_exit(self, config: HConfigChild) -> str | None:
         for exit_rule in self.rules.sectional_exiting:
             if config.is_lineage_match(exit_rule.match_rules):

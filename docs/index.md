@@ -21,6 +21,7 @@
 
 | Platform | `Platform` enum | Status |
 |----------|-----------------|--------|
+| Aruba AOS-CX | `Platform.ARUBA_AOSCX` | Experimental |
 | Cisco IOS | `Platform.CISCO_IOS` | Fully supported |
 | Arista EOS | `Platform.ARISTA_EOS` | Fully supported |
 | Cisco IOS XR | `Platform.CISCO_XR` | Fully supported |
