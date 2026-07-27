@@ -10,6 +10,8 @@ from .child import HConfigChild
 from .models import Dump, Platform
 from .platforms.arista_eos.driver import HConfigDriverAristaEOS
 from .platforms.arista_eos.view import HConfigViewAristaEOS
+from .platforms.aruba_aoscx.driver import HConfigDriverArubaAOSCX
+from .platforms.aruba_aoscx.view import HConfigViewArubaAOSCX
 from .platforms.cisco_ios.driver import HConfigDriverCiscoIOS
 from .platforms.cisco_ios.view import HConfigViewCiscoIOS
 from .platforms.cisco_nxos.driver import HConfigDriverCiscoNXOS
@@ -35,6 +37,7 @@ def get_hconfig_driver(platform: Platform) -> HConfigDriverBase:
     """Create base options on an OS level."""
     platform_drivers: dict[Platform, type[HConfigDriverBase]] = {
         Platform.ARISTA_EOS: HConfigDriverAristaEOS,
+        Platform.ARUBA_AOSCX: HConfigDriverArubaAOSCX,
         Platform.CISCO_IOS: HConfigDriverCiscoIOS,
         Platform.CISCO_NXOS: HConfigDriverCiscoNXOS,
         Platform.CISCO_XR: HConfigDriverCiscoIOSXR,
@@ -64,6 +67,8 @@ def get_hconfig_view(config: HConfig) -> HConfigViewBase:
     driver = config.driver
     if isinstance(driver, HConfigDriverAristaEOS):
         return HConfigViewAristaEOS(config)
+    if isinstance(driver, HConfigDriverArubaAOSCX):
+        return HConfigViewArubaAOSCX(config)
     if isinstance(driver, HConfigDriverCiscoIOS):
         return HConfigViewCiscoIOS(config)
     if isinstance(driver, HConfigDriverCiscoNXOS):

@@ -28,6 +28,7 @@
 | Fortinet FortiOS | `Platform.FORTINET_FORTIOS` | Fully supported |
 | HP ProCurve (Aruba AOSS) | `Platform.HP_PROCURVE` | Fully supported |
 | HP Comware5 / H3C | `Platform.HP_COMWARE5` | Fully supported |
+| Aruba AOS-CX | `Platform.ARUBA_AOSCX` | Experimental |
 | Juniper JunOS | `Platform.JUNIPER_JUNOS` | Experimental |
 | Nokia SRL | `Platform.NOKIA_SRL` | Experimental |
 | VyOS | `Platform.VYOS` | Experimental |

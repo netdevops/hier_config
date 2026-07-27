@@ -174,6 +174,48 @@ def test_non_vlan_id_line_not_split_on_load() -> None:
     )
 
 
+def test_vlan_id_list_with_overlap_splits_without_negation() -> None:
+    """An overlapping collapsed list (vlan 10,10-12) de-duplicates and splits cleanly."""
+    running_config = get_hconfig(Platform.CISCO_IOS, "vlan 10,10-12\n")
+    assert [c.text for c in running_config.children] == [
+        "vlan 10",
+        "vlan 11",
+        "vlan 12",
+    ]
+    generated_config = get_hconfig(Platform.CISCO_IOS, "vlan 10\nvlan 11\nvlan 12\n")
+    remediation = running_config.config_to_get_to(generated_config).dump_simple()
+    assert not any(line.lstrip().startswith("no vlan") for line in remediation)
+
+
+def test_malformed_vlan_range_left_untouched() -> None:
+    """A malformed range (vlan 1-2-3) is left collapsed rather than silently truncated."""
+    config = get_hconfig(Platform.CISCO_IOS, "vlan 1-2-3\n")
+    assert config.get_child(equals="vlan 1-2-3") is not None
+    assert config.get_child(equals="vlan 1") is None
+
+
+def test_reversed_vlan_range_left_untouched() -> None:
+    """A reversed range (vlan 5-3,7) must not silently drop the reversed segment."""
+    config = get_hconfig(Platform.CISCO_IOS, "vlan 5-3,7\n")
+    assert config.get_child(equals="vlan 5-3,7") is not None
+    assert config.get_child(equals="vlan 7") is None
+
+
+def test_cisco_ios_trunk_allowed_vlan_not_split() -> None:
+    """Cisco trunk membership is declarative, not additive: the trunk line stays a
+    single command. Only AOS-CX splits `vlan trunk allowed` one VLAN per line.
+    """
+    config = get_hconfig(
+        Platform.CISCO_IOS,
+        "interface GigabitEthernet0/1\n switchport trunk allowed vlan 150-166\n",
+    )
+    interface = config.get_child(equals="interface GigabitEthernet0/1")
+    assert interface is not None
+    assert [c.text for c in interface.children] == [
+        "switchport trunk allowed vlan 150-166"
+    ]
+
+
 def test_vlan_id_list_rename_is_not_destructive() -> None:
     """Renaming one VLAN in a collapsed list must not negate the whole list."""
     running_config = get_hconfig(Platform.CISCO_IOS, "vlan 69,381\n")

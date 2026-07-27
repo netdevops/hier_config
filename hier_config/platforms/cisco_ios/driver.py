@@ -10,6 +10,7 @@ from hier_config.models import (
     SectionalExitingRule,
 )
 from hier_config.platforms.driver_base import HConfigDriverBase, HConfigDriverRules
+from hier_config.platforms.utils import split_vlan_id_lists
 from hier_config.root import HConfig
 
 logger = getLogger(__name__)
@@ -41,36 +42,6 @@ def _add_acl_sequence_numbers(config: HConfig) -> None:
                 if sub_child.text.startswith(acl_line_sw):
                     sub_child.text = f"{sequence_number} {sub_child.text}"
                     sequence_number += 10
-
-
-def _expand_vlan_id_list(spec: str) -> list[int]:
-    """Expand a VLAN id spec like ``69,381`` or ``10-12,20`` into a list of ints."""
-    ids: list[int] = []
-    for part in spec.split(","):
-        if "-" in part:
-            low, high = part.split("-")
-            ids.extend(range(int(low), int(high) + 1))
-        else:
-            ids.append(int(part))
-    return ids
-
-
-def _split_vlan_id_lists(config: HConfig) -> None:
-    """Split ``vlan 69,381`` / ``vlan 10-12`` into a separate ``vlan <id>`` block per VLAN.
-
-    IOS can render unnamed VLANs collapsed onto a single comma/range line
-    (depending on how they were created; named VLANs always get their own block).
-    Splitting such a line at load time lets the diff engine match VLANs
-    block-to-block against an intended config that lists them separately,
-    avoiding a destructive ``no vlan 69,381``.
-    """
-    for vlan in tuple(config.get_children(re_search=r"^vlan \d[\d,\-]*$")):
-        spec = vlan.text.split(maxsplit=1)[1]
-        if not any(separator in spec for separator in (",", "-")):
-            continue
-        for vlan_id in _expand_vlan_id_list(spec):
-            config.add_child(f"vlan {vlan_id}")
-        vlan.delete()
 
 
 class HConfigDriverCiscoIOS(HConfigDriverBase):
@@ -227,6 +198,6 @@ class HConfigDriverCiscoIOS(HConfigDriverBase):
                 _rm_ipv6_acl_sequence_numbers,
                 _remove_ipv4_acl_remarks,
                 _add_acl_sequence_numbers,
-                _split_vlan_id_lists,
+                split_vlan_id_lists,
             ],
         )

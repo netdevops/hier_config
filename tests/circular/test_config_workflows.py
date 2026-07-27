@@ -24,6 +24,7 @@ class TestConfigWorkflows:  # pylint: disable=too-few-public-methods
     @pytest.mark.parametrize(
         ("platform", "fixture_prefix"),
         (
+            (Platform.ARUBA_AOSCX, "aruba_aoscx"),
             (Platform.CISCO_IOS, "ios"),
             (Platform.ARISTA_EOS, "eos"),
             (Platform.CISCO_NXOS, "nxos"),

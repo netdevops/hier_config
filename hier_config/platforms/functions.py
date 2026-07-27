@@ -1,18 +1,30 @@
 def expand_range(number_range_str: str) -> tuple[int, ...]:
-    """Expand ranges like 2-5,8,22-45."""
+    """Expand ranges like ``2-5,8,22-45`` into a de-duplicated, ordered tuple.
+
+    Overlapping/duplicated ids (e.g. ``10,10-12``) collapse to a single entry
+    rather than raising, so callers that split a collapsed line get the set of
+    ids the operator meant. A malformed segment -- non-numeric, or more than one
+    ``-`` such as ``1-2-3`` -- raises ``ValueError`` instead of silently
+    truncating, so callers can leave the original line untouched.
+    """
     numbers: list[int] = []
     for number_range in number_range_str.split(","):
         start_stop = number_range.split("-")
-        if len(start_stop) == 2:
+        if len(start_stop) == 1:
+            numbers.append(int(start_stop[0]))
+        elif len(start_stop) == 2:
             start = int(start_stop[0])
             stop = int(start_stop[1])
-            numbers.extend(n for n in range(start, stop + 1))
+            if stop < start:
+                message = (
+                    f"reversed range segment {number_range!r} in {number_range_str!r}"
+                )
+                raise ValueError(message)
+            numbers.extend(range(start, stop + 1))
         else:
-            numbers.append(int(start_stop[0]))
-    if len(set(numbers)) != len(numbers):
-        message = "len(set(numbers)) must be equal to len(numbers)."
-        raise ValueError(message)
-    return tuple(numbers)
+            message = f"invalid range segment {number_range!r} in {number_range_str!r}"
+            raise ValueError(message)
+    return tuple(dict.fromkeys(numbers))
 
 
 def convert_to_set_commands(config_raw: str) -> str:

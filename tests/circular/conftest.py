@@ -16,6 +16,31 @@ def _fixture_file_read(filename: str) -> str:
     )
 
 
+# Aruba AOS-CX fixtures
+@pytest.fixture(scope="module")
+def aruba_aoscx_running_config() -> str:
+    """Load Aruba AOS-CX running config fixture."""
+    return _fixture_file_read("aruba_aoscx_running.conf")
+
+
+@pytest.fixture(scope="module")
+def aruba_aoscx_generated_config() -> str:
+    """Load Aruba AOS-CX generated config fixture."""
+    return _fixture_file_read("aruba_aoscx_generated.conf")
+
+
+@pytest.fixture(scope="module")
+def aruba_aoscx_remediation_config() -> str:
+    """Load Aruba AOS-CX remediation config fixture."""
+    return _fixture_file_read("aruba_aoscx_remediation.conf")
+
+
+@pytest.fixture(scope="module")
+def aruba_aoscx_rollback_config() -> str:
+    """Load Aruba AOS-CX rollback config fixture."""
+    return _fixture_file_read("aruba_aoscx_rollback.conf")
+
+
 # Cisco IOS fixtures
 @pytest.fixture(scope="module")
 def ios_running_config() -> str:
