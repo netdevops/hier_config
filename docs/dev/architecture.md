@@ -149,8 +149,9 @@ The formats module maps JSON (e.g. OpenConfig) and XML (e.g. NETCONF payloads) o
 - `hconfig_from_json` / `hconfig_to_json` — invertible JSON mapping (keyed lists identified via `list_keys`).
 - `hconfig_from_xml` / `hconfig_to_xml` — invertible XML mapping (attributes and text content become specially-encoded leaves).
 - `hconfig_to_netconf_xml` — renders a remediation between `from_xml` trees as a NETCONF `edit-config` payload (deletions become `nc:operation="delete"` elements).
+- `hconfig_to_gnmi_json` — renders a remediation between `from_json` trees as a gNMI-SetRequest-style dict (additions render into an `update` object, deletions become xpath-ish paths with `[key=value]` selectors).
 
-These are exposed on `HConfig` as `from_json` / `from_xml` / `to_json` / `to_xml`, and on `WorkflowRemediation` as `remediation_netconf_xml()`. See [Loading Configurations](../user/loading-configs.md) for the mapping rules.
+These are exposed on `HConfig` as `from_json` / `from_xml` / `to_json` / `to_xml`, and on `WorkflowRemediation` as `remediation_netconf_xml()` / `remediation_json()`. See [Loading Configurations](../user/loading-configs.md) for the mapping rules.
 
 ---
 

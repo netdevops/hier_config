@@ -70,6 +70,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `nc:operation="delete"` elements (keyed list entries delete by their key
   leaf, resolved against the running config), additions use the default merge
   operation, and attribute-level changes raise `InvalidConfigError`.
+- gNMI-style JSON remediation rendering (#287):
+  `WorkflowRemediation.remediation_json()` (and
+  `hier_config.formats.hconfig_to_gnmi_json()`) render a remediation between
+  `HConfig.from_json()` trees as a gNMI-SetRequest-style structure — added
+  and changed values render into an `update` object (modified keyed list
+  entries keep their identity leaf), negations become xpath-ish `delete`
+  paths with `[key=value]` selectors resolved against the running config,
+  and attribute-level changes raise `InvalidConfigError`.
 
 ### Fixed
 

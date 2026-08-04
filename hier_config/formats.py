@@ -38,6 +38,12 @@ Remediation between ``hconfig_from_xml`` trees can be rendered as a NETCONF
 ``nc:operation="delete"`` elements; additions use the default merge
 operation). Attribute-level changes cannot be expressed as NETCONF
 operations and raise ``InvalidConfigError``.
+
+Remediation between ``hconfig_from_json`` trees can be rendered as a
+gNMI-SetRequest-style structure via ``hconfig_to_gnmi_json`` (deletions
+become xpath-ish paths with ``[key=value]`` selectors for keyed list
+entries; additions render into an ``update`` object using the JSON
+mapping above).
 """
 
 from __future__ import annotations
@@ -45,7 +51,7 @@ from __future__ import annotations
 import xml.etree.ElementTree as ET  # ruff:ignore[suspicious-xml-etree-import]
 from collections import Counter
 from json import JSONDecodeError, dumps, loads
-from typing import TYPE_CHECKING, Any, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, NamedTuple, TypeAlias, TypedDict, cast
 
 from .exceptions import InvalidConfigError
 from .registry import resolve_driver
@@ -64,6 +70,13 @@ NETCONF_BASE_NS = "urn:ietf:params:xml:ns:netconf:base:1.0"
 JsonValue: TypeAlias = (
     "str | int | float | bool | list[JsonValue] | dict[str, JsonValue] | None"
 )
+
+
+class GnmiRemediation(TypedDict):
+    """gNMI-SetRequest-style remediation: an update tree and delete paths."""
+
+    update: dict[str, JsonValue]
+    delete: list[str]
 
 
 def hconfig_from_json(
@@ -399,3 +412,124 @@ def _netconf_delete_element(
                 return element
     element.text = _xml_text(words[1])
     return element
+
+
+def hconfig_to_gnmi_json(
+    remediation: HConfig,
+    *,
+    running: HConfig | None = None,
+    list_keys: tuple[str, ...] | None = None,
+) -> GnmiRemediation:
+    """Render a remediation between `hconfig_from_json` trees as gNMI-style sets.
+
+    Negated nodes become xpath-ish delete paths; everything else renders
+    into the `update` object via the JSON mapping. When `running` is given,
+    deletions of keyed list entries get `[key=value]` selectors (keys found
+    via `list_keys`); without it, deletions fall back to bare leaf paths.
+    """
+    result: GnmiRemediation = {"update": {}, "delete": []}
+    context = _GnmiContext(
+        delete=result["delete"],
+        negation_prefix=remediation.driver.negation_prefix,
+        list_keys=list_keys or DEFAULT_LIST_KEYS,
+    )
+    _gnmi_into(remediation, result["update"], (), running, context)
+    return result
+
+
+class _GnmiContext(NamedTuple):
+    delete: list[str]
+    negation_prefix: str
+    list_keys: tuple[str, ...]
+
+
+def _gnmi_into(
+    node: HConfigBase,
+    update: dict[str, JsonValue],
+    path: tuple[str, ...],
+    running_node: HConfigBase | None,
+    context: _GnmiContext,
+) -> None:
+    for child in node.children:
+        if child.text.startswith(context.negation_prefix):
+            # A negated child is resolved against the parent's running node.
+            context.delete.append(
+                _gnmi_delete_path(
+                    path,
+                    child.text.removeprefix(context.negation_prefix),
+                    running_node,
+                    context.list_keys,
+                )
+            )
+            continue
+        words = child.text.split(maxsplit=1)
+        if not child.children:
+            value: JsonValue = _leaf_value(words[1]) if len(words) > 1 else {}
+            _store_json_member(update, words[0], value, force_list=False)
+            continue
+        running_child = (
+            running_node.get_child(equals=child.text) if running_node else None
+        )
+        segment = words[0]
+        key_name: str | None = None
+        if len(words) > 1:
+            key_name = _gnmi_identity_key(
+                child, running_child, words[1], context.list_keys
+            )
+            segment = (
+                f"{words[0]}[{key_name or context.list_keys[0]}"
+                f"={_gnmi_selector_value(words[1])}]"
+            )
+        child_update: dict[str, JsonValue] = {}
+        _gnmi_into(child, child_update, (*path, segment), running_child, context)
+        if not child_update:
+            # The branch contained only deletions.
+            continue
+        if key_name is not None and key_name not in child_update:
+            child_update = {key_name: _leaf_value(words[1]), **child_update}
+        _store_json_member(update, words[0], child_update, force_list=len(words) > 1)
+
+
+def _gnmi_identity_key(
+    entry: HConfigChild,
+    running_entry: HConfigBase | None,
+    raw_value: str,
+    list_keys: tuple[str, ...],
+) -> str | None:
+    for source in (entry, running_entry):
+        if source is None:
+            continue
+        for key in list_keys:
+            if source.get_child(equals=f"{key} {raw_value}") is not None:
+                return key
+    return None
+
+
+def _gnmi_selector_value(raw: str) -> str:
+    return _xml_text(raw).replace("\\", "\\\\").replace("]", "\\]")
+
+
+def _gnmi_delete_path(
+    parent_path: tuple[str, ...],
+    positive_text: str,
+    running_parent: HConfigBase | None,
+    list_keys: tuple[str, ...],
+) -> str:
+    words = positive_text.split(maxsplit=1)
+    if words[0].startswith("@"):
+        message = (
+            "Attribute changes cannot be expressed as gNMI delete paths:"
+            f" {positive_text!r}"
+        )
+        raise InvalidConfigError(message)
+    segment = words[0]
+    # A keyed list entry (branch in the running config) deletes by selector;
+    # a scalar leaf deletes by its bare path (the value is dropped).
+    if len(words) > 1 and running_parent is not None:
+        running_entry = running_parent.get_child(equals=positive_text)
+        if running_entry is not None and running_entry.children:
+            for key in list_keys:
+                if running_entry.get_child(equals=f"{key} {words[1]}") is not None:
+                    segment = f"{words[0]}[{key}={_gnmi_selector_value(words[1])}]"
+                    break
+    return "/".join((*parent_path, segment))

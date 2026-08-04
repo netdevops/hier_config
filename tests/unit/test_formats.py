@@ -7,7 +7,7 @@ import pytest
 
 from hier_config import HConfig, Platform, WorkflowRemediation
 from hier_config.exceptions import DuplicateChildError, InvalidConfigError
-from hier_config.formats import hconfig_to_netconf_xml
+from hier_config.formats import hconfig_to_gnmi_json, hconfig_to_netconf_xml
 
 OPENCONFIG_STYLE = {
     "system": {
@@ -323,3 +323,169 @@ def test_xml_diff_is_surgical_across_entry_counts() -> None:
         line.strip() for line in remediation.to_lines() if "interface" in line
     ]
     assert interfaces_lines == ["interfaces", 'no interface "eth1"']
+
+
+GNMI_RUNNING = {
+    "system": {"config": {"hostname": "old", "location": "hq"}},
+    "interfaces": {
+        "interface": [
+            {"name": "eth0", "config": {"mtu": 9000}},
+            {"name": "eth1", "config": {"mtu": 1500}},
+        ],
+    },
+}
+GNMI_GENERATED = {
+    "system": {"config": {"hostname": "new", "location": "hq"}},
+    "interfaces": {
+        "interface": [
+            {"name": "eth0", "config": {"mtu": 9000}},
+        ],
+    },
+}
+
+
+def test_gnmi_remediation_payload() -> None:
+    """Remediation between from_json trees renders as update/delete sets."""
+    running = HConfig.from_json(Platform.GENERIC, GNMI_RUNNING)
+    generated = HConfig.from_json(Platform.GENERIC, GNMI_GENERATED)
+    workflow = WorkflowRemediation(running, generated)
+    result = workflow.remediation_json()
+
+    assert result["delete"] == [
+        "system/config/hostname",
+        "interfaces/interface[name=eth1]",
+    ]
+    assert result["update"] == {"system": {"config": {"hostname": "new"}}}
+
+
+def test_gnmi_scalar_leaf_delete_prunes_branch() -> None:
+    """A branch containing only deletions must not appear in the update tree."""
+    running = HConfig.from_json(Platform.GENERIC, {"system": {"hostname": "old"}})
+    generated = HConfig.from_json(Platform.GENERIC, {"system": {}})
+    result = WorkflowRemediation(running, generated).remediation_json()
+
+    assert result == {"update": {}, "delete": ["system/hostname"]}
+
+
+def test_gnmi_keyed_entry_delete_custom_list_keys() -> None:
+    running = HConfig.from_json(
+        Platform.GENERIC,
+        {"vlans": {"vlan": [{"vid": 100}, {"vid": 200}]}},
+        list_keys=("vid",),
+    )
+    generated = HConfig.from_json(
+        Platform.GENERIC, {"vlans": {"vlan": [{"vid": 200}]}}, list_keys=("vid",)
+    )
+    result = hconfig_to_gnmi_json(
+        running.remediation(generated), running=running, list_keys=("vid",)
+    )
+
+    assert result == {"update": {}, "delete": ["vlans/vlan[vid=100]"]}
+
+
+def test_gnmi_nested_delete_under_keyed_ancestor() -> None:
+    """An ancestor keyed entry gets a selector resolved against the running config."""
+    running = HConfig.from_json(
+        Platform.GENERIC,
+        {
+            "interfaces": {
+                "interface": [
+                    {"name": "eth0", "config": {"mtu": 9000, "description": "uplink"}},
+                ],
+            },
+        },
+    )
+    generated = HConfig.from_json(
+        Platform.GENERIC,
+        {
+            "interfaces": {
+                "interface": [
+                    {"name": "eth0", "config": {"description": "uplink"}},
+                ],
+            },
+        },
+    )
+    result = WorkflowRemediation(running, generated).remediation_json()
+
+    assert result == {
+        "update": {},
+        "delete": ["interfaces/interface[name=eth0]/config/mtu"],
+    }
+
+
+def test_gnmi_update_reinjects_identity_leaf() -> None:
+    """A modified keyed entry's update carries its identity leaf and re-ingests."""
+    running = HConfig.from_json(
+        Platform.GENERIC,
+        {"interfaces": {"interface": [{"name": "eth0", "config": {"mtu": 9000}}]}},
+    )
+    generated = HConfig.from_json(
+        Platform.GENERIC,
+        {"interfaces": {"interface": [{"name": "eth0", "config": {"mtu": 1500}}]}},
+    )
+    result = WorkflowRemediation(running, generated).remediation_json()
+
+    assert result["delete"] == ["interfaces/interface[name=eth0]/config/mtu"]
+    assert result["update"] == {
+        "interfaces": {"interface": [{"name": "eth0", "config": {"mtu": 1500}}]},
+    }
+    assert HConfig.from_json(Platform.GENERIC, result["update"]) is not None
+
+
+def test_gnmi_pure_addition_has_empty_delete() -> None:
+    running = HConfig.from_json(Platform.GENERIC, {"system": {}})
+    generated = HConfig.from_json(
+        Platform.GENERIC, {"system": {}, "ntp": {"enabled": True, "port": 123}}
+    )
+    result = WorkflowRemediation(running, generated).remediation_json()
+
+    assert result == {"update": {"ntp": {"enabled": True, "port": 123}}, "delete": []}
+
+
+def test_gnmi_empty_remediation() -> None:
+    running = HConfig.from_json(Platform.GENERIC, GNMI_RUNNING)
+    generated = HConfig.from_json(Platform.GENERIC, GNMI_RUNNING)
+    result = WorkflowRemediation(running, generated).remediation_json()
+
+    assert result == {"update": {}, "delete": []}
+
+
+def test_gnmi_no_running_context_falls_back_to_scalar() -> None:
+    """Without a running config, keyed-entry deletes degrade to bare paths."""
+    running = HConfig.from_json(Platform.GENERIC, GNMI_RUNNING)
+    generated = HConfig.from_json(Platform.GENERIC, GNMI_GENERATED)
+    result = hconfig_to_gnmi_json(running.remediation(generated))
+
+    assert result["delete"] == ["system/config/hostname", "interfaces/interface"]
+    assert result["update"] == {"system": {"config": {"hostname": "new"}}}
+
+
+def test_gnmi_attribute_negation_raises() -> None:
+    """Attribute removals cannot be expressed as gNMI delete paths."""
+    running = HConfig.from_xml(Platform.GENERIC, '<config><system foo="bar"/></config>')
+    generated = HConfig.from_xml(Platform.GENERIC, "<config><system/></config>")
+    remediation = running.remediation(generated)
+    with pytest.raises(InvalidConfigError, match="Attribute"):
+        hconfig_to_gnmi_json(remediation, running=running)
+
+
+def test_gnmi_selector_value_escaping() -> None:
+    r"""Selector values escape `\` and `]` so paths stay parseable."""
+    running = HConfig.from_json(
+        Platform.GENERIC,
+        {
+            "policies": {
+                "policy": [
+                    {"name": "a]b\\c", "action": "deny"},
+                    {"name": "keep", "action": "permit"},
+                ],
+            },
+        },
+    )
+    generated = HConfig.from_json(
+        Platform.GENERIC,
+        {"policies": {"policy": [{"name": "keep", "action": "permit"}]}},
+    )
+    result = WorkflowRemediation(running, generated).remediation_json()
+
+    assert result["delete"] == ["policies/policy[name=a\\]b\\\\c]"]
