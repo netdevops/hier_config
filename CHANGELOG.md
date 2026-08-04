@@ -30,10 +30,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   statement of repo standards, a `hier-config-review` Claude Code skill
   (`.claude/skills/`) that self-reviews a change set against those standards,
   GitHub Copilot review instructions (`.github/copilot-instructions.md`), and
-  a pull request template with a self-review checklist.
+  a pull request template with a self-review checklist (#290).
 - New developer and maintainer documentation: extending hier_config (in-tree
   drivers, rule types, view properties), testing conventions, code style and
-  standards, the release process, and CI/infrastructure notes.
+  standards, the release process, and CI/infrastructure notes (#290).
 
 ### Changed
 
@@ -45,7 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   unified diff walkthrough (previously duplicated in Future Config and
   orphaned from the nav), and the platform support table (previously in three
   places, two of which were missing Huawei VRP). CLAUDE.md was slimmed to an
-  overlay that imports AGENTS.md, retiring its stale platform list.
+  overlay that imports AGENTS.md, retiring its stale platform list (#290).
 
 ---
 
