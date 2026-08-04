@@ -33,6 +33,7 @@ driver = get_hconfig_driver(Platform.CISCO_IOS)
 | HP ProCurve (Aruba AOSS) | `Platform.HP_PROCURVE` | Fully supported |
 | HP Comware5 / H3C | `Platform.HP_COMWARE5` | Fully supported |
 | Huawei VRP | `Platform.HUAWEI_VRP` | Fully supported |
+| Aruba AOS-CX | `Platform.ARUBA_AOSCX` | Experimental |
 | Juniper JunOS | `Platform.JUNIPER_JUNOS` | Experimental |
 | Nokia SRL | `Platform.NOKIA_SRL` | Experimental |
 | VyOS | `Platform.VYOS` | Experimental |
@@ -123,6 +124,21 @@ Huawei VRP (Versatile Routing Platform) uses `undo` as the negation prefix rathe
 - **Smart negation**: `description` and `alias` commands are negated without their argument; `remark` commands strip the remark text; `snmp-agent community` commands truncate to the community name.
 - **Sectional exiting**: section exit text `exit` is translated to `quit` as VRP requires.
 - **Per-line substitutions**: strips `#` and `!` comment lines during parsing.
+
+---
+
+### Aruba AOS-CX
+
+Aruba AOS-CX uses a Cisco IOS/EOS-like hierarchical CLI with `no ` as the [negation prefix](../glossary.md#negation-prefix), so the `ARUBA_AOSCX` driver reuses the standard IOS/EOS tree model and remediation. The one platform-specific behavior is how trunk VLAN membership is modeled:
+
+- `vlan trunk allowed` is *additive* on AOS-CX rather than declarative. The driver splits comma/range VLAN lists into one command per VLAN (on load and in the intended config), so remediation adds a missing VLAN with `vlan trunk allowed <id>` and removes an extra one with `no vlan trunk allowed <id>`, rather than rewriting the whole list.
+- Unnamed collapsed VLAN headers such as `vlan 1,10` or `vlan 100-102` are likewise split into individual `vlan <id>` sections.
+- Structured sections such as `evpn` and `interface vxlan` are remediated like any other section: individual members (for example an EVPN `vlan`) are added or negated, while unchanged siblings such as `arp-suppression` are left untouched. As with Arista/Cisco, the intended config should list the members that must remain.
+- Common one-value commands such as interface `description`, `ip address`, `vlan access`, `vlan trunk native`, and `vrf attach` are treated as idempotent replacements.
+- BGP address-family blocks close with `exit-address-family`.
+- Per-line substitutions strip comment lines and rendered `exit`/`end` markers during parsing.
+
+**Known limitation**: because trunk VLAN lists are modeled one VLAN per line, a very wide range (for example `vlan trunk allowed 1-4094`) expands to one command per VLAN internally, so remediation that creates such a trunk from scratch renders many lines instead of the single range the operator wrote. Only the *delta* is emitted for an existing trunk, so day-to-day changes stay minimal; the expansion only shows up when adding a wide range wholesale.
 
 ---
 

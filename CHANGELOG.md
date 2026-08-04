@@ -15,7 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   guides (`docs/user/`, `docs/admin/`, `docs/dev/`) with a rewritten landing
   page, new pages for loading configurations and remediation workflows, and
   content refreshed for the v4 API.
-
+- Old readthedocs.io URLs (both the original flat layout and the 3.7 `user/`
+  layout) keep working via the mkdocs-redirects plugin; CLAUDE.md was slimmed
+  to an overlay that imports `AGENTS.md` (#290).
 ### Fixed
 
 - `future()` negation edge cases (#269): a negation whose positive form exists
@@ -31,9 +33,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `HConfig.future(..., prune_empty_branches=True)` removes sections that a
   change emptied out — matching devices that prune empty stanzas on commit —
   while keeping sections that were already empty (#269).
-
-### Added
-
+- Aruba AOS-CX platform support (`Platform.ARUBA_AOSCX`): a new driver and
+  config view covering AOS-CX's Cisco/EOS-like hierarchical CLI. Because
+  `vlan trunk allowed` is additive on AOS-CX rather than declarative, collapsed
+  unnamed VLAN headers (`vlan 1,10`) and comma/range trunk lists are split into
+  one VLAN per line via `post_load_callbacks`, so remediation adds a missing
+  VLAN with `vlan trunk allowed <id>` and removes an extra one with
+  `no vlan trunk allowed <id>`. All other sections, including `evpn` and
+  `interface vxlan`, are remediated with the standard rule framework. (#289)
+- Guidance for AI-assisted contributions: `AGENTS.md` as the canonical
+  statement of repo standards, a `hier-config-review` Claude Code skill
+  (`.claude/skills/`) that self-reviews a change set against those standards,
+  GitHub Copilot review instructions (`.github/copilot-instructions.md`), and
+  a pull request template with a self-review checklist (#290).
+- Two more Claude Code skills: `hier-config-new-driver` scaffolds in-tree
+  platform driver support (characterization checklist, TDD test and driver
+  templates, registration and documentation steps), and
+  `hier-config-troubleshoot` diagnoses unexpected library behavior via a
+  symptom-to-rule table covering negation, idempotency, indentation,
+  `DuplicateChildError`, sectional rules, ordering, and `future()` limits
+  (#290).
+- New developer and maintainer documentation: testing conventions, code style
+  and standards, the release process, and CI/infrastructure notes (#290).
 - NETCONF `edit-config` remediation rendering (#232):
   `WorkflowRemediation.remediation_netconf_xml()` (and
   `hier_config.formats.hconfig_to_netconf_xml()`) render a remediation

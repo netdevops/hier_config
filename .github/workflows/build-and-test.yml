@@ -32,3 +32,15 @@ jobs:
         poetry install --no-interaction --no-root
         poetry run python scripts/build.py lint
         poetry run python scripts/build.py pytest --coverage
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.12"
+    - name: Install docs dependencies
+      run: pip install -r docs/requirements.txt
+    - name: Build docs
+      run: mkdocs build --strict

@@ -9,6 +9,7 @@ Hierarchical Configuration has been used extensively on:
 - [x] Cisco NXOS
 - [x] Arista EOS
 - [x] Fortinet FortiOS
+- [x] Aruba AOS-CX
 - [x] HP Procurve (Aruba AOSS)
 - [x] HP Comware5 / H3C
 - [x] Huawei VRP

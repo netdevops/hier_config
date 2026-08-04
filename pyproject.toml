@@ -35,6 +35,7 @@ pydantic = "^2.9"
 flynt = "*"
 mkdocs = "*"
 mkdocs-include-markdown-plugin = "*"
+mkdocs-redirects = "*"
 mkdocstrings = {extras = ["python"], version = "*"}
 mypy = "*"
 pylint = "*"

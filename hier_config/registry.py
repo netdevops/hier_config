@@ -11,6 +11,7 @@ before configs are parsed concurrently.
 from hier_config.exceptions import DriverNotFoundError
 from hier_config.models import Platform
 from hier_config.platforms.arista_eos.driver import HConfigDriverAristaEOS
+from hier_config.platforms.aruba_aoscx.driver import HConfigDriverArubaAOSCX
 from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
 from hier_config.platforms.cisco_nxos.driver import HConfigDriverCiscoNXOS
 from hier_config.platforms.cisco_xr.driver import HConfigDriverCiscoIOSXR
@@ -26,6 +27,7 @@ from hier_config.platforms.vyos.driver import HConfigDriverVYOS
 
 _BUILTIN_DRIVERS: dict[Platform | str, type[HConfigDriverBase]] = {
     Platform.ARISTA_EOS: HConfigDriverAristaEOS,
+    Platform.ARUBA_AOSCX: HConfigDriverArubaAOSCX,
     Platform.CISCO_IOS: HConfigDriverCiscoIOS,
     Platform.CISCO_NXOS: HConfigDriverCiscoNXOS,
     Platform.CISCO_XR: HConfigDriverCiscoIOSXR,

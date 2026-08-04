@@ -286,7 +286,7 @@ class RemediationReporter:  # ruff:ignore[too-many-public-methods]
         )
 
     def get_device_count(self, line: str, *, tag: str | None = None) -> int:
-        """Get the number of devices that need a specific configuration line.
+        """The number of devices that need a specific configuration line.
 
         Args:
             line: The configuration line to search for.
@@ -360,7 +360,7 @@ class RemediationReporter:  # ruff:ignore[too-many-public-methods]
         include_tags: Iterable[str] = (),
         exclude_tags: Iterable[str] = (),
     ) -> tuple[tuple[HConfigChild, int], ...]:
-        """Get the top N most common changes across devices.
+        """The top N most common changes across devices.
 
         Args:
             n: Number of top changes to return.
@@ -579,7 +579,7 @@ class RemediationReporter:  # ruff:ignore[too-many-public-methods]
         self,
         bins: Sequence[int] = (1, 10, 25, 50, 100),
     ) -> dict[str, int]:
-        """Get the distribution of changes by device impact.
+        """The distribution of changes by device impact.
 
         Args:
             bins: Boundaries for impact ranges.
@@ -613,7 +613,7 @@ class RemediationReporter:  # ruff:ignore[too-many-public-methods]
         return dict(distribution)
 
     def get_tag_distribution(self) -> dict[str, int]:
-        """Get the distribution of tags across all changes.
+        """The distribution of tags across all changes.
 
         Returns:
             A dictionary mapping tag names to their occurrence count.

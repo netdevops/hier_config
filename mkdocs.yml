@@ -6,12 +6,37 @@ theme:
 
 plugins:
   - search
+  - include-markdown
   - mkdocstrings:
       handlers:
         python:
           options:
             show_source: true
             show_root_heading: true
+  - redirects:
+      redirect_maps:
+        install.md: user/install.md
+        getting-started.md: user/getting-started.md
+        utilities.md: user/loading-configs.md
+        drivers.md: admin/platforms.md
+        future-config.md: user/future-config.md
+        unified-diff.md: user/unified-diff.md
+        tags.md: user/tags.md
+        custom-workflows.md: user/remediation-workflows.md
+        remediation-reporting.md: user/remediation-reporting.md
+        junos-style-syntax-remediation.md: user/set-style-platforms.md
+        config-view.md: user/config-views.md
+        api-reference.md: dev/api-reference.md
+        architecture.md: dev/architecture.md
+        user/utilities.md: user/loading-configs.md
+        user/drivers.md: admin/platforms.md
+        user/custom-drivers.md: admin/custom-drivers.md
+        user/custom-workflows.md: user/remediation-workflows.md
+        user/junos-style-syntax-remediation.md: user/set-style-platforms.md
+        user/config-view.md: user/config-views.md
+        user/api-reference.md: dev/api-reference.md
+        user/glossary.md: glossary.md
+        dev/extending.md: dev/creating-drivers.md
 
 nav:
   - Home: index.md
@@ -35,6 +60,11 @@ nav:
       - Architecture: dev/architecture.md
       - Driver Rule Reference: dev/rule-reference.md
       - Creating a Platform Driver: dev/creating-drivers.md
+      - Testing Conventions: dev/testing.md
+      - Code Style & Standards: dev/code-style.md
       - Contributing: dev/contributing.md
       - API Reference: dev/api-reference.md
+  - Maintainer Guide:
+      - Releases: admin/releases.md
+      - CI & Infrastructure: admin/infrastructure.md
   - Glossary: glossary.md
