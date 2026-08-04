@@ -8,9 +8,9 @@ Every change described here follows [TDD](testing.md): write the failing test fi
 
 ## Adding an In-Tree Platform Driver
 
-1. **Create the driver package**: `hier_config/platforms/<platform>/` containing `driver.py` with a class subclassing `HConfigDriverBase` (`hier_config/platforms/driver_base.py`). Override `_instantiate_rules()` to return an `HConfigDriverRules` model populated with the platform's rules. Use **named module-level default factory functions** (e.g., `_ordering_rules_default()`) rather than inline lambdas — this matches the established pattern in `driver_base.py` and keeps pyright strict mode happy.
+1. **Create the driver package**: `hier_config/platforms/<platform>/` containing `driver.py` with a class subclassing `HConfigDriverBase` (`hier_config/platforms/driver_base.py`). Override `_instantiate_rules()` to return an `HConfigDriverRules` model constructed with the platform's rules (see `platforms/huawei_vrp/driver.py` for a small example).
 2. **Register the platform**: add a member to the `Platform` enum in `hier_config/models.py`.
-3. **Wire the constructor**: map the new enum member to your driver class in `get_hconfig_driver` (`hier_config/platforms/functions.py`).
+3. **Wire the constructor**: map the new enum member to your driver class in the `platform_drivers` dict inside `get_hconfig_driver` (`hier_config/constructors.py`).
 4. **Add tests**: create `tests/test_driver_<platform>.py` following the [testing conventions](testing.md). Add any config fixtures to `tests/fixtures/`.
 5. **Document it**: add a driver section and a platform-table row to [Drivers](../user/drivers.md).
 6. **Changelog**: add an entry under `## [Unreleased]` in `CHANGELOG.md`.

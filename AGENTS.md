@@ -77,4 +77,4 @@ These are enforced by CI and by reviewers; violations block merges:
 - [ ] Docs updated if public API or driver behavior changed; `mkdocs build --strict` passes if docs touched.
 - [ ] Commit messages follow CONTRIBUTING.md style.
 
-Claude Code users: run the `hier-config-review` skill (in `.claude/skills/`) to check all of the above automatically.
+Claude Code users: run the `hier-config-review` skill (in `.claude/skills/`) to check all of the above automatically. Two more repo skills cover common workflows: `hier-config-new-driver` (scaffold support for a new platform) and `hier-config-troubleshoot` (diagnose wrong remediation/parsing output). Other agents can follow the same workflows via the docs those skills reference (`docs/dev/extending.md` and the troubleshooting symptom table in the skill files, which are plain markdown).

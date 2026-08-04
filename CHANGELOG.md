@@ -31,6 +31,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`.claude/skills/`) that self-reviews a change set against those standards,
   GitHub Copilot review instructions (`.github/copilot-instructions.md`), and
   a pull request template with a self-review checklist (#290).
+- Two more Claude Code skills: `hier-config-new-driver` scaffolds in-tree
+  platform driver support (characterization checklist, TDD test and driver
+  templates, registration and documentation steps), and
+  `hier-config-troubleshoot` diagnoses unexpected library behavior via a
+  symptom-to-rule table covering negation, idempotency, indentation,
+  `DuplicateChildError`, sectional rules, ordering, and `future()` limits
+  (#290).
 - New developer and maintainer documentation: extending hier_config (in-tree
   drivers, rule types, view properties), testing conventions, code style and
   standards, the release process, and CI/infrastructure notes (#290).
