@@ -6,25 +6,53 @@ theme:
 
 plugins:
   - search
+  - include-markdown
   - mkdocstrings:
       handlers:
         python:
           options:
             show_source: true
             show_root_heading: true
+  - redirects:
+      redirect_maps:
+        install.md: user/install.md
+        getting-started.md: user/getting-started.md
+        utilities.md: user/utilities.md
+        drivers.md: user/drivers.md
+        future-config.md: user/future-config.md
+        unified-diff.md: user/unified-diff.md
+        tags.md: user/tags.md
+        custom-workflows.md: user/custom-workflows.md
+        remediation-reporting.md: user/remediation-reporting.md
+        junos-style-syntax-remediation.md: user/junos-style-syntax-remediation.md
+        config-view.md: user/config-view.md
+        api-reference.md: user/api-reference.md
+        glossary.md: user/glossary.md
+        architecture.md: dev/architecture.md
 
 nav:
   - Home: index.md
-  - Install: install.md
-  - Getting Started: getting-started.md
-  - Utilities: utilities.md
-  - Drivers: drivers.md
-  - Future Config: future-config.md
-  - Working with Tags: tags.md
-  - Custom Workflows: custom-workflows.md
-  - Remediation Reporting: remediation-reporting.md
-  - JunOS Style Syntax Remediation: junos-style-syntax-remediation.md
-  - Config View: config-view.md
-  - Architecture: architecture.md
-  - API Reference: api-reference.md
-  - Glossary: glossary.md
+  - User Guide:
+      - Install: user/install.md
+      - Getting Started: user/getting-started.md
+      - Drivers: user/drivers.md
+      - Customizing and Creating Drivers: user/custom-drivers.md
+      - Future Config: user/future-config.md
+      - Unified Diff: user/unified-diff.md
+      - Working with Tags: user/tags.md
+      - Custom Workflows: user/custom-workflows.md
+      - Remediation Reporting: user/remediation-reporting.md
+      - JunOS Style Syntax Remediation: user/junos-style-syntax-remediation.md
+      - Config View: user/config-view.md
+      - Utilities: user/utilities.md
+      - API Reference: user/api-reference.md
+      - Glossary: user/glossary.md
+  - Developer Guide:
+      - Contributing: dev/contributing.md
+      - Architecture: dev/architecture.md
+      - Extending hier_config: dev/extending.md
+      - Testing Conventions: dev/testing.md
+      - Code Style & Standards: dev/code-style.md
+  - Maintainer Guide:
+      - Releases: admin/releases.md
+      - CI & Infrastructure: admin/infrastructure.md

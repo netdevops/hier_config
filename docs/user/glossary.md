@@ -55,14 +55,7 @@ A pair of `IndentAdjustRule` entries (`start_expression` / `end_expression`) tha
 
 ## Match rule
 
-A `MatchRule` Pydantic model that acts as a predicate on an `HConfigChild.text` value.  All fields (`equals`, `startswith`, `endswith`, `contains`, `re_search`) are optional; when multiple are set every criterion must match.  Match rules are composed into tuples to describe a full lineage path.
-
-**Example:** Match any `neighbor X.X.X.X description` line under a BGP section:
-
-```python
-MatchRule(startswith="router bgp"),
-MatchRule(re_search=r"neighbor \S+ description"),
-```
+A `MatchRule` Pydantic model that acts as a predicate on an `HConfigChild.text` value; match rules are composed into tuples to describe a full lineage path. See [MatchRules](tags.md#matchrules) for the full reference and examples.
 
 ---
 

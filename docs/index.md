@@ -2,18 +2,18 @@
 
 `hier_config` is a Python library that compares a network device's running configuration against its intended configuration and generates the exact remediation commands needed to bring it into compliance — without connecting to any device.
 
-**New to hier_config?** → [Get started in 5 minutes](getting-started.md)
+**New to hier_config?** → [Get started in 5 minutes](user/getting-started.md)
 
 ---
 
 ## What can hier_config do?
 
-- **Compute remediation** — diff running vs intended config and produce the minimum set of commands to close the gap. See [Getting Started](getting-started.md).
-- **Generate rollbacks** — automatically produce the inverse change so you can revert safely. See [Getting Started → Rollback](getting-started.md#generating-the-rollback-configuration).
-- **Preview future state** — simulate what the running config will look like after a change set is applied. See [Future Config](future-config.md).
-- **Tag-based filtering** — annotate remediation lines with tags and deploy only a subset of changes (e.g., interfaces only, or BGP only). See [Working with Tags](tags.md).
-- **Structured config access** — query interface properties, VLANs, hostnames, and more through a typed Python API without writing regex. See [Config View](config-view.md).
-- **Multi-device reporting** — aggregate remediation stats across a fleet and export to JSON or CSV. See [Remediation Reporting](remediation-reporting.md).
+- **Compute remediation** — diff running vs intended config and produce the minimum set of commands to close the gap. See [Getting Started](user/getting-started.md).
+- **Generate rollbacks** — automatically produce the inverse change so you can revert safely. See [Getting Started → Rollback](user/getting-started.md#generating-the-rollback-configuration).
+- **Preview future state** — simulate what the running config will look like after a change set is applied. See [Future Config](user/future-config.md).
+- **Tag-based filtering** — annotate remediation lines with tags and deploy only a subset of changes (e.g., interfaces only, or BGP only). See [Working with Tags](user/tags.md).
+- **Structured config access** — query interface properties, VLANs, hostnames, and more through a typed Python API without writing regex. See [Config View](user/config-view.md).
+- **Multi-device reporting** — aggregate remediation stats across a fleet and export to JSON or CSV. See [Remediation Reporting](user/remediation-reporting.md).
 
 ---
 
@@ -54,9 +54,9 @@ for line in workflow.remediation_config.all_children_sorted():
 
 | Goal | Page |
 |------|------|
-| Install the library | [Install](install.md) |
-| Walk through a first diff | [Getting Started](getting-started.md) |
-| Learn about platform drivers | [Drivers](drivers.md) |
-| Understand the architecture | [Architecture](architecture.md) |
-| Browse the full API | [API Reference](api-reference.md) |
-| Look up terminology | [Glossary](glossary.md) |
+| Install the library | [Install](user/install.md) |
+| Walk through a first diff | [Getting Started](user/getting-started.md) |
+| Learn about platform drivers | [Drivers](user/drivers.md) |
+| Understand the architecture | [Architecture](dev/architecture.md) |
+| Browse the full API | [API Reference](user/api-reference.md) |
+| Look up terminology | [Glossary](user/glossary.md) |
