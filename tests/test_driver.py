@@ -3,6 +3,7 @@ from hier_config.child import HConfigChild
 from hier_config.constructors import get_hconfig
 from hier_config.models import Platform
 from hier_config.platforms.arista_eos.driver import HConfigDriverAristaEOS
+from hier_config.platforms.aruba_aoscx.driver import HConfigDriverArubaAOSCX
 from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
 from hier_config.platforms.cisco_nxos.driver import HConfigDriverCiscoNXOS
 from hier_config.platforms.cisco_xr.driver import HConfigDriverCiscoIOSXR
@@ -13,6 +14,7 @@ from hier_config.platforms.vyos.driver import HConfigDriverVYOS
 
 
 def test_get_hconfig_driver() -> None:
+    assert isinstance(get_hconfig_driver(Platform.ARUBA_AOSCX), HConfigDriverArubaAOSCX)
     assert isinstance(get_hconfig_driver(Platform.ARISTA_EOS), HConfigDriverAristaEOS)
     assert isinstance(get_hconfig_driver(Platform.CISCO_IOS), HConfigDriverCiscoIOS)
     assert isinstance(get_hconfig_driver(Platform.CISCO_NXOS), HConfigDriverCiscoNXOS)

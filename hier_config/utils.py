@@ -28,6 +28,11 @@ from hier_config.models import (
 from hier_config.platforms.driver_base import HConfigDriverBase
 
 HCONFIG_PLATFORM_V2_TO_V3_MAPPING = {
+    # netutils sets this platform's network_driver_mappings["hier_config"] to
+    # "aruba_aoscx", and nautobot-golden-config resolves the driver by feeding
+    # that string through this mapper, so the entry is required for AOS-CX to
+    # resolve instead of falling back to GENERIC.
+    "aruba_aoscx": Platform.ARUBA_AOSCX,
     "ios": Platform.CISCO_IOS,
     "iosxe": Platform.CISCO_IOS,
     "iosxr": Platform.CISCO_XR,
@@ -96,6 +101,12 @@ def load_hier_config_tags(tags_file: str) -> tuple[TagRule, ...]:
 def hconfig_v2_os_v3_platform_mapper(os_name: str) -> Platform:
     """Map a Hier Config v2 operating system name to a v3 Platform enumeration.
 
+    Surrounding whitespace is stripped before lookup: consumers such as
+    nautobot-golden-config pass ``platform.network_driver_mappings["hier_config"]``
+    straight in, and a stray trailing space there would otherwise miss the table
+    and silently fall back to ``Platform.GENERIC`` -- producing a wrong (often
+    destructive) remediation with no error. Case is left untouched.
+
     Args:
         os_name (str): The name of the OS as defined in Hier Config v2.
 
@@ -107,7 +118,7 @@ def hconfig_v2_os_v3_platform_mapper(os_name: str) -> Platform:
         <Platform.CISCO_IOS: 'ios'>
 
     """
-    return HCONFIG_PLATFORM_V2_TO_V3_MAPPING.get(os_name, Platform.GENERIC)
+    return HCONFIG_PLATFORM_V2_TO_V3_MAPPING.get(os_name.strip(), Platform.GENERIC)
 
 
 def hconfig_v3_platform_v2_os_mapper(platform: Platform) -> str:

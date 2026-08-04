@@ -188,6 +188,7 @@ class Platform(str, Enum):
     """Enumeration of supported network operating system platforms."""
 
     ARISTA_EOS = auto()
+    ARUBA_AOSCX = auto()
     CISCO_IOS = auto()
     CISCO_NXOS = auto()
     CISCO_XR = auto()

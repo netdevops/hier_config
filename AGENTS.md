@@ -41,7 +41,7 @@ Three-layer design — full detail in [docs/dev/architecture.md](docs/dev/archit
 - **Driver** (`platforms/`): each platform subclasses `HConfigDriverBase` and overrides `_instantiate_rules()` returning `HConfigDriverRules` — typed, frozen Pydantic rule models matched against config lineage via `MatchRule` tuples.
 - **Workflow** (`workflows.py`, `reporting.py`): `WorkflowRemediation` exposes `remediation_config` / `rollback_config`; constructors live in `constructors.py` (`get_hconfig()`, `get_hconfig_fast_load()`, `get_hconfig_driver()`).
 
-Supported platforms (`Platform` enum in `models.py`): ARISTA_EOS, CISCO_IOS, CISCO_NXOS, CISCO_XR, FORTINET_FORTIOS, GENERIC, HP_COMWARE5, HP_PROCURVE, HUAWEI_VRP, JUNIPER_JUNOS, NOKIA_SRL, VYOS.
+Supported platforms (`Platform` enum in `models.py`): ARISTA_EOS, ARUBA_AOSCX, CISCO_IOS, CISCO_NXOS, CISCO_XR, FORTINET_FORTIOS, GENERIC, HP_COMWARE5, HP_PROCURVE, HUAWEI_VRP, JUNIPER_JUNOS, NOKIA_SRL, VYOS.
 
 ## Hard Rules
 

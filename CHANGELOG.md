@@ -23,6 +23,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Aruba AOS-CX platform support (`Platform.ARUBA_AOSCX`): a new driver and
+  config view covering AOS-CX's Cisco/EOS-like hierarchical CLI. Because
+  `vlan trunk allowed` is additive on AOS-CX rather than declarative, collapsed
+  unnamed VLAN headers (`vlan 1,10`) and comma/range trunk lists are split into
+  one VLAN per line via `post_load_callbacks`, so remediation adds a missing
+  VLAN with `vlan trunk allowed <id>` and removes an extra one with
+  `no vlan trunk allowed <id>`. All other sections, including `evpn` and
+  `interface vxlan`, are remediated with the standard rule framework. (#289)
 - `HConfig.future(..., prune_empty_branches=True)` removes sections that a
   change emptied out — matching devices that prune empty stanzas on commit —
   while keeping sections that were already empty (#269).
