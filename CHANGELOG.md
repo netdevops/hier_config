@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Migration guide for v3 → v4 upgrades (`docs/user/migrating-from-v3.md`):
+  rename tables for constructors, methods, and utilities, the unified
+  negation rule mapping, exception and config-view changes, and behavior
+  changes to review.
+
 ### Changed
 
 - Restructured the documentation into User, Administrator, and Developer
@@ -18,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Old readthedocs.io URLs (both the original flat layout and the 3.7 `user/`
   layout) keep working via the mkdocs-redirects plugin; CLAUDE.md was slimmed
   to an overlay that imports `AGENTS.md` (#290).
+
 ### Fixed
 
 - `future()` negation edge cases (#269): a negation whose positive form exists
