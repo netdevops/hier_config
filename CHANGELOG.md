@@ -26,6 +26,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `HConfig.future(..., prune_empty_branches=True)` removes sections that a
   change emptied out — matching devices that prune empty stanzas on commit —
   while keeping sections that were already empty (#269).
+- Guidance for AI-assisted contributions: `AGENTS.md` as the canonical
+  statement of repo standards, a `hier-config-review` Claude Code skill
+  (`.claude/skills/`) that self-reviews a change set against those standards,
+  GitHub Copilot review instructions (`.github/copilot-instructions.md`), and
+  a pull request template with a self-review checklist.
+- New developer and maintainer documentation: extending hier_config (in-tree
+  drivers, rule types, view properties), testing conventions, code style and
+  standards, the release process, and CI/infrastructure notes.
+
+### Changed
+
+- Documentation reorganized into User Guide, Developer Guide, and Maintainer
+  Guide sections (`docs/user/`, `docs/dev/`, `docs/admin/`); old
+  readthedocs.io URLs keep working via the mkdocs-redirects plugin, and
+  CONTRIBUTING.md now renders on the docs site. Duplicated content was
+  consolidated: the MatchRule reference (previously in three places), the
+  unified diff walkthrough (previously duplicated in Future Config and
+  orphaned from the nav), and the platform support table (previously in three
+  places, two of which were missing Huawei VRP). CLAUDE.md was slimmed to an
+  overlay that imports AGENTS.md, retiring its stale platform list.
 
 ---
 
