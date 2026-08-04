@@ -100,21 +100,7 @@ A frozen Pydantic model holding lists of typed rule objects:
 
 ### Built-in Platform Drivers
 
-| Platform enum | Driver class | Module |
-|--------------|-------------|--------|
-| `ARISTA_EOS` | `HConfigDriverAristaEOS` | `platforms/arista_eos/driver.py` |
-| `CISCO_IOS` | `HConfigDriverCiscoIOS` | `platforms/cisco_ios/driver.py` |
-| `CISCO_NXOS` | `HConfigDriverCiscoNXOS` | `platforms/cisco_nxos/driver.py` |
-| `CISCO_XR` | `HConfigDriverCiscoIOSXR` | `platforms/cisco_xr/driver.py` |
-| `FORTINET_FORTIOS` | `HConfigDriverFortinetFortiOS` | `platforms/fortinet_fortios/driver.py` |
-| `GENERIC` | `HConfigDriverGeneric` | `platforms/generic/driver.py` |
-| `HP_COMWARE5` | `HConfigDriverHPComware5` | `platforms/hp_comware5/driver.py` |
-| `HP_PROCURVE` | `HConfigDriverHPProcurve` | `platforms/hp_procurve/driver.py` |
-| `JUNIPER_JUNOS` | `HConfigDriverJuniperJUNOS` | `platforms/juniper_junos/driver.py` |
-| `NOKIA_SRL` | `HConfigDriverNokiaSRL` | `platforms/nokia_srl/driver.py` |
-| `VYOS` | `HConfigDriverVYOS` | `platforms/vyos/driver.py` |
-
-See [Drivers](drivers.md) for full documentation on customising or creating drivers.
+Each supported platform provides a driver in `hier_config/platforms/<platform>/driver.py`. The canonical list of platforms and their support status lives in [Drivers](../user/drivers.md); see [Customizing and Creating Drivers](../user/custom-drivers.md) for how to customize or create drivers.
 
 ---
 
@@ -149,7 +135,7 @@ Sectional-overwrite and idempotency rules are applied during the right pass.
 - Idempotency rules (last value wins)
 - Negation commands (`no ...` removes the corresponding positive command)
 
-See [Future Config](future-config.md) for known limitations.
+See [Future Config](../user/future-config.md) for known limitations.
 
 ---
 
@@ -185,7 +171,7 @@ summary = reporter.summary()
 reporter.to_json("report.json")
 ```
 
-See [Remediation Reporting](remediation-reporting.md) for full API documentation.
+See [Remediation Reporting](../user/remediation-reporting.md) for full API documentation.
 
 ---
 

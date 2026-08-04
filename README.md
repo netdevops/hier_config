@@ -19,7 +19,7 @@ In addition to the Cisco-style syntax, hier_config offers experimental support f
 - [x] Nokia SRL (Service Router Linux)
 - [x] VyOS
 
-Hier Config is compatible with any NOS that utilizes a structured CLI syntax similar to Cisco IOS or Junos OS.
+Hier Config is compatible with any NOS that utilizes a structured CLI syntax similar to Cisco IOS or Junos OS. The full platform support matrix is maintained in the [driver documentation](https://hier-config.readthedocs.io/en/latest/user/drivers/).
 
 The code documentation can be found at: [Hier Config documentation](https://hier-config.readthedocs.io/en/latest/).
 
@@ -29,13 +29,13 @@ Network devices continuously drift from their intended state — VLANs appear, A
 
 ## Highlights
 
-- Predict the device state before deploying with [`future()`](https://hier-config.readthedocs.io/en/latest/future-config/) and generate accurate rollbacks that preserve distinct structural commands — BGP neighbor descriptions, for example, no longer collapse when multiple peers share a common prefix.
-- Build remediation workflows with deterministic diffs across [Cisco-style and Junos-style](https://hier-config.readthedocs.io/en/latest/drivers/) configuration syntaxes.
-- Tag remediation lines and filter output with [tag-based rules](https://hier-config.readthedocs.io/en/latest/tags/) for phased or conditional deployment.
-- Aggregate and analyse changes across a fleet with [RemediationReporter](https://hier-config.readthedocs.io/en/latest/remediation-reporting/).
-- Render structured, typed interface data with the [Config View](https://hier-config.readthedocs.io/en/latest/config-view/) abstraction.
+- Predict the device state before deploying with [`future()`](https://hier-config.readthedocs.io/en/latest/user/future-config/) and generate accurate rollbacks that preserve distinct structural commands — BGP neighbor descriptions, for example, no longer collapse when multiple peers share a common prefix.
+- Build remediation workflows with deterministic diffs across [Cisco-style and Junos-style](https://hier-config.readthedocs.io/en/latest/user/drivers/) configuration syntaxes.
+- Tag remediation lines and filter output with [tag-based rules](https://hier-config.readthedocs.io/en/latest/user/tags/) for phased or conditional deployment.
+- Aggregate and analyse changes across a fleet with [RemediationReporter](https://hier-config.readthedocs.io/en/latest/user/remediation-reporting/).
+- Render structured, typed interface data with the [Config View](https://hier-config.readthedocs.io/en/latest/user/config-view/) abstraction.
 
-See the [Architecture Overview](https://hier-config.readthedocs.io/en/latest/architecture/) for how the tree, driver, and workflow layers fit together.
+See the [Architecture Overview](https://hier-config.readthedocs.io/en/latest/dev/architecture/) for how the tree, driver, and workflow layers fit together.
 
 ## Installation
 
@@ -86,3 +86,7 @@ print(workflow.remediation_config)
 ```
 
 This guide gets you started with Hier Config in minutes! For more details, visit [Hier Config Documentation Site](https://hier-config.readthedocs.io/en/latest/).
+
+## Contributing
+
+Contributions are welcome — see the [contributing guide](https://github.com/netdevops/hier_config/blob/master/CONTRIBUTING.md) and the [developer documentation](https://hier-config.readthedocs.io/en/latest/dev/contributing/) for setup, standards, and testing conventions. Release history lives in the [changelog](https://github.com/netdevops/hier_config/blob/master/CHANGELOG.md).
