@@ -139,9 +139,7 @@ class WorkflowRemediation:
         Keyed list-entry deletions are expressed by their key leaf, resolved
         against the running config via `list_keys`.
         """
-        from .formats import (
-            hconfig_to_netconf_xml,
-        )
+        from .formats import hconfig_to_netconf_xml
 
         return hconfig_to_netconf_xml(
             self.remediation_config,
@@ -162,9 +160,7 @@ class WorkflowRemediation:
         get `[key=value]` selectors, resolved against the running config via
         `list_keys`.
         """
-        from .formats import (
-            hconfig_to_gnmi_json,
-        )
+        from .formats import hconfig_to_gnmi_json
 
         return hconfig_to_gnmi_json(
             self.remediation_config,

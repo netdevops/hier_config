@@ -400,18 +400,38 @@ def _netconf_delete_element(
     if len(words) == 1:
         return element
     # A keyed list entry (branch in the running config) deletes by key leaf.
-    if (
-        running_parent is not None
-        and (running_entry := running_parent.get_child(equals=positive_text))
-        is not None
-        and running_entry.children
-    ):
-        for key in list_keys:
-            if running_entry.get_child(equals=f"{key} {words[1]}") is not None:
-                ET.SubElement(element, key).text = _xml_text(words[1])
-                return element
+    key = _running_entry_key(running_parent, positive_text, words[1], list_keys)
+    if key is not None:
+        ET.SubElement(element, key).text = _xml_text(words[1])
+        return element
     element.text = _xml_text(words[1])
     return element
+
+
+def _matching_list_key(
+    entry: HConfigBase,
+    raw_value: str,
+    list_keys: tuple[str, ...],
+) -> str | None:
+    for key in list_keys:
+        if entry.get_child(equals=f"{key} {raw_value}") is not None:
+            return key
+    return None
+
+
+def _running_entry_key(
+    running_parent: HConfigBase | None,
+    positive_text: str,
+    raw_value: str,
+    list_keys: tuple[str, ...],
+) -> str | None:
+    """Key leaf identifying `positive_text` as a keyed list entry, if any."""
+    if running_parent is None:
+        return None
+    running_entry = running_parent.get_child(equals=positive_text)
+    if running_entry is None or not running_entry.children:
+        return None
+    return _matching_list_key(running_entry, raw_value, list_keys)
 
 
 def hconfig_to_gnmi_json(
@@ -499,9 +519,9 @@ def _gnmi_identity_key(
     for source in (entry, running_entry):
         if source is None:
             continue
-        for key in list_keys:
-            if source.get_child(equals=f"{key} {raw_value}") is not None:
-                return key
+        key = _matching_list_key(source, raw_value, list_keys)
+        if key is not None:
+            return key
     return None
 
 
@@ -525,11 +545,8 @@ def _gnmi_delete_path(
     segment = words[0]
     # A keyed list entry (branch in the running config) deletes by selector;
     # a scalar leaf deletes by its bare path (the value is dropped).
-    if len(words) > 1 and running_parent is not None:
-        running_entry = running_parent.get_child(equals=positive_text)
-        if running_entry is not None and running_entry.children:
-            for key in list_keys:
-                if running_entry.get_child(equals=f"{key} {words[1]}") is not None:
-                    segment = f"{words[0]}[{key}={_gnmi_selector_value(words[1])}]"
-                    break
+    if len(words) > 1:
+        key = _running_entry_key(running_parent, positive_text, words[1], list_keys)
+        if key is not None:
+            segment = f"{words[0]}[{key}={_gnmi_selector_value(words[1])}]"
     return "/".join((*parent_path, segment))

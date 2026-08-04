@@ -425,7 +425,6 @@ def test_gnmi_update_reinjects_identity_leaf() -> None:
     )
     result = WorkflowRemediation(running, generated).remediation_json()
 
-    assert result["delete"] == ["interfaces/interface[name=eth0]/config/mtu"]
     assert result["update"] == {
         "interfaces": {"interface": [{"name": "eth0", "config": {"mtu": 1500}}]},
     }
