@@ -4,6 +4,10 @@ Built-in drivers are registered at import time. Users can register drivers for
 custom platforms (by string name), override built-in drivers, and restore
 built-in defaults by unregistering the override.
 
+Entries are keyed on canonical uppercase platform names (#284): `Platform`
+members are converted via their names at the boundary, and string names are
+uppercased, so a member and its name address the same entry.
+
 The registry is not synchronized; register drivers at application startup,
 before configs are parsed concurrently.
 """
@@ -25,33 +29,31 @@ from hier_config.platforms.juniper_junos.driver import HConfigDriverJuniperJUNOS
 from hier_config.platforms.nokia_srl.driver import HConfigDriverNokiaSRL
 from hier_config.platforms.vyos.driver import HConfigDriverVYOS
 
-_BUILTIN_DRIVERS: dict[Platform | str, type[HConfigDriverBase]] = {
-    Platform.ARISTA_EOS: HConfigDriverAristaEOS,
-    Platform.ARUBA_AOSCX: HConfigDriverArubaAOSCX,
-    Platform.CISCO_IOS: HConfigDriverCiscoIOS,
-    Platform.CISCO_NXOS: HConfigDriverCiscoNXOS,
-    Platform.CISCO_XR: HConfigDriverCiscoIOSXR,
-    Platform.FORTINET_FORTIOS: HConfigDriverFortinetFortiOS,
-    Platform.GENERIC: HConfigDriverGeneric,
-    Platform.HP_PROCURVE: HConfigDriverHPProcurve,
-    Platform.HP_COMWARE5: HConfigDriverHPComware5,
-    Platform.HUAWEI_VRP: HConfigDriverHuaweiVrp,
-    Platform.JUNIPER_JUNOS: HConfigDriverJuniperJUNOS,
-    Platform.NOKIA_SRL: HConfigDriverNokiaSRL,
-    Platform.VYOS: HConfigDriverVYOS,
+_BUILTIN_DRIVERS: dict[str, type[HConfigDriverBase]] = {
+    Platform.ARISTA_EOS.name: HConfigDriverAristaEOS,
+    Platform.ARUBA_AOSCX.name: HConfigDriverArubaAOSCX,
+    Platform.CISCO_IOS.name: HConfigDriverCiscoIOS,
+    Platform.CISCO_NXOS.name: HConfigDriverCiscoNXOS,
+    Platform.CISCO_XR.name: HConfigDriverCiscoIOSXR,
+    Platform.FORTINET_FORTIOS.name: HConfigDriverFortinetFortiOS,
+    Platform.GENERIC.name: HConfigDriverGeneric,
+    Platform.HP_PROCURVE.name: HConfigDriverHPProcurve,
+    Platform.HP_COMWARE5.name: HConfigDriverHPComware5,
+    Platform.HUAWEI_VRP.name: HConfigDriverHuaweiVrp,
+    Platform.JUNIPER_JUNOS.name: HConfigDriverJuniperJUNOS,
+    Platform.NOKIA_SRL.name: HConfigDriverNokiaSRL,
+    Platform.VYOS.name: HConfigDriverVYOS,
 }
 
-_registry: dict[Platform | str, type[HConfigDriverBase]] = dict(_BUILTIN_DRIVERS)
+_registry: dict[str, type[HConfigDriverBase]] = dict(_BUILTIN_DRIVERS)
 
 
-def _normalize(platform: Platform | str) -> Platform | str:
+def _normalize(platform: Platform | str) -> str:
+    # Platform must be checked first: it subclasses str, and its str content
+    # is the enum value, not the platform name.
     if isinstance(platform, Platform):
-        return platform
-    name = platform.upper()
-    try:
-        return Platform[name]
-    except KeyError:
-        return name
+        return platform.name
+    return platform.upper()
 
 
 def register_driver(
@@ -61,30 +63,39 @@ def register_driver(
     """Register a driver for a platform.
 
     Passing a string registers a custom platform usable anywhere a `Platform`
-    is accepted (names are case-insensitive). Passing an existing `Platform`
-    member overrides the built-in driver for that platform.
+    is accepted; names are canonicalized to uppercase, so registration and
+    lookup are case-insensitive. Passing an existing `Platform` member (or its
+    name — the two are interchangeable) overrides the built-in driver for
+    that platform.
     """
     _registry[_normalize(platform)] = driver_class
 
 
 def unregister_driver(platform: Platform | str) -> None:
     """Remove a custom platform, or restore an overridden built-in driver."""
-    platform = _normalize(platform)
-    if platform not in _registry:
+    name = _normalize(platform)
+    if name not in _registry:
         message = f"Unsupported platform: {platform}"
         raise DriverNotFoundError(message)
-    if isinstance(platform, Platform):
-        if _registry[platform] is _BUILTIN_DRIVERS[platform]:
-            message = f"Built-in platform {platform} is not overridden"
-            raise DriverNotFoundError(message)
-        _registry[platform] = _BUILTIN_DRIVERS[platform]
+    builtin = _BUILTIN_DRIVERS.get(name)
+    if builtin is None:
+        del _registry[name]
+    elif _registry[name] is builtin:
+        # Format the canonical name: pre-3.11 f-strings render a str-Enum
+        # member as its meaningless value string.
+        message = f"Built-in platform {name} is not overridden"
+        raise DriverNotFoundError(message)
     else:
-        del _registry[platform]
+        _registry[name] = builtin
 
 
 def get_registered_platforms() -> tuple[Platform | str, ...]:
-    """Return all registered platforms, built-in and custom."""
-    return tuple(_registry)
+    """Return all registered platforms, built-in and custom.
+
+    Names matching a `Platform` member are returned as members; custom names
+    are returned as canonical uppercase strings.
+    """
+    return tuple(Platform.__members__.get(name, name) for name in _registry)
 
 
 def resolve_driver(

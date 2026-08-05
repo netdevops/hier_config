@@ -26,6 +26,10 @@ class _CustomDriver(HConfigDriverBase):
         return HConfigDriverRules()
 
 
+# The member's value string ("3"): a str-Enum artifact, not a platform name.
+_CISCO_IOS_VALUE = str(Platform.CISCO_IOS.value)
+
+
 def _assert_custom_platform_works() -> None:
     driver = get_hconfig_driver("MY_NOS")
     assert isinstance(driver, _CustomDriver)
@@ -116,3 +120,54 @@ def test_unregister_builtin_without_override_raises() -> None:
     """A built-in platform without an override cannot be unregistered."""
     with pytest.raises(DriverNotFoundError, match="not overridden"):
         unregister_driver(Platform.CISCO_XR)
+
+
+def test_register_platform_value_does_not_collide_with_builtin() -> None:
+    """A Platform member's value string is a distinct custom key (#284)."""
+    register_driver(_CISCO_IOS_VALUE, _CustomDriver)
+    try:
+        driver = get_hconfig_driver(Platform.CISCO_IOS)
+    finally:
+        unregister_driver(_CISCO_IOS_VALUE)
+    assert driver.__class__ is HConfigDriverCiscoIOS
+
+
+def test_platform_value_lookup_raises() -> None:
+    """Platform member value strings are not platform names (#284)."""
+    with pytest.raises(DriverNotFoundError, match="Unsupported platform"):
+        get_hconfig_driver(_CISCO_IOS_VALUE)
+
+
+def test_get_registered_platforms_includes_custom_names() -> None:
+    """Custom platforms are listed by their canonical uppercase name (#284)."""
+    register_driver("my_nos", _CustomDriver)
+    try:
+        assert [
+            platform
+            for platform in get_registered_platforms()
+            if not isinstance(platform, Platform)
+        ] == ["MY_NOS"]
+    finally:
+        unregister_driver("my_nos")
+
+
+def test_get_registered_platforms_returns_enum_members_for_builtins() -> None:
+    """Enum-known names are listed as Platform members, not strings (#284)."""
+    members = {
+        platform
+        for platform in get_registered_platforms()
+        if isinstance(platform, Platform)
+    }
+    assert members == set(Platform)
+
+
+def test_platform_name_string_interchangeable_with_member() -> None:
+    """A Platform member and its name address the same registry entry (#284)."""
+    register_driver("cisco_ios", _CustomDriver)
+    try:
+        assert isinstance(get_hconfig_driver(Platform.CISCO_IOS), _CustomDriver)
+    finally:
+        unregister_driver(Platform.CISCO_IOS)
+
+    driver = get_hconfig_driver(Platform.CISCO_IOS)
+    assert driver.__class__ is HConfigDriverCiscoIOS

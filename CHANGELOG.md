@@ -35,9 +35,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   their driver modules (e.g. `remove_ipv4_acl_remarks` in
   `hier_config.platforms.cisco_ios.driver`), so a built-in callback can be
   removed by identity with `rules.post_load_callbacks.remove(...)` (#286).
+- The driver registry is keyed internally on canonical uppercase platform
+  names; `Platform` members are converted via their names at the boundary, so
+  a member and its name are fully interchangeable in `register_driver`,
+  `unregister_driver`, and `get_hconfig_driver`. `get_registered_platforms()`
+  returns `Platform` members for enum-known names and uppercase strings for
+  custom names (#284).
 
 ### Fixed
 
+- Registering a driver under a `Platform` member's *value* string (e.g. `"3"`,
+  the value of `Platform.CISCO_IOS`) no longer silently overwrites that
+  platform's built-in registry entry, and value strings no longer resolve in
+  platform lookups — platforms are identified by name (#284).
 - `future()` negation edge cases (#269): a negation whose positive form exists
   in the running config now removes it without surviving as a literal `no ...`
   child (evaluated before the idempotency rules, which can match the negation

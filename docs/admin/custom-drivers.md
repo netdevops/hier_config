@@ -94,6 +94,8 @@ config = HConfig.from_text("MY_NOS", config_text)
 config = HConfig.from_text("my_nos", config_text)  # same driver
 ```
 
+Names are canonicalized to uppercase, and a `Platform` member is interchangeable with its name — `register_driver("cisco_ios", ...)` and `register_driver(Platform.CISCO_IOS, ...)` address the same entry.
+
 The registry is not synchronized — register drivers at application startup, before configs are parsed concurrently.
 
 ### Overriding a built-in driver
@@ -130,6 +132,8 @@ from hier_config import get_registered_platforms
 print(get_registered_platforms())
 # (Platform.ARISTA_EOS, Platform.CISCO_IOS, ..., 'MY_NOS')
 ```
+
+Names known to the `Platform` enum are returned as members; custom names are returned as canonical uppercase strings.
 
 ## Using an unregistered driver instance
 
