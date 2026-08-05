@@ -459,6 +459,30 @@ def test_gnmi_no_running_context_falls_back_to_scalar() -> None:
     assert result["update"] == {"system": {"config": {"hostname": "new"}}}
 
 
+def test_gnmi_unresolved_identity_falls_back_to_default_key() -> None:
+    """An unresolvable entry key guesses the selector but skips injection.
+
+    A modified keyed entry's remediation subtree lacks its identity leaf, so
+    without a running config the key name cannot be resolved: the delete-path
+    selector falls back to the first `list_keys` name, and no identity leaf is
+    injected into the update (a guessed key would become applied config).
+    """
+    running = HConfig.from_json(
+        Platform.GENERIC,
+        {"interfaces": {"interface": [{"name": "eth0", "config": {"mtu": 9000}}]}},
+    )
+    generated = HConfig.from_json(
+        Platform.GENERIC,
+        {"interfaces": {"interface": [{"name": "eth0", "config": {"mtu": 1500}}]}},
+    )
+    result = hconfig_to_gnmi_json(running.remediation(generated))
+
+    assert result == {
+        "update": {"interfaces": {"interface": [{"config": {"mtu": 1500}}]}},
+        "delete": ["interfaces/interface[name=eth0]/config/mtu"],
+    }
+
+
 def test_gnmi_attribute_negation_raises() -> None:
     """Attribute removals cannot be expressed as gNMI delete paths."""
     running = HConfig.from_xml(Platform.GENERIC, '<config><system foo="bar"/></config>')
