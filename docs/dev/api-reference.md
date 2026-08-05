@@ -30,6 +30,8 @@ Auto-generated reference documentation for the `hier_config` public API. Signatu
 
 ::: hier_config.get_registered_platforms
 
+::: hier_config.registry.resolve_driver
+
 ---
 
 ## Core Classes
@@ -39,6 +41,24 @@ Auto-generated reference documentation for the `hier_config` public API. Signatu
 ::: hier_config.HConfigChild
 
 ::: hier_config.children.HConfigChildren
+
+---
+
+## Future Config
+
+::: hier_config.HConfig.future
+
+::: hier_config.HConfig.future_with_report
+
+::: hier_config.FutureReport
+
+---
+
+## Structured Formats
+
+JSON/XML ingestion and rendering, NETCONF `edit-config` payloads, and gNMI-style JSON remediation. The module docstring below documents the tree↔structure mapping and its caveats.
+
+::: hier_config.formats
 
 ---
 
@@ -58,8 +78,6 @@ Auto-generated reference documentation for the `hier_config` public API. Signatu
 
 ::: hier_config.ChangeDetail
 
-::: hier_config.FutureReport
-
 ---
 
 ## Driver System
@@ -67,6 +85,28 @@ Auto-generated reference documentation for the `hier_config` public API. Signatu
 ::: hier_config.platforms.driver_base.HConfigDriverBase
 
 ::: hier_config.platforms.driver_base.HConfigDriverRules
+
+### Built-in post-load callbacks
+
+Public functions shipped by the built-in drivers (removable by identity — see [Customizing Driver Rules](../admin/customizing-rules.md#customizing-post-load-callbacks)):
+
+::: hier_config.platforms.cisco_ios.driver.remove_ipv6_acl_sequence_numbers
+
+::: hier_config.platforms.cisco_ios.driver.remove_ipv4_acl_remarks
+
+::: hier_config.platforms.cisco_ios.driver.add_acl_sequence_numbers
+
+::: hier_config.platforms.utils.split_vlan_id_lists
+
+::: hier_config.platforms.cisco_xr.driver.fixup_xr_comments
+
+::: hier_config.platforms.hp_procurve.driver.fixup_hp_procurve_aaa_port_access
+
+::: hier_config.platforms.hp_procurve.driver.fixup_hp_procurve_device_profile
+
+::: hier_config.platforms.hp_procurve.driver.fixup_hp_procurve_vlan
+
+::: hier_config.platforms.aruba_aoscx.driver.split_interface_vlan_trunk_allowed
 
 ---
 
@@ -83,6 +123,20 @@ Auto-generated reference documentation for the `hier_config` public API. Signatu
 ::: hier_config.InterfaceNACViewMixin
 
 ::: hier_config.InterfacePhysicalViewMixin
+
+### Typed view data models
+
+The value types returned by view properties:
+
+::: hier_config.platforms.models.Vlan
+
+::: hier_config.platforms.models.StackMember
+
+::: hier_config.platforms.models.InterfaceDot1qMode
+
+::: hier_config.platforms.models.InterfaceDuplex
+
+::: hier_config.platforms.models.NACHostMode
 
 ---
 

@@ -80,30 +80,21 @@ With a solid understanding of MatchRules, you can unlock more advanced capabilit
 
 Tagging builds on MatchRules by adding the **apply_tags** keyword to target specific configurations.
 
-For example, suppose your running configuration contains an NTP server setup like this:
-
-```text
-ntp server 192.0.2.1 prefer version 2
-```
-
-But your intended configuration uses publicly available NTP servers:
-
-```text
-ip name-server 1.1.1.1
-ip name-server 8.8.8.8
-ntp server time.nist.gov
-```
-
-You can create a MatchRule to tag this specific remediation with "ntp" as follows:
+For example, the repository's `tests/fixtures/tag_rules_ios.yml` labels low-risk changes (VLAN declarations, interface descriptions) with a `safe` tag and riskier changes (ACLs, IP addressing, MTU, shutdown state) with a `manual` tag. The `safe` rules look like this:
 
 ```yaml
 - match_rules:
+  - equals:
+    - no ip http secure-server
+    - no ip http server
+    - vlan
+    - no vlan
+  apply_tags: [safe]
+- match_rules:
+  - startswith: interface Vlan
   - startswith:
-    - ip name-server
-    - no ip name-server
-    - ntp
-    - no ntp
-  apply_tags: [ntp]
+    - description
+  apply_tags: [safe]
 ```
 
 With the tags loaded, you can create a targeted remediation based on those tags as follows:
@@ -130,17 +121,17 @@ wfr = WorkflowRemediation(
 # Apply the tag rules to label matching remediation sections
 wfr.apply_remediation_tag_rules(tags)
 
-# Display remediation steps filtered to include only the "ntp" tag
-print(wfr.remediation_config_filtered_text(include_tags={"ntp"}, exclude_tags={}))
+# Display remediation steps filtered to include only the "safe" tag
+print(wfr.remediation_config_filtered_text(include_tags={"safe"}, exclude_tags=set()))
 ```
 
-The resulting remediation output appears as follows:
+The resulting remediation output contains only the low-risk changes:
 
 ```text
-no ntp server 192.0.2.1 prefer version 2
-ip name-server 1.1.1.1
-ip name-server 8.8.8.8
-ntp server time.nist.gov
+interface Vlan3
+  description switch_mgmt_10.0.3.0/24
+interface Vlan4
+  description switch_mgmt_10.0.4.0/24
 ```
 
 `remediation_config_filtered_text()` accepts both `include_tags` and `exclude_tags`, so you can also render everything *except* a tag (for example, hold back `critical` changes).

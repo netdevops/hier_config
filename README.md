@@ -9,7 +9,6 @@ Hierarchical Configuration has been used extensively on:
 - [x] Cisco NXOS
 - [x] Arista EOS
 - [x] Fortinet FortiOS
-- [x] Aruba AOS-CX
 - [x] HP Procurve (Aruba AOSS)
 - [x] HP Comware5 / H3C
 - [x] Huawei VRP
@@ -19,6 +18,8 @@ In addition to the Cisco-style syntax, hier_config offers experimental support f
 - [x] Juniper JunOS
 - [x] Nokia SRL (Service Router Linux)
 - [x] VyOS
+
+Newer drivers start life as **experimental** until they have seen wider production use — currently Aruba AOS-CX joins the list above in that status. See [Supported Platforms](https://hier-config.readthedocs.io/en/latest/admin/platforms/) for the authoritative per-platform status.
 
 Hier Config is compatible with any NOS that utilizes a structured CLI syntax similar to Cisco IOS or Junos OS.
 
@@ -30,9 +31,11 @@ Network devices continuously drift from their intended state — VLANs appear, A
 
 ## Highlights
 
-- Predict the device state before deploying with [`future()`](https://hier-config.readthedocs.io/en/latest/user/future-config/) and generate accurate rollbacks that preserve distinct structural commands — BGP neighbor descriptions, for example, no longer collapse when multiple peers share a common prefix.
+- Predict the device state before deploying with [`future()`](https://hier-config.readthedocs.io/en/latest/user/future-config/) — and audit ambiguous negation resolution explicitly with `future_with_report()`.
 - Build remediation workflows with deterministic diffs across [Cisco-style](https://hier-config.readthedocs.io/en/latest/admin/platforms/) and [Junos-style](https://hier-config.readthedocs.io/en/latest/user/set-style-platforms/) configuration syntaxes.
+- Ingest and render structured configs: [JSON and XML loading](https://hier-config.readthedocs.io/en/latest/user/loading-configs/), NETCONF `edit-config` payloads, and gNMI-style JSON remediation.
 - Tag remediation lines and filter output with [tag-based rules](https://hier-config.readthedocs.io/en/latest/user/tags/) for phased or conditional deployment.
+- Extend the pipeline with [`RemediationPlugin` transforms](https://hier-config.readthedocs.io/en/latest/user/remediation-workflows/) and register [custom platform drivers](https://hier-config.readthedocs.io/en/latest/admin/custom-drivers/) at runtime.
 - Aggregate and analyse changes across a fleet with [RemediationReporter](https://hier-config.readthedocs.io/en/latest/user/remediation-reporting/).
 - Render structured, typed interface data with the [Config View](https://hier-config.readthedocs.io/en/latest/user/config-views/) abstraction.
 
@@ -42,11 +45,13 @@ See the [Architecture Overview](https://hier-config.readthedocs.io/en/latest/dev
 
 ### PIP
 
-Install from PyPi:
+Version 4 is currently published as a prerelease; pip skips prereleases by default, so pass `--pre`:
 
 ```shell
-pip install hier-config
+pip install --pre hier-config
 ```
+
+(The Quick Start below uses the v4 API. `pip install hier-config` without `--pre` installs the latest stable v3 release — see the [v3 documentation](https://hier-config.readthedocs.io/) for that API.)
 
 ## Quick Start
 
