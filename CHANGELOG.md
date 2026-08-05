@@ -11,6 +11,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `HConfig.future_with_report()` returns the predicted future config together
+  with a frozen `FutureReport` listing unresolved negations (negations that
+  matched nothing in the running config) and idempotency-tracked negation
+  replacements, so change-validation pipelines can assert
+  `not report.unresolved_negations` instead of grepping the render for
+  `no ` lines (#285).
 - Migration guide for v3 → v4 upgrades (`docs/user/migrating-from-v3.md`):
   rename tables for constructors, methods, and utilities, the unified
   negation rule mapping, exception and config-view changes, and behavior

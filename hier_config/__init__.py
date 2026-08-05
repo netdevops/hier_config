@@ -26,6 +26,7 @@ from .registry import (
 )
 from .reporting import RemediationReporter
 from .root import HConfig
+from .tree_algorithms import FutureReport
 from .workflows import WorkflowRemediation
 
 __all__ = (
@@ -33,6 +34,7 @@ __all__ = (
     "ConfigViewInterfaceBase",
     "DriverNotFoundError",
     "DuplicateChildError",
+    "FutureReport",
     "HConfig",
     "HConfigChild",
     "HConfigDriverBase",

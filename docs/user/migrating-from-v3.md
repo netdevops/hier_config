@@ -177,6 +177,8 @@ Not required for migration, but these are the headline additions:
   [custom drivers](../dev/creating-drivers.md).
 - Built-in post-load callbacks are public functions removable by identity —
   see [Customizing Driver Rules](../admin/customizing-rules.md#customizing-post-load-callbacks).
+- `HConfig.future_with_report()` — predict a future config and get a
+  `FutureReport` of [how the change's negations resolved](future-config.md#auditing-negation-resolution).
 
 ## Next steps
 
