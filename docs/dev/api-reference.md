@@ -58,6 +58,8 @@ Auto-generated reference documentation for the `hier_config` public API. Signatu
 
 ::: hier_config.ChangeDetail
 
+::: hier_config.FutureReport
+
 ---
 
 ## Driver System

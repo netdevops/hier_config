@@ -32,7 +32,25 @@ If you receive a `DuplicateChildError` while calling `merge()`, consider whether
 - **Exact negation** — a `no <command>` whose positive form exists in the running config removes that command; neither line survives in the prediction. This is evaluated before the idempotency rules, so an idempotency rule that happens to match the negation text cannot accidentally keep it as a literal child.
 - **Shorthand negation** — a valueless negation such as `no description` removes the valued lines it matches (`description foo`), just as the device CLI does.
 - **Idempotency-tracked negated forms** — when a negated form is itself tracked by an idempotency rule (e.g. IOS `no logging console`), it replaces its counterpart and *persists* in the rendered future config, because the device stores it as explicit configuration.
-- **Unmatched negations** — a negation that matches nothing in the running config is kept in the output as a signal that the change would not apply cleanly.
+- **Unmatched negations** — a negation that matches nothing in the running config is kept in the output as a signal that the change would not apply cleanly. Use [`future_with_report()`](#auditing-negation-resolution) to detect these explicitly instead of scanning the render.
+
+## Auditing negation resolution
+
+`HConfig.future_with_report()` behaves exactly like `future()` but also returns a `FutureReport` describing how the change's negations resolved:
+
+```python
+future_config, report = running_config.future_with_report(change_config)
+
+report.unresolved_negations      # negations that matched nothing in the running config
+report.idempotency_replacements  # negations that displaced an idempotency-tracked line but persist
+```
+
+Change-validation pipelines can assert `not report.unresolved_negations` instead of grepping the rendered output for `no ` lines. Both fields hold `HConfigChild` nodes that live in the returned future config tree, so `path()` and `lineage()` give the surrounding context:
+
+```python
+for negation in report.unresolved_negations:
+    print(" > ".join(negation.path()))
+```
 
 ## Pruning emptied sections
 

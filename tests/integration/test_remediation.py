@@ -1,6 +1,11 @@
 """Integration tests for remediation, future, difference, and sectional overwrite."""
 
+from dataclasses import FrozenInstanceError
+
+import pytest
+
 from hier_config import (
+    FutureReport,
     HConfig,
     HConfigChild,
     WorkflowRemediation,
@@ -655,3 +660,169 @@ def test_future_prune_keeps_originally_empty_parents() -> None:
         "hostname r1",
         "interface GigabitEthernet0/0/0/0",
     )
+
+
+def test_future_with_report_flags_unresolved_negation() -> None:
+    """A negation matching nothing is reported as unresolved (#285)."""
+    running_config = HConfig.from_text(
+        Platform.ARISTA_EOS, "interface Ethernet1\n   switchport access vlan 10\n"
+    )
+    change = HConfig.from_text(
+        Platform.ARISTA_EOS, "interface Ethernet1\n no description\n"
+    )
+    future_config, report = running_config.future_with_report(change)
+
+    assert future_config.to_lines() == (
+        "interface Ethernet1",
+        "  no description",
+        "  switchport access vlan 10",
+    )
+    assert len(report.unresolved_negations) == 1
+    assert tuple(report.unresolved_negations[0].path()) == (
+        "interface Ethernet1",
+        "no description",
+    )
+    assert not report.idempotency_replacements
+
+
+def test_future_with_report_clean_change_is_empty() -> None:
+    """Exact-match and shorthand negations resolve without report entries (#285)."""
+    running_config = HConfig.from_text(
+        Platform.ARISTA_EOS,
+        "router bgp 65000\n"
+        "   neighbor 10.0.0.1 peer group PEERS\n"
+        "interface Ethernet1\n"
+        "   description foo\n"
+        "   switchport access vlan 10\n",
+    )
+    change = HConfig.from_text(
+        Platform.ARISTA_EOS,
+        "router bgp 65000\n"
+        " no neighbor 10.0.0.1 peer group PEERS\n"
+        "interface Ethernet1\n"
+        " no description\n",
+    )
+    _, report = running_config.future_with_report(change)
+
+    assert not report.unresolved_negations
+    assert not report.idempotency_replacements
+
+
+def test_future_with_report_records_idempotency_replacement() -> None:
+    """A stale-valued negation that persists via idempotency is reported (#285)."""
+    running_config = HConfig.from_text(
+        Platform.ARISTA_EOS,
+        "router bgp 65000\n   neighbor 10.0.0.1 description spine1\n",
+    )
+    change = HConfig.from_text(
+        Platform.ARISTA_EOS,
+        "router bgp 65000\n no neighbor 10.0.0.1 description stale-value\n",
+    )
+    future_config, report = running_config.future_with_report(change)
+
+    bgp = future_config.get_child(equals="router bgp 65000")
+    assert bgp is not None
+    rendered = bgp.get_child(equals="no neighbor 10.0.0.1 description stale-value")
+    assert rendered is not None
+    assert len(report.idempotency_replacements) == 1
+    assert report.idempotency_replacements[0] is rendered
+    assert not report.unresolved_negations
+
+
+def test_future_with_report_ignores_positive_idempotent_replacement() -> None:
+    """A positive-form idempotent value update is not a signal (#285)."""
+    running_config = HConfig.from_text(
+        Platform.ARISTA_EOS,
+        "router bgp 65000\n   neighbor 10.0.0.1 description spine1\n",
+    )
+    change = HConfig.from_text(
+        Platform.ARISTA_EOS,
+        "router bgp 65000\n neighbor 10.0.0.1 description new-value\n",
+    )
+    future_config, report = running_config.future_with_report(change)
+
+    assert future_config.to_lines() == (
+        "router bgp 65000",
+        "  neighbor 10.0.0.1 description new-value",
+    )
+    assert not report.unresolved_negations
+    assert not report.idempotency_replacements
+
+
+def test_future_with_report_accumulates_across_sections() -> None:
+    """Unresolved negations are collected across recursed sections (#285)."""
+    running_config = HConfig.from_text(
+        Platform.ARISTA_EOS,
+        "interface Ethernet1\n"
+        "   switchport access vlan 10\n"
+        "interface Ethernet2\n"
+        "   switchport access vlan 20\n",
+    )
+    change = HConfig.from_text(
+        Platform.ARISTA_EOS,
+        "interface Ethernet1\n no description\ninterface Ethernet2\n no shutdown\n",
+    )
+    _, report = running_config.future_with_report(change)
+
+    assert tuple(
+        tuple(negation.path()) for negation in report.unresolved_negations
+    ) == (
+        ("interface Ethernet1", "no description"),
+        ("interface Ethernet2", "no shutdown"),
+    )
+
+
+def test_future_with_report_survives_pruning() -> None:
+    """Reported nodes remain live in the pruned future tree (#285)."""
+    running_config = HConfig.from_text(
+        Platform.ARISTA_EOS, "interface Ethernet1\n   switchport access vlan 10\n"
+    )
+    change = HConfig.from_text(
+        Platform.ARISTA_EOS, "interface Ethernet1\n no description\n"
+    )
+    future_config, report = running_config.future_with_report(
+        change, prune_empty_branches=True
+    )
+
+    assert len(report.unresolved_negations) == 1
+    interface = future_config.get_child(equals="interface Ethernet1")
+    assert interface is not None
+    assert report.unresolved_negations[0] is interface.get_child(
+        equals="no description"
+    )
+
+
+def test_future_with_report_output_matches_future() -> None:
+    """future_with_report() renders identically to future() (#285)."""
+    running_text = (
+        "router bgp 65000\n"
+        "   neighbor 10.0.0.1 peer group PEERS\n"
+        "   neighbor 10.0.0.1 description spine1\n"
+        "interface Ethernet1\n"
+        "   description foo\n"
+    )
+    change_text = (
+        "router bgp 65000\n"
+        " no neighbor 10.0.0.1 peer group PEERS\n"
+        " no neighbor 10.0.0.1 description stale-value\n"
+        "interface Ethernet1\n"
+        " no description\n"
+        " no shutdown\n"
+    )
+    for prune in (False, True):
+        running_config = HConfig.from_text(Platform.ARISTA_EOS, running_text)
+        change = HConfig.from_text(Platform.ARISTA_EOS, change_text)
+        expected = running_config.future(change, prune_empty_branches=prune).to_lines()
+        future_config, _ = running_config.future_with_report(
+            change, prune_empty_branches=prune
+        )
+
+        assert future_config.to_lines() == expected
+
+
+def test_future_report_is_frozen() -> None:
+    """FutureReport is immutable once built (#285)."""
+    report = FutureReport(unresolved_negations=(), idempotency_replacements=())
+
+    with pytest.raises(FrozenInstanceError):
+        report.unresolved_negations = ()  # type: ignore[misc]

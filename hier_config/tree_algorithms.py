@@ -9,6 +9,7 @@ so they can be tested and extended independently of the tree structure.
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, TypeVar
 
 if TYPE_CHECKING:
@@ -17,6 +18,58 @@ if TYPE_CHECKING:
     from .root import HConfig
 
     _HConfigRootOrChildT = TypeVar("_HConfigRootOrChildT", bound=HConfig | HConfigChild)
+
+
+@dataclass(frozen=True, slots=True)
+class FutureReport:
+    """How `HConfig.future_with_report()` resolved a change's negations (#285).
+
+    The nodes reference the returned future config tree, so `path()` and
+    `lineage()` give the surrounding context.
+    """
+
+    unresolved_negations: tuple[HConfigChild, ...]
+    idempotency_replacements: tuple[HConfigChild, ...]
+
+
+def _new_child_list() -> list[HConfigChild]:
+    return []
+
+
+@dataclass(slots=True)
+class _FutureReportBuilder:
+    """Mutable collector threaded through the `compute_future` recursion."""
+
+    unresolved_negations: list[HConfigChild] = field(default_factory=_new_child_list)
+    idempotency_replacements: list[HConfigChild] = field(
+        default_factory=_new_child_list,
+    )
+
+    def record_unresolved(self, node: HConfigChild) -> None:
+        """Record a kept negation that matched nothing in the source config."""
+        self.unresolved_negations.append(node)
+
+    def record_idempotency(self, node: HConfigChild, *, is_negation: bool) -> None:
+        """Record a persisting idempotency replacement when it is a negation."""
+        if is_negation:
+            self.idempotency_replacements.append(node)
+
+    def build(self) -> FutureReport:
+        return FutureReport(
+            unresolved_negations=tuple(self.unresolved_negations),
+            idempotency_replacements=tuple(self.idempotency_replacements),
+        )
+
+
+def compute_future_with_report(
+    source: HConfigBase,
+    config: HConfig | HConfigChild,
+    future_config: HConfig | HConfigChild,
+) -> FutureReport:
+    """Compute the future config subtree and report how negations resolved."""
+    report = _FutureReportBuilder()
+    compute_future(source, config, future_config, report=report)
+    return report.build()
 
 
 def compute_remediation(
@@ -171,6 +224,8 @@ def compute_future(  # ruff:ignore[complex-structure]
     source: HConfigBase,
     config: HConfig | HConfigChild,
     future_config: HConfig | HConfigChild,
+    *,
+    report: _FutureReportBuilder | None = None,
 ) -> None:
     """Recursively compute the future configuration subtree.
 
@@ -185,6 +240,7 @@ def compute_future(  # ruff:ignore[complex-structure]
     - Idempotent command avoid list
     - And likely other edge cases
     """
+    report = report or _FutureReportBuilder()
     negated_or_recursed, config_children_ignore = _future_pre(source, config)
 
     for config_child in config.children:
@@ -212,7 +268,10 @@ def compute_future(  # ruff:ignore[complex-structure]
             config_child,
             source.children,
         ):
-            future_config.add_deep_copy_of(config_child)
+            report.record_idempotency(
+                future_config.add_deep_copy_of(config_child),
+                is_negation=is_negation,
+            )
             negated_or_recursed.add(self_child.text)
         # Shorthand negation: `no description` removes `description foo`, as
         # devices do (#269).
@@ -229,13 +288,13 @@ def compute_future(  # ruff:ignore[complex-structure]
         # config_child is already in source
         elif self_child := source.get_child(equals=config_child.text):
             future_child = future_config.add_shallow_copy_of(self_child)
-            compute_future(self_child, config_child, future_child)
+            compute_future(self_child, config_child, future_child, report=report)
             negated_or_recursed.add(config_child.text)
         # A negation matching nothing is kept: it accounts for "no ..." lines
         # native to the running config and doubles as a did-not-apply-cleanly
         # signal for callers (#269).
         elif is_negation:
-            future_config.add_shallow_copy_of(config_child)
+            report.record_unresolved(future_config.add_shallow_copy_of(config_child))
         # The negated form of config_child is in source.children
         elif self_child := source.get_child(
             equals=f"{source.driver.negation_prefix}{config_child.text}",

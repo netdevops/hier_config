@@ -7,8 +7,10 @@ from .base import HConfigBase
 from .child import HConfigChild
 from .models import Dump, DumpLine, Platform, ReferenceLocation
 from .tree_algorithms import (
+    FutureReport,
     compute_difference,
     compute_future,
+    compute_future_with_report,
     compute_remediation,
     compute_with_tags,
     prune_emptied_branches,
@@ -302,6 +304,28 @@ class HConfig(HConfigBase):  # ruff:ignore[too-many-public-methods]
         if prune_empty_branches:
             prune_emptied_branches(self, future_config)
         return future_config
+
+    def future_with_report(
+        self,
+        config: HConfig,
+        *,
+        prune_empty_branches: bool = False,
+    ) -> tuple[HConfig, FutureReport]:
+        """EXPERIMENTAL - like `future()`, but also report how negations resolved.
+
+        Returns the predicted future config together with a `FutureReport`
+        whose `unresolved_negations` are negations that matched nothing in
+        self and `idempotency_replacements` are negations that displaced an
+        idempotency-tracked line but persist in the render. Both hold nodes
+        of the returned future config tree. Change-validation pipelines can
+        assert `not report.unresolved_negations` instead of grepping the
+        render for negation lines.
+        """
+        future_config = HConfig(self.driver)
+        report = compute_future_with_report(self, config, future_config)
+        if prune_empty_branches:
+            prune_emptied_branches(self, future_config)
+        return future_config, report
 
     def with_tags(self, tags: Iterable[str]) -> HConfig:
         """Returns a new instance recursively containing children that only have a subset of tags."""
