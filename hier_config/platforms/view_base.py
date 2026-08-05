@@ -305,6 +305,7 @@ class HConfigViewBase(ABC):
 
     @property
     def bundle_interface_views(self) -> Iterable[InterfaceBundleViewMixin]:
+        """The interface views that represent bundle (LAG) interfaces."""
         for interface_view in self.interface_views:
             if (
                 isinstance(interface_view, InterfaceBundleViewMixin)
@@ -331,7 +332,7 @@ class HConfigViewBase(ABC):
     @property
     @abstractmethod
     def hostname(self) -> str | None:
-        pass
+        """Determine the configured hostname, or None if not set."""
 
     @property
     def interface_names_mentioned(self) -> frozenset[str]:
@@ -339,6 +340,7 @@ class HConfigViewBase(ABC):
         return frozenset(model.name for model in self.interface_views)
 
     def interface_view_by_name(self, name: str) -> ConfigViewInterfaceBase | None:
+        """Return the interface view for the given interface name, if any."""
         for interface_view in self.interface_views:
             if interface_view.name == name:
                 return interface_view
@@ -347,22 +349,23 @@ class HConfigViewBase(ABC):
     @property
     @abstractmethod
     def interface_views(self) -> Iterable[ConfigViewInterfaceBase]:
-        pass
+        """A platform-specific interface view for each interface in the config."""
 
     @property
     @abstractmethod
     def interfaces(self) -> Iterable[HConfigChild]:
-        pass
+        """The config children defining the device's interfaces."""
 
     @property
     def interfaces_names(self) -> Iterable[str]:
+        """The name of each interface."""
         for interface_view in self.interface_views:
             yield interface_view.name
 
     @property
     @abstractmethod
     def ipv4_default_gw(self) -> IPv4Address | None:
-        pass
+        """Determine the IPv4 default gateway address, if configured."""
 
     @property
     def location(self) -> str:
@@ -373,6 +376,7 @@ class HConfigViewBase(ABC):
 
     @property
     def module_numbers(self) -> Iterable[int]:
+        """The unique module numbers of physical interfaces, in order seen."""
         seen: set[int] = set()
         for interface_view in self.interface_views:
             if not isinstance(interface_view, InterfacePhysicalViewMixin):

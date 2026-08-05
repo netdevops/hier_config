@@ -90,6 +90,11 @@ class HConfigChildren:
         *,
         update_mapping: bool = True,
     ) -> HConfigChild:
+        """Append a child and return it.
+
+        With `update_mapping=False`, the child is added to the ordered list
+        only (used for allowed duplicate children).
+        """
         self._data.append(child)
         if update_mapping:
             self._mapping.setdefault(child.text, child)
@@ -120,9 +125,11 @@ class HConfigChildren:
             self._mapping.setdefault(child.text, child)
 
     def get(self, key: str, default: _D | None = None) -> HConfigChild | _D | None:
+        """Return the child whose text equals `key`, or `default` if not found."""
         return self._mapping.get(key, default)
 
     def index(self, child: HConfigChild) -> int:
+        """Return the position of `child` in the ordered list."""
         return self._data.index(child)
 
     def rebuild_mapping(self) -> None:

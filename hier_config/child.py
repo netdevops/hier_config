@@ -90,10 +90,12 @@ class HConfigChild(  # ruff:ignore[too-many-public-methods]  pylint: disable=too
 
     @property
     def driver(self) -> HConfigDriverBase:
+        """The platform driver, inherited from the root HConfig object."""
         return self.root.driver
 
     @property
     def text(self) -> str:
+        """The configuration text of this node, stripped of surrounding whitespace."""
         return self._text
 
     @text.setter
@@ -106,6 +108,7 @@ class HConfigChild(  # ruff:ignore[too-many-public-methods]  pylint: disable=too
 
     @property
     def text_without_negation(self) -> str:
+        """The text with the driver's negation prefix removed, if present."""
         return self.text.removeprefix(self.driver.negation_prefix)
 
     @property
@@ -114,6 +117,11 @@ class HConfigChild(  # ruff:ignore[too-many-public-methods]  pylint: disable=too
         return self.parent.root
 
     def lines(self, *, sectional_exiting: bool = False) -> Iterable[str]:
+        """Yield the indented config lines of self and its children.
+
+        With `sectional_exiting`, the driver's exit token is appended after
+        each section that requires one.
+        """
         yield self.indented_text()
         for child in sorted(self.children):
             yield from child.lines(sectional_exiting=sectional_exiting)
@@ -126,10 +134,16 @@ class HConfigChild(  # ruff:ignore[too-many-public-methods]  pylint: disable=too
 
     @property
     def sectional_exit(self) -> str | None:
+        """The driver-determined exit token for this section, if any."""
         return self.driver.sectional_exit(self)
 
     @property
     def sectional_exit_text_parent_level(self) -> bool:
+        """Whether the exit token renders at the parent's indentation level.
+
+        Determined by the first matching sectional-exiting rule; defaults
+        to False.
+        """
         for rule in self.driver.rules.sectional_exiting:
             if self.is_lineage_match(rule.match_rules):
                 return rule.exit_text_parent_level
@@ -137,6 +151,11 @@ class HConfigChild(  # ruff:ignore[too-many-public-methods]  pylint: disable=too
         return False
 
     def delete_sectional_exit(self) -> None:
+        """Remove the last child if it matches this section's exit token.
+
+        Used after parsing so that stored trees do not retain explicit exit
+        lines.
+        """
         try:
             potential_exit = self.children[-1]
         except IndexError:
@@ -209,6 +228,7 @@ class HConfigChild(  # ruff:ignore[too-many-public-methods]  pylint: disable=too
 
     @property
     def indentation(self) -> str:
+        """The leading whitespace rendered before this node's text."""
         return " " * self.driver.rules.indentation * (self.depth - 1)
 
     def delete(self) -> None:
@@ -379,6 +399,10 @@ class HConfigChild(  # ruff:ignore[too-many-public-methods]  pylint: disable=too
 
     @property
     def instance(self) -> Instance:
+        """The `Instance` record for this node (root config id, comments, and tags).
+
+        Used to track the origin of a child when merging multiple configs.
+        """
         return Instance(
             id=id(self.root),
             comments=frozenset(self.comments),
@@ -494,6 +518,7 @@ class HConfigChild(  # ruff:ignore[too-many-public-methods]  pylint: disable=too
         return self
 
     def instantiate_child(self, text: str) -> HConfigChild:
+        """Create a new `HConfigChild` with self as the parent."""
         return HConfigChild(self, text)
 
     def _is_duplicate_child_allowed(self) -> bool:

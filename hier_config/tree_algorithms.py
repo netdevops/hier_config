@@ -29,7 +29,12 @@ class FutureReport:
     """
 
     unresolved_negations: tuple[HConfigChild, ...]
+    """Kept negation lines whose positive form matched nothing in the source
+    config — the change did not apply cleanly."""
+
     idempotency_replacements: tuple[HConfigChild, ...]
+    """Negation lines that persisted by replacing an idempotency-tracked
+    counterpart (e.g. IOS `no logging console`)."""
 
 
 def _new_child_list() -> list[HConfigChild]:

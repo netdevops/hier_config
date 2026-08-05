@@ -216,6 +216,17 @@ v4 design decisions, for the record:
 
 ### Fixed
 
+- Documentation gap sweep: repaired doc examples that no longer ran or showed
+  wrong output (getting-started fixture path, tags filtering, the custom ACL
+  remediation `delete()` idiom, config-view and hierarchical-JunOS outputs);
+  removed the stale prerelease pin from the install page and added `--pre` to
+  the README install; propagated Aruba AOS-CX into the architecture and
+  config-view docs; documented the built-in post-load callbacks, the formats
+  module, `future_with_report()`, and the view data models in the API
+  reference and glossary; corrected agent instruction files (branching
+  strategy in `AGENTS.md`, the `HConfigDriverRules` mutable-list carve-out,
+  review-skill diff base, registry key format, CI Python matrix) and the
+  benchmarks per-file lint-ignore path (#297).
 - Registering a driver under a `Platform` member's *value* string (e.g. `"3"`,
   the value of `Platform.CISCO_IOS`) no longer silently overwrites that
   platform's built-in registry entry, and value strings no longer resolve in

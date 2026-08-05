@@ -152,6 +152,12 @@ class HConfigDriverBase(ABC):
         config: HConfigChild,
         other_children: Iterable[HConfigChild],
     ) -> HConfigChild | None:
+        """Return the child in `other_children` that `config` idempotently overwrites.
+
+        The default implementation derives a structural idempotency key from
+        the lineage and the `idempotent_commands` match rules. Override for
+        imperative idempotency logic.
+        """
         for rule in self.rules.idempotent_commands:
             if not config.is_lineage_match(rule.match_rules):
                 continue
@@ -181,6 +187,12 @@ class HConfigDriverBase(ABC):
         return None
 
     def sectional_exit(self, config: HConfigChild) -> str | None:
+        """Return the exit token to render at the end of `config`'s section.
+
+        Sectional-exiting rules are consulted first; a matching rule without
+        `exit_text` suppresses the token. Otherwise, sections with children
+        default to `exit` and leaves to None.
+        """
         for exit_rule in self.rules.sectional_exiting:
             if config.is_lineage_match(exit_rule.match_rules):
                 if exit_text := exit_rule.exit_text:
@@ -437,14 +449,31 @@ class HConfigDriverBase(ABC):
 
     @property
     def declaration_prefix(self) -> str:
+        """The string prepended to positive commands on set-style platforms.
+
+        Defaults to an empty string; set-style drivers override this with
+        e.g. `set `.
+        """
         return ""
 
     @property
     def negation_prefix(self) -> str:
+        """The string prepended to a command to negate it.
+
+        Defaults to `no `; drivers override this with e.g. `undo ` or
+        `delete `.
+        """
         return "no "
 
     @staticmethod
     def config_preprocessor(config_text: str) -> str:
+        """Transform raw config text before parsing.
+
+        The default is a no-op. Override to convert a platform's native
+        rendering into parseable lines (e.g. flattening JunOS curly-brace
+        config into `set` commands). Runs inside `HConfig.from_text()` after
+        full-text substitutions and before tree construction.
+        """
         return config_text
 
     @staticmethod
