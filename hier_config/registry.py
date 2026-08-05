@@ -81,7 +81,9 @@ def unregister_driver(platform: Platform | str) -> None:
     if builtin is None:
         del _registry[name]
     elif _registry[name] is builtin:
-        message = f"Built-in platform {platform} is not overridden"
+        # Format the canonical name: pre-3.11 f-strings render a str-Enum
+        # member as its meaningless value string.
+        message = f"Built-in platform {name} is not overridden"
         raise DriverNotFoundError(message)
     else:
         _registry[name] = builtin

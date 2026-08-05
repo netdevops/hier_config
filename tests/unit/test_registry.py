@@ -26,6 +26,10 @@ class _CustomDriver(HConfigDriverBase):
         return HConfigDriverRules()
 
 
+# The member's value string ("3"): a str-Enum artifact, not a platform name.
+_CISCO_IOS_VALUE = str(Platform.CISCO_IOS.value)
+
+
 def _assert_custom_platform_works() -> None:
     driver = get_hconfig_driver("MY_NOS")
     assert isinstance(driver, _CustomDriver)
@@ -120,19 +124,18 @@ def test_unregister_builtin_without_override_raises() -> None:
 
 def test_register_platform_value_does_not_collide_with_builtin() -> None:
     """A Platform member's value string is a distinct custom key (#284)."""
-    register_driver(str(Platform.CISCO_IOS.value), _CustomDriver)
+    register_driver(_CISCO_IOS_VALUE, _CustomDriver)
     try:
-        assert get_hconfig_driver(Platform.CISCO_IOS).__class__ is (
-            HConfigDriverCiscoIOS
-        )
+        driver = get_hconfig_driver(Platform.CISCO_IOS)
     finally:
-        unregister_driver(str(Platform.CISCO_IOS.value))
+        unregister_driver(_CISCO_IOS_VALUE)
+    assert driver.__class__ is HConfigDriverCiscoIOS
 
 
 def test_platform_value_lookup_raises() -> None:
     """Platform member value strings are not platform names (#284)."""
     with pytest.raises(DriverNotFoundError, match="Unsupported platform"):
-        get_hconfig_driver(str(Platform.CISCO_IOS.value))
+        get_hconfig_driver(_CISCO_IOS_VALUE)
 
 
 def test_get_registered_platforms_includes_custom_names() -> None:
@@ -160,13 +163,9 @@ def test_get_registered_platforms_returns_enum_members_for_builtins() -> None:
 
 def test_platform_name_string_interchangeable_with_member() -> None:
     """A Platform member and its name address the same registry entry (#284)."""
-
-    class CustomIOSDriver(HConfigDriverCiscoIOS):
-        """Override registered by name string."""
-
-    register_driver("cisco_ios", CustomIOSDriver)
+    register_driver("cisco_ios", _CustomDriver)
     try:
-        assert isinstance(get_hconfig_driver(Platform.CISCO_IOS), CustomIOSDriver)
+        assert isinstance(get_hconfig_driver(Platform.CISCO_IOS), _CustomDriver)
     finally:
         unregister_driver(Platform.CISCO_IOS)
 
