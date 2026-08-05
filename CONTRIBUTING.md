@@ -18,14 +18,17 @@ Set up your environment:
 ```
 cd hier_config
 poetry install
-poetry shell
+poetry shell   # Poetry 2.x: requires the shell plugin, or use `poetry run <cmd>` / `poetry env activate`
 ```
 
-Create a branch
+Create a branch from the right base: v4 features and breaking changes branch from **`next`**; v3.x maintenance fixes branch from **`master`**.
 
 ```
+git checkout next
 git checkout -b YOUR-BRANCH
 ```
+
+Open your pull request against the same branch you based on (`next` for v4 work).
 
 Make sure linters, type-checkers, and tests pass:
 
@@ -63,7 +66,7 @@ pytest
 Run a single test file:
 
 ```bash
-pytest tests/test_hconfig.py
+pytest tests/integration/test_cisco_ios.py
 ```
 
 Stop on the first failure:
@@ -88,12 +91,16 @@ pytest --cov=hier_config
 
 ## Running Linters Individually
 
+The build script runs all of these over `hier_config`, `tests`, and `scripts`:
+
 ```bash
 ruff check .                  # style + lint
 ruff format --check .         # formatting (no changes)
-mypy hier_config/             # type checking
-pyright hier_config/          # additional type checking
-pylint hier_config/           # extended lint rules
+mypy hier_config/ tests/ scripts/     # type checking
+pyright hier_config/ tests/ scripts/  # additional type checking
+pylint hier_config/ tests/ scripts/   # extended lint rules
+yamllint .                    # YAML files
+flynt -d -tc -f hier_config tests scripts  # f-string conversion check
 ```
 
 To auto-fix ruff issues:
@@ -126,8 +133,11 @@ NegationDefaultWithRule model so that the behaviour is preserved.
 
 ## PR Expectations
 
-- **Tests required** — all new behaviour must be covered by unit tests.
+- **Tests required** — all new behaviour must be covered by tests: unit tests in
+  `tests/unit/`, end-to-end driver scenarios in `tests/integration/test_<platform>.py`.
 - **Linting must pass** — `python scripts/build.py lint-and-test` must exit 0.
+- **Changelog entry required** — every PR adds an entry to `CHANGELOG.md` under
+  `## [Unreleased]` (Keep a Changelog categories, with a `(#NNN)` reference).
 - **Docstrings for new public API** — any new public class, method, or function
   must have a docstring.
 - **No breaking changes without discussion** — open an issue first if you plan to
@@ -144,7 +154,7 @@ Where do changes belong?
 | New platform support | `hier_config/platforms/<name>/driver.py` (subclass `HConfigDriverBase`) |
 | New rule type | `hier_config/models.py` (new `BaseModel` subclass) + `hier_config/platforms/driver_base.py` (`HConfigDriverRules` field) |
 | New utility function | `hier_config/utils.py` |
-| New view property | `hier_config/platforms/view_base.py` (abstract) + each platform's `view.py` |
+| New view property | `hier_config/platforms/view_base.py` (abstract) + the `view.py` of each platform that ships a view (currently 6 of 13 platforms) |
 | Core tree algorithm | `hier_config/base.py` (shared) or `hier_config/root.py` (`HConfig`-only) |
 
 Read the [Architecture Overview](docs/dev/architecture.md) before making structural changes.

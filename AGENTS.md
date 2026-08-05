@@ -6,12 +6,18 @@ This file is the canonical quick reference for AI coding agents (and humans) wor
 
 hier_config is a Python library that compares network device configurations (running vs intended) and generates minimal remediation commands. It parses config text into hierarchical trees and computes diffs respecting vendor-specific syntax rules. Runtime dependencies are deliberately minimal (`pydantic` only).
 
+## Branching Strategy
+
+- `master` — stable branch for v3.x releases and maintenance.
+- `next` — long-lived development branch for v4 work. All v4 features and breaking changes target this branch; base v4 branches on `next` and open PRs against `next`.
+- `2.3-lts` — legacy LTS maintenance branch; only targeted fixes for 2.3.x land there.
+
 ## Build & Test Commands
 
 All commands use **poetry** (not pip):
 
 ```bash
-# Full lint + test suite (what CI runs)
+# Full lint + test suite (equivalent to CI's lint + pytest --coverage steps)
 poetry run ./scripts/build.py lint-and-test
 
 # Lint only (ruff, mypy, pyright, pylint, yamllint, flynt — run in parallel)
@@ -33,17 +39,25 @@ poetry run pytest tests/integration/ -v
 # Auto-fix formatting
 poetry run ruff format hier_config tests scripts
 
-# Validate docs (required if docs/ or mkdocs.yml changed)
+# Validate docs (CI runs this unconditionally on every push/PR)
 poetry run mkdocs build --strict
+
+# Benchmarks (deselected by default via the `benchmark` marker)
+poetry run pytest -m benchmark -v -s
 ```
+
+CI facts that matter for changes:
+
+- **Python matrix**: CI tests on Python 3.10–3.14 and ruff targets `py310` — write 3.10-compatible syntax even though your local interpreter may be newer.
+- **Docs job**: CI builds docs with `mkdocs build --strict` on every push/PR using `docs/requirements.txt` (pip, not poetry). Adding an mkdocs plugin requires updating **both** `pyproject.toml` and `docs/requirements.txt`.
 
 ## Architecture in Brief
 
 Three-layer design — full detail in [docs/dev/architecture.md](docs/dev/architecture.md):
 
-- **Tree** (`base.py`, `root.py`, `child.py`, `children.py`, `tree_algorithms.py`): `HConfig` root and `HConfigChild` nodes; key operations `remediation()`, `future()`, `unified_diff()`, `to_lines()`. Constructors are classmethods: `HConfig.from_text()`, `HConfig.from_lines()`, `HConfig.from_dump()`.
-- **Driver** (`platforms/`): each platform subclasses `HConfigDriverBase` and overrides `_instantiate_rules()` returning `HConfigDriverRules` — typed, frozen Pydantic rule models matched against config lineage via `MatchRule` tuples. Drivers register in `registry.py` (`get_hconfig_driver()`, `register_driver()`) and expose their config view via the `view_class` attribute.
-- **Workflow** (`workflows.py`, `reporting.py`): `WorkflowRemediation` exposes `remediation_config` / `rollback_config`; `RemediationReporter` aggregates changes across devices.
+- **Tree** (`base.py`, `root.py`, `child.py`, `children.py`, `tree_algorithms.py`, `constructors.py`): `HConfig` root and `HConfigChild` nodes; key operations `remediation()`, `future()`, `future_with_report()`, `unified_diff()`, `to_lines()`. Constructors are classmethods: `HConfig.from_text()`, `HConfig.from_lines()`, `HConfig.from_dump()`, `HConfig.from_json()`, `HConfig.from_xml()`. Supporting modules: `formats.py` (JSON/XML ingestion and rendering, NETCONF `edit-config` XML, gNMI-style JSON via `GnmiRemediation`), `plugins.py` (`RemediationPlugin` extension point), `exceptions.py` (exception hierarchy under `HierConfigError`), `utils.py` (file/YAML rule loaders).
+- **Driver** (`platforms/`): each platform subclasses `HConfigDriverBase` and overrides `_instantiate_rules()` returning `HConfigDriverRules` — typed, frozen Pydantic rule models matched against config lineage via `MatchRule` tuples. Drivers register in `registry.py` (`get_hconfig_driver()`, `register_driver()`, `unregister_driver()`, `get_registered_platforms()`) and expose their config view via the `view_class` attribute. Registry keys are canonicalized to uppercase platform names (`Platform.X.name`); string lookups are case-insensitive (#284/#295).
+- **Workflow** (`workflows.py`, `reporting.py`): `WorkflowRemediation` exposes `remediation_config` / `rollback_config` plus structured renderings `remediation_netconf_xml()` / `remediation_json()`; `RemediationReporter` aggregates changes across devices.
 
 Supported platforms (`Platform` enum in `models.py`): ARISTA_EOS, ARUBA_AOSCX, CISCO_IOS, CISCO_NXOS, CISCO_XR, FORTINET_FORTIOS, GENERIC, HP_COMWARE5, HP_PROCURVE, HUAWEI_VRP, JUNIPER_JUNOS, NOKIA_SRL, VYOS.
 
@@ -51,7 +65,7 @@ Supported platforms (`Platform` enum in `models.py`): ARISTA_EOS, ARUBA_AOSCX, C
 
 These are enforced by CI and by reviewers; violations block merges:
 
-1. **Models**: always subclass the project-local `BaseModel` in `hier_config/models.py` (it sets `frozen=True, extra="forbid"`) — never `pydantic.BaseModel` directly. Model fields use immutable collections only (`tuple`, `frozenset`). Rule models match lineage with `match_rules: tuple[MatchRule, ...]`.
+1. **Models**: always subclass the project-local `BaseModel` in `hier_config/models.py` (it sets `frozen=True, extra="forbid"`) — never `pydantic.BaseModel` directly. Model fields use immutable collections only (`tuple`, `frozenset`). Rule models match lineage with `match_rules: tuple[MatchRule, ...]`. **Deliberate exception**: the rule-collection fields on `HConfigDriverRules` (`platforms/driver_base.py`) are intentionally `list[...]` so built-in rules and callbacks can be removed by identity (e.g. `rules.post_load_callbacks.remove(...)`, #286) — do not convert them to tuples.
 2. **Typing**: mypy strict + pyright strict. Full annotations everywhere, including tests. No `Any`, no unjustified `# type: ignore` or `# noqa`.
 3. **Lint**: ruff `select = ["ALL"]` with preview, line length 88. Never loosen lint or coverage configuration to make a change pass.
 4. **TDD**: write a failing test first, confirm it fails for the right reason, implement minimally, run the full suite. 95% coverage floor.
@@ -72,6 +86,9 @@ These are enforced by CI and by reviewers; violations block merges:
 | Understand the internals | [docs/dev/architecture.md](docs/dev/architecture.md) |
 | Dev environment setup, commit style, PR expectations | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Driver behavior reference | [docs/admin/platforms.md](docs/admin/platforms.md), [docs/admin/custom-drivers.md](docs/admin/custom-drivers.md), [docs/admin/customizing-rules.md](docs/admin/customizing-rules.md) |
+| Load rules/tags from YAML or JSON files | [docs/admin/rules-from-files.md](docs/admin/rules-from-files.md) |
+| Release process, prerelease versioning | [docs/admin/releases.md](docs/admin/releases.md) |
+| CI, Read the Docs, Renovate, redirect policy | [docs/admin/infrastructure.md](docs/admin/infrastructure.md) |
 
 ## Before Opening a PR
 

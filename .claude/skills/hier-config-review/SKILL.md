@@ -9,8 +9,11 @@ Review the current change set against this repository's standards and report fin
 
 ## Step 1: Establish the Diff
 
+Pick the base branch first: v4 work branches from `next`; only v3.x maintenance work branches from `master`. Diffing a `next`-based branch against `master` would include all of v4 and make the review meaningless.
+
 ```bash
-git diff master...HEAD --stat   # on a branch
+git diff "$(git merge-base origin/next HEAD)"...HEAD --stat   # v4 branch (the usual case)
+git diff "$(git merge-base origin/master HEAD)"...HEAD --stat # v3.x maintenance branch
 git diff HEAD --stat            # fall back: uncommitted work
 git diff --staged --stat        # fall back: staged only
 ```
@@ -26,11 +29,13 @@ poetry run ./scripts/build.py lint
 poetry run ./scripts/build.py pytest --coverage
 ```
 
-If docs/ or mkdocs.yml changed, also run:
+Also run the docs build — CI runs it unconditionally on every push/PR, not just when docs change:
 
 ```bash
 poetry run mkdocs build --strict
 ```
+
+Remember CI's test matrix covers Python 3.10–3.14: flag syntax or stdlib usage newer than 3.10 even if local checks pass.
 
 ## Step 3: Review by Category
 
@@ -39,7 +44,7 @@ Read the referenced doc before judging that category — the docs are the standa
 ### Models & Typing — read `docs/dev/code-style.md`
 
 - New Pydantic models subclass the local `BaseModel` (`hier_config/models.py`), never `pydantic.BaseModel` directly.
-- Model fields use `tuple`/`frozenset`, never `list`/`set`. Rule models use `match_rules: tuple[MatchRule, ...]`.
+- Model fields use `tuple`/`frozenset`, never `list`/`set`. Rule models use `match_rules: tuple[MatchRule, ...]`. Exception: the rule-collection fields on `HConfigDriverRules` are intentionally `list[...]` (removal-by-identity, #286) — do not flag them.
 - No `Any`, no missing annotations, no unjustified `# type: ignore` / `# noqa`.
 - Lint/coverage/type-checking configuration was not loosened.
 
@@ -53,8 +58,8 @@ Read the referenced doc before judging that category — the docs are the standa
 
 ### Driver & Rule Changes — read `docs/dev/creating-drivers.md` and `docs/dev/rule-reference.md`
 
-- New rule types: frozen model in `models.py` → named default factory + field on `HConfigDriverRules` → consumed in `child.py`/`root.py` → populated in drivers.
-- New platforms: `Platform` enum member, `_BUILTIN_DRIVERS` wiring in `hier_config/registry.py`, `view_class` on the driver if it has a config view, per-platform test file, and a driver section + table row in `docs/admin/platforms.md`.
+- New rule types: frozen model in `models.py` → named default factory + field on `HConfigDriverRules` → consumed in `child.py`/`root.py` → populated in drivers → documented in `docs/dev/rule-reference.md`.
+- New platforms: `Platform` enum member, `_BUILTIN_DRIVERS` wiring in `hier_config/registry.py` **keyed on `Platform.X.name`** (a `Platform`-member key is silently unreachable — `_normalize()` canonicalizes to uppercase name strings), `view_class` on the driver if it has a config view, per-platform test file, and a driver section + table row in `docs/admin/platforms.md`.
 
 ### Changelog
 
