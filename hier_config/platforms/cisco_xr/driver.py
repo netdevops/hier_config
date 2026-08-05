@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from hier_config.root import HConfig
 
 
-def _fixup_xr_comments(config: HConfig) -> None:
+def fixup_xr_comments(config: HConfig) -> None:
     """Move ``!`` comment lines into the next sibling's comments set."""
     for parent in (config, *config.all_children()):
         siblings = list(parent.children)
@@ -187,7 +187,7 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-in
                 PerLineSubRule(search="^\\s*#.*", replace=""),
                 PerLineSubRule(search="^\\s*!\\s*$", replace=""),
             ],
-            post_load_callbacks=[_fixup_xr_comments],
+            post_load_callbacks=[fixup_xr_comments],
             idempotent_commands=[
                 IdempotentCommandsRule(
                     match_rules=(

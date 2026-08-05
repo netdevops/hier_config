@@ -12,7 +12,7 @@ from hier_config.platforms.utils import split_vlan_id_lists
 from hier_config.root import HConfig
 
 
-def _split_interface_vlan_trunk_allowed(config: HConfig) -> None:
+def split_interface_vlan_trunk_allowed(config: HConfig) -> None:
     """Split AOS-CX additive trunk VLAN lists into one VLAN per line.
 
     ``vlan trunk allowed`` is additive on AOS-CX rather than declarative, so
@@ -182,6 +182,6 @@ class HConfigDriverArubaAOSCX(HConfigDriverBase):
             ],
             post_load_callbacks=[
                 split_vlan_id_lists,
-                _split_interface_vlan_trunk_allowed,
+                split_interface_vlan_trunk_allowed,
             ],
         )

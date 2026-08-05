@@ -16,7 +16,7 @@ from hier_config.platforms.hp_procurve.view import HConfigViewHPProcurve
 from hier_config.root import HConfig
 
 
-def _fixup_hp_procurve_aaa_port_access_fixup(config: HConfig) -> None:
+def fixup_hp_procurve_aaa_port_access(config: HConfig) -> None:
     """Expands the interface ranges present in aaa port-access commands.
 
     aaa port-access authenticator 1/15-1/20,1/26-1/40,2/14-2/20,2/25-2/28,2/30-2/44,3/8-3/44,4/1-4/2,4/8-4/44,5/1-5/2,5/8-5/15,5/17-5/28,5/30-5/44
@@ -40,7 +40,7 @@ def _fixup_hp_procurve_aaa_port_access_fixup(config: HConfig) -> None:
         aaa_port_access.delete()
 
 
-def _fixup_hp_procurve_vlan(config: HConfig) -> None:
+def fixup_hp_procurve_vlan(config: HConfig) -> None:
     """Move native/tagged vlan config to the interface config for easier modeling and remediation.
 
     vlan 1
@@ -90,7 +90,7 @@ def _fixup_hp_procurve_vlan(config: HConfig) -> None:
             no_untagged_interfaces.delete()
 
 
-def _fixup_hp_procurve_device_profile(config: HConfig) -> None:
+def fixup_hp_procurve_device_profile(config: HConfig) -> None:
     """Separates the device-profile tagged-vlans onto individual lines.
 
     device-profile name "phone"
@@ -335,8 +335,8 @@ class HConfigDriverHPProcurve(HConfigDriverBase):
                 ),
             ],
             post_load_callbacks=[
-                _fixup_hp_procurve_aaa_port_access_fixup,
-                _fixup_hp_procurve_device_profile,
-                _fixup_hp_procurve_vlan,
+                fixup_hp_procurve_aaa_port_access,
+                fixup_hp_procurve_device_profile,
+                fixup_hp_procurve_vlan,
             ],
         )

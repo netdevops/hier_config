@@ -134,17 +134,17 @@ The preprocessor runs inside `HConfig.from_text()` after full-text substitutions
 
 ## Step 4: Add imperative callbacks (if needed)
 
-For transformations that declarative rules cannot express, add plain functions to the rules model:
+For transformations that declarative rules cannot express, add plain functions to the rules model. Give them public (non-underscore) names — built-in callbacks are public API so users can remove them from the list by identity:
 
 ```python
-def _split_collapsed_vlans(config: HConfig) -> None:
+def split_collapsed_vlans(config: HConfig) -> None:
     """Example post-load normalization."""
     ...
 
     # inside _instantiate_rules():
     return HConfigDriverRules(
         ...,
-        post_load_callbacks=[_split_collapsed_vlans],
+        post_load_callbacks=[split_collapsed_vlans],
         remediation_transform_callbacks=[],
     )
 ```
