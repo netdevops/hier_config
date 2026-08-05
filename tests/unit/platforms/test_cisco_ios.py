@@ -9,7 +9,7 @@ from hier_config.platforms.cisco_ios.driver import (
 from hier_config.platforms.utils import split_vlan_id_lists
 
 
-def test_rm_ipv6_acl_sequence_numbers() -> None:
+def test_remove_ipv6_acl_sequence_numbers() -> None:
     """Test post-load callback that removes IPv6 ACL sequence numbers."""
     platform = Platform.CISCO_IOS
     config_text = "ipv6 access-list TEST_IPV6_ACL\n sequence 10 permit tcp any any eq 443\n sequence 20 deny ipv6 any any"

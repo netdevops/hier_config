@@ -28,8 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Built-in driver post-load callbacks are now public functions exported from
   their driver modules (e.g. `remove_ipv4_acl_remarks` in
   `hier_config.platforms.cisco_ios.driver`), so a built-in callback can be
-  removed by identity with `rules.post_load_callbacks.remove(...)`; the docs
-  recipe for keeping IOS ACL remarks no longer imports a private name (#286).
+  removed by identity with `rules.post_load_callbacks.remove(...)` (#286).
 
 ### Fixed
 
