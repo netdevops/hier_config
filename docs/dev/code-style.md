@@ -18,7 +18,7 @@ The authoritative rule configuration lives in `pyproject.toml`. Do not add suppr
 ## Pydantic Model Conventions
 
 - **Always subclass the project-local `BaseModel`** defined in `hier_config/models.py` — never `pydantic.BaseModel` directly. The local base sets `ConfigDict(frozen=True, extra="forbid")`, making every model immutable and strict.
-- **Immutable collections only** in model fields: `tuple[...]` for ordered data, `frozenset[...]` for sets. Never `list` or `set`.
+- **Immutable collections only** in model fields: `tuple[...]` for ordered data, `frozenset[...]` for sets. Never `list` or `set`. Deliberate exception: the rule-collection fields on `HConfigDriverRules` are `list[...]` on purpose, so built-in rules and callbacks can be removed by identity (e.g. `rules.post_load_callbacks.remove(...)`) — do not convert them to tuples.
 - **Rule models** match configuration lineage with `match_rules: tuple[MatchRule, ...]`.
 - Fields on `HConfigDriverRules` use **named module-level default factory functions** (e.g., `_ordering_rules_default`) rather than lambdas, for strict-mode type checking.
 

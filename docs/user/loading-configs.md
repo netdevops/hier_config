@@ -115,7 +115,7 @@ Entries without any of the named keys raise `InvalidConfigError`.
 
 Both mappings are invertible via `to_json()` / `to_xml()`, with a few caveats (documented in `hier_config.formats`): a single-item scalar list renders back as a bare scalar, and empty lists are dropped.
 
-Remediation between two `from_xml()` trees can also be rendered as a NETCONF `edit-config` payload — see [Remediation Workflows](remediation-workflows.md#netconf-remediation-payloads).
+Remediation between two `from_xml()` trees can also be rendered as a NETCONF `edit-config` payload, and remediation between two `from_json()` trees as a gNMI-style JSON payload — see [Remediation Workflows](remediation-workflows.md#netconf-remediation-payloads) and [gNMI-style JSON payloads](remediation-workflows.md#gnmi-style-json-remediation-payloads).
 
 ## Format detection errors
 

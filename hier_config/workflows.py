@@ -25,15 +25,15 @@ class WorkflowRemediation:
         generated_config (HConfig): The target configuration for the network device.
 
     Raises:
-        ValueError: If `running_config` and `generated_config` have different drivers.
+        IncompatibleDriverError: If `running_config` and `generated_config` have
+            different drivers.
 
     Example:
         Initialize `WorkflowRemediation` with the running and generated configurations
         and generate remediation and rollback configurations.
 
         ```python
-        from hier_config import WorkflowRemediation, get_hconfig
-        from hier_config.model import Platform
+        from hier_config import HConfig, Platform, WorkflowRemediation
 
         # Create running and generated configurations as HConfig objects
         running_config = HConfig.from_text(Platform.CISCO_IOS, "running_config_text")

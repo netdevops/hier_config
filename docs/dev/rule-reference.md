@@ -170,6 +170,22 @@ NegationRule(
 
 Built-in driver callbacks are public functions exported from their driver modules (e.g. `hier_config.platforms.cisco_ios.driver.remove_ipv4_acl_remarks`), so they can be removed from the list by identity — see [Customizing Driver Rules](../admin/customizing-rules.md#customizing-post-load-callbacks).
 
+The complete set of built-in post-load callbacks:
+
+| Driver | Callback | What it does |
+|--------|----------|--------------|
+| Cisco IOS | `hier_config.platforms.cisco_ios.driver.remove_ipv6_acl_sequence_numbers` | Strips sequence numbers from IPv6 ACL entries so they diff by content |
+| Cisco IOS | `hier_config.platforms.cisco_ios.driver.remove_ipv4_acl_remarks` | Removes `remark` lines from IPv4 ACLs |
+| Cisco IOS | `hier_config.platforms.cisco_ios.driver.add_acl_sequence_numbers` | Adds sequence numbers to IPv4 ACL entries for valid negation |
+| Cisco IOS, Aruba AOS-CX | `hier_config.platforms.utils.split_vlan_id_lists` | Expands `vlan 1,3-5`-style ID lists into one node per VLAN |
+| Cisco XR | `hier_config.platforms.cisco_xr.driver.fixup_xr_comments` | Moves `!` comment lines into the next sibling's comments set |
+| HP ProCurve | `hier_config.platforms.hp_procurve.driver.fixup_hp_procurve_aaa_port_access` | Expands the interface ranges in `aaa port-access` commands |
+| HP ProCurve | `hier_config.platforms.hp_procurve.driver.fixup_hp_procurve_device_profile` | Separates `device-profile` tagged-vlans onto individual lines |
+| HP ProCurve | `hier_config.platforms.hp_procurve.driver.fixup_hp_procurve_vlan` | Moves native/tagged VLAN membership onto the interface config |
+| Aruba AOS-CX | `hier_config.platforms.aruba_aoscx.driver.split_interface_vlan_trunk_allowed` | Expands `vlan trunk allowed` lists into one node per VLAN |
+
+No built-in driver populates `remediation_transform_callbacks`; the list exists for customized and custom drivers.
+
 ---
 
 ## Rendering

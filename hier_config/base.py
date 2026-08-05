@@ -50,21 +50,21 @@ class HConfigBase(ABC):  # ruff:ignore[too-many-public-methods]
     @property
     @abstractmethod
     def root(self) -> HConfig:
-        pass
+        """The `HConfig` object at the base of the tree."""
 
     @property
     @abstractmethod
     def driver(self) -> HConfigDriverBase:
-        pass
+        """The platform driver associated with this tree."""
 
     @abstractmethod
     def lineage(self) -> Iterator[HConfigChild]:
-        pass
+        """Yield the lineage of parent objects, up to but excluding the root."""
 
     @property
     @abstractmethod
     def depth(self) -> int:
-        pass
+        """The distance to the root HConfig object i.e. indent level."""
 
     def add_children(self, lines: Iterable[str]) -> None:
         """Add child instances of HConfigChild."""
@@ -98,6 +98,7 @@ class HConfigBase(ABC):  # ruff:ignore[too-many-public-methods]
         return new_child
 
     def path(self) -> Iterator[str]:  # ruff:ignore[no-self-use]
+        """Yield the text of each lineage node; the root itself yields nothing."""
         yield from ()
 
     def add_deep_copy_of(
@@ -275,7 +276,10 @@ class HConfigBase(ABC):  # ruff:ignore[too-many-public-methods]
 
     @abstractmethod
     def instantiate_child(self, text: str) -> HConfigChild:
-        pass
+        """Create a new `HConfigChild` with self as the parent.
+
+        The child is not appended to `self.children`; use `add_child` for that.
+        """
 
     @abstractmethod
     def _is_duplicate_child_allowed(self) -> bool:

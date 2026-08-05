@@ -21,7 +21,7 @@ Use `HConfig.from_text()` to parse each configuration. The first argument select
 ```python
 # Load running and intended configurations from files
 >>> running_config_text = read_text_from_file("./tests/fixtures/running_config.conf")
->>> generated_config_text = read_text_from_file("./tests/fixtures/remediation_config.conf")
+>>> generated_config_text = read_text_from_file("./tests/fixtures/generated_config.conf")
 >>>
 
 # Create HConfig objects for running and intended configurations

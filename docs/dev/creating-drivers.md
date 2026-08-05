@@ -198,11 +198,10 @@ Idempotency matching is structural: `idempotent_for` builds an *idempotency key*
 
 To give the platform a typed [config view](../user/config-views.md), implement the two view classes and point the driver at them.
 
-**1. Interface view** — subclass `ConfigViewInterfaceBase` plus the capability mixins the platform genuinely supports:
+**1. Interface view** — subclass the capability mixins the platform genuinely supports (each mixin already subclasses `ConfigViewInterfaceBase`, so listing the base explicitly is redundant — the in-tree views don't):
 
 ```python
 from hier_config.platforms.view_base import (
-    ConfigViewInterfaceBase,
     InterfaceBundleViewMixin,
     InterfaceVlanViewMixin,
 )
@@ -211,7 +210,6 @@ from hier_config.platforms.view_base import (
 class ConfigViewInterfaceCustomNOS(
     InterfaceBundleViewMixin,
     InterfaceVlanViewMixin,
-    ConfigViewInterfaceBase,
 ):
     """Typed view over one `interface ...` block."""
 
@@ -230,7 +228,7 @@ class ConfigViewInterfaceCustomNOS(
 
 Inheriting a mixin is a contract: `isinstance(view, InterfaceVlanViewMixin)` tells users the capability exists, so only inherit mixins whose properties the platform can actually populate.
 
-**2. Device view** — subclass `HConfigViewBase` and implement its abstract members (`hostname`, `interface_views`, `interfaces`, `ipv4_default_gw`, `dot1q_mode_from_vlans`, ...):
+**2. Device view** — subclass `HConfigViewBase` and implement its abstract members (`hostname`, `interface_views`, `interfaces`, `ipv4_default_gw`; `dot1q_mode_from_vlans` is a concrete static helper you can call, not implement):
 
 ```python
 from hier_config.platforms.view_base import HConfigViewBase

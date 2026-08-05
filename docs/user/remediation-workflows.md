@@ -134,7 +134,7 @@ ip access-list extended TEST
 
 ```python
 invalid_remediation = wfr.remediation_config.get_child(equals="ip access-list extended TEST")
-wfr.remediation_config.delete_child(invalid_remediation)
+invalid_remediation.delete()
 wfr.remediation_config.merge(custom_remediation)
 ```
 
@@ -144,7 +144,7 @@ wfr.remediation_config.merge(custom_remediation)
 
 When `remediation_config` is first computed, hier_config runs two ordered sets of transforms over the result, each receiving the remediation `HConfig` and mutating it in place:
 
-1. **Driver-level transforms** — `driver.rules.remediation_transform_callbacks`, populated by platform drivers (or your customized driver) for platform-wide fixups.
+1. **Driver-level transforms** — `driver.rules.remediation_transform_callbacks`, a hook for platform-wide fixups. No built-in driver populates it today; it exists for customized and custom drivers.
 2. **User plugins** — the `plugins` argument of `WorkflowRemediation`, for organization policies and per-workflow behavior.
 
 ### Plain-callable plugins

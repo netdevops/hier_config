@@ -281,7 +281,7 @@ class HConfigDriverCiscoIOSKeepRemarks(HConfigDriverCiscoIOS):
 register_driver(Platform.CISCO_IOS, HConfigDriverCiscoIOSKeepRemarks)
 ```
 
-The same pattern works for adding callbacks (`rules.post_load_callbacks.append(my_callback)`) and for the remediation-stage equivalents in `rules.remediation_transform_callbacks` (see [Remediation Workflows](../user/remediation-workflows.md#the-remediation-transform-pipeline)).
+The same pattern works for adding callbacks (`rules.post_load_callbacks.append(my_callback)`) and for the remediation-stage equivalents in `rules.remediation_transform_callbacks` (see [Remediation Workflows](../user/remediation-workflows.md#the-remediation-transform-pipeline)). The full table of built-in post-load callbacks — which drivers ship them and what each one does — is in the [Driver Rule Reference](../dev/rule-reference.md#callbacks).
 
 ## Next steps
 

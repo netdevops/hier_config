@@ -58,7 +58,12 @@ Use the returned driver instance directly: `HConfig.from_text(driver, config_tex
 
 ### Supported option keys
 
-Each entry uses a `lineage` list of match criteria (`startswith`, `endswith`, `contains`, `equals`, `re_search`) that maps onto [`MatchRule`](../glossary.md#match-rule) tuples:
+Each entry uses a `lineage` list of match criteria (`startswith`, `endswith`, `contains`, `equals`, `re_search`) that maps onto [`MatchRule`](../glossary.md#match-rule) tuples.
+
+Two constraints to be aware of:
+
+- **One criterion per `lineage` entry.** The loader picks the first criterion it finds (checked in the order `startswith`, `endswith`, `contains`, `equals`, `re_search`) and silently ignores the rest — unlike a `MatchRule` built in Python, where multiple set fields AND together. Use `re_search` if a single entry needs compound matching.
+- **Built-in platforms only.** `load_driver_rules()` takes a `Platform` enum member; it does not accept the name string of a custom driver registered via `register_driver()`. Extend a custom driver in Python instead ([Custom Drivers](custom-drivers.md)).
 
 | YAML key | Resulting rule |
 |----------|----------------|

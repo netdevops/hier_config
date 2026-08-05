@@ -12,16 +12,16 @@ pip install hier-config
 
 ### Installing a prerelease (v4)
 
-Version 4 is currently published as a prerelease (`4.0.0b1`). Pip skips prereleases by default, so pass `--pre` to install it:
+Version 4 is currently published as a prerelease. Pip skips prereleases by default, so pass `--pre` to install it:
 
 ```bash
 pip install --pre hier-config
 ```
 
-Or pin the exact version:
+Or pin an exact version (see the [release history on PyPI](https://pypi.org/project/hier-config/#history) for the current prerelease):
 
 ```bash
-pip install hier-config==4.0.0b1
+pip install hier-config==<version>
 ```
 
 ## Install from source

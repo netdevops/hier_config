@@ -77,16 +77,18 @@ class HConfigDriverAcmeOS(HConfigDriverBase):
         )
 ```
 
-Replace `#` in the `per_line_sub` regex with the platform's actual comment token, and keep the `^\s*` anchor so indented comments are stripped too. Rules take `match_rules: tuple[MatchRule, ...]` (immutable — never lists). A minimal driver returning bare `HConfigDriverRules()` is valid; only add rules the platform needs. Public classes require docstrings.
+Replace `#` in the `per_line_sub` regex with the platform's actual comment token, and keep the `^\s*` anchor so indented comments are stripped too. Rules take `match_rules: tuple[MatchRule, ...]` (immutable — never lists), while the `HConfigDriverRules` *collection fields themselves* are intentionally `list[...]` as shown above (so built-in rules/callbacks can be removed by identity). A minimal driver returning bare `HConfigDriverRules()` is valid; only add rules the platform needs. Public classes require docstrings.
 
 ## Step 4: Register the Platform
 
 1. Add the member to the `Platform` enum in `hier_config/models.py` (alphabetical position). Note the enum uses `auto()`, so inserting a member renumbers everything after it — fine for in-repo use, but never rely on `Platform.value` for serialization.
-2. Add the mapping to the `_BUILTIN_DRIVERS` dict in `hier_config/registry.py` and import the driver class there. If the platform has a config view, set the `view_class` attribute on the driver.
+2. Add the mapping to the `_BUILTIN_DRIVERS` dict in `hier_config/registry.py` and import the driver class there. The key must be the canonical uppercase name string — `Platform.ACME_OS.name` — not the enum member (`_normalize()` canonicalizes lookups to `.name`, so a `Platform`-member key would be silently unreachable). If the platform has a config view, set the `view_class` attribute on the driver.
 
 ## Step 5: Document and Log
 
+- Add driver-level unit tests in `tests/unit/platforms/test_<platform>.py` (every recent driver has one; see `tests/unit/platforms/test_aruba_aoscx.py`). If the driver ships a config view, add `tests/unit/platforms/views/test_<platform>.py` too.
 - Add a driver section (behavior summary) and a platform-table row to `docs/admin/platforms.md`. Mark the status `Experimental` for a new driver.
+- If you introduced a new *rule type* (not just rule instances), document it in `docs/dev/rule-reference.md`.
 - Add a `CHANGELOG.md` entry under `## [Unreleased]` → `### Added`.
 
 ## Step 6: Run the Gates

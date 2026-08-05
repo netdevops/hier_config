@@ -150,14 +150,17 @@ class HConfig(HConfigBase):  # ruff:ignore[too-many-public-methods]
 
     @property
     def driver(self) -> HConfigDriverBase:
+        """The platform driver this config was created with."""
         return self._driver
 
     @property
     def real_indent_level(self) -> int:
+        """The indentation level used during parsing; always -1 for the root."""
         return -1
 
     @property
     def parent(self) -> HConfig:
+        """The root is its own parent."""
         return self
 
     @property
@@ -176,6 +179,7 @@ class HConfig(HConfigBase):  # ruff:ignore[too-many-public-methods]
         return True
 
     def instantiate_child(self, text: str) -> HConfigChild:
+        """Create a new `HConfigChild` with self as the parent."""
         return HConfigChild(self, text)
 
     @property
@@ -217,10 +221,16 @@ class HConfig(HConfigBase):  # ruff:ignore[too-many-public-methods]
         yield from ()
 
     def lines(self, *, sectional_exiting: bool = False) -> Iterable[str]:
+        """Yield the indented config lines of the tree, sorted at each level.
+
+        With `sectional_exiting`, the driver's exit token is appended after
+        each section that requires one.
+        """
         for child in sorted(self.children):
             yield from child.lines(sectional_exiting=sectional_exiting)
 
     def to_lines(self, *, sectional_exiting: bool = False) -> tuple[str, ...]:
+        """Return the rendered config lines as a tuple."""
         return tuple(self.lines(sectional_exiting=sectional_exiting))
 
     def dump(self) -> Dump:

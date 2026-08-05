@@ -126,6 +126,7 @@ Built-in drivers are registered at import time in a module-level registry keyed 
 | Platform enum | Driver class | Module |
 |--------------|-------------|--------|
 | `ARISTA_EOS` | `HConfigDriverAristaEOS` | `platforms/arista_eos/driver.py` |
+| `ARUBA_AOSCX` | `HConfigDriverArubaAOSCX` | `platforms/aruba_aoscx/driver.py` |
 | `CISCO_IOS` | `HConfigDriverCiscoIOS` | `platforms/cisco_ios/driver.py` |
 | `CISCO_NXOS` | `HConfigDriverCiscoNXOS` | `platforms/cisco_nxos/driver.py` |
 | `CISCO_XR` | `HConfigDriverCiscoIOSXR` | `platforms/cisco_xr/driver.py` |
@@ -179,7 +180,7 @@ Internally it calls `running_config.remediation(generated_config)` (which delega
 
 The view layer (`hier_config/platforms/view_base.py` and platform-specific `view.py` files) provides structured, typed access to configuration elements without modifying the underlying tree.
 
-- `HConfigViewBase` — abstract device-level base; subclasses implement `interface_views` and `dot1q_mode_from_vlans`.
+- `HConfigViewBase` — abstract device-level base; subclasses implement `hostname`, `interface_views`, `interfaces`, and `ipv4_default_gw` (`dot1q_mode_from_vlans` is a concrete static helper).
 - `ConfigViewInterfaceBase` — abstract per-interface base; exposes core properties like `name`, `description`, `enabled`, `ipv4_interfaces`, and `vrf`.
 - Optional capability mixins — `InterfaceBundleViewMixin` (`bundle_id`, `bundle_member_interfaces`, ...), `InterfaceVlanViewMixin` (`native_vlan`, `tagged_vlans`, `dot1q_mode`, ...), `InterfaceNACViewMixin` (`has_nac`, `nac_host_mode`, ...), and `InterfacePhysicalViewMixin` (`duplex`, `speed`, `poe`, `module_number`). Platform views inherit only the mixins they support; users check capability with `isinstance(view, InterfaceVlanViewMixin)`.
 

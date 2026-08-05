@@ -185,5 +185,6 @@ Not required for migration, but these are the headline additions:
 - [Getting Started](getting-started.md) — the v4 workflow end to end.
 - [Customizing Driver Rules](../admin/customizing-rules.md) — if you carried
   v3 driver customizations.
-- Full change list: the 4.0.0 section of the
-  [CHANGELOG](https://github.com/netdevops/hier_config/blob/next/CHANGELOG.md).
+- Full change list: the Unreleased section of the
+  [CHANGELOG](https://github.com/netdevops/hier_config/blob/next/CHANGELOG.md)
+  (it becomes the 4.0.0 section at release).

@@ -61,6 +61,12 @@ def hconfig_from_text(
     platform_or_driver: Platform | str | HConfigDriverBase,
     config_raw: Path | str = "",
 ) -> HConfig:
+    """Create an HConfig from raw configuration text (or a Path to it).
+
+    Applies the driver's full-text substitutions, parses the text into a
+    tree (including banner handling), strips sectional-exit lines, and runs
+    post-load callbacks.
+    """
     if isinstance(config_raw, Path):
         config_raw = config_raw.read_text(encoding="utf8")
 
@@ -113,6 +119,12 @@ def hconfig_from_lines(
     platform_or_driver: Platform | str | HConfigDriverBase,
     lines: list[str] | tuple[str, ...] | str,
 ) -> HConfig:
+    """Create an HConfig from pre-split configuration lines (fast load).
+
+    Applies per-line substitutions and indentation analysis but skips the
+    full-text substitutions, config preprocessor, and banner handling of
+    `hconfig_from_text`.
+    """
     driver = resolve_driver(platform_or_driver)
     config = HConfig(driver)
     if isinstance(lines, str):

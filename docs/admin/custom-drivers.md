@@ -130,7 +130,7 @@ Unregistering a platform that is not registered (or a built-in that is not overr
 from hier_config import get_registered_platforms
 
 print(get_registered_platforms())
-# (Platform.ARISTA_EOS, Platform.CISCO_IOS, ..., 'MY_NOS')
+# (<Platform.ARISTA_EOS: '1'>, <Platform.ARUBA_AOSCX: '2'>, ..., 'MY_NOS')
 ```
 
 Names known to the `Platform` enum are returned as members; custom names are returned as canonical uppercase strings.

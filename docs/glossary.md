@@ -20,6 +20,18 @@ A Python class that encodes all operating-system-specific behaviour for one netw
 
 ---
 
+## Driver registry / canonical platform name
+
+The runtime mapping from platform identifiers to driver classes (`hier_config/registry.py`): `register_driver()`, `unregister_driver()`, `get_registered_platforms()`, `get_hconfig_driver()`. Keys are canonicalized to the uppercase platform *name* (`Platform.CISCO_IOS.name` → `"CISCO_IOS"`), and string lookups are case-insensitive. Custom drivers registered under a string name coexist with the built-ins.
+
+---
+
+## Future config / FutureReport
+
+`HConfig.future(config)` predicts the configuration a device will have after a change is applied — used to validate remediations and build rollbacks offline. `HConfig.future_with_report(config)` returns the same tree plus a `FutureReport` naming the nodes where negation resolution was ambiguous (`unresolved_negations`) or an idempotent command was silently replaced (`idempotency_replacements`). See [Predicting Future Configs](user/future-config.md).
+
+---
+
 ## Idempotent command
 
 A configuration command where only the *last* value applied takes effect — applying the same command twice with different values results in only the second value being active. Typical examples: `hostname`, `ip address`, `description`.
@@ -50,6 +62,12 @@ A set of `IdempotentCommandsAvoidRule` entries that *prevent* specific commands 
 ## Indent adjust
 
 A pair of `IndentAdjustRule` entries (`start_expression` / `end_expression`) that temporarily shift the indentation level between the two markers. Used on Cisco IOS XR for inline templates whose body is indented differently from the surrounding context.
+
+---
+
+## List keys (`list_keys`)
+
+The tuple of leaf names that identify entries in structured (JSON/XML) list data — default `("name", "id")`. Used by `HConfig.from_json()` / `from_xml()` to give keyed list entries stable identities, and by `remediation_netconf_xml()` / `remediation_json()` to render deletions by key selector. Pass `list_keys=` when your data model keys lists on something else.
 
 ---
 
@@ -111,6 +129,18 @@ PerLineSubRule(search="^Building configuration.*", replace="")
 
 ---
 
+## Post-load / remediation-transform callbacks
+
+Two callback lists on `HConfigDriverRules`, each holding `Callable[[HConfig], None]` transforms that mutate a tree in place. `post_load_callbacks` run right after a config is parsed (built-in examples: `remove_ipv4_acl_remarks` on Cisco IOS, `fixup_xr_comments` on Cisco XR); the built-ins are public functions, so they can be removed by identity (`rules.post_load_callbacks.remove(...)`). `remediation_transform_callbacks` run over a freshly computed remediation — no built-in driver populates this list; it exists for customized drivers. See [Customizing Driver Rules](admin/customizing-rules.md).
+
+---
+
+## RemediationPlugin
+
+The abstract base class (`hier_config/plugins.py`) for reusable, named remediation transforms. Subclasses implement `name`, `description`, and `transform(remediation)`; instances are callable, so they work anywhere a plain `Callable[[HConfig], None]` does — most commonly the `plugins=` argument of `WorkflowRemediation`. Plugins express user/workflow policy; driver-level fixups belong in `remediation_transform_callbacks` instead. See [Remediation Workflows](user/remediation-workflows.md).
+
+---
+
 ## Sectional exiting
 
 A `SectionalExitingRule` that instructs hier_config to emit a closing token at the end of a configuration section when rendering output. Different platforms require different exit syntax.
@@ -158,6 +188,7 @@ The primary user-facing class for computing the delta between a running and an i
 - `remediation_config` — the commands to apply to bring the device into compliance.
 - `rollback_config` — the commands to revert the device back to its original state.
 - `remediation_netconf_xml()` — the remediation rendered as a NETCONF `edit-config` payload (for XML-sourced configs).
+- `remediation_json()` — the remediation rendered as a gNMI-SetRequest-style dict of update/delete sets (for JSON-sourced configs).
 - `apply_remediation_tag_rules()` — annotate remediation lines with tags.
 - `remediation_config_filtered_text()` — render a tagged subset of the remediation.
 - `plugins` — user-supplied transforms applied to the computed remediation.

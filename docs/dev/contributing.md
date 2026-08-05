@@ -1,6 +1,6 @@
 # Contributing
 
-This page summarizes how to set up a development environment, run the checks that CI runs, and meet the project's expectations for pull requests. The authoritative reference is [CONTRIBUTING.md](https://github.com/netdevops/hier_config/blob/master/CONTRIBUTING.md) in the repository root.
+This page summarizes how to set up a development environment, run the checks that CI runs, and meet the project's expectations for pull requests. The authoritative reference is [CONTRIBUTING.md](https://github.com/netdevops/hier_config/blob/next/CONTRIBUTING.md) in the repository root.
 
 ## Development setup
 

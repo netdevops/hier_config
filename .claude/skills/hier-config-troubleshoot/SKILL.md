@@ -40,6 +40,9 @@ Bisect: delete config lines until removing one more makes the symptom disappear.
 | Commands in an order the device rejects | Ordering weights | `ordering` rules (lower weight applies first) |
 | Junk lines in the tree (banners, comments, timestamps) | Load-time substitutions | `per_line_sub` / `full_text_sub` |
 | `future()` or rollback doesn't match real device behavior | Known algorithm limitations | `docs/user/future-config.md#known-limitations` — duplicate children and order-dependent sections (ACLs need sequence numbers) are documented limits |
+| Suspected unresolved negations or silent idempotent replacements in `future()` | Negation resolution ambiguity | Use `HConfig.future_with_report()` — the returned `FutureReport.unresolved_negations` / `.idempotency_replacements` name the exact nodes instead of you scanning the render |
+| JSON/XML config raises on `from_text()` / parses as gibberish | Structured input fed to the text parser (rejected by design) | Use `HConfig.from_json()` / `HConfig.from_xml()`; text constructors deliberately reject structured formats |
+| `InvalidConfigError: Attribute changes cannot be expressed as gNMI delete paths` (or the NETCONF equivalent) | Structured-rendering limitation on attribute-style (`@`-prefixed) changes | `hier_config/formats.py` (`hconfig_to_gnmi_json` / `hconfig_to_netconf_xml`); restructure the change as element updates |
 | Wrong platform behavior entirely | Wrong driver selected | Confirm the `Platform` enum member; `GENERIC` has almost no rules |
 
 Rule semantics reference: `docs/dev/rule-reference.md`. Layer responsibilities: `docs/dev/architecture.md`.

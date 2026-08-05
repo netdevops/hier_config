@@ -34,7 +34,7 @@ hconfig = HConfig.from_text(Platform.CISCO_IOS, raw_config)
 config_view = get_hconfig_view(hconfig)
 ```
 
-Platforms without a view raise `DriverNotFoundError`. Views are currently provided for Cisco IOS, Arista EOS, Cisco NX-OS, Cisco IOS XR, and HP ProCurve. (You can also import a platform view class directly, e.g. `from hier_config.platforms.cisco_ios.view import HConfigViewCiscoIOS`.)
+Platforms without a view raise `DriverNotFoundError`. Views are currently provided for Cisco IOS, Arista EOS, Cisco NX-OS, Cisco IOS XR, Aruba AOS-CX, and HP ProCurve. (You can also import a platform view class directly, e.g. `from hier_config.platforms.cisco_ios.view import HConfigViewCiscoIOS`.)
 
 ## The capability mixin model
 
@@ -55,7 +55,7 @@ for interface_view in config_view.interface_views:
         print(interface_view.name, interface_view.native_vlan)
 ```
 
-Current platform capabilities: Cisco IOS and HP ProCurve inherit all four mixins; Arista EOS, Cisco NX-OS, and Cisco IOS XR inherit the bundle and VLAN mixins.
+Current platform capabilities: Cisco IOS, HP ProCurve, and Aruba AOS-CX inherit all four mixins; Arista EOS, Cisco NX-OS, and Cisco IOS XR inherit the bundle and VLAN mixins.
 
 ## Device-level view properties
 
@@ -163,7 +163,6 @@ interface GigabitEthernet0/1
  description Uplink to Switch
  switchport access vlan 10
  switchport mode access
- ip address 192.168.1.1 255.255.255.0
  shutdown
 !
 interface GigabitEthernet0/2
@@ -196,11 +195,11 @@ Enabled: False
 Dot1Q Mode: InterfaceDot1qMode.ACCESS
 Native VLAN: 10
 Tagged VLANs: ()
-IP Address: 192.168.1.1/24
+IP Address: None
 Is Subinterface: False
 ----------------------------------------
 Interface Name: GigabitEthernet0/2
-Description: None
+Description: 
 Enabled: True
 Dot1Q Mode: InterfaceDot1qMode.TAGGED
 Native VLAN: None
@@ -209,6 +208,8 @@ IP Address: None
 Is Subinterface: False
 ----------------------------------------
 ```
+
+Note that `description` returns an empty string (not `None`) when no description is configured, and an interface configured as a routed port (with an `ip address`) reports `dot1q_mode` and `native_vlan` as `None` even if stale `switchport` lines remain.
 
 ## Next steps
 
