@@ -9,7 +9,6 @@ from .models import Dump, DumpLine, Platform, ReferenceLocation
 from .tree_algorithms import (
     FutureReport,
     compute_difference,
-    compute_future,
     compute_future_with_report,
     compute_remediation,
     compute_with_tags,
@@ -299,10 +298,10 @@ class HConfig(HConfigBase):  # ruff:ignore[too-many-public-methods]
         removed, matching devices that prune empty stanzas on commit; sections
         that were already empty are kept.
         """
-        future_config = HConfig(self.driver)
-        compute_future(self, config, future_config)
-        if prune_empty_branches:
-            prune_emptied_branches(self, future_config)
+        future_config, _ = self.future_with_report(
+            config,
+            prune_empty_branches=prune_empty_branches,
+        )
         return future_config
 
     def future_with_report(
