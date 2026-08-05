@@ -1,9 +1,16 @@
-from collections.abc import Callable, Iterable
+from __future__ import annotations
+
 from logging import getLogger
+from typing import TYPE_CHECKING
 
 from .exceptions import IncompatibleDriverError
-from .models import TagRule
 from .root import HConfig
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterable
+
+    from .formats import GnmiRemediation
+    from .models import TagRule
 
 logger = getLogger(__name__)
 
@@ -132,11 +139,30 @@ class WorkflowRemediation:
         Keyed list-entry deletions are expressed by their key leaf, resolved
         against the running config via `list_keys`.
         """
-        from .formats import (
-            hconfig_to_netconf_xml,
-        )
+        from .formats import hconfig_to_netconf_xml
 
         return hconfig_to_netconf_xml(
+            self.remediation_config,
+            running=self.running_config,
+            list_keys=list_keys,
+        )
+
+    def remediation_json(
+        self,
+        *,
+        list_keys: tuple[str, ...] | None = None,
+    ) -> GnmiRemediation:
+        """Render the remediation as a gNMI-SetRequest-style dict.
+
+        Requires running and generated configs built by `HConfig.from_json()`.
+        Returns `{"update": ..., "delete": [...]}` — added/changed values as a
+        JSON tree and deletions as xpath-ish paths. Keyed list-entry deletions
+        get `[key=value]` selectors, resolved against the running config via
+        `list_keys`.
+        """
+        from .formats import hconfig_to_gnmi_json
+
+        return hconfig_to_gnmi_json(
             self.remediation_config,
             running=self.running_config,
             list_keys=list_keys,

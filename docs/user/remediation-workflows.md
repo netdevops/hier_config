@@ -202,6 +202,20 @@ payload = wfr.remediation_netconf_xml()
 
 Deletions become elements with `nc:operation="delete"`; additions use the NETCONF default merge operation. Keyed list-entry deletions are expressed by their key leaf, resolved against the running config — pass `list_keys=` if your data does not use the default `name`/`id` keys. Attribute-level changes cannot be expressed as NETCONF operations and raise `InvalidConfigError`.
 
+## gNMI-style JSON remediation payloads
+
+When both configurations were built with [`HConfig.from_json()`](loading-configs.md#structured-formats-json-and-xml), the remediation can be rendered as a gNMI-SetRequest-style dict of update and delete sets:
+
+```python
+result = wfr.remediation_json()
+# {
+#     "update": {"system": {"config": {"hostname": "new"}}},
+#     "delete": ["interfaces/interface[name=eth1]"],
+# }
+```
+
+Added and changed values render into the `update` object using the same JSON mapping as `to_json()` (a modified keyed list entry keeps its identity leaf, so the update stays valid OpenConfig). Deletions become xpath-ish paths: keyed list entries get a `[key=value]` selector resolved against the running config — pass `list_keys=` if your data does not use the default `name`/`id` keys — while scalar leaves delete by their bare path (e.g. `system/config/hostname`). Backslashes and `]` inside selector values are escaped with a backslash. Element names themselves are not escaped, so keys containing `/` or `[` produce ambiguous paths.
+
 ## Next steps
 
 - [Working with Tags](tags.md) — filter the remediation for phased deployment.
