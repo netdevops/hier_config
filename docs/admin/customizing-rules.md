@@ -258,13 +258,13 @@ driver.rules.negation.append(
 
 Post-load callbacks are Python functions that a driver runs against the tree after parsing (`driver.rules.post_load_callbacks`). Sometimes you want to *remove* one of a built-in driver's callbacks — for example, Cisco IOS strips IPv4 ACL `remark` lines by default, and you may want to keep them so remarks participate in remediation.
 
-Because `HConfigDriverRules` is frozen, filter the callback list *in place* (slice assignment) rather than reassigning the attribute:
+Built-in callbacks are public functions exported from their driver modules, so a callback can be removed by identity. Because `HConfigDriverRules` is frozen, mutate the callback list *in place* with `list.remove()` — which raises `ValueError` if the callback was already removed — rather than reassigning the attribute:
 
 ```python
 from hier_config import Platform, register_driver
 from hier_config.platforms.cisco_ios.driver import (
     HConfigDriverCiscoIOS,
-    _remove_ipv4_acl_remarks,
+    remove_ipv4_acl_remarks,
 )
 
 
@@ -274,13 +274,7 @@ class HConfigDriverCiscoIOSKeepRemarks(HConfigDriverCiscoIOS):
     @staticmethod
     def _instantiate_rules():
         rules = HConfigDriverCiscoIOS._instantiate_rules()
-        # Frozen model: attribute reassignment fails, but the list is
-        # mutable — filter it in place with slice assignment.
-        rules.post_load_callbacks[:] = [
-            callback
-            for callback in rules.post_load_callbacks
-            if callback is not _remove_ipv4_acl_remarks
-        ]
+        rules.post_load_callbacks.remove(remove_ipv4_acl_remarks)
         return rules
 
 

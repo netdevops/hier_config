@@ -18,7 +18,7 @@ from hier_config.root import HConfig
 logger = getLogger(__name__)
 
 
-def _rm_ipv6_acl_sequence_numbers(config: HConfig) -> None:
+def remove_ipv6_acl_sequence_numbers(config: HConfig) -> None:
     """If there are sequence numbers in the IPv6 ACL, remove them."""
     for acl in config.get_children(startswith="ipv6 access-list "):
         for entry in acl.children:
@@ -26,14 +26,15 @@ def _rm_ipv6_acl_sequence_numbers(config: HConfig) -> None:
                 entry.text = " ".join(entry.text.split()[2:])
 
 
-def _remove_ipv4_acl_remarks(config: HConfig) -> None:
+def remove_ipv4_acl_remarks(config: HConfig) -> None:
+    """Remove remark lines from IPv4 ACLs so they do not participate in diffs."""
     for acl in config.get_children(startswith="ip access-list "):
         for entry in tuple(acl.children):
             if entry.text.startswith("remark"):
                 entry.delete()
 
 
-def _add_acl_sequence_numbers(config: HConfig) -> None:
+def add_acl_sequence_numbers(config: HConfig) -> None:
     """Add ACL sequence numbers."""
     ipv4_acl_sw = "ip access-list"
     acl_line_sw: tuple[str, ...] = ("permit", "deny")
@@ -200,9 +201,9 @@ class HConfigDriverCiscoIOS(HConfigDriverBase):
                 ),
             ],
             post_load_callbacks=[
-                _rm_ipv6_acl_sequence_numbers,
-                _remove_ipv4_acl_remarks,
-                _add_acl_sequence_numbers,
+                remove_ipv6_acl_sequence_numbers,
+                remove_ipv4_acl_remarks,
+                add_acl_sequence_numbers,
                 split_vlan_id_lists,
             ],
         )

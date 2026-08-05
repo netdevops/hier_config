@@ -1,5 +1,11 @@
 from hier_config import HConfig
 from hier_config.models import Platform
+from hier_config.platforms.hp_procurve.driver import (
+    HConfigDriverHPProcurve,
+    fixup_hp_procurve_aaa_port_access,
+    fixup_hp_procurve_device_profile,
+    fixup_hp_procurve_vlan,
+)
 
 
 def test_fixup_aaa_port_access_ranges() -> None:
@@ -96,3 +102,12 @@ def test_fixup_device_profile_tagged_vlans() -> None:
 
     assert device_profile_printer is not None
     assert device_profile_printer.get_child(equals="tagged-vlan 40") is not None
+
+
+def test_default_post_load_callbacks_are_public() -> None:
+    """Built-in ProCurve post-load callbacks are public, pinned by identity (#286)."""
+    callbacks = HConfigDriverHPProcurve().rules.post_load_callbacks
+
+    assert fixup_hp_procurve_aaa_port_access in callbacks
+    assert fixup_hp_procurve_device_profile in callbacks
+    assert fixup_hp_procurve_vlan in callbacks

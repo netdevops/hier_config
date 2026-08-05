@@ -175,6 +175,8 @@ Not required for migration, but these are the headline additions:
   root.
 - `HConfigDriverBase` and `HConfigDriverRules` are public API for
   [custom drivers](../dev/creating-drivers.md).
+- Built-in post-load callbacks are public functions removable by identity —
+  see [Customizing Driver Rules](../admin/customizing-rules.md#customizing-post-load-callbacks).
 
 ## Next steps
 

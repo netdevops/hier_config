@@ -168,6 +168,8 @@ NegationRule(
 - `post_load_callbacks` — run against the tree immediately after parsing (e.g. IOS VLAN-list splitting, ProCurve VLAN membership normalization).
 - `remediation_transform_callbacks` — run against each computed remediation, before user plugins (see [Remediation Workflows](../user/remediation-workflows.md#the-remediation-transform-pipeline)).
 
+Built-in driver callbacks are public functions exported from their driver modules (e.g. `hier_config.platforms.cisco_ios.driver.remove_ipv4_acl_remarks`), so they can be removed from the list by identity — see [Customizing Driver Rules](../admin/customizing-rules.md#customizing-post-load-callbacks).
+
 ---
 
 ## Rendering

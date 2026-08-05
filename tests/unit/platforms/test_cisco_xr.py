@@ -1,5 +1,9 @@
 from hier_config import HConfig
 from hier_config.models import Platform
+from hier_config.platforms.cisco_xr.driver import (
+    HConfigDriverCiscoIOSXR,
+    fixup_xr_comments,
+)
 
 
 def test_multiple_groups_no_duplicate_child_error() -> None:
@@ -466,3 +470,10 @@ router isis backbone
     assert len(net_child.comments) == 0
     for child in router_isis.all_children():
         assert not child.text.startswith("!")
+
+
+def test_default_post_load_callbacks_are_public() -> None:
+    """Built-in XR post-load callbacks are public and pinned by identity (#286)."""
+    callbacks = HConfigDriverCiscoIOSXR().rules.post_load_callbacks
+
+    assert fixup_xr_comments in callbacks
