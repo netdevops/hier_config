@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+v4 design decisions, for the record:
+
+- `HConfig.remediation()` stays public (#223): it was deliberately renamed
+  from `config_to_get_to()` in #216 as the tree-level primitive;
+  `WorkflowRemediation` remains the recommended workflow API and already
+  validates driver compatibility (`IncompatibleDriverError`).
+- Drivers remain declaratively-configured with sanctioned imperative
+  extension points (#222): #220 removed the negation-related override needs;
+  `idempotent_for()`, `negate_with()`, and `config_preprocessor()` stay
+  overridable for logic that rules cannot express.
+- Config trees stay mutable (#224): full immutability would break the
+  callback/plugin mutation model for marginal benefit. The remediation
+  algorithms are guaranteed (and now tested) not to mutate their input
+  configs.
+
 ### Added
 
 - `HConfig.future_with_report()` returns the predicted future config together
@@ -21,43 +36,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rename tables for constructors, methods, and utilities, the unified
   negation rule mapping, exception and config-view changes, and behavior
   changes to review.
-
-### Changed
-
-- Restructured the documentation into User, Administrator, and Developer
-  guides (`docs/user/`, `docs/admin/`, `docs/dev/`) with a rewritten landing
-  page, new pages for loading configurations and remediation workflows, and
-  content refreshed for the v4 API.
-- Old readthedocs.io URLs (both the original flat layout and the 3.7 `user/`
-  layout) keep working via the mkdocs-redirects plugin; CLAUDE.md was slimmed
-  to an overlay that imports `AGENTS.md` (#290).
-- Built-in driver post-load callbacks are now public functions exported from
-  their driver modules (e.g. `remove_ipv4_acl_remarks` in
-  `hier_config.platforms.cisco_ios.driver`), so a built-in callback can be
-  removed by identity with `rules.post_load_callbacks.remove(...)` (#286).
-- The driver registry is keyed internally on canonical uppercase platform
-  names; `Platform` members are converted via their names at the boundary, so
-  a member and its name are fully interchangeable in `register_driver`,
-  `unregister_driver`, and `get_hconfig_driver`. `get_registered_platforms()`
-  returns `Platform` members for enum-known names and uppercase strings for
-  custom names (#284).
-
-### Fixed
-
-- Registering a driver under a `Platform` member's *value* string (e.g. `"3"`,
-  the value of `Platform.CISCO_IOS`) no longer silently overwrites that
-  platform's built-in registry entry, and value strings no longer resolve in
-  platform lookups — platforms are identified by name (#284).
-- `future()` negation edge cases (#269): a negation whose positive form exists
-  in the running config now removes it without surviving as a literal `no ...`
-  child (evaluated before the idempotency rules, which can match the negation
-  line itself); shorthand negations (`no description`) remove the valued lines
-  they match, as devices do. Negations matching nothing are still kept as a
-  did-not-apply-cleanly signal, and idempotency-tracked negated forms (e.g.
-  IOS `no logging console`) still replace their counterpart and persist.
-
-### Added
-
 - `HConfig.future(..., prune_empty_branches=True)` removes sections that a
   change emptied out — matching devices that prune empty stanzas on commit —
   while keeping sections that were already empty (#269).
@@ -98,13 +76,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   entries keep their identity leaf), negations become xpath-ish `delete`
   paths with `[key=value]` selectors resolved against the running config,
   and attribute-level changes raise `InvalidConfigError`.
-
-### Fixed
-
-- XML ingestion keys an element whenever an identifying `list_keys` child
-  exists, not only when the tag repeats among siblings, so configs with
-  different list-entry counts diff surgically instead of deleting and
-  re-adding surviving entries (#232).
 
 - Structured config ingestion and rendering (#232): `HConfig.from_json()` /
   `HConfig.from_xml()` build config trees from JSON (e.g. OpenConfig) and XML
@@ -163,13 +134,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Structured config format detection (#232): `HConfig.from_text()` rejects XML
   and JSON input with a clear `InvalidConfigError`; set-style configs remain
   natively supported via the JunOS, VyOS, and Nokia SRL driver preprocessors.
-  Full XML/JSON ingestion is additive, post-4.0 roadmap work.
 - Custom exception hierarchy: `HierConfigError` base, `DriverNotFoundError`,
   `InvalidConfigError`, `IncompatibleDriverError` (#219). `DuplicateChildError`
   reparented under `HierConfigError`.
 
 ### Changed
 
+- Restructured the documentation into User, Administrator, and Developer
+  guides (`docs/user/`, `docs/admin/`, `docs/dev/`) with a rewritten landing
+  page, new pages for loading configurations and remediation workflows, and
+  content refreshed for the v4 API.
+- Old readthedocs.io URLs (both the original flat layout and the 3.7 `user/`
+  layout) keep working via the mkdocs-redirects plugin; CLAUDE.md was slimmed
+  to an overlay that imports `AGENTS.md` (#290).
+- Built-in driver post-load callbacks are now public functions exported from
+  their driver modules (e.g. `remove_ipv4_acl_remarks` in
+  `hier_config.platforms.cisco_ios.driver`), so a built-in callback can be
+  removed by identity with `rules.post_load_callbacks.remove(...)` (#286).
+- The driver registry is keyed internally on canonical uppercase platform
+  names; `Platform` members are converted via their names at the boundary, so
+  a member and its name are fully interchangeable in `register_driver`,
+  `unregister_driver`, and `get_hconfig_driver`. `get_registered_platforms()`
+  returns `Platform` members for enum-known names and uppercase strings for
+  custom names (#284).
 - Shared interface-view logic hoisted out of the five platform view files into
   concrete defaults on `ConfigViewInterfaceBase`, the capability mixins
   (parameterized by `_bundle_membership_prefix` / `_encapsulation_prefix`
@@ -229,6 +216,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Registering a driver under a `Platform` member's *value* string (e.g. `"3"`,
+  the value of `Platform.CISCO_IOS`) no longer silently overwrites that
+  platform's built-in registry entry, and value strings no longer resolve in
+  platform lookups — platforms are identified by name (#284).
+- `future()` negation edge cases (#269): a negation whose positive form exists
+  in the running config now removes it without surviving as a literal `no ...`
+  child (evaluated before the idempotency rules, which can match the negation
+  line itself); shorthand negations (`no description`) remove the valued lines
+  they match, as devices do. Negations matching nothing are still kept as a
+  did-not-apply-cleanly signal, and idempotency-tracked negated forms (e.g.
+  IOS `no logging console`) still replace their counterpart and persist.
+- XML ingestion keys an element whenever an identifying `list_keys` child
+  exists, not only when the tag repeats among siblings, so configs with
+  different list-entry counts diff surgically instead of deleting and
+  re-adding surviving entries (#232).
 - `port_number` no longer raises `ValueError` on slash-less interface names
   such as `Port-channel10`, `port-channel10`, `Bundle-Ether10`, and `Trk1`;
   it now derives from the letter-stripped `number` property on all platform
@@ -237,21 +239,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `IndexError` on degenerate single-word commands, and documented that dropping
   parameters when negating (`set description "Port 1"` → `unset description`) is
   intentional FortiOS semantics (#225).
-
-### v4 design decisions
-
-- `HConfig.remediation()` stays public (#223): it was deliberately renamed
-  from `config_to_get_to()` in #216 as the tree-level primitive;
-  `WorkflowRemediation` remains the recommended workflow API and already
-  validates driver compatibility (`IncompatibleDriverError`).
-- Drivers remain declaratively-configured with sanctioned imperative
-  extension points (#222): #220 removed the negation-related override needs;
-  `idempotent_for()`, `negate_with()`, and `config_preprocessor()` stay
-  overridable for logic that rules cannot express.
-- Config trees stay mutable (#224): full immutability would break the
-  callback/plugin mutation model for marginal benefit. The remediation
-  algorithms are guaranteed (and now tested) not to mutate their input
-  configs.
 
 ---
 
