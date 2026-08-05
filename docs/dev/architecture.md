@@ -113,11 +113,11 @@ See the [Driver Rule Reference](rule-reference.md) for every model's fields.
 
 ### Registry (`hier_config/registry.py`)
 
-Built-in drivers are registered at import time in a module-level registry mapping `Platform | str` → driver class:
+Built-in drivers are registered at import time in a module-level registry keyed on canonical uppercase platform names — `Platform` members are converted via their `.name`, string names are uppercased, so a member and its name address the same entry (#284):
 
 - `register_driver(platform, driver_class)` — add a custom platform (string names, case-insensitive) or override a built-in.
 - `unregister_driver(platform)` — remove a custom platform or restore an overridden built-in.
-- `get_registered_platforms()` — list everything registered.
+- `get_registered_platforms()` — list everything registered: `Platform` members for enum-known names, uppercase strings for custom names.
 - `get_hconfig_driver(platform)` — instantiate the registered driver.
 - `resolve_driver(platform_or_driver)` — accept a `Platform`, string, or driver instance (used by every constructor).
 
