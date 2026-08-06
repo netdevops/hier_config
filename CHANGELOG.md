@@ -26,6 +26,12 @@ v4 design decisions, for the record:
 
 ### Added
 
+- Admin-only `prepare release` workflow (`.github/workflows/prepare-release.yml`):
+  run from any branch with a major/minor/patch/prerelease bump choice, it bumps
+  the version, rotates `CHANGELOG.md` (`scripts/rotate_changelog.py`, skipped
+  for prereleases), opens a `chore(release): prepare X.Y.Z` PR, and creates a
+  draft GitHub release. The PyPI deploy workflow now triggers on release
+  `published` (not `created`) so publishing a draft deploys it.
 - `HConfig.future_with_report()` returns the predicted future config together
   with a frozen `FutureReport` listing unresolved negations (negations that
   matched nothing in the running config) and idempotency-tracked negation

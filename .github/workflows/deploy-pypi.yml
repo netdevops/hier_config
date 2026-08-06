@@ -1,8 +1,10 @@
 name: deploy to pypi
 
+# "published" (not "created") so publishing a draft release made by the
+# prepare-release workflow also triggers deployment.
 on:
   release:
-    types: [created]
+    types: [published]
 
 jobs:
   deploy:
