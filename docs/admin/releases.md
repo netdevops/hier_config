@@ -30,6 +30,17 @@ published.
    published and runs `poetry publish --build` using the `TWINE_API_KEY`
    repository secret.
 
+## Ecosystem Fan-Out
+
+Publishing a hier_config release also triggers
+`.github/workflows/notify-ecosystem.yml`, which dispatches to
+[netdevops/hier-config-ci](https://github.com/netdevops/hier-config-ci). Its
+orchestrator then releases the downstream apps (hier-config-gpt, -api, -mcp,
+-cli): prerelease hier_config versions produce app prereleases from each
+app's `next` branch; stable versions produce patch releases from each app's
+default branch. See the hier-config-ci README for the required secrets and
+manual-run instructions.
+
 ## Post-Release Checks
 
 - Verify the new version appears on [PyPI](https://pypi.org/project/hier-config/).

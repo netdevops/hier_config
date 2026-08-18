@@ -26,6 +26,10 @@ v4 design decisions, for the record:
 
 ### Added
 
+- `notify ecosystem` workflow (`.github/workflows/notify-ecosystem.yml`): on
+  release publish, sends a `repository_dispatch` to netdevops/hier-config-ci
+  so the downstream app ecosystem (hier-config-gpt, -api, -mcp, -cli) is
+  released against the new hier_config version automatically.
 - Admin-only `prepare release` workflow (`.github/workflows/prepare-release.yml`):
   run from any branch with a major/minor/patch/prerelease bump choice, it bumps
   the version, rotates `CHANGELOG.md` (`scripts/rotate_changelog.py`, skipped

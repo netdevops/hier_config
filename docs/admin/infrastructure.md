@@ -11,6 +11,8 @@ This page is for project maintainers and describes the repository's automation.
 
 `.github/workflows/prepare-release.yml` is an admin-only, manually-run workflow that bumps the version, rotates the changelog, opens the release PR, and creates a draft GitHub release; `.github/workflows/deploy-pypi.yml` publishes to PyPI when that release is published — see [Releases](releases.md).
 
+`.github/workflows/notify-ecosystem.yml` also runs when a release is published: it sends a `repository_dispatch` (event `hier-config-release`, payload `version` + `prerelease`) to [netdevops/hier-config-ci](https://github.com/netdevops/hier-config-ci), whose orchestrator releases the downstream apps (hier-config-gpt, -api, -mcp, -cli) against the new version. It requires the `ECOSYSTEM_DISPATCH_TOKEN` secret — a PAT from an org admin that can dispatch to hier-config-ci.
+
 ## Dependency Automation
 
 Dependency updates are managed by **Renovate** (`.github/renovate.json`), not Dependabot: weekly schedule, grouped non-major updates, semantic commit messages, and `security`-labelled vulnerability PRs that can open at any time.
