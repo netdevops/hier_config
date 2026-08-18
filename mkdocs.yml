@@ -63,6 +63,7 @@ nav:
       - Creating a Platform Driver: dev/creating-drivers.md
       - Testing Conventions: dev/testing.md
       - Code Style & Standards: dev/code-style.md
+      - Shared Development Standards: dev/shared-standards.md
       - Contributing: dev/contributing.md
       - API Reference: dev/api-reference.md
   - Maintainer Guide:

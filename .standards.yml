@@ -1,0 +1,20 @@
+# Shared development standards for netdevops hier-config projects.
+#
+# This repository is the canonical source: the files listed below are owned
+# here and synced into the downstream hier-config projects. Running
+# `invoke sync-standards` here compares the working tree against what is
+# published on the source ref, which previews what downstream repositories
+# will receive on their next sync.
+source:
+  repo: netdevops/hier_config
+  ref: master
+
+# Whole-word replacements applied to fetched file contents so package
+# references match the consuming project. Empty in the canonical repository.
+substitutions: {}
+
+files:
+  - scripts/build.py
+  - scripts/sync_standards.py
+  - .yamllint.yml
+  - .dockerignore

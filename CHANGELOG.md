@@ -26,6 +26,16 @@ v4 design decisions, for the record:
 
 ### Added
 
+- Shared development standards for the hier-config ecosystem: this repository
+  is now the canonical source for `scripts/build.py`, `scripts/sync_standards.py`,
+  `.yamllint.yml`, and `.dockerignore`. Downstream projects declare where their
+  standards come from in `.standards.yml` and pull changes in with
+  `invoke sync-standards`, which rewrites package names for the consuming
+  project. Documented in `docs/dev/shared-standards.md`.
+- Docker development environment (`Dockerfile`, `docker-compose.yml`) driven by
+  invoke tasks (`tasks.py`), giving every hier-config project the same
+  `invoke build/docs/pytest/lint/lint-and-test/cli/sync-standards/destroy`
+  commands.
 - `notify ecosystem` workflow (`.github/workflows/notify-ecosystem.yml`): on
   release publish, sends a `repository_dispatch` to netdevops/hier-config-ci
   so the downstream app ecosystem (hier-config-gpt, -api, -mcp, -cli) is

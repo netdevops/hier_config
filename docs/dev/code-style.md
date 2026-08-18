@@ -2,6 +2,8 @@
 
 All standards below are enforced by `poetry run ./scripts/build.py lint`, which runs ruff (format + check), mypy, pyright, pylint, yamllint, and flynt in parallel. CI fails if any tool reports an issue.
 
+This repository is the canonical source of that tooling for every netdevops hier-config project. See [Shared Development Standards](shared-standards.md) for how the shared files are distributed and kept in sync.
+
 ## Lint & Type Checking Stack
 
 | Tool | Configuration |

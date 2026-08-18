@@ -1,0 +1,21 @@
+services:
+  # Toolchain container for lint, type checking, and tests
+  dev:
+    build:
+      context: .
+      target: development
+    volumes:
+      - .:/app
+
+  # Live-reloading documentation server; opt in with: docker compose --profile docs up
+  docs:
+    build:
+      context: .
+      target: development
+    profiles:
+      - docs
+    ports:
+      - "8001:8001"
+    volumes:
+      - .:/app
+    command: mkdocs serve --dev-addr 0.0.0.0:8001
