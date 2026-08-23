@@ -23,6 +23,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `.github/workflows/claude-review.yml`: a GitHub Actions workflow that runs
+  the in-repo `hier-config-review` skill against every pull request through
+  `anthropics/claude-code-action` and posts the findings as a PR comment. The
+  job installs the poetry and docs environments first, so the skill's lint,
+  test, and `mkdocs build --strict` gates run for real. It is skipped for draft
+  and fork pull requests, where `CLAUDE_CODE_OAUTH_TOKEN` is unavailable.
 - Aruba AOS-CX platform support (`Platform.ARUBA_AOSCX`): a new driver and
   config view covering AOS-CX's Cisco/EOS-like hierarchical CLI. Because
   `vlan trunk allowed` is additive on AOS-CX rather than declarative, collapsed
