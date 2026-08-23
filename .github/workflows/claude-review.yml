@@ -1,0 +1,76 @@
+name: Claude PR review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+# Cancel a superseded review when the branch is pushed again.
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    # Secrets, including CLAUDE_CODE_OAUTH_TOKEN, are unavailable to fork
+    # pull requests.
+    if: >-
+      github.event.pull_request.draft == false &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      actions: read
+      # claude-code-action exchanges an OIDC token for its GitHub App token.
+      id-token: write
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        fetch-depth: 0
+
+    - name: Fetch the base branch
+      run: |
+        git fetch --no-tags origin \
+          +refs/heads/${{ github.event.pull_request.base.ref }}:refs/heads/${{ github.event.pull_request.base.ref }} || true
+
+    - name: Set up Python
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.12"
+
+    - name: Install poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: 1.5.1
+
+    - name: Install the project dependencies
+      run: poetry install --no-interaction --no-root
+
+    - name: Install the docs dependencies
+      run: pip install -r docs/requirements.txt
+
+    - name: Run the hier-config-review skill
+      uses: anthropics/claude-code-action@v1
+      with:
+        claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        track_progress: true
+        prompt: |
+          /hier-config-review
+
+          Review this pull request. The base branch is
+          `${{ github.event.pull_request.base.ref }}`, so use
+          `git diff ${{ github.event.pull_request.base.ref }}...HEAD` for the diff.
+
+          The Python environment is ready. Do not run `poetry install`.
+
+          Report only. Do not change, stage, or commit any file.
+
+          Post the full report as your pull request comment. Group the findings
+          by severity (Blockers, Should fix, Nits). Give each finding a
+          `file:line` reference and name the standard it violates. End with the
+          pass/fail verdict against the "Before Opening a PR" checklist in
+          AGENTS.md.
+        claude_args: |
+          --max-turns 60
+          --allowedTools Read,Grep,Glob,Bash,mcp__github_comment__update_claude_comment
