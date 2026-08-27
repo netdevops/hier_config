@@ -272,3 +272,95 @@ def load_tag_rules(
             )
 
     return tuple(result)
+
+
+# --- v3 compatibility -----------------------------------------------------
+#
+# The names below are the v3 spellings. They are supported permanently and
+# emit no DeprecationWarning. The loader wrappers delegate to their v4
+# counterparts and keep the v3 parameter names, because v3 callers pass them
+# as keywords.
+
+HCONFIG_PLATFORM_V2_TO_V3_MAPPING = {
+    # netutils sets this platform's network_driver_mappings["hier_config"] to
+    # "aruba_aoscx", and nautobot-golden-config resolves the driver by feeding
+    # that string through this mapper, so the entry is required for AOS-CX to
+    # resolve instead of falling back to GENERIC.
+    "aruba_aoscx": Platform.ARUBA_AOSCX,
+    "ios": Platform.CISCO_IOS,
+    "iosxe": Platform.CISCO_IOS,
+    "iosxr": Platform.CISCO_XR,
+    "nxos": Platform.CISCO_NXOS,
+    "eos": Platform.ARISTA_EOS,
+    "junos": Platform.JUNIPER_JUNOS,
+    "vyos": Platform.VYOS,
+    "huawei_vrp": Platform.HUAWEI_VRP,
+    "nokia_srl": Platform.NOKIA_SRL,
+}
+
+
+def hconfig_v2_os_v3_platform_mapper(os_name: str) -> Platform:
+    """Map a Hier Config v2 operating system name to a Platform enumeration.
+
+    Surrounding whitespace is stripped before lookup: consumers such as
+    nautobot-golden-config pass ``platform.network_driver_mappings["hier_config"]``
+    straight in, and a stray trailing space there would otherwise miss the table
+    and silently fall back to ``Platform.GENERIC`` -- producing a wrong (often
+    destructive) remediation with no error. Case is left untouched.
+
+    Args:
+        os_name: The name of the OS as defined in Hier Config v2.
+
+    Returns:
+        Platform: The corresponding Platform enumeration.
+
+    Example:
+        >>> hconfig_v2_os_v3_platform_mapper("ios")
+        <Platform.CISCO_IOS: 3>
+
+    """
+    return HCONFIG_PLATFORM_V2_TO_V3_MAPPING.get(os_name.strip(), Platform.GENERIC)
+
+
+def hconfig_v3_platform_v2_os_mapper(platform: Platform) -> str:
+    """Map a Platform enumeration to a Hier Config v2 operating system name.
+
+    Args:
+        platform: A Platform enumeration.
+
+    Returns:
+        str: The corresponding OS name for Hier Config v2.
+
+    Example:
+        >>> hconfig_v3_platform_v2_os_mapper(Platform.CISCO_IOS)
+        'ios'
+
+    """
+    for os_name, mapped in HCONFIG_PLATFORM_V2_TO_V3_MAPPING.items():
+        if mapped == platform:
+            return os_name
+
+    return "generic"
+
+
+def load_hconfig_v2_options(
+    v2_options: dict[str, Any] | str, platform: Platform
+) -> HConfigDriverBase:
+    """v3 name for `load_driver_rules()`. Both spellings are supported."""
+    return load_driver_rules(v2_options, platform)
+
+
+def load_hconfig_v2_options_from_file(
+    options_file: str, platform: Platform
+) -> HConfigDriverBase:
+    """v3 helper. Reads the YAML file, then calls `load_driver_rules()`."""
+    return load_driver_rules(
+        yaml.safe_load(read_text_from_file(file_path=options_file)), platform
+    )
+
+
+def load_hconfig_v2_tags(
+    v2_tags: list[dict[str, Any]] | str,
+) -> tuple[TagRule, ...]:
+    """v3 name for `load_tag_rules()`. Both spellings are supported."""
+    return load_tag_rules(v2_tags)

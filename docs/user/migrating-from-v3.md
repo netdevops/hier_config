@@ -1,14 +1,26 @@
 # Migrating from v3 to v4
 
 This page is for existing hier_config 3.x users upgrading to 4.x. Version 4 renames
-most entry points, unifies the negation rule system, and removes the v2
-compatibility utilities — but the concepts (trees, drivers, remediation) are
-unchanged, and most migrations are mechanical find-and-replace.
+most entry points and unifies the negation rule system — but the concepts (trees,
+drivers, remediation) are unchanged.
+
+!!! note "The renames are optional"
+    Every v3 name below still works in v4, permanently and with no
+    `DeprecationWarning`. See [v3 API Compatibility](v3-compatibility.md). Your v3
+    code runs on v4 unchanged; adopt the v4 names when it suits you.
+
+    Three v4 changes are **not** covered by that compatibility surface, so review
+    them before you upgrade: the `depth` property, the new exception types, and the
+    completed EOS/NX-OS/XR views. They are in
+    [Behavior changes to review](#behavior-changes-to-review).
 
 If you are new to hier_config, skip this page and start with
 [Getting Started](getting-started.md).
 
 ## Quick reference
+
+The left column is the v3 spelling and still works. The right column is the v4
+spelling, which the rest of the documentation uses.
 
 ### Constructors
 
@@ -39,7 +51,7 @@ config = HConfig.from_text(Platform.CISCO_IOS, config_text)
 | `config.dump_simple()` | `config.to_lines()` |
 | `child.cisco_style_text()` | `child.indented_text()` |
 | `child.tags_add(...)` / `child.tags_remove(...)` | `child.add_tags(...)` / `child.remove_tags(...)` |
-| `child.depth()` (method) | `child.depth` (property) |
+| `child.depth()` (method) | `child.depth` (property) — **you must change this**; see [Behavior changes to review](#behavior-changes-to-review) |
 
 ### Utility functions
 
@@ -47,10 +59,10 @@ config = HConfig.from_text(Platform.CISCO_IOS, config_text)
 |---|---|
 | `load_hconfig_v2_options(options, platform)` | `load_driver_rules(options, platform)` |
 | `load_hconfig_v2_tags(tags)` | `load_tag_rules(tags)` |
-| `load_hconfig_v2_options_from_file(path, platform)` | removed — read the file yourself and call `load_driver_rules()` |
-| `HCONFIG_PLATFORM_V2_TO_V3_MAPPING` | removed |
-| `hconfig_v2_os_v3_platform_mapper(os)` | removed |
-| `hconfig_v3_platform_v2_os_mapper(platform)` | removed |
+| `load_hconfig_v2_options_from_file(path, platform)` | no v4 rename; reads the file, then calls `load_driver_rules()` |
+| `HCONFIG_PLATFORM_V2_TO_V3_MAPPING` | no v4 equivalent; keep using it |
+| `hconfig_v2_os_v3_platform_mapper(os)` | no v4 equivalent; keep using it |
+| `hconfig_v3_platform_v2_os_mapper(platform)` | no v4 equivalent; keep using it |
 
 The dict format accepted by `load_driver_rules()` is unchanged, including the
 `negation_negate_with`, `negation_default_when`, and `negation_sub` keys — they
@@ -69,25 +81,37 @@ strategy enum, held in one ordered `negation` list on `HConfigDriverRules`:
 | `rules.negate_with` / `rules.negation_default_when` / `rules.negation_sub` | `rules.negation` (single list) |
 
 ```python
-# v3
-driver.rules.negate_with.append(
-    NegationDefaultWithRule(
-        match_rules=(MatchRule(startswith="logging console "),),
-        use="logging console debugging",
-    )
+# v3 -- still works when passed to the constructor
+HConfigDriverRules(
+    negate_with=[
+        NegationDefaultWithRule(
+            match_rules=(MatchRule(startswith="logging console "),),
+            use="logging console debugging",
+        )
+    ],
 )
 
 # v4
 from hier_config.models import NegationRule, NegationStrategy
 
-driver.rules.negation.append(
-    NegationRule(
-        strategy=NegationStrategy.REPLACE,
-        match_rules=(MatchRule(startswith="logging console "),),
-        use="logging console debugging",
-    )
+HConfigDriverRules(
+    negation=[
+        NegationRule(
+            strategy=NegationStrategy.REPLACE,
+            match_rules=(MatchRule(startswith="logging console "),),
+            use="logging console debugging",
+        )
+    ],
 )
 ```
+
+!!! warning "Appending to the v3 lists has no effect"
+    `HConfigDriverRules` still accepts `negate_with`, `negation_default_when`,
+    and `negation_sub` as **constructor arguments**, and folds them into
+    `negation`. A v3 driver that appends to `driver.rules.negate_with` *after*
+    construction must append to `driver.rules.negation` instead. Rules loaded
+    through `load_driver_rules()` are unaffected — it already appends to
+    `negation`.
 
 `REPLACE` rules are consulted first (via `driver.negate_with()`, which
 imperative driver overrides also hook into); remaining rules evaluate in list
@@ -97,7 +121,9 @@ order, first match wins. See the
 ## Exceptions
 
 v3 raised generic `ValueError`/`TypeError` from constructors and workflows. v4
-raises typed exceptions under a common base — update any `except` clauses:
+raises typed exceptions under a common base. This is one of the three changes the
+[v3 compatibility surface](v3-compatibility.md) does not cover, so update any
+`except ValueError` clauses:
 
 | Condition | v4 exception |
 |---|---|
@@ -142,6 +168,15 @@ See [Config Views](config-views.md) for the mixin catalog.
 
 ## Behavior changes to review
 
+These are the changes that the [v3 compatibility surface](v3-compatibility.md)
+cannot absorb. Everything else in this guide is optional.
+
+- **`depth` is a property** — replace `child.depth()` with `child.depth`. This is
+  the only required call-site edit.
+- **Typed exceptions** — see [Exceptions](#exceptions) above.
+- **Completed config views** — the Arista EOS, Cisco NX-OS, and Cisco IOS-XR views
+  return real data where v3 raised `NotImplementedError`. Code that caught
+  `NotImplementedError` now silently receives values.
 - **`future()` negation resolution** — negations that match an existing line
   (exactly or by shorthand prefix) now remove it instead of surviving as a
   literal `no ...` child; see
@@ -182,6 +217,8 @@ Not required for migration, but these are the headline additions:
 
 ## Next steps
 
+- [v3 API Compatibility](v3-compatibility.md) — the full list of v3 names that
+  keep working in v4, and the two limits.
 - [Getting Started](getting-started.md) — the v4 workflow end to end.
 - [Customizing Driver Rules](../admin/customizing-rules.md) — if you carried
   v3 driver customizations.

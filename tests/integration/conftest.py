@@ -1,8 +1,14 @@
-"""Fixtures for circular config workflow tests."""
+"""Fixtures for the integration test suite."""
 
+import json
+import subprocess  # ruff: ignore[suspicious-subprocess-import]
+import venv
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import pytest
+
+from scripts.generate_v3_baseline import V3_VERSION
 
 
 def _fixture_file_read(filename: str) -> str:
@@ -264,3 +270,45 @@ def procurve_remediation_config() -> str:
 def procurve_rollback_config() -> str:
     """Load HP Procurve rollback config fixture."""
     return _fixture_file_read("procurve_rollback.conf")
+
+
+@pytest.fixture(scope="session")
+def v3_output() -> dict[str, str]:
+    """Run tests/integration/v3_scenarios.py inside a fresh v3 environment.
+
+    Used only by the `v3_differential` tests, which are deselected by default,
+    so the virtual environment is built only when they are selected.
+    """
+    scenarios = Path(__file__).resolve().parent / "v3_scenarios.py"
+    fixtures = Path(__file__).resolve().parent.parent / "fixtures"
+
+    with TemporaryDirectory(prefix="hier-config-v3-") as tmp:
+        env_dir = Path(tmp) / "venv"
+        venv.create(env_dir, with_pip=True)
+        python = env_dir / "bin" / "python"
+        subprocess.run(  # ruff: ignore[subprocess-without-shell-equals-true]
+            [
+                str(python),
+                "-m",
+                "pip",
+                "install",
+                "--quiet",
+                f"hier-config=={V3_VERSION}",
+                # hier_config.utils imports yaml, but PyYAML is not a runtime
+                # dependency of hier-config, so install it explicitly.
+                "PyYAML",
+            ],
+            check=True,
+        )
+        result = subprocess.run(  # ruff: ignore[subprocess-without-shell-equals-true]
+            [str(python), str(scenarios), str(fixtures)],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+
+    if result.returncode != 0:
+        pytest.fail(f"v{V3_VERSION} scenarios failed:\n{result.stderr}")
+
+    parsed: dict[str, str] = json.loads(result.stdout)
+    return parsed

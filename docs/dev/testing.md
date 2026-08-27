@@ -66,3 +66,22 @@ poetry run pytest -m benchmark -k test_parse_large_ios_config -v -s
 ```
 
 If a benchmark fails its time threshold, investigate the relevant code path for performance regressions.
+
+## v3 compatibility tests
+
+`tests/integration/v3_scenarios.py` holds scenarios that run under **both** hier_config v3 and v4. Its core mirrors `nautobot_golden_config.models._get_hierconfig_remediation`, the reference v3 consumer. Keep that module importable on both majors: no v4-only imports, no pytest fixtures, and no v4 behaviour that the [v3 compatibility surface](../user/v3-compatibility.md) does not cover.
+
+Two tests consume it:
+
+- `tests/integration/test_v3_baseline.py` compares `run_all()` against `tests/fixtures/v3_baseline.json`, a committed recording made on v3.7.0. It runs in the normal suite -- no network, no second environment.
+- `tests/integration/test_v3_differential.py` diffs against a **live** v3 install. It is deselected by default via the `v3_differential` marker because it builds a virtual environment and downloads from PyPI.
+
+```bash
+# Diff against a live v3 install
+poetry run pytest -m v3_differential -v
+
+# Re-record the baseline after changing v3_scenarios.py
+poetry run ./scripts/generate_v3_baseline.py
+```
+
+After changing `v3_scenarios.py`, regenerate the baseline and **review the diff**. A changed value for an existing scenario means v4 no longer matches v3 -- fix the compatibility surface, not the recording.

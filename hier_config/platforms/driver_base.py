@@ -3,7 +3,7 @@ from collections.abc import Callable, Iterable
 from re import Match, search
 from typing import TYPE_CHECKING, ClassVar
 
-from pydantic import Field, PositiveInt
+from pydantic import Field, PositiveInt, model_validator
 
 from hier_config.child import HConfigChild
 from hier_config.models import (
@@ -13,8 +13,11 @@ from hier_config.models import (
     IdempotentCommandsRule,
     IndentAdjustRule,
     MatchRule,
+    NegationDefaultWhenRule,
+    NegationDefaultWithRule,
     NegationRule,
     NegationStrategy,
+    NegationSubRule,
     OrderingRule,
     ParentAllowsDuplicateChildRule,
     PerLineSubRule,
@@ -85,6 +88,18 @@ def _unused_object_rules_default() -> list[UnusedObjectRule]:
     return []
 
 
+def _negate_with_rules_default() -> list[NegationDefaultWithRule]:
+    return []
+
+
+def _negation_default_when_rules_default() -> list[NegationDefaultWhenRule]:
+    return []
+
+
+def _negation_sub_rules_default() -> list[NegationSubRule]:
+    return []
+
+
 class HConfigDriverRules(BaseModel):  # pylint: disable=too-many-instance-attributes
     """Pydantic model holding all rule collections for a platform driver.
 
@@ -132,6 +147,40 @@ class HConfigDriverRules(BaseModel):  # pylint: disable=too-many-instance-attrib
     unused_objects: list[UnusedObjectRule] = Field(
         default_factory=_unused_object_rules_default
     )
+
+    # --- v3 compatibility ---
+    #
+    # v3 split negation across three rule lists; v4 uses the single ordered
+    # `negation` list above. Both spellings are supported permanently, so a v3
+    # driver's `_instantiate_rules()` keeps working unchanged. These fields are
+    # inputs only: `_absorb_v3_negation_fields` folds their contents into
+    # `negation` at construction, and appending to them afterwards has no
+    # effect.
+    negate_with: list[NegationDefaultWithRule] = Field(
+        default_factory=_negate_with_rules_default
+    )
+    negation_default_when: list[NegationDefaultWhenRule] = Field(
+        default_factory=_negation_default_when_rules_default
+    )
+    negation_sub: list[NegationSubRule] = Field(
+        default_factory=_negation_sub_rules_default
+    )
+
+    @model_validator(mode="after")
+    def _absorb_v3_negation_fields(self) -> "HConfigDriverRules":
+        """Fold the v3 negation fields into the unified `negation` list.
+
+        The append order — DEFAULT, REPLACE, REGEX_SUB — matches
+        `load_driver_rules()` and reproduces the v3 resolution priority:
+        `negate_with` is consulted first by `driver.negate_with()`, then the
+        remaining rules are walked in list order.
+        """
+        self.negation.extend(
+            rule.to_negation_rule() for rule in self.negation_default_when
+        )
+        self.negation.extend(rule.to_negation_rule() for rule in self.negate_with)
+        self.negation.extend(rule.to_negation_rule() for rule in self.negation_sub)
+        return self
 
 
 class HConfigDriverBase(ABC):

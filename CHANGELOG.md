@@ -26,6 +26,27 @@ v4 design decisions, for the record:
 
 ### Added
 
+- Permanent v3 API compatibility. Every v3 name that v4 renamed or removed is
+  restored as a thin delegation to its v4 counterpart, with no
+  `DeprecationWarning` and no planned removal: the `get_hconfig*()`
+  constructors, `config_to_get_to()`, `dump_simple()`, `cisco_style_text()`,
+  `tags_add()`/`tags_remove()`, `load_hconfig_v2_options()`,
+  `load_hconfig_v2_tags()`, `load_hconfig_v2_options_from_file()`,
+  `HCONFIG_PLATFORM_V2_TO_V3_MAPPING`, `hconfig_v2_os_v3_platform_mapper()`,
+  `hconfig_v3_platform_v2_os_mapper()`, and the `NegationDefaultWithRule` /
+  `NegationDefaultWhenRule` / `NegationSubRule` models, which
+  `HConfigDriverRules` still accepts as constructor arguments. Documented in
+  `docs/user/v3-compatibility.md`. Two limits remain: the v3 negation fields
+  are constructor inputs only (appending to them after construction has no
+  effect), and the `depth` property, typed exceptions, and completed
+  EOS/NX-OS/XR views are still behavior changes.
+- v3-to-v4 integration tests: `tests/integration/v3_scenarios.py` mirrors
+  `nautobot_golden_config.models._get_hierconfig_remediation` and runs under
+  both major versions. `tests/integration/test_v3_baseline.py` compares v4
+  against a committed v3.7.0 recording on every push, and
+  `tests/integration/test_v3_differential.py` (marker `v3_differential`,
+  deselected by default) diffs against a live v3 install. Regenerate the
+  recording with `./scripts/generate_v3_baseline.py`.
 - `notify ecosystem` workflow (`.github/workflows/notify-ecosystem.yml`): on
   release publish, sends a `repository_dispatch` to netdevops/hier-config-ci
   so the downstream app ecosystem (hier-config-gpt, -api, -mcp, -cli) is
@@ -190,7 +211,9 @@ v4 design decisions, for the record:
   `NegationStrategy` enum — `REPLACE` (was `negate_with`), `DEFAULT` (was
   `negation_default_when`), and `REGEX_SUB` (was `negation_sub`) — in one
   ordered `negation` list on `HConfigDriverRules`; first matching rule wins
-  (#220). `load_driver_rules()` still accepts the v2 dict keys.
+  (#220). `load_driver_rules()` still accepts the v2 dict keys, and
+  `HConfigDriverRules` still accepts the three v3 fields as constructor
+  arguments.
 - Tree algorithms (difference, remediation, future, with_tags) extracted from
   `HConfigBase` into `hier_config.tree_algorithms` as standalone functions;
   `HConfigBase` retains thin delegating methods (#217).
@@ -208,27 +231,26 @@ v4 design decisions, for the record:
   (`tagged_all` → `TAGGED_ALL`, tagged VLANs → `TAGGED`, untagged only →
   `ACCESS`); the per-platform `NotImplementedError` stubs were removed (#228).
 - Changed `style` parameter on `indented_text()` and `RemediationReporter.to_text()` from `str` to `Literal["without_comments", "merged", "with_comments"]` via new `TextStyle` type alias (#189).
-- Renamed `load_hconfig_v2_options` to `load_driver_rules` (#221).
-- Renamed `load_hconfig_v2_tags` to `load_tag_rules` (#221).
-- Renamed `tags_add()`/`tags_remove()` to `add_tags()`/`remove_tags()` (#216).
-- Renamed `cisco_style_text()` to `indented_text()` (#216).
-- Renamed `dump_simple()` to `to_lines()` (#216).
-- Renamed `config_to_get_to()` to `remediation()` (#216).
-- Converted `depth()` method to `depth` property (#216).
+- Renamed `load_hconfig_v2_options` to `load_driver_rules`; the v3 name is retained (#221).
+- Renamed `load_hconfig_v2_tags` to `load_tag_rules`; the v3 name is retained (#221).
+- Renamed `tags_add()`/`tags_remove()` to `add_tags()`/`remove_tags()`; the v3 names are retained (#216).
+- Renamed `cisco_style_text()` to `indented_text()`; the v3 name is retained (#216).
+- Renamed `dump_simple()` to `to_lines()`; the v3 name is retained (#216).
+- Renamed `config_to_get_to()` to `remediation()`; the v3 name is retained (#216).
+- Converted `depth()` method to `depth` property (#216). This is the one rename with no compatibility alias; call sites must drop the parentheses.
 
 ### Removed
 
-- `get_hconfig()`, `get_hconfig_fast_load()`, `get_hconfig_from_dump()`, and
-  `get_hconfig_fast_generic_load()` — replaced by the `HConfig.from_*`
-  classmethods (#218). `get_hconfig_driver()` and `get_hconfig_view()` remain.
-- `NegationDefaultWithRule`, `NegationDefaultWhenRule`, and `NegationSubRule`
-  models and their `HConfigDriverRules` fields (#220).
 - `HConfigChild.use_default_for_negation()` — subsumed by the unified
   negation rule evaluation (#220).
-- Removed `HCONFIG_PLATFORM_V2_TO_V3_MAPPING` constant (#221).
-- Removed `hconfig_v2_os_v3_platform_mapper()` function (#221).
-- Removed `hconfig_v3_platform_v2_os_mapper()` function (#221).
-- Removed `load_hconfig_v2_options_from_file()` function (#221).
+
+Nothing else was removed. The names previously listed here — `get_hconfig()`,
+`get_hconfig_fast_load()`, `get_hconfig_from_dump()`,
+`get_hconfig_fast_generic_load()`, the three v3 negation rule models and their
+`HConfigDriverRules` fields, `HCONFIG_PLATFORM_V2_TO_V3_MAPPING`,
+`hconfig_v2_os_v3_platform_mapper()`, `hconfig_v3_platform_v2_os_mapper()`, and
+`load_hconfig_v2_options_from_file()` — are all retained as a permanent,
+supported compatibility surface. See the `### Added` entry above.
 
 ### Fixed
 

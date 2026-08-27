@@ -11,10 +11,22 @@ from .child import HConfigChild
 from .exceptions import DriverNotFoundError, InvalidConfigError
 from .models import Dump, Platform
 from .platforms.view_base import HConfigViewBase
-from .registry import resolve_driver
+from .registry import get_hconfig_driver, resolve_driver
 from .root import HConfig
 
 logger = getLogger(__name__)
+
+__all__ = (
+    "get_hconfig",
+    "get_hconfig_driver",
+    "get_hconfig_fast_generic_load",
+    "get_hconfig_fast_load",
+    "get_hconfig_from_dump",
+    "get_hconfig_view",
+    "hconfig_from_dump",
+    "hconfig_from_lines",
+    "hconfig_from_text",
+)
 
 
 def get_hconfig_view(config: HConfig) -> HConfigViewBase:
@@ -308,3 +320,41 @@ class _ConfigTextLoader:  # pylint: disable=too-many-instance-attributes,too-few
 
 def _load_from_string_lines(config: HConfig, config_text: str) -> None:
     _ConfigTextLoader(config).load(config_text)
+
+
+# --- v3 compatibility -----------------------------------------------------
+#
+# The names below are the v3 spellings of the constructors above. They are
+# supported permanently and emit no DeprecationWarning. Each one delegates to
+# its v4 counterpart, so behaviour never drifts between the two spellings.
+
+
+def get_hconfig(
+    platform_or_driver: Platform | str | HConfigDriverBase,
+    config_raw: Path | str = "",
+) -> HConfig:
+    """v3 name for `HConfig.from_text()`. Both spellings are supported."""
+    return hconfig_from_text(platform_or_driver, config_raw)
+
+
+def get_hconfig_from_dump(
+    platform_or_driver: Platform | str | HConfigDriverBase,
+    dump: Dump,
+) -> HConfig:
+    """v3 name for `HConfig.from_dump()`. Both spellings are supported."""
+    return hconfig_from_dump(platform_or_driver, dump)
+
+
+def get_hconfig_fast_load(
+    platform_or_driver: Platform | str | HConfigDriverBase,
+    lines: list[str] | tuple[str, ...] | str,
+) -> HConfig:
+    """v3 name for `HConfig.from_lines()`. Both spellings are supported."""
+    return hconfig_from_lines(platform_or_driver, lines)
+
+
+def get_hconfig_fast_generic_load(
+    lines: list[str] | tuple[str, ...] | str,
+) -> HConfig:
+    """v3 name for `HConfig.from_lines(Platform.GENERIC, lines)`."""
+    return hconfig_from_lines(Platform.GENERIC, lines)
