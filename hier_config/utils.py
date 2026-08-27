@@ -315,8 +315,8 @@ def hconfig_v2_os_v3_platform_mapper(os_name: str) -> Platform:
         Platform: The corresponding Platform enumeration.
 
     Example:
-        >>> hconfig_v2_os_v3_platform_mapper("ios")
-        <Platform.CISCO_IOS: 3>
+        >>> hconfig_v2_os_v3_platform_mapper("ios").name
+        'CISCO_IOS'
 
     """
     return HCONFIG_PLATFORM_V2_TO_V3_MAPPING.get(os_name.strip(), Platform.GENERIC)

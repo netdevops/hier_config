@@ -36,6 +36,7 @@ All four are importable from `hier_config` and from `hier_config.constructors`.
 | `HConfigChild.cisco_style_text(style, tag)` | `HConfigChild.indented_text()` |
 | `HConfigChild.tags_add(tag)` | `HConfigChild.add_tags()` |
 | `HConfigChild.tags_remove(tag)` | `HConfigChild.remove_tags()` |
+| `HConfigChild.use_default_for_negation(config)` | no v4 equivalent; restored against the unified rule list |
 
 ### Utility functions
 
@@ -59,10 +60,10 @@ pass them as keywords still work.
 | `NegationDefaultWhenRule(match_rules)` | `NegationRule(match_rules, strategy=NegationStrategy.DEFAULT)` |
 | `NegationSubRule(match_rules, search, replace)` | `NegationRule(match_rules, strategy=NegationStrategy.REGEX_SUB, search=..., replace=...)` |
 
-`HConfigDriverRules` still accepts the three v3 fields. It folds their contents into
-the unified `negation` list at construction, in the order DEFAULT, REPLACE,
-REGEX_SUB — the same order `load_driver_rules()` uses, which reproduces the v3
-resolution priority.
+`HConfigDriverRules` still carries the three v3 fields. Pass them to the
+constructor or append to them afterwards — `all_negation_rules()` resolves both on
+every lookup, in the order DEFAULT, REPLACE, REGEX_SUB. That is the same order
+`load_driver_rules()` uses and it reproduces the v3 resolution priority.
 
 ```python
 from hier_config import HConfigDriverBase, HConfigDriverRules, MatchRule
@@ -81,6 +82,17 @@ class MyDriver(HConfigDriverBase):
                 )
             ],
         )
+```
+
+The append idiom that v3's own custom-driver documentation teaches also works:
+
+```python
+driver = get_hconfig_driver(Platform.CISCO_IOS)
+driver.rules.negate_with.append(
+    NegationDefaultWithRule(
+        match_rules=(MatchRule(startswith="ip route"),), use="no ip route all"
+    )
+)
 ```
 
 Each v3 model also has `to_negation_rule()`, which returns the equivalent
@@ -107,17 +119,10 @@ remediation = workflow.remediation_config_filtered_text(
 )
 ```
 
-## Two limits
+## One limit
 
-The compatibility surface covers **names**. Two things are outside it.
-
-**The v3 negation fields are constructor arguments only.** Pass them to
-`HConfigDriverRules(...)` and they are folded into `negation`. Appending to
-`rules.negate_with` *after* construction has no effect — append to `rules.negation`
-instead. `load_driver_rules()` already does this, so rules loaded from a file or a
-dict are unaffected.
-
-**Some v4 behaviour changed even where the name did not.** Review these:
+The compatibility surface covers **names**. Some v4 behaviour changed even where
+the name did not. Review these:
 
 - `child.depth()` became the `child.depth` property. Drop the parentheses.
 - `DriverNotFoundError`, `InvalidConfigError`, and `IncompatibleDriverError` replace

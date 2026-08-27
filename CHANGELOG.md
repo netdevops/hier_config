@@ -26,24 +26,29 @@ v4 design decisions, for the record:
 
 ### Added
 
-- Permanent v3 API compatibility. Every v3 name that v4 renamed or removed is
-  restored as a thin delegation to its v4 counterpart, with no
+- Permanent v3 API compatibility (#300). Every v3 name that v4 renamed or
+  removed is restored as a thin delegation to its v4 counterpart, with no
   `DeprecationWarning` and no planned removal: the `get_hconfig*()`
   constructors, `config_to_get_to()`, `dump_simple()`, `cisco_style_text()`,
-  `tags_add()`/`tags_remove()`, `load_hconfig_v2_options()`,
-  `load_hconfig_v2_tags()`, `load_hconfig_v2_options_from_file()`,
-  `HCONFIG_PLATFORM_V2_TO_V3_MAPPING`, `hconfig_v2_os_v3_platform_mapper()`,
-  `hconfig_v3_platform_v2_os_mapper()`, and the `NegationDefaultWithRule` /
-  `NegationDefaultWhenRule` / `NegationSubRule` models, which
-  `HConfigDriverRules` still accepts as constructor arguments. Documented in
-  `docs/user/v3-compatibility.md`. Two limits remain: the v3 negation fields
-  are constructor inputs only (appending to them after construction has no
-  effect), and the `depth` property, typed exceptions, and completed
-  EOS/NX-OS/XR views are still behavior changes.
-- v3-to-v4 integration tests: `tests/integration/v3_scenarios.py` mirrors
-  `nautobot_golden_config.models._get_hierconfig_remediation` and runs under
-  both major versions. `tests/integration/test_v3_baseline.py` compares v4
-  against a committed v3.7.0 recording on every push, and
+  `tags_add()`/`tags_remove()`, `use_default_for_negation()`,
+  `load_hconfig_v2_options()`, `load_hconfig_v2_tags()`,
+  `load_hconfig_v2_options_from_file()`, `HCONFIG_PLATFORM_V2_TO_V3_MAPPING`,
+  `hconfig_v2_os_v3_platform_mapper()`, `hconfig_v3_platform_v2_os_mapper()`,
+  and the `NegationDefaultWithRule` / `NegationDefaultWhenRule` /
+  `NegationSubRule` models together with their `HConfigDriverRules` fields.
+  Those fields stay live: passing them to the constructor and appending to them
+  afterwards both take effect, so `driver.rules.negate_with.append(...)` — the
+  idiom v3's custom-driver docs teach — behaves as it did in v3. Documented in
+  `docs/user/v3-compatibility.md`. The `depth` property, the typed exceptions,
+  and the completed EOS/NX-OS/XR views remain behavior changes.
+- `HConfigDriverRules.all_negation_rules()` resolves the unified `negation`
+  list together with the v3 negation fields on every lookup (#300). Nothing is
+  folded in at validation, so re-validating a rules model never duplicates
+  rules.
+- v3-to-v4 integration tests (#300): `tests/integration/v3_scenarios.py`
+  mirrors `nautobot_golden_config.models._get_hierconfig_remediation` and runs
+  under both major versions. `tests/integration/test_v3_baseline.py` compares
+  v4 against a committed v3.7.0 recording on every push, and
   `tests/integration/test_v3_differential.py` (marker `v3_differential`,
   deselected by default) diffs against a live v3 install. Regenerate the
   recording with `./scripts/generate_v3_baseline.py`.
@@ -211,9 +216,8 @@ v4 design decisions, for the record:
   `NegationStrategy` enum — `REPLACE` (was `negate_with`), `DEFAULT` (was
   `negation_default_when`), and `REGEX_SUB` (was `negation_sub`) — in one
   ordered `negation` list on `HConfigDriverRules`; first matching rule wins
-  (#220). `load_driver_rules()` still accepts the v2 dict keys, and
-  `HConfigDriverRules` still accepts the three v3 fields as constructor
-  arguments.
+  (#220). `load_driver_rules()` still accepts the v2 dict keys, and the three
+  v3 fields remain live on `HConfigDriverRules` (#300).
 - Tree algorithms (difference, remediation, future, with_tags) extracted from
   `HConfigBase` into `hier_config.tree_algorithms` as standalone functions;
   `HConfigBase` retains thin delegating methods (#217).
@@ -241,16 +245,14 @@ v4 design decisions, for the record:
 
 ### Removed
 
-- `HConfigChild.use_default_for_negation()` — subsumed by the unified
-  negation rule evaluation (#220).
-
-Nothing else was removed. The names previously listed here — `get_hconfig()`,
+Nothing. Every name previously listed here — `get_hconfig()`,
 `get_hconfig_fast_load()`, `get_hconfig_from_dump()`,
-`get_hconfig_fast_generic_load()`, the three v3 negation rule models and their
-`HConfigDriverRules` fields, `HCONFIG_PLATFORM_V2_TO_V3_MAPPING`,
-`hconfig_v2_os_v3_platform_mapper()`, `hconfig_v3_platform_v2_os_mapper()`, and
-`load_hconfig_v2_options_from_file()` — are all retained as a permanent,
-supported compatibility surface. See the `### Added` entry above.
+`get_hconfig_fast_generic_load()`, `HConfigChild.use_default_for_negation()`,
+the three v3 negation rule models and their `HConfigDriverRules` fields,
+`HCONFIG_PLATFORM_V2_TO_V3_MAPPING`, `hconfig_v2_os_v3_platform_mapper()`,
+`hconfig_v3_platform_v2_os_mapper()`, and `load_hconfig_v2_options_from_file()`
+— is retained as a permanent, supported compatibility surface (#300). See the
+`### Added` entry above.
 
 ### Fixed
 

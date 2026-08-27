@@ -343,14 +343,14 @@ def _unified_rules() -> HConfigDriverRules:
 
 
 def test_legacy_negation_fields_build_the_unified_list() -> None:
-    assert _legacy_rules().negation == _unified_rules().negation
+    assert _legacy_rules().all_negation_rules() == _unified_rules().negation
 
 
 def test_legacy_negation_fields_accept_dicts() -> None:
     rules = HConfigDriverRules.model_validate(
         {"negation_default_when": [{"match_rules": [{"startswith": "interface"}]}]}
     )
-    assert rules.negation == [
+    assert rules.all_negation_rules() == [
         NegationRule(
             match_rules=(MatchRule(startswith="interface"),),
             strategy=NegationStrategy.DEFAULT,
@@ -369,8 +369,57 @@ def test_legacy_negation_fields_append_after_unified_entries() -> None:
             NegationDefaultWhenRule(match_rules=(MatchRule(startswith="interface"),))
         ],
     )
-    assert rules.negation[0] == unified
-    assert rules.negation[1].match_rules == (MatchRule(startswith="interface"),)
+    resolved = rules.all_negation_rules()
+    assert resolved[0] == unified
+    assert resolved[1].match_rules == (MatchRule(startswith="interface"),)
+
+
+def test_all_negation_rules_returns_negation_itself_when_no_v3_fields() -> None:
+    """The no-v3-rules path must not allocate a copy on every negation."""
+    rules = _unified_rules()
+    assert rules.all_negation_rules() is rules.negation
+
+
+def test_legacy_negation_fields_stay_live_after_construction() -> None:
+    """v3's own custom-driver docs teach `rules.negate_with.append(...)`."""
+    driver = get_hconfig_driver(Platform.CISCO_IOS)
+    driver.rules.negate_with.append(
+        NegationDefaultWithRule(
+            match_rules=(MatchRule(startswith="ip route"),), use="no ip route all"
+        )
+    )
+    child = HConfig(driver).add_child("ip route 0.0.0.0 0.0.0.0 10.0.0.1")
+    assert child.negate().text == "no ip route all"
+
+
+def test_appending_to_negation_still_works() -> None:
+    """The v4 spelling must keep working alongside the v3 fields."""
+    driver = get_hconfig_driver(Platform.CISCO_IOS)
+    driver.rules.negation.append(
+        NegationRule(
+            match_rules=(MatchRule(startswith="ip route"),),
+            strategy=NegationStrategy.REPLACE,
+            use="no ip route all",
+        )
+    )
+    child = HConfig(driver).add_child("ip route 0.0.0.0 0.0.0.0 10.0.0.1")
+    assert child.negate().text == "no ip route all"
+
+
+def test_v3_fields_are_not_folded_in_twice_on_revalidation() -> None:
+    """`HConfigDriverRules(**base.model_dump(), ...)` must not duplicate rules."""
+    rules = _legacy_rules()
+    round_tripped = HConfigDriverRules.model_validate(rules.model_dump())
+    assert round_tripped.all_negation_rules() == rules.all_negation_rules()
+
+
+def test_use_default_for_negation() -> None:
+    driver = _driver_for(_legacy_rules())
+    config = HConfig(driver)
+    interface = config.add_child("interface Vlan2")
+    route = config.add_child("ip route 0.0.0.0 0.0.0.0 10.0.0.1")
+    assert interface.use_default_for_negation(interface)
+    assert not route.use_default_for_negation(route)
 
 
 def _driver_for(rules: HConfigDriverRules) -> HConfigDriverBase:

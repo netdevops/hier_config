@@ -27,6 +27,12 @@ from hier_config import (
     get_hconfig_from_dump,
 )
 from hier_config.constructors import get_hconfig_fast_generic_load
+from hier_config.models import (
+    MatchRule,
+    NegationDefaultWhenRule,
+    NegationDefaultWithRule,
+    NegationSubRule,
+)
 from hier_config.utils import (
     HCONFIG_PLATFORM_V2_TO_V3_MAPPING,
     hconfig_v2_os_v3_platform_mapper,
@@ -145,6 +151,36 @@ def tagged_remediation(
     )
 
 
+def appended_rules_remediation(actual: str, intended: str) -> str:
+    """Append negation rules to a live driver, the way v3's own docs teach.
+
+    `docs/user/custom-drivers.md` at tag v3.7.0 shows
+    `driver.rules.negate_with.append(...)` and
+    `driver.rules.negation_sub.append(...)`. That idiom must keep working, so
+    it is exercised here rather than only through the constructor.
+    """
+    driver = get_hconfig_driver(Platform.CISCO_IOS)
+    driver.rules.negate_with.append(
+        NegationDefaultWithRule(
+            match_rules=(MatchRule(startswith="vlan"),), use="no vlan all"
+        )
+    )
+    driver.rules.negation_default_when.append(
+        NegationDefaultWhenRule(match_rules=(MatchRule(startswith="interface Vlan"),))
+    )
+    driver.rules.negation_sub.append(
+        NegationSubRule(
+            match_rules=(MatchRule(startswith="ip access-list"),),
+            search=r"^no ip access-list (\S+) (\S+)$",
+            replace=r"no ip access-list \2",
+        )
+    )
+    workflow = WorkflowRemediation(
+        get_hconfig(driver, actual), get_hconfig(driver, intended)
+    )
+    return workflow.remediation_config_filtered_text(include_tags={}, exclude_tags={})
+
+
 def resolved_driver(network_driver: str) -> str:
     """Return the driver golden config would get for a netutils driver name.
 
@@ -226,6 +262,9 @@ def run_all(fixtures_dir: Path) -> dict[str, str]:
     )
     results["options:negation_without_options"] = golden_config_remediation(
         "ios", NEGATION_RUNNING, NEGATION_GENERATED
+    )
+    results["options:negation_appended"] = appended_rules_remediation(
+        NEGATION_RUNNING, NEGATION_GENERATED
     )
 
     # 4. Tag filtering.

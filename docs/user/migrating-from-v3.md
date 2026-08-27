@@ -105,13 +105,11 @@ HConfigDriverRules(
 )
 ```
 
-!!! warning "Appending to the v3 lists has no effect"
-    `HConfigDriverRules` still accepts `negate_with`, `negation_default_when`,
-    and `negation_sub` as **constructor arguments**, and folds them into
-    `negation`. A v3 driver that appends to `driver.rules.negate_with` *after*
-    construction must append to `driver.rules.negation` instead. Rules loaded
-    through `load_driver_rules()` are unaffected — it already appends to
-    `negation`.
+!!! note "The v3 lists still work"
+    `HConfigDriverRules` keeps `negate_with`, `negation_default_when`, and
+    `negation_sub`. Pass them to the constructor or append to them afterwards —
+    both take effect. `driver.rules.negate_with.append(...)`, the idiom the v3
+    custom-driver docs teach, behaves exactly as it did in v3.
 
 `REPLACE` rules are consulted first (via `driver.negate_with()`, which
 imperative driver overrides also hook into); remaining rules evaluate in list

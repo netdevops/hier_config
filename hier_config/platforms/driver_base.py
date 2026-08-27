@@ -3,7 +3,7 @@ from collections.abc import Callable, Iterable
 from re import Match, search
 from typing import TYPE_CHECKING, ClassVar
 
-from pydantic import Field, PositiveInt, model_validator
+from pydantic import Field, PositiveInt
 
 from hier_config.child import HConfigChild
 from hier_config.models import (
@@ -152,10 +152,9 @@ class HConfigDriverRules(BaseModel):  # pylint: disable=too-many-instance-attrib
     #
     # v3 split negation across three rule lists; v4 uses the single ordered
     # `negation` list above. Both spellings are supported permanently, so a v3
-    # driver's `_instantiate_rules()` keeps working unchanged. These fields are
-    # inputs only: `_absorb_v3_negation_fields` folds their contents into
-    # `negation` at construction, and appending to them afterwards has no
-    # effect.
+    # driver keeps working unchanged whether it passes these to the constructor
+    # or appends to them afterwards -- the idiom v3's own custom-driver docs
+    # teach. `all_negation_rules()` resolves both on every lookup.
     negate_with: list[NegationDefaultWithRule] = Field(
         default_factory=_negate_with_rules_default
     )
@@ -166,21 +165,27 @@ class HConfigDriverRules(BaseModel):  # pylint: disable=too-many-instance-attrib
         default_factory=_negation_sub_rules_default
     )
 
-    @model_validator(mode="after")
-    def _absorb_v3_negation_fields(self) -> "HConfigDriverRules":
-        """Fold the v3 negation fields into the unified `negation` list.
+    def all_negation_rules(self) -> list[NegationRule]:
+        """Return `negation` plus the v3 negation fields, in resolution order.
 
-        The append order — DEFAULT, REPLACE, REGEX_SUB — matches
-        `load_driver_rules()` and reproduces the v3 resolution priority:
-        `negate_with` is consulted first by `driver.negate_with()`, then the
-        remaining rules are walked in list order.
+        Computed on every call, so appending to `negation` **or** to one of the
+        v3 fields takes effect either way, and nothing is ever folded in twice.
+
+        The v3 fields are appended in the order DEFAULT, REPLACE, REGEX_SUB.
+        That is the order `load_driver_rules()` already uses and it reproduces
+        the v3 priority: `driver.negate_with()` scans every REPLACE rule first,
+        so REPLACE placement does not matter, and DEFAULT is then evaluated
+        ahead of REGEX_SUB.
         """
-        self.negation.extend(
-            rule.to_negation_rule() for rule in self.negation_default_when
-        )
-        self.negation.extend(rule.to_negation_rule() for rule in self.negate_with)
-        self.negation.extend(rule.to_negation_rule() for rule in self.negation_sub)
-        return self
+        if not (self.negation_default_when or self.negate_with or self.negation_sub):
+            return self.negation
+
+        return [
+            *self.negation,
+            *(rule.to_negation_rule() for rule in self.negation_default_when),
+            *(rule.to_negation_rule() for rule in self.negate_with),
+            *(rule.to_negation_rule() for rule in self.negation_sub),
+        ]
 
 
 class HConfigDriverBase(ABC):
@@ -225,10 +230,11 @@ class HConfigDriverBase(ABC):
     def negate_with(self, config: HConfigChild) -> str | None:
         """Return a fixed replacement negation string for `config`, if any.
 
-        Reads REPLACE-strategy rules from the unified `negation` rule list.
-        Drivers may override this method for imperative negation logic.
+        Reads REPLACE-strategy rules from the unified `negation` rule list,
+        plus any v3 `negate_with` rules. Drivers may override this method for
+        imperative negation logic.
         """
-        for rule in self.rules.negation:
+        for rule in self.rules.all_negation_rules():
             if rule.strategy is NegationStrategy.REPLACE and config.is_lineage_match(
                 rule.match_rules
             ):
