@@ -1,5 +1,11 @@
 from .child import HConfigChild
-from .constructors import get_hconfig_view
+from .constructors import (
+    get_hconfig,
+    get_hconfig_fast_generic_load,
+    get_hconfig_fast_load,
+    get_hconfig_from_dump,
+    get_hconfig_view,
+)
 from .exceptions import (
     DriverNotFoundError,
     DuplicateChildError,
@@ -7,7 +13,19 @@ from .exceptions import (
     IncompatibleDriverError,
     InvalidConfigError,
 )
-from .models import ChangeDetail, MatchRule, Platform, ReportSummary, TagRule, TextStyle
+from .models import (
+    ChangeDetail,
+    MatchRule,
+    NegationDefaultWhenRule,
+    NegationDefaultWithRule,
+    NegationRule,
+    NegationStrategy,
+    NegationSubRule,
+    Platform,
+    ReportSummary,
+    TagRule,
+    TextStyle,
+)
 from .platforms.driver_base import HConfigDriverBase, HConfigDriverRules
 from .platforms.view_base import (
     ConfigViewInterfaceBase,
@@ -48,6 +66,11 @@ __all__ = (
     "InterfaceVlanViewMixin",
     "InvalidConfigError",
     "MatchRule",
+    "NegationDefaultWhenRule",
+    "NegationDefaultWithRule",
+    "NegationRule",
+    "NegationStrategy",
+    "NegationSubRule",
     "Platform",
     "RemediationPlugin",
     "RemediationReporter",
@@ -55,7 +78,11 @@ __all__ = (
     "TagRule",
     "TextStyle",
     "WorkflowRemediation",
+    "get_hconfig",
     "get_hconfig_driver",
+    "get_hconfig_fast_generic_load",
+    "get_hconfig_fast_load",
+    "get_hconfig_from_dump",
     "get_hconfig_view",
     "get_registered_platforms",
     "register_driver",

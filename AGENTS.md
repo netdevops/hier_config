@@ -44,6 +44,10 @@ poetry run mkdocs build --strict
 
 # Benchmarks (deselected by default via the `benchmark` marker)
 poetry run pytest -m benchmark -v -s
+
+# Diff this tree against a live hier-config v3 install
+# (deselected by default via the `v3_differential` marker; builds a venv)
+poetry run pytest -m v3_differential -v
 ```
 
 CI facts that matter for changes:
@@ -71,10 +75,15 @@ These are enforced by CI and by reviewers; violations block merges:
 4. **TDD**: write a failing test first, confirm it fails for the right reason, implement minimally, run the full suite. 95% coverage floor.
 5. **Tests**: flat function-based (no classes except benchmarks); unit tests mirror the source in `tests/unit/` (config views in `tests/unit/platforms/views/`), end-to-end driver scenarios go in `tests/integration/test_<platform>.py`; fixtures are module-scoped in the relevant `conftest.py` reading the sibling `fixtures/` directory; the dominant idiom is `HConfig.from_lines()` → `remediation()` → assert `to_lines()` tuple → `future()` → rollback → assert no `unified_diff()`.
 6. **Rules containers**: fields on `HConfigDriverRules` use named module-level default factory functions, not lambdas.
-7. **Changelog**: every PR adds an entry to `CHANGELOG.md` under `## [Unreleased]` (Keep a Changelog categories, `(#NNN)` reference).
-8. **Commits**: imperative mood, subject ≤72 characters, body explains *why* (see [CONTRIBUTING.md](CONTRIBUTING.md)).
-9. **Docs**: public API or driver behavior changes must update `docs/`; new pages must be added to `mkdocs.yml` nav; never move a page without a redirect entry.
-10. **Dependencies**: no new runtime dependencies without prior discussion in an issue.
+7. **v3 compatibility**: the v3 names restored in `hier_config/constructors.py`,
+   `utils.py`, `models.py`, `root.py`, and `child.py` are a permanent supported
+   API. Never add a `DeprecationWarning` to them and never remove them. Each one
+   must stay a thin delegation to its v4 counterpart -- never a second
+   implementation. See [docs/user/v3-compatibility.md](docs/user/v3-compatibility.md).
+8. **Changelog**: every PR adds an entry to `CHANGELOG.md` under `## [Unreleased]` (Keep a Changelog categories, `(#NNN)` reference).
+9. **Commits**: imperative mood, subject ≤72 characters, body explains *why* (see [CONTRIBUTING.md](CONTRIBUTING.md)).
+10. **Docs**: public API or driver behavior changes must update `docs/`; new pages must be added to `mkdocs.yml` nav; never move a page without a redirect entry.
+11. **Dependencies**: no new runtime dependencies without prior discussion in an issue.
 
 ## Task → Documentation Map
 

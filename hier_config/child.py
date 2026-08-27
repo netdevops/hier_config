@@ -226,6 +226,14 @@ class HConfigChild(  # ruff:ignore[too-many-public-methods]  pylint: disable=too
         comments_str = f" !{', '.join(sorted(comments))}" if comments else ""
         return f"{self.indentation}{self.text}{comments_str}"
 
+    def cisco_style_text(
+        self,
+        style: TextStyle = "without_comments",
+        tag: str | None = None,
+    ) -> str:
+        """v3 name for `indented_text()`. Both spellings are supported."""
+        return self.indented_text(style, tag)
+
     @property
     def indentation(self) -> str:
         """The leading whitespace rendered before this node's text."""
@@ -255,6 +263,26 @@ class HConfigChild(  # ruff:ignore[too-many-public-methods]  pylint: disable=too
         else:
             self._tags.difference_update(tag)
 
+    def use_default_for_negation(self, config: HConfigChild) -> bool:
+        """Whether `config` negates to its `default` form.
+
+        v3 method, retained. True when a DEFAULT-strategy negation rule
+        matches -- in v3 terms, when a `negation_default_when` rule matches.
+        """
+        return any(
+            rule.strategy is NegationStrategy.DEFAULT
+            and config.is_lineage_match(rule.match_rules)
+            for rule in self.driver.rules.all_negation_rules()
+        )
+
+    def tags_add(self, tag: str | Iterable[str]) -> None:
+        """v3 name for `add_tags()`. Both spellings are supported."""
+        self.add_tags(tag)
+
+    def tags_remove(self, tag: str | Iterable[str]) -> None:
+        """v3 name for `remove_tags()`. Both spellings are supported."""
+        self.remove_tags(tag)
+
     def negate(self) -> HConfigChild:
         """Negate self.text using driver-specific negation rules.
 
@@ -274,7 +302,7 @@ class HConfigChild(  # ruff:ignore[too-many-public-methods]  pylint: disable=too
             self.text = negate_with
             return self
 
-        for rule in self.driver.rules.negation:
+        for rule in self.driver.rules.all_negation_rules():
             if rule.strategy is NegationStrategy.REPLACE:
                 continue
             if self.is_lineage_match(rule.match_rules):

@@ -169,6 +169,71 @@ class NegationRule(BaseModel):
         return self
 
 
+class NegationDefaultWhenRule(BaseModel):
+    """Rule specifying when negation should use the ``default`` form.
+
+    v3 name. `NegationRule` with ``strategy=NegationStrategy.DEFAULT`` is the
+    v4 spelling. Both are supported; pass either to `HConfigDriverRules`.
+    """
+
+    match_rules: tuple[MatchRule, ...]
+
+    def to_negation_rule(self) -> NegationRule:
+        """Return the equivalent unified `NegationRule`."""
+        return NegationRule(
+            match_rules=self.match_rules,
+            strategy=NegationStrategy.DEFAULT,
+        )
+
+
+class NegationDefaultWithRule(BaseModel):
+    """Rule replacing negation with a fixed custom command string.
+
+    v3 name. `NegationRule` with ``strategy=NegationStrategy.REPLACE`` is the
+    v4 spelling. Both are supported; pass either to `HConfigDriverRules`.
+    """
+
+    match_rules: tuple[MatchRule, ...]
+    use: str
+
+    def to_negation_rule(self) -> NegationRule:
+        """Return the equivalent unified `NegationRule`."""
+        return NegationRule(
+            match_rules=self.match_rules,
+            strategy=NegationStrategy.REPLACE,
+            use=self.use,
+        )
+
+
+class NegationSubRule(BaseModel):
+    r"""Regex substitution applied to a command during negation.
+
+    When a negated command matches ``match_rules``, ``re.sub(search, replace, text)``
+    is applied to transform the negation line.  Useful when a platform requires
+    truncated or reformatted negation commands — e.g. NX-OS SNMP user removal
+    must drop everything after the username.
+
+    The regex is applied to the **already-negated** text (with ``no `` prepended).
+    ``replace`` supports back-references such as ``\1``.
+
+    v3 name. `NegationRule` with ``strategy=NegationStrategy.REGEX_SUB`` is the
+    v4 spelling. Both are supported; pass either to `HConfigDriverRules`.
+    """
+
+    match_rules: tuple[MatchRule, ...]
+    search: str
+    replace: str
+
+    def to_negation_rule(self) -> NegationRule:
+        """Return the equivalent unified `NegationRule`."""
+        return NegationRule(
+            match_rules=self.match_rules,
+            strategy=NegationStrategy.REGEX_SUB,
+            search=self.search,
+            replace=self.replace,
+        )
+
+
 class ReferenceLocation(BaseModel):
     """A location in the config tree where object name references are searched.
 

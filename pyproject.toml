@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "hier-config"
-version = "4.0.0b2"
+version = "4.0.0b3"
 description = "A network configuration query and comparison library, used to build remediation configurations."
 packages = [
     { include="hier_config", from="."},
@@ -160,5 +160,6 @@ parametrize-values-type = "tuple"
 [tool.pytest.ini_options]
 markers = [
     "benchmark: performance benchmark tests (deselect with '-m \"not benchmark\"')",
+    "v3_differential: compare against a live hier-config v3 install (select with '-m v3_differential')",
 ]
-addopts = "-m 'not benchmark'"
+addopts = "-m 'not benchmark and not v3_differential'"

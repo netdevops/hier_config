@@ -233,6 +233,10 @@ class HConfig(HConfigBase):  # ruff:ignore[too-many-public-methods]
         """Return the rendered config lines as a tuple."""
         return tuple(self.lines(sectional_exiting=sectional_exiting))
 
+    def dump_simple(self, *, sectional_exiting: bool = False) -> tuple[str, ...]:
+        """v3 name for `to_lines()`. Both spellings are supported."""
+        return self.to_lines(sectional_exiting=sectional_exiting)
+
     def dump(self) -> Dump:
         """Dump loaded HConfig data."""
         return Dump(
@@ -270,6 +274,14 @@ class HConfig(HConfigBase):  # ruff:ignore[too-many-public-methods]
             delta = HConfig(self.driver)
 
         return compute_remediation(self, target, delta)
+
+    def config_to_get_to(
+        self,
+        target: HConfig,
+        delta: HConfig | None = None,
+    ) -> HConfig:
+        """v3 name for `remediation()`. Both spellings are supported."""
+        return self.remediation(target, delta)
 
     def add_ancestor_copy_of(
         self,
