@@ -119,10 +119,11 @@ remediation = workflow.remediation_config_filtered_text(
 )
 ```
 
-## One limit
+## The limit
 
-The compatibility surface covers **names**. Some v4 behaviour changed even where
-the name did not. Review these:
+The compatibility surface covers **names**. It cannot cover a changed signature,
+exception type, or return value. These four v4 changes apply even to code that
+keeps the v3 spellings:
 
 - `child.depth()` became the `child.depth` property. Drop the parentheses.
 - `DriverNotFoundError`, `InvalidConfigError`, and `IncompatibleDriverError` replace

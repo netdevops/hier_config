@@ -236,7 +236,7 @@ def test_load_hconfig_v2_options_accepts_v3_keyword_names() -> None:
     assert isinstance(driver, HConfigDriverBase)
 
 
-def test_load_hconfig_v2_options_from_file(tags_file_path: str) -> None:
+def test_load_hconfig_v2_options_from_file() -> None:
     with NamedTemporaryFile(
         "w", suffix=".yml", delete=False, encoding="utf8"
     ) as handle:
@@ -247,9 +247,9 @@ def test_load_hconfig_v2_options_from_file(tags_file_path: str) -> None:
     finally:
         Path(path).unlink()
     assert any(
-        rule.strategy is NegationStrategy.DEFAULT for rule in driver.rules.negation
+        rule.strategy is NegationStrategy.DEFAULT
+        for rule in driver.rules.all_negation_rules()
     )
-    assert Path(tags_file_path).exists()
 
 
 def test_load_hconfig_v2_tags_matches_load_tag_rules(tags_file_path: str) -> None:

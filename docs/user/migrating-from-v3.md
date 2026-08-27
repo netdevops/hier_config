@@ -166,8 +166,12 @@ See [Config Views](config-views.md) for the mixin catalog.
 
 ## Behavior changes to review
 
-These are the changes that the [v3 compatibility surface](v3-compatibility.md)
-cannot absorb. Everything else in this guide is optional.
+Everything else in this guide is optional. These are not.
+
+### Gaps the v3 compatibility surface cannot cover
+
+A name alias cannot absorb a changed signature, exception type, or return
+value. These four apply even to code that keeps the v3 spellings:
 
 - **`depth` is a property** — replace `child.depth()` with `child.depth`. This is
   the only required call-site edit.
@@ -175,16 +179,22 @@ cannot absorb. Everything else in this guide is optional.
 - **Completed config views** — the Arista EOS, Cisco NX-OS, and Cisco IOS-XR views
   return real data where v3 raised `NotImplementedError`. Code that caught
   `NotImplementedError` now silently receives values.
+- **Structured input rejection** — `HConfig.from_text()` and the restored
+  `get_hconfig()` (and the string form of `from_lines()`) raise
+  `InvalidConfigError` when given XML or JSON, instead of silently building a
+  garbage tree. Use `HConfig.from_xml()` / `HConfig.from_json()` for those
+  formats ([Loading Configurations](loading-configs.md)).
+
+### Other v4 changes worth reviewing
+
+These were never candidates for name-alias coverage. They are improvements to
+how v4 works, listed here so an upgrade does not surprise you:
+
 - **`future()` negation resolution** — negations that match an existing line
   (exactly or by shorthand prefix) now remove it instead of surviving as a
   literal `no ...` child; see
   [Predicting Future Configs](future-config.md) for the resolution order and
   the new `prune_empty_branches` option.
-- **Structured input rejection** — `HConfig.from_text()` (and the string form
-  of `from_lines()`) raises `InvalidConfigError` when given XML or JSON
-  instead of silently building a garbage tree. Use `HConfig.from_xml()` /
-  `HConfig.from_json()` for those formats
-  ([Loading Configurations](loading-configs.md)).
 - **Custom driver wiring** — subclassed drivers previously required a local
   constructor function; v4 registers them with
   [`register_driver()`](../admin/custom-drivers.md), which also makes them
