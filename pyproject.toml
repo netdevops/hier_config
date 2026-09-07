@@ -4,6 +4,7 @@ version = "4.0.0b3"
 description = "A network configuration query and comparison library, used to build remediation configurations."
 readme = "README.md"
 license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     { name = "Andrew Edwards", email = "edwards.andrew@heb.com" },
     { name = "James Williams", email = "james.williams@networktocode.com" },
@@ -50,7 +51,6 @@ dev = [
     "pytest",
     "pytest-cov",
     "pytest-profiling",
-    "pytest-runner",
     "pytest-xdist",
     "ruff",
     "typer",
