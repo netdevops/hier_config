@@ -82,6 +82,20 @@ def _reject_structured_format(config_text: str) -> None:
         raise InvalidConfigError(message)
 
 
+
+def _new_config(driver: HConfigDriverBase) -> HConfig:
+    """Construct an ``HConfig`` and claim it as its tree's canonical root.
+
+    PyO3 exposes ``__init__`` as an ordinary method rather than the ``tp_init``
+    slot, so the native constructor cannot register the object it just built.
+    Reading ``root`` once here does that registration, guaranteeing that
+    ``child.root is config`` for every config the library hands out.
+    """
+    config = HConfig(driver)
+    _ = config.root
+    return config
+
+
 def hconfig_from_text(
     platform_or_driver: Platform | str | HConfigDriverBase,
     config_raw: Path | str = "",
@@ -93,7 +107,7 @@ def hconfig_from_text(
     analysis, and sectional-exit stripping in a single pass. Only callbacks the
     core did not already apply are run here.
     """
-    config = HConfig(resolve_driver(platform_or_driver))
+    config = _new_config(resolve_driver(platform_or_driver))
 
     if isinstance(config_raw, Path):
         config._load_file_native(str(config_raw), True)  # noqa: SLF001, FBT003
@@ -123,7 +137,7 @@ def hconfig_from_dump(
     Rebuilding the tree from the flat, depth-annotated dump lines happens in
     the Rust core so the parent lookup stays O(1) per line.
     """
-    config = HConfig(resolve_driver(platform_or_driver))
+    config = _new_config(resolve_driver(platform_or_driver))
     config._load_from_dump_native(dump.lines)  # noqa: SLF001
     return config
 
@@ -139,7 +153,7 @@ def hconfig_from_lines(
     handling of `hconfig_from_text`.
     """
     driver = resolve_driver(platform_or_driver)
-    config = HConfig(driver)
+    config = _new_config(driver)
     if isinstance(lines, str):
         _reject_structured_format(lines)
         lines = lines.splitlines()

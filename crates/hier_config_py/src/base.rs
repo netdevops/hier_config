@@ -334,8 +334,7 @@ impl PyHConfigBase {
             let tree = self.tree.tree.read().unwrap();
             tree.all_children(self.node_id)
         };
-        let result = SharedTree::get_or_create_children_batch(&self.tree, py, &node_ids)?;
-        items_sequence(py, result)
+        lazy_children(&self.tree, py, &node_ids)
     }
 
     pub fn all_children_sorted(&self, py: Python<'_>) -> PyResult<PyObject> {
@@ -343,8 +342,7 @@ impl PyHConfigBase {
             let tree = self.tree.tree.read().unwrap();
             tree.all_children_sorted(self.node_id)
         };
-        let result = SharedTree::get_or_create_children_batch(&self.tree, py, &node_ids)?;
-        items_sequence(py, result)
+        lazy_children(&self.tree, py, &node_ids)
     }
 
     #[pyo3(signature = (include_tags = None, exclude_tags = None))]
@@ -651,4 +649,21 @@ pub(crate) fn parse_match_rules_seq(
         )?);
     }
     Ok(list)
+}
+
+/// Wraps `node_ids` as interned children handed back through a real
+/// Python generator, matching the documented iterator contract.
+fn lazy_children(
+    tree: &Arc<SharedTree>,
+    py: Python<'_>,
+    node_ids: &[NodeId],
+) -> PyResult<PyObject> {
+    let children = node_ids
+        .iter()
+        .map(|&id| SharedTree::get_or_create_child(tree, py, id, None).map(Py::into_any))
+        .collect::<PyResult<Vec<PyObject>>>()?;
+    py.import("hier_config._iterators")?
+        .getattr("as_generator")?
+        .call1((PyTuple::new(py, children)?,))
+        .map(Bound::unbind)
 }
