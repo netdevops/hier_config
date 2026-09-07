@@ -7,12 +7,12 @@
 
 ## Status
 
-- **State:** Proposed
+- **State:** ✅ Shipped (Phases 1–3 complete; Phase 4 deferred)
 - **Owner:** Network Engineering & Core Automation Team
 - **Last updated:** 2026-09-07
 - **Related:**
-  - Architecture: [`docs/dev/architecture.md`](../dev/architecture.md)
-  - Extending & Drivers: [`docs/dev/extending.md`](../dev/creating-drivers.md)
+  - Architecture: [`docs/dev/architecture.md`](../../dev/architecture.md)
+  - Extending & Drivers: [`docs/dev/creating-drivers.md`](../../dev/creating-drivers.md)
   - Python Test Suite Trim Plan: [`python-test-suite-trim.md`](python-test-suite-trim.md)
 - **Supersedes / Superseded by:** n/a
 
@@ -431,15 +431,15 @@ sequenceDiagram
   — *Resolved:* Return complete `HierConfig` / `HConfig` objects (`PyHConfig` wrapping the native `Tree`), ensuring callers have full tree access and manipulation capabilities.
 - [x] Should we preserve strict backward compatibility if a cleaner architecture exists?
   — *Resolved:* Backward compatibility is desirable ("nice to have") but not a hard blocker. Where a cleaner, faster, more idiomatic design exists (such as direct construction from raw strings or cleaner method names like `remediation_text`), we implement the better way while keeping compatibility aliases where convenient.
-- [ ] Should a standalone one-shot `remediate()` function be exported from the top-level `hier_config` package namespace?
-  — *Open for review.*
+- [x] Should a standalone one-shot `remediate()` function be exported from the top-level `hier_config` package namespace?
+  — *Resolved:* Deferred/omitted. The canonical v4 `WorkflowRemediation` class API satisfies both Python and Rust use cases with minimal API surface area.
 
 ---
 
 ## Cross-references
 
-- Architecture: [`docs/dev/architecture.md`](../dev/architecture.md)
-- Workflows User Guide: [`docs/user/custom-workflows.md`](../user/remediation-workflows.md)
+- Architecture: [`docs/dev/architecture.md`](../../dev/architecture.md)
+- Workflows User Guide: [`docs/user/custom-workflows.md`](../../user/remediation-workflows.md)
 - Python Workflow implementation: `hier_config/workflows.py`
 - Core Remediation engine: `crates/hier_config_core/src/remediation.rs`
 - PyO3 Root implementation: `crates/hier_config_py/src/root.rs`

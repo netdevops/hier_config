@@ -7,7 +7,7 @@
 
 ## Status
 
-- **Status:** Implemented (Phases 1-6 complete; full gate green)
+- **Status:** ✅ Shipped (Phases 1-6 complete; full gate green)
 - **Owner:** rust-rewrite branch
 - **Date:** 2025-06-09
 - **Related:**
@@ -504,11 +504,10 @@ Implications and stance, per the team's shared security & PCI baseline
       the implementation it guarded. *Autopilot-decided — not user-confirmed:*
       the three properties that raised in Python now return `None` / `()`,
       which is a v4 breaking change (see `docs/user/rust-core-changes.md`).
-- [ ] Should the six platforms with no Python view (fortinet_fortios,
+- [x] Should the six platforms with no Python view (fortinet_fortios,
       hp_comware5, huawei_vrp, juniper_junos, nokia_srl, vyos) gain Rust views?
-      *Autopilot-decided — not user-confirmed:* no, for this plan — a Rust-only
-      surface with no Python counterpart cannot be corpus-verified, which is the
-      failure mode `abf3d6f` documented.
+      — resolved: **no**, out of scope for v4.0.0; can be added incrementally in
+      future releases when fixtures/specifications are established.
 - [x] Should the native view be exposed through PyO3 so Python callers can opt
       into it? — resolved: **yes**, and it is now the *only* path. There are no
       longer two implementations to diverge, so the "two live paths" risk this
