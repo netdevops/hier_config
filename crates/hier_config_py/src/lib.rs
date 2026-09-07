@@ -14,7 +14,6 @@ pub(crate) mod children;
 pub(crate) mod errors;
 pub(crate) mod root;
 pub(crate) mod tree;
-pub(crate) mod view;
 pub(crate) mod workflow;
 
 use pyo3::prelude::*;
@@ -99,8 +98,6 @@ fn _hier_config_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyHConfig>()?;
     m.add_class::<PyHConfigChildren>()?;
     m.add_class::<PyHConfigChildrenIter>()?;
-    m.add_class::<view::PyNativeConfigViewInterface>()?;
-    m.add_class::<view::PyNativeHConfigView>()?;
     m.add_class::<workflow::PyWorkflowRemediation>()?;
     Ok(())
 }

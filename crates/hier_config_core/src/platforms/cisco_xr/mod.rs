@@ -1,8 +1,6 @@
 use crate::platforms::post_load_enabled;
 use crate::tree::Tree;
 
-pub mod view;
-
 pub const RULES_JSON: &str = include_str!("rules.json");
 
 pub fn run_post_load(tree: &mut Tree) {
