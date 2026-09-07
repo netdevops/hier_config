@@ -342,7 +342,11 @@ impl PyHConfigBase {
             let tree = self.tree.tree.read().unwrap();
             tree.all_children_sorted(self.node_id)
         };
-        lazy_children(&self.tree, py, &node_ids)
+        // Sorting has to see every node before the first one can be yielded, so a
+        // generator here would only misrepresent the cost. Return the sequence, as
+        // `all_children_sorted_by_tags` does.
+        let items = SharedTree::get_or_create_children_batch(&self.tree, py, &node_ids)?;
+        items_sequence(py, items)
     }
 
     #[pyo3(signature = (include_tags = None, exclude_tags = None))]
@@ -658,10 +662,10 @@ fn lazy_children(
     py: Python<'_>,
     node_ids: &[NodeId],
 ) -> PyResult<PyObject> {
-    let children = node_ids
-        .iter()
-        .map(|&id| SharedTree::get_or_create_child(tree, py, id, None).map(Py::into_any))
-        .collect::<PyResult<Vec<PyObject>>>()?;
+    // Bulk traversal, so take the uncached materializer: interning costs a lock, a
+    // hash and a weakref per node, and nothing about a whole-tree walk needs handle
+    // identity. See `SharedTree::get_or_create_children_batch`.
+    let children = SharedTree::get_or_create_children_batch(tree, py, node_ids)?;
     py.import("hier_config._iterators")?
         .getattr("as_generator")?
         .call1((PyTuple::new(py, children)?,))

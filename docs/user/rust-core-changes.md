@@ -340,17 +340,18 @@ view.config is config.children["interface Eth1"]  # True
 
 ### Some traversal methods return tuples, not generators
 
-`all_children()` and `all_children_sorted()` remain true generators and stream
-lazily out of the core, so `isinstance(x, types.GeneratorType)`, `.send()`,
-`.throw()`, and `.close()` all still work and a partial walk still costs only
-what it visits.
+`all_children()` is still a true generator, so `isinstance(x,
+types.GeneratorType)`, `.send()`, `.throw()`, and `.close()` all still work.
 
-`all_children_sorted_by_tags()` and `HConfig.unused_objects()` return a **tuple**
-instead. Neither can produce a result before it has seen the whole tree, so the
-3.x generator was a wrapper around an already-materialized list: it added a
-Python frame per item and bought no laziness.
+`all_children_sorted()`, `all_children_sorted_by_tags()`, and
+`HConfig.unused_objects()` return a **tuple** instead. The rule is whether the
+method can be lazy at all: none of these three can produce a result before it
+has seen the whole tree, so the 3.x generator was a wrapper around an
+already-materialized list — it added a Python frame per item and bought no
+laziness. Dropping it makes a full `all_children_sorted()` walk roughly six
+times faster.
 
-For those two, the change is mostly additive at runtime:
+For those three, the change is mostly additive at runtime:
 
 ```python
 children = config.all_children_sorted_by_tags(frozenset({"safe"}), frozenset())
