@@ -12,6 +12,7 @@ pub(crate) mod base;
 pub(crate) mod child;
 pub(crate) mod children;
 pub(crate) mod errors;
+pub(crate) mod formats;
 pub(crate) mod root;
 pub(crate) mod tree;
 pub(crate) mod workflow;
@@ -21,7 +22,7 @@ use pyo3::prelude::*;
 use base::PyHConfigBase;
 use child::PyHConfigChild;
 use children::{PyHConfigChildren, PyHConfigChildrenIter};
-use errors::{DuplicateChildError, HierConfigError};
+use errors::{DuplicateChildError, HierConfigError, InvalidConfigError};
 use root::PyHConfig;
 
 // Parsing allocates a node (and a lookup key) per configuration line, so the
@@ -89,10 +90,20 @@ fn _hier_config_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
         m.py().get_type::<DuplicateChildError>(),
     )?;
     m.add("HierConfigError", m.py().get_type::<HierConfigError>())?;
+    m.add(
+        "InvalidConfigError",
+        m.py().get_type::<InvalidConfigError>(),
+    )?;
     m.add_function(wrap_pyfunction!(get_platform_rules_json, m)?)?;
     m.add_function(wrap_pyfunction!(driver_swap_negation, m)?)?;
     m.add_function(wrap_pyfunction!(convert_to_set_commands, m)?)?;
     m.add_function(wrap_pyfunction!(config_preprocessor, m)?)?;
+    m.add_function(wrap_pyfunction!(formats::formats_from_json, m)?)?;
+    m.add_function(wrap_pyfunction!(formats::formats_to_json, m)?)?;
+    m.add_function(wrap_pyfunction!(formats::formats_from_xml, m)?)?;
+    m.add_function(wrap_pyfunction!(formats::formats_to_xml, m)?)?;
+    m.add_function(wrap_pyfunction!(formats::formats_to_netconf_xml, m)?)?;
+    m.add_function(wrap_pyfunction!(formats::formats_to_gnmi_json, m)?)?;
     m.add_class::<PyHConfigBase>()?;
     m.add_class::<PyHConfigChild>()?;
     m.add_class::<PyHConfig>()?;

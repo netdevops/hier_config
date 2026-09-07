@@ -215,6 +215,7 @@ parametrize-values-type = "tuple"
 "hier_config/child.py" = ["PLC2701"]
 "hier_config/children.py" = ["PLC2701"]
 "hier_config/exceptions.py" = ["PLC2701"]
+"hier_config/formats.py" = ["PLC2701"]
 # B024: `HConfigDriverBase` stays an `ABC` for backward compatibility with
 # downstream `isinstance` checks and custom subclasses. v4 gave
 # `_instantiate_rules` a concrete default (platforms declare rules in Rust), so

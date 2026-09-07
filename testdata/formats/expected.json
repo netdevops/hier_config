@@ -1,0 +1,6981 @@
+{
+ "errors": {
+  "bad-json": {
+   "err": "InvalidConfigError: The config is not valid JSON: key must be a string at line 1 column 2"
+  },
+  "bad-xml": {
+   "err": "InvalidConfigError: The config is not valid XML: no element found"
+  },
+  "empty-key": {
+   "err": "InvalidConfigError: Unsupported JSON key: '' (keys must be non-empty strings without whitespace)"
+  },
+  "json-not-obj": {
+   "err": "InvalidConfigError: The top-level JSON value must be an object"
+  },
+  "nested-array": {
+   "err": "InvalidConfigError: Nested JSON arrays are not supported (under 'a')"
+  },
+  "unkeyed-list": {
+   "err": "InvalidConfigError: List entries under 'a' need one of ('name', 'id') to identify them; pass list_keys= to name the identifying member"
+  },
+  "ws-key": {
+   "err": "InvalidConfigError: Unsupported JSON key: 'a b' (keys must be non-empty strings without whitespace)"
+  }
+ },
+ "gnmi": {
+  "empty-obj|ARISTA_EOS|('id',)": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {}
+    }
+   },
+   "remediation": [],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {}
+    }
+   }
+  },
+  "empty-obj|ARISTA_EOS|('name', 'id')": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {}
+    }
+   },
+   "remediation": [],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {}
+    }
+   }
+  },
+  "empty-obj|ARISTA_EOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {}
+    }
+   },
+   "remediation": [],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {}
+    }
+   }
+  },
+  "empty-obj|ARISTA_EOS|None": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {}
+    }
+   },
+   "remediation": [],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {}
+    }
+   }
+  },
+  "empty-obj|CISCO_IOS|('id',)": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {}
+    }
+   },
+   "remediation": [],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {}
+    }
+   }
+  },
+  "empty-obj|CISCO_IOS|('name', 'id')": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {}
+    }
+   },
+   "remediation": [],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {}
+    }
+   }
+  },
+  "empty-obj|CISCO_IOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {}
+    }
+   },
+   "remediation": [],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {}
+    }
+   }
+  },
+  "empty-obj|CISCO_IOS|None": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {}
+    }
+   },
+   "remediation": [],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {}
+    }
+   }
+  },
+  "empty-obj|JUNIPER_JUNOS|('id',)": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {}
+    }
+   },
+   "remediation": [],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {}
+    }
+   }
+  },
+  "empty-obj|JUNIPER_JUNOS|('name', 'id')": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {}
+    }
+   },
+   "remediation": [],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {}
+    }
+   }
+  },
+  "empty-obj|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {}
+    }
+   },
+   "remediation": [],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {}
+    }
+   }
+  },
+  "empty-obj|JUNIPER_JUNOS|None": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {}
+    }
+   },
+   "remediation": [],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {}
+    }
+   }
+  },
+  "id-keyed|ARISTA_EOS|('id',)": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "vlans",
+      "vlans[id=10]/name"
+     ],
+     "update": {
+      "vlans": [
+       {
+        "name": "NEW"
+       }
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "no vlans 20",
+    "vlans 10",
+    "  no name \"OLD\"",
+    "  name \"NEW\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "vlans[id=20]",
+      "vlans[id=10]/name"
+     ],
+     "update": {
+      "vlans": [
+       {
+        "id": 10,
+        "name": "NEW"
+       }
+      ]
+     }
+    }
+   }
+  },
+  "id-keyed|ARISTA_EOS|('name', 'id')": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "vlans",
+      "vlans"
+     ],
+     "update": {
+      "vlans": [
+       {
+        "id": 10,
+        "name": "NEW"
+       }
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "no vlans \"OLD\"",
+    "no vlans \"B\"",
+    "vlans \"NEW\"",
+    "  id 10",
+    "  name \"NEW\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "vlans[name=OLD]",
+      "vlans[name=B]"
+     ],
+     "update": {
+      "vlans": [
+       {
+        "id": 10,
+        "name": "NEW"
+       }
+      ]
+     }
+    }
+   }
+  },
+  "id-keyed|ARISTA_EOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "vlans",
+      "vlans"
+     ],
+     "update": {
+      "vlans": [
+       {
+        "id": 10,
+        "name": "NEW"
+       }
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "no vlans \"OLD\"",
+    "no vlans \"B\"",
+    "vlans \"NEW\"",
+    "  id 10",
+    "  name \"NEW\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "vlans[name=OLD]",
+      "vlans[name=B]"
+     ],
+     "update": {
+      "vlans": [
+       {
+        "id": 10,
+        "name": "NEW"
+       }
+      ]
+     }
+    }
+   }
+  },
+  "id-keyed|ARISTA_EOS|None": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "vlans",
+      "vlans"
+     ],
+     "update": {
+      "vlans": [
+       {
+        "id": 10,
+        "name": "NEW"
+       }
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "no vlans \"OLD\"",
+    "no vlans \"B\"",
+    "vlans \"NEW\"",
+    "  id 10",
+    "  name \"NEW\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "vlans[name=OLD]",
+      "vlans[name=B]"
+     ],
+     "update": {
+      "vlans": [
+       {
+        "id": 10,
+        "name": "NEW"
+       }
+      ]
+     }
+    }
+   }
+  },
+  "id-keyed|CISCO_IOS|('id',)": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "vlans"
+     ],
+     "update": {
+      "vlans": [
+       {
+        "name": "NEW"
+       }
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "no vlans 20",
+    "vlans 10",
+    "  name \"NEW\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "vlans[id=20]"
+     ],
+     "update": {
+      "vlans": [
+       {
+        "id": 10,
+        "name": "NEW"
+       }
+      ]
+     }
+    }
+   }
+  },
+  "id-keyed|CISCO_IOS|('name', 'id')": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "vlans",
+      "vlans"
+     ],
+     "update": {
+      "vlans": [
+       {
+        "id": 10,
+        "name": "NEW"
+       }
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "no vlans \"OLD\"",
+    "no vlans \"B\"",
+    "vlans \"NEW\"",
+    "  id 10",
+    "  name \"NEW\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "vlans[name=OLD]",
+      "vlans[name=B]"
+     ],
+     "update": {
+      "vlans": [
+       {
+        "id": 10,
+        "name": "NEW"
+       }
+      ]
+     }
+    }
+   }
+  },
+  "id-keyed|CISCO_IOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "vlans",
+      "vlans"
+     ],
+     "update": {
+      "vlans": [
+       {
+        "id": 10,
+        "name": "NEW"
+       }
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "no vlans \"OLD\"",
+    "no vlans \"B\"",
+    "vlans \"NEW\"",
+    "  id 10",
+    "  name \"NEW\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "vlans[name=OLD]",
+      "vlans[name=B]"
+     ],
+     "update": {
+      "vlans": [
+       {
+        "id": 10,
+        "name": "NEW"
+       }
+      ]
+     }
+    }
+   }
+  },
+  "id-keyed|CISCO_IOS|None": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "vlans",
+      "vlans"
+     ],
+     "update": {
+      "vlans": [
+       {
+        "id": 10,
+        "name": "NEW"
+       }
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "no vlans \"OLD\"",
+    "no vlans \"B\"",
+    "vlans \"NEW\"",
+    "  id 10",
+    "  name \"NEW\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "vlans[name=OLD]",
+      "vlans[name=B]"
+     ],
+     "update": {
+      "vlans": [
+       {
+        "id": 10,
+        "name": "NEW"
+       }
+      ]
+     }
+    }
+   }
+  },
+  "id-keyed|JUNIPER_JUNOS|('id',)": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "vlans": [
+       20,
+       {
+        "name": [
+         "OLD",
+         "NEW"
+        ]
+       }
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "vlans 20",
+    "vlans 10",
+    "  name \"OLD\"",
+    "  name \"NEW\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "vlans": [
+       20,
+       {
+        "id": 10,
+        "name": [
+         "OLD",
+         "NEW"
+        ]
+       }
+      ]
+     }
+    }
+   }
+  },
+  "id-keyed|JUNIPER_JUNOS|('name', 'id')": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "vlans": [
+       "OLD",
+       "B",
+       {
+        "id": 10,
+        "name": "NEW"
+       }
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "vlans \"OLD\"",
+    "vlans \"B\"",
+    "vlans \"NEW\"",
+    "  id 10",
+    "  name \"NEW\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "vlans": [
+       "OLD",
+       "B",
+       {
+        "id": 10,
+        "name": "NEW"
+       }
+      ]
+     }
+    }
+   }
+  },
+  "id-keyed|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "vlans": [
+       "OLD",
+       "B",
+       {
+        "id": 10,
+        "name": "NEW"
+       }
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "vlans \"OLD\"",
+    "vlans \"B\"",
+    "vlans \"NEW\"",
+    "  id 10",
+    "  name \"NEW\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "vlans": [
+       "OLD",
+       "B",
+       {
+        "id": 10,
+        "name": "NEW"
+       }
+      ]
+     }
+    }
+   }
+  },
+  "id-keyed|JUNIPER_JUNOS|None": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "vlans": [
+       "OLD",
+       "B",
+       {
+        "id": 10,
+        "name": "NEW"
+       }
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "vlans \"OLD\"",
+    "vlans \"B\"",
+    "vlans \"NEW\"",
+    "  id 10",
+    "  name \"NEW\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "vlans": [
+       "OLD",
+       "B",
+       {
+        "id": 10,
+        "name": "NEW"
+       }
+      ]
+     }
+    }
+   }
+  },
+  "keyed-list|ARISTA_EOS|('name', 'id')": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "interfaces"
+     ],
+     "update": {
+      "interfaces": [
+       {
+        "mtu": 9000
+       }
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "no interfaces \"Et2\"",
+    "interfaces \"Et1\"",
+    "  mtu 9000"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "interfaces[name=Et2]"
+     ],
+     "update": {
+      "interfaces": [
+       {
+        "mtu": 9000,
+        "name": "Et1"
+       }
+      ]
+     }
+    }
+   }
+  },
+  "keyed-list|ARISTA_EOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "interfaces"
+     ],
+     "update": {
+      "interfaces": [
+       {
+        "mtu": 9000
+       }
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "no interfaces \"Et2\"",
+    "interfaces \"Et1\"",
+    "  mtu 9000"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "interfaces[name=Et2]"
+     ],
+     "update": {
+      "interfaces": [
+       {
+        "mtu": 9000,
+        "name": "Et1"
+       }
+      ]
+     }
+    }
+   }
+  },
+  "keyed-list|ARISTA_EOS|None": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "interfaces"
+     ],
+     "update": {
+      "interfaces": [
+       {
+        "mtu": 9000
+       }
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "no interfaces \"Et2\"",
+    "interfaces \"Et1\"",
+    "  mtu 9000"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "interfaces[name=Et2]"
+     ],
+     "update": {
+      "interfaces": [
+       {
+        "mtu": 9000,
+        "name": "Et1"
+       }
+      ]
+     }
+    }
+   }
+  },
+  "keyed-list|CISCO_IOS|('name', 'id')": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "interfaces",
+      "interfaces[name=Et1]/mtu"
+     ],
+     "update": {
+      "interfaces": [
+       {
+        "mtu": 9000
+       }
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "no interfaces \"Et2\"",
+    "interfaces \"Et1\"",
+    "  no mtu 1500",
+    "  mtu 9000"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "interfaces[name=Et2]",
+      "interfaces[name=Et1]/mtu"
+     ],
+     "update": {
+      "interfaces": [
+       {
+        "mtu": 9000,
+        "name": "Et1"
+       }
+      ]
+     }
+    }
+   }
+  },
+  "keyed-list|CISCO_IOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "interfaces",
+      "interfaces[name=Et1]/mtu"
+     ],
+     "update": {
+      "interfaces": [
+       {
+        "mtu": 9000
+       }
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "no interfaces \"Et2\"",
+    "interfaces \"Et1\"",
+    "  no mtu 1500",
+    "  mtu 9000"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "interfaces[name=Et2]",
+      "interfaces[name=Et1]/mtu"
+     ],
+     "update": {
+      "interfaces": [
+       {
+        "mtu": 9000,
+        "name": "Et1"
+       }
+      ]
+     }
+    }
+   }
+  },
+  "keyed-list|CISCO_IOS|None": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "interfaces",
+      "interfaces[name=Et1]/mtu"
+     ],
+     "update": {
+      "interfaces": [
+       {
+        "mtu": 9000
+       }
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "no interfaces \"Et2\"",
+    "interfaces \"Et1\"",
+    "  no mtu 1500",
+    "  mtu 9000"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "interfaces[name=Et2]",
+      "interfaces[name=Et1]/mtu"
+     ],
+     "update": {
+      "interfaces": [
+       {
+        "mtu": 9000,
+        "name": "Et1"
+       }
+      ]
+     }
+    }
+   }
+  },
+  "keyed-list|JUNIPER_JUNOS|('name', 'id')": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "interfaces": [
+       "Et2",
+       {
+        "mtu": [
+         1500,
+         9000
+        ]
+       }
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "interfaces \"Et2\"",
+    "interfaces \"Et1\"",
+    "  mtu 1500",
+    "  mtu 9000"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "interfaces": [
+       "Et2",
+       {
+        "mtu": [
+         1500,
+         9000
+        ],
+        "name": "Et1"
+       }
+      ]
+     }
+    }
+   }
+  },
+  "keyed-list|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "interfaces": [
+       "Et2",
+       {
+        "mtu": [
+         1500,
+         9000
+        ]
+       }
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "interfaces \"Et2\"",
+    "interfaces \"Et1\"",
+    "  mtu 1500",
+    "  mtu 9000"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "interfaces": [
+       "Et2",
+       {
+        "mtu": [
+         1500,
+         9000
+        ],
+        "name": "Et1"
+       }
+      ]
+     }
+    }
+   }
+  },
+  "keyed-list|JUNIPER_JUNOS|None": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "interfaces": [
+       "Et2",
+       {
+        "mtu": [
+         1500,
+         9000
+        ]
+       }
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "interfaces \"Et2\"",
+    "interfaces \"Et1\"",
+    "  mtu 1500",
+    "  mtu 9000"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "interfaces": [
+       "Et2",
+       {
+        "mtu": [
+         1500,
+         9000
+        ],
+        "name": "Et1"
+       }
+      ]
+     }
+    }
+   }
+  },
+  "nested|ARISTA_EOS|('id',)": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "system/ntp",
+      "system/dns/server"
+     ],
+     "update": {
+      "system": {
+       "dns": {
+        "server": "1.1.1.1"
+       }
+      }
+     }
+    }
+   },
+   "remediation": [
+    "system",
+    "  no ntp",
+    "  dns",
+    "    no server \"8.8.8.8\"",
+    "    server \"1.1.1.1\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "system/ntp",
+      "system/dns/server"
+     ],
+     "update": {
+      "system": {
+       "dns": {
+        "server": "1.1.1.1"
+       }
+      }
+     }
+    }
+   }
+  },
+  "nested|ARISTA_EOS|('name', 'id')": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "system/ntp",
+      "system/dns/server"
+     ],
+     "update": {
+      "system": {
+       "dns": {
+        "server": "1.1.1.1"
+       }
+      }
+     }
+    }
+   },
+   "remediation": [
+    "system",
+    "  no ntp",
+    "  dns",
+    "    no server \"8.8.8.8\"",
+    "    server \"1.1.1.1\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "system/ntp",
+      "system/dns/server"
+     ],
+     "update": {
+      "system": {
+       "dns": {
+        "server": "1.1.1.1"
+       }
+      }
+     }
+    }
+   }
+  },
+  "nested|ARISTA_EOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "system/ntp",
+      "system/dns/server"
+     ],
+     "update": {
+      "system": {
+       "dns": {
+        "server": "1.1.1.1"
+       }
+      }
+     }
+    }
+   },
+   "remediation": [
+    "system",
+    "  no ntp",
+    "  dns",
+    "    no server \"8.8.8.8\"",
+    "    server \"1.1.1.1\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "system/ntp",
+      "system/dns/server"
+     ],
+     "update": {
+      "system": {
+       "dns": {
+        "server": "1.1.1.1"
+       }
+      }
+     }
+    }
+   }
+  },
+  "nested|ARISTA_EOS|None": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "system/ntp",
+      "system/dns/server"
+     ],
+     "update": {
+      "system": {
+       "dns": {
+        "server": "1.1.1.1"
+       }
+      }
+     }
+    }
+   },
+   "remediation": [
+    "system",
+    "  no ntp",
+    "  dns",
+    "    no server \"8.8.8.8\"",
+    "    server \"1.1.1.1\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "system/ntp",
+      "system/dns/server"
+     ],
+     "update": {
+      "system": {
+       "dns": {
+        "server": "1.1.1.1"
+       }
+      }
+     }
+    }
+   }
+  },
+  "nested|CISCO_IOS|('id',)": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "system/ntp",
+      "system/dns/server"
+     ],
+     "update": {
+      "system": {
+       "dns": {
+        "server": "1.1.1.1"
+       }
+      }
+     }
+    }
+   },
+   "remediation": [
+    "system",
+    "  no ntp",
+    "  dns",
+    "    no server \"8.8.8.8\"",
+    "    server \"1.1.1.1\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "system/ntp",
+      "system/dns/server"
+     ],
+     "update": {
+      "system": {
+       "dns": {
+        "server": "1.1.1.1"
+       }
+      }
+     }
+    }
+   }
+  },
+  "nested|CISCO_IOS|('name', 'id')": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "system/ntp",
+      "system/dns/server"
+     ],
+     "update": {
+      "system": {
+       "dns": {
+        "server": "1.1.1.1"
+       }
+      }
+     }
+    }
+   },
+   "remediation": [
+    "system",
+    "  no ntp",
+    "  dns",
+    "    no server \"8.8.8.8\"",
+    "    server \"1.1.1.1\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "system/ntp",
+      "system/dns/server"
+     ],
+     "update": {
+      "system": {
+       "dns": {
+        "server": "1.1.1.1"
+       }
+      }
+     }
+    }
+   }
+  },
+  "nested|CISCO_IOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "system/ntp",
+      "system/dns/server"
+     ],
+     "update": {
+      "system": {
+       "dns": {
+        "server": "1.1.1.1"
+       }
+      }
+     }
+    }
+   },
+   "remediation": [
+    "system",
+    "  no ntp",
+    "  dns",
+    "    no server \"8.8.8.8\"",
+    "    server \"1.1.1.1\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "system/ntp",
+      "system/dns/server"
+     ],
+     "update": {
+      "system": {
+       "dns": {
+        "server": "1.1.1.1"
+       }
+      }
+     }
+    }
+   }
+  },
+  "nested|CISCO_IOS|None": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "system/ntp",
+      "system/dns/server"
+     ],
+     "update": {
+      "system": {
+       "dns": {
+        "server": "1.1.1.1"
+       }
+      }
+     }
+    }
+   },
+   "remediation": [
+    "system",
+    "  no ntp",
+    "  dns",
+    "    no server \"8.8.8.8\"",
+    "    server \"1.1.1.1\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "system/ntp",
+      "system/dns/server"
+     ],
+     "update": {
+      "system": {
+       "dns": {
+        "server": "1.1.1.1"
+       }
+      }
+     }
+    }
+   }
+  },
+  "nested|JUNIPER_JUNOS|('id',)": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "system": {
+       "dns": {
+        "server": [
+         "8.8.8.8",
+         "1.1.1.1"
+        ]
+       },
+       "ntp": {}
+      }
+     }
+    }
+   },
+   "remediation": [
+    "system",
+    "  ntp",
+    "  dns",
+    "    server \"8.8.8.8\"",
+    "    server \"1.1.1.1\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "system": {
+       "dns": {
+        "server": [
+         "8.8.8.8",
+         "1.1.1.1"
+        ]
+       },
+       "ntp": {}
+      }
+     }
+    }
+   }
+  },
+  "nested|JUNIPER_JUNOS|('name', 'id')": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "system": {
+       "dns": {
+        "server": [
+         "8.8.8.8",
+         "1.1.1.1"
+        ]
+       },
+       "ntp": {}
+      }
+     }
+    }
+   },
+   "remediation": [
+    "system",
+    "  ntp",
+    "  dns",
+    "    server \"8.8.8.8\"",
+    "    server \"1.1.1.1\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "system": {
+       "dns": {
+        "server": [
+         "8.8.8.8",
+         "1.1.1.1"
+        ]
+       },
+       "ntp": {}
+      }
+     }
+    }
+   }
+  },
+  "nested|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "system": {
+       "dns": {
+        "server": [
+         "8.8.8.8",
+         "1.1.1.1"
+        ]
+       },
+       "ntp": {}
+      }
+     }
+    }
+   },
+   "remediation": [
+    "system",
+    "  ntp",
+    "  dns",
+    "    server \"8.8.8.8\"",
+    "    server \"1.1.1.1\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "system": {
+       "dns": {
+        "server": [
+         "8.8.8.8",
+         "1.1.1.1"
+        ]
+       },
+       "ntp": {}
+      }
+     }
+    }
+   }
+  },
+  "nested|JUNIPER_JUNOS|None": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "system": {
+       "dns": {
+        "server": [
+         "8.8.8.8",
+         "1.1.1.1"
+        ]
+       },
+       "ntp": {}
+      }
+     }
+    }
+   },
+   "remediation": [
+    "system",
+    "  ntp",
+    "  dns",
+    "    server \"8.8.8.8\"",
+    "    server \"1.1.1.1\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "system": {
+       "dns": {
+        "server": [
+         "8.8.8.8",
+         "1.1.1.1"
+        ]
+       },
+       "ntp": {}
+      }
+     }
+    }
+   }
+  },
+  "scalar-list|ARISTA_EOS|('id',)": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "tags",
+      "tags"
+     ],
+     "update": {}
+    }
+   },
+   "remediation": [
+    "no tags \"b\"",
+    "no tags 3"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "tags",
+      "tags"
+     ],
+     "update": {}
+    }
+   }
+  },
+  "scalar-list|ARISTA_EOS|('name', 'id')": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "tags",
+      "tags"
+     ],
+     "update": {}
+    }
+   },
+   "remediation": [
+    "no tags \"b\"",
+    "no tags 3"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "tags",
+      "tags"
+     ],
+     "update": {}
+    }
+   }
+  },
+  "scalar-list|ARISTA_EOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "tags",
+      "tags"
+     ],
+     "update": {}
+    }
+   },
+   "remediation": [
+    "no tags \"b\"",
+    "no tags 3"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "tags",
+      "tags"
+     ],
+     "update": {}
+    }
+   }
+  },
+  "scalar-list|ARISTA_EOS|None": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "tags",
+      "tags"
+     ],
+     "update": {}
+    }
+   },
+   "remediation": [
+    "no tags \"b\"",
+    "no tags 3"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "tags",
+      "tags"
+     ],
+     "update": {}
+    }
+   }
+  },
+  "scalar-list|CISCO_IOS|('id',)": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "tags",
+      "tags"
+     ],
+     "update": {}
+    }
+   },
+   "remediation": [
+    "no tags \"b\"",
+    "no tags 3"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "tags",
+      "tags"
+     ],
+     "update": {}
+    }
+   }
+  },
+  "scalar-list|CISCO_IOS|('name', 'id')": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "tags",
+      "tags"
+     ],
+     "update": {}
+    }
+   },
+   "remediation": [
+    "no tags \"b\"",
+    "no tags 3"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "tags",
+      "tags"
+     ],
+     "update": {}
+    }
+   }
+  },
+  "scalar-list|CISCO_IOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "tags",
+      "tags"
+     ],
+     "update": {}
+    }
+   },
+   "remediation": [
+    "no tags \"b\"",
+    "no tags 3"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "tags",
+      "tags"
+     ],
+     "update": {}
+    }
+   }
+  },
+  "scalar-list|CISCO_IOS|None": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "tags",
+      "tags"
+     ],
+     "update": {}
+    }
+   },
+   "remediation": [
+    "no tags \"b\"",
+    "no tags 3"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "tags",
+      "tags"
+     ],
+     "update": {}
+    }
+   }
+  },
+  "scalar-list|JUNIPER_JUNOS|('id',)": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "tags": [
+       "b",
+       3
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "tags \"b\"",
+    "tags 3"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "tags": [
+       "b",
+       3
+      ]
+     }
+    }
+   }
+  },
+  "scalar-list|JUNIPER_JUNOS|('name', 'id')": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "tags": [
+       "b",
+       3
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "tags \"b\"",
+    "tags 3"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "tags": [
+       "b",
+       3
+      ]
+     }
+    }
+   }
+  },
+  "scalar-list|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "tags": [
+       "b",
+       3
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "tags \"b\"",
+    "tags 3"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "tags": [
+       "b",
+       3
+      ]
+     }
+    }
+   }
+  },
+  "scalar-list|JUNIPER_JUNOS|None": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "tags": [
+       "b",
+       3
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "tags \"b\"",
+    "tags 3"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "tags": [
+       "b",
+       3
+      ]
+     }
+    }
+   }
+  },
+  "scalars|ARISTA_EOS|('id',)": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "mtu",
+      "enabled",
+      "ratio",
+      "nothing"
+     ],
+     "update": {
+      "enabled": false,
+      "hostname": "sw2",
+      "mtu": 1500,
+      "ratio": 2.5
+     }
+    }
+   },
+   "remediation": [
+    "no mtu 9000",
+    "no enabled true",
+    "no ratio 1.5",
+    "no nothing null",
+    "hostname \"sw2\"",
+    "mtu 1500",
+    "enabled false",
+    "ratio 2.5"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "mtu",
+      "enabled",
+      "ratio",
+      "nothing"
+     ],
+     "update": {
+      "enabled": false,
+      "hostname": "sw2",
+      "mtu": 1500,
+      "ratio": 2.5
+     }
+    }
+   }
+  },
+  "scalars|ARISTA_EOS|('name', 'id')": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "mtu",
+      "enabled",
+      "ratio",
+      "nothing"
+     ],
+     "update": {
+      "enabled": false,
+      "hostname": "sw2",
+      "mtu": 1500,
+      "ratio": 2.5
+     }
+    }
+   },
+   "remediation": [
+    "no mtu 9000",
+    "no enabled true",
+    "no ratio 1.5",
+    "no nothing null",
+    "hostname \"sw2\"",
+    "mtu 1500",
+    "enabled false",
+    "ratio 2.5"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "mtu",
+      "enabled",
+      "ratio",
+      "nothing"
+     ],
+     "update": {
+      "enabled": false,
+      "hostname": "sw2",
+      "mtu": 1500,
+      "ratio": 2.5
+     }
+    }
+   }
+  },
+  "scalars|ARISTA_EOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "mtu",
+      "enabled",
+      "ratio",
+      "nothing"
+     ],
+     "update": {
+      "enabled": false,
+      "hostname": "sw2",
+      "mtu": 1500,
+      "ratio": 2.5
+     }
+    }
+   },
+   "remediation": [
+    "no mtu 9000",
+    "no enabled true",
+    "no ratio 1.5",
+    "no nothing null",
+    "hostname \"sw2\"",
+    "mtu 1500",
+    "enabled false",
+    "ratio 2.5"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "mtu",
+      "enabled",
+      "ratio",
+      "nothing"
+     ],
+     "update": {
+      "enabled": false,
+      "hostname": "sw2",
+      "mtu": 1500,
+      "ratio": 2.5
+     }
+    }
+   }
+  },
+  "scalars|ARISTA_EOS|None": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "mtu",
+      "enabled",
+      "ratio",
+      "nothing"
+     ],
+     "update": {
+      "enabled": false,
+      "hostname": "sw2",
+      "mtu": 1500,
+      "ratio": 2.5
+     }
+    }
+   },
+   "remediation": [
+    "no mtu 9000",
+    "no enabled true",
+    "no ratio 1.5",
+    "no nothing null",
+    "hostname \"sw2\"",
+    "mtu 1500",
+    "enabled false",
+    "ratio 2.5"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "mtu",
+      "enabled",
+      "ratio",
+      "nothing"
+     ],
+     "update": {
+      "enabled": false,
+      "hostname": "sw2",
+      "mtu": 1500,
+      "ratio": 2.5
+     }
+    }
+   }
+  },
+  "scalars|CISCO_IOS|('id',)": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "hostname",
+      "mtu",
+      "enabled",
+      "ratio",
+      "nothing"
+     ],
+     "update": {
+      "enabled": false,
+      "hostname": "sw2",
+      "mtu": 1500,
+      "ratio": 2.5
+     }
+    }
+   },
+   "remediation": [
+    "no hostname \"sw1\"",
+    "no mtu 9000",
+    "no enabled true",
+    "no ratio 1.5",
+    "no nothing null",
+    "hostname \"sw2\"",
+    "mtu 1500",
+    "enabled false",
+    "ratio 2.5"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "hostname",
+      "mtu",
+      "enabled",
+      "ratio",
+      "nothing"
+     ],
+     "update": {
+      "enabled": false,
+      "hostname": "sw2",
+      "mtu": 1500,
+      "ratio": 2.5
+     }
+    }
+   }
+  },
+  "scalars|CISCO_IOS|('name', 'id')": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "hostname",
+      "mtu",
+      "enabled",
+      "ratio",
+      "nothing"
+     ],
+     "update": {
+      "enabled": false,
+      "hostname": "sw2",
+      "mtu": 1500,
+      "ratio": 2.5
+     }
+    }
+   },
+   "remediation": [
+    "no hostname \"sw1\"",
+    "no mtu 9000",
+    "no enabled true",
+    "no ratio 1.5",
+    "no nothing null",
+    "hostname \"sw2\"",
+    "mtu 1500",
+    "enabled false",
+    "ratio 2.5"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "hostname",
+      "mtu",
+      "enabled",
+      "ratio",
+      "nothing"
+     ],
+     "update": {
+      "enabled": false,
+      "hostname": "sw2",
+      "mtu": 1500,
+      "ratio": 2.5
+     }
+    }
+   }
+  },
+  "scalars|CISCO_IOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "hostname",
+      "mtu",
+      "enabled",
+      "ratio",
+      "nothing"
+     ],
+     "update": {
+      "enabled": false,
+      "hostname": "sw2",
+      "mtu": 1500,
+      "ratio": 2.5
+     }
+    }
+   },
+   "remediation": [
+    "no hostname \"sw1\"",
+    "no mtu 9000",
+    "no enabled true",
+    "no ratio 1.5",
+    "no nothing null",
+    "hostname \"sw2\"",
+    "mtu 1500",
+    "enabled false",
+    "ratio 2.5"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "hostname",
+      "mtu",
+      "enabled",
+      "ratio",
+      "nothing"
+     ],
+     "update": {
+      "enabled": false,
+      "hostname": "sw2",
+      "mtu": 1500,
+      "ratio": 2.5
+     }
+    }
+   }
+  },
+  "scalars|CISCO_IOS|None": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "hostname",
+      "mtu",
+      "enabled",
+      "ratio",
+      "nothing"
+     ],
+     "update": {
+      "enabled": false,
+      "hostname": "sw2",
+      "mtu": 1500,
+      "ratio": 2.5
+     }
+    }
+   },
+   "remediation": [
+    "no hostname \"sw1\"",
+    "no mtu 9000",
+    "no enabled true",
+    "no ratio 1.5",
+    "no nothing null",
+    "hostname \"sw2\"",
+    "mtu 1500",
+    "enabled false",
+    "ratio 2.5"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "hostname",
+      "mtu",
+      "enabled",
+      "ratio",
+      "nothing"
+     ],
+     "update": {
+      "enabled": false,
+      "hostname": "sw2",
+      "mtu": 1500,
+      "ratio": 2.5
+     }
+    }
+   }
+  },
+  "scalars|JUNIPER_JUNOS|('id',)": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "enabled": [
+       true,
+       false
+      ],
+      "hostname": [
+       "sw1",
+       "sw2"
+      ],
+      "mtu": [
+       9000,
+       1500
+      ],
+      "nothing": null,
+      "ratio": [
+       1.5,
+       2.5
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "hostname \"sw1\"",
+    "mtu 9000",
+    "enabled true",
+    "ratio 1.5",
+    "nothing null",
+    "hostname \"sw2\"",
+    "mtu 1500",
+    "enabled false",
+    "ratio 2.5"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "enabled": [
+       true,
+       false
+      ],
+      "hostname": [
+       "sw1",
+       "sw2"
+      ],
+      "mtu": [
+       9000,
+       1500
+      ],
+      "nothing": null,
+      "ratio": [
+       1.5,
+       2.5
+      ]
+     }
+    }
+   }
+  },
+  "scalars|JUNIPER_JUNOS|('name', 'id')": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "enabled": [
+       true,
+       false
+      ],
+      "hostname": [
+       "sw1",
+       "sw2"
+      ],
+      "mtu": [
+       9000,
+       1500
+      ],
+      "nothing": null,
+      "ratio": [
+       1.5,
+       2.5
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "hostname \"sw1\"",
+    "mtu 9000",
+    "enabled true",
+    "ratio 1.5",
+    "nothing null",
+    "hostname \"sw2\"",
+    "mtu 1500",
+    "enabled false",
+    "ratio 2.5"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "enabled": [
+       true,
+       false
+      ],
+      "hostname": [
+       "sw1",
+       "sw2"
+      ],
+      "mtu": [
+       9000,
+       1500
+      ],
+      "nothing": null,
+      "ratio": [
+       1.5,
+       2.5
+      ]
+     }
+    }
+   }
+  },
+  "scalars|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "enabled": [
+       true,
+       false
+      ],
+      "hostname": [
+       "sw1",
+       "sw2"
+      ],
+      "mtu": [
+       9000,
+       1500
+      ],
+      "nothing": null,
+      "ratio": [
+       1.5,
+       2.5
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "hostname \"sw1\"",
+    "mtu 9000",
+    "enabled true",
+    "ratio 1.5",
+    "nothing null",
+    "hostname \"sw2\"",
+    "mtu 1500",
+    "enabled false",
+    "ratio 2.5"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "enabled": [
+       true,
+       false
+      ],
+      "hostname": [
+       "sw1",
+       "sw2"
+      ],
+      "mtu": [
+       9000,
+       1500
+      ],
+      "nothing": null,
+      "ratio": [
+       1.5,
+       2.5
+      ]
+     }
+    }
+   }
+  },
+  "scalars|JUNIPER_JUNOS|None": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "enabled": [
+       true,
+       false
+      ],
+      "hostname": [
+       "sw1",
+       "sw2"
+      ],
+      "mtu": [
+       9000,
+       1500
+      ],
+      "nothing": null,
+      "ratio": [
+       1.5,
+       2.5
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "hostname \"sw1\"",
+    "mtu 9000",
+    "enabled true",
+    "ratio 1.5",
+    "nothing null",
+    "hostname \"sw2\"",
+    "mtu 1500",
+    "enabled false",
+    "ratio 2.5"
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "enabled": [
+       true,
+       false
+      ],
+      "hostname": [
+       "sw1",
+       "sw2"
+      ],
+      "mtu": [
+       9000,
+       1500
+      ],
+      "nothing": null,
+      "ratio": [
+       1.5,
+       2.5
+      ]
+     }
+    }
+   }
+  },
+  "special-chars|ARISTA_EOS|('id',)": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "x<y"
+     }
+    }
+   },
+   "remediation": [
+    "no desc \"a<b>c&d\\\"e'f\"",
+    "desc \"x<y\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "x<y"
+     }
+    }
+   }
+  },
+  "special-chars|ARISTA_EOS|('name', 'id')": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "x<y"
+     }
+    }
+   },
+   "remediation": [
+    "no desc \"a<b>c&d\\\"e'f\"",
+    "desc \"x<y\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "x<y"
+     }
+    }
+   }
+  },
+  "special-chars|ARISTA_EOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "x<y"
+     }
+    }
+   },
+   "remediation": [
+    "no desc \"a<b>c&d\\\"e'f\"",
+    "desc \"x<y\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "x<y"
+     }
+    }
+   }
+  },
+  "special-chars|ARISTA_EOS|None": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "x<y"
+     }
+    }
+   },
+   "remediation": [
+    "no desc \"a<b>c&d\\\"e'f\"",
+    "desc \"x<y\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "x<y"
+     }
+    }
+   }
+  },
+  "special-chars|CISCO_IOS|('id',)": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "x<y"
+     }
+    }
+   },
+   "remediation": [
+    "no desc \"a<b>c&d\\\"e'f\"",
+    "desc \"x<y\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "x<y"
+     }
+    }
+   }
+  },
+  "special-chars|CISCO_IOS|('name', 'id')": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "x<y"
+     }
+    }
+   },
+   "remediation": [
+    "no desc \"a<b>c&d\\\"e'f\"",
+    "desc \"x<y\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "x<y"
+     }
+    }
+   }
+  },
+  "special-chars|CISCO_IOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "x<y"
+     }
+    }
+   },
+   "remediation": [
+    "no desc \"a<b>c&d\\\"e'f\"",
+    "desc \"x<y\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "x<y"
+     }
+    }
+   }
+  },
+  "special-chars|CISCO_IOS|None": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "x<y"
+     }
+    }
+   },
+   "remediation": [
+    "no desc \"a<b>c&d\\\"e'f\"",
+    "desc \"x<y\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "x<y"
+     }
+    }
+   }
+  },
+  "special-chars|JUNIPER_JUNOS|('id',)": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "desc": [
+       "a<b>c&d\"e'f",
+       "x<y"
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "desc \"a<b>c&d\\\"e'f\"",
+    "desc \"x<y\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "desc": [
+       "a<b>c&d\"e'f",
+       "x<y"
+      ]
+     }
+    }
+   }
+  },
+  "special-chars|JUNIPER_JUNOS|('name', 'id')": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "desc": [
+       "a<b>c&d\"e'f",
+       "x<y"
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "desc \"a<b>c&d\\\"e'f\"",
+    "desc \"x<y\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "desc": [
+       "a<b>c&d\"e'f",
+       "x<y"
+      ]
+     }
+    }
+   }
+  },
+  "special-chars|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "desc": [
+       "a<b>c&d\"e'f",
+       "x<y"
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "desc \"a<b>c&d\\\"e'f\"",
+    "desc \"x<y\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "desc": [
+       "a<b>c&d\"e'f",
+       "x<y"
+      ]
+     }
+    }
+   }
+  },
+  "special-chars|JUNIPER_JUNOS|None": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "desc": [
+       "a<b>c&d\"e'f",
+       "x<y"
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "desc \"a<b>c&d\\\"e'f\"",
+    "desc \"x<y\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "desc": [
+       "a<b>c&d\"e'f",
+       "x<y"
+      ]
+     }
+    }
+   }
+  },
+  "unicode|ARISTA_EOS|('id',)": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "naïve"
+     }
+    }
+   },
+   "remediation": [
+    "no desc \"caf\\u00e9 \\u2013 dash\"",
+    "desc \"na\\u00efve\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "naïve"
+     }
+    }
+   }
+  },
+  "unicode|ARISTA_EOS|('name', 'id')": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "naïve"
+     }
+    }
+   },
+   "remediation": [
+    "no desc \"caf\\u00e9 \\u2013 dash\"",
+    "desc \"na\\u00efve\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "naïve"
+     }
+    }
+   }
+  },
+  "unicode|ARISTA_EOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "naïve"
+     }
+    }
+   },
+   "remediation": [
+    "no desc \"caf\\u00e9 \\u2013 dash\"",
+    "desc \"na\\u00efve\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "naïve"
+     }
+    }
+   }
+  },
+  "unicode|ARISTA_EOS|None": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "naïve"
+     }
+    }
+   },
+   "remediation": [
+    "no desc \"caf\\u00e9 \\u2013 dash\"",
+    "desc \"na\\u00efve\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "naïve"
+     }
+    }
+   }
+  },
+  "unicode|CISCO_IOS|('id',)": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "naïve"
+     }
+    }
+   },
+   "remediation": [
+    "no desc \"caf\\u00e9 \\u2013 dash\"",
+    "desc \"na\\u00efve\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "naïve"
+     }
+    }
+   }
+  },
+  "unicode|CISCO_IOS|('name', 'id')": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "naïve"
+     }
+    }
+   },
+   "remediation": [
+    "no desc \"caf\\u00e9 \\u2013 dash\"",
+    "desc \"na\\u00efve\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "naïve"
+     }
+    }
+   }
+  },
+  "unicode|CISCO_IOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "naïve"
+     }
+    }
+   },
+   "remediation": [
+    "no desc \"caf\\u00e9 \\u2013 dash\"",
+    "desc \"na\\u00efve\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "naïve"
+     }
+    }
+   }
+  },
+  "unicode|CISCO_IOS|None": {
+   "no_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "naïve"
+     }
+    }
+   },
+   "remediation": [
+    "no desc \"caf\\u00e9 \\u2013 dash\"",
+    "desc \"na\\u00efve\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [
+      "desc"
+     ],
+     "update": {
+      "desc": "naïve"
+     }
+    }
+   }
+  },
+  "unicode|JUNIPER_JUNOS|('id',)": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "desc": [
+       "café – dash",
+       "naïve"
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "desc \"caf\\u00e9 \\u2013 dash\"",
+    "desc \"na\\u00efve\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "desc": [
+       "café – dash",
+       "naïve"
+      ]
+     }
+    }
+   }
+  },
+  "unicode|JUNIPER_JUNOS|('name', 'id')": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "desc": [
+       "café – dash",
+       "naïve"
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "desc \"caf\\u00e9 \\u2013 dash\"",
+    "desc \"na\\u00efve\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "desc": [
+       "café – dash",
+       "naïve"
+      ]
+     }
+    }
+   }
+  },
+  "unicode|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "desc": [
+       "café – dash",
+       "naïve"
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "desc \"caf\\u00e9 \\u2013 dash\"",
+    "desc \"na\\u00efve\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "desc": [
+       "café – dash",
+       "naïve"
+      ]
+     }
+    }
+   }
+  },
+  "unicode|JUNIPER_JUNOS|None": {
+   "no_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "desc": [
+       "café – dash",
+       "naïve"
+      ]
+     }
+    }
+   },
+   "remediation": [
+    "desc \"caf\\u00e9 \\u2013 dash\"",
+    "desc \"na\\u00efve\""
+   ],
+   "with_running": {
+    "ok": {
+     "delete": [],
+     "update": {
+      "desc": [
+       "café – dash",
+       "naïve"
+      ]
+     }
+    }
+   }
+  }
+ },
+ "json": {
+  "empty-obj|ARISTA_EOS|('id',)": {
+   "ok": {
+    "simple": [
+     "system"
+    ],
+    "to_json": {
+     "ok": "{\n  \"system\": {}\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"system\": {}}"
+    }
+   }
+  },
+  "empty-obj|ARISTA_EOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "system"
+    ],
+    "to_json": {
+     "ok": "{\n  \"system\": {}\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"system\": {}}"
+    }
+   }
+  },
+  "empty-obj|ARISTA_EOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "system"
+    ],
+    "to_json": {
+     "ok": "{\n  \"system\": {}\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"system\": {}}"
+    }
+   }
+  },
+  "empty-obj|ARISTA_EOS|None": {
+   "ok": {
+    "simple": [
+     "system"
+    ],
+    "to_json": {
+     "ok": "{\n  \"system\": {}\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"system\": {}}"
+    }
+   }
+  },
+  "empty-obj|CISCO_IOS|('id',)": {
+   "ok": {
+    "simple": [
+     "system"
+    ],
+    "to_json": {
+     "ok": "{\n  \"system\": {}\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"system\": {}}"
+    }
+   }
+  },
+  "empty-obj|CISCO_IOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "system"
+    ],
+    "to_json": {
+     "ok": "{\n  \"system\": {}\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"system\": {}}"
+    }
+   }
+  },
+  "empty-obj|CISCO_IOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "system"
+    ],
+    "to_json": {
+     "ok": "{\n  \"system\": {}\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"system\": {}}"
+    }
+   }
+  },
+  "empty-obj|CISCO_IOS|None": {
+   "ok": {
+    "simple": [
+     "system"
+    ],
+    "to_json": {
+     "ok": "{\n  \"system\": {}\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"system\": {}}"
+    }
+   }
+  },
+  "empty-obj|JUNIPER_JUNOS|('id',)": {
+   "ok": {
+    "simple": [
+     "system"
+    ],
+    "to_json": {
+     "ok": "{\n  \"system\": {}\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"system\": {}}"
+    }
+   }
+  },
+  "empty-obj|JUNIPER_JUNOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "system"
+    ],
+    "to_json": {
+     "ok": "{\n  \"system\": {}\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"system\": {}}"
+    }
+   }
+  },
+  "empty-obj|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "system"
+    ],
+    "to_json": {
+     "ok": "{\n  \"system\": {}\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"system\": {}}"
+    }
+   }
+  },
+  "empty-obj|JUNIPER_JUNOS|None": {
+   "ok": {
+    "simple": [
+     "system"
+    ],
+    "to_json": {
+     "ok": "{\n  \"system\": {}\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"system\": {}}"
+    }
+   }
+  },
+  "id-keyed|ARISTA_EOS|('id',)": {
+   "ok": {
+    "simple": [
+     "vlans 10",
+     "  id 10",
+     "  name \"OLD\"",
+     "vlans 20",
+     "  id 20",
+     "  name \"B\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"vlans\": [\n    {\n      \"id\": 10,\n      \"name\": \"OLD\"\n    },\n    {\n      \"id\": 20,\n      \"name\": \"B\"\n    }\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"vlans\": [{\"id\": 10, \"name\": \"OLD\"}, {\"id\": 20, \"name\": \"B\"}]}"
+    }
+   }
+  },
+  "id-keyed|ARISTA_EOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "vlans \"OLD\"",
+     "  id 10",
+     "  name \"OLD\"",
+     "vlans \"B\"",
+     "  id 20",
+     "  name \"B\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"vlans\": [\n    {\n      \"id\": 10,\n      \"name\": \"OLD\"\n    },\n    {\n      \"id\": 20,\n      \"name\": \"B\"\n    }\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"vlans\": [{\"id\": 10, \"name\": \"OLD\"}, {\"id\": 20, \"name\": \"B\"}]}"
+    }
+   }
+  },
+  "id-keyed|ARISTA_EOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "vlans \"OLD\"",
+     "  id 10",
+     "  name \"OLD\"",
+     "vlans \"B\"",
+     "  id 20",
+     "  name \"B\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"vlans\": [\n    {\n      \"id\": 10,\n      \"name\": \"OLD\"\n    },\n    {\n      \"id\": 20,\n      \"name\": \"B\"\n    }\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"vlans\": [{\"id\": 10, \"name\": \"OLD\"}, {\"id\": 20, \"name\": \"B\"}]}"
+    }
+   }
+  },
+  "id-keyed|ARISTA_EOS|None": {
+   "ok": {
+    "simple": [
+     "vlans \"OLD\"",
+     "  id 10",
+     "  name \"OLD\"",
+     "vlans \"B\"",
+     "  id 20",
+     "  name \"B\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"vlans\": [\n    {\n      \"id\": 10,\n      \"name\": \"OLD\"\n    },\n    {\n      \"id\": 20,\n      \"name\": \"B\"\n    }\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"vlans\": [{\"id\": 10, \"name\": \"OLD\"}, {\"id\": 20, \"name\": \"B\"}]}"
+    }
+   }
+  },
+  "id-keyed|CISCO_IOS|('id',)": {
+   "ok": {
+    "simple": [
+     "vlans 10",
+     "  id 10",
+     "  name \"OLD\"",
+     "vlans 20",
+     "  id 20",
+     "  name \"B\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"vlans\": [\n    {\n      \"id\": 10,\n      \"name\": \"OLD\"\n    },\n    {\n      \"id\": 20,\n      \"name\": \"B\"\n    }\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"vlans\": [{\"id\": 10, \"name\": \"OLD\"}, {\"id\": 20, \"name\": \"B\"}]}"
+    }
+   }
+  },
+  "id-keyed|CISCO_IOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "vlans \"OLD\"",
+     "  id 10",
+     "  name \"OLD\"",
+     "vlans \"B\"",
+     "  id 20",
+     "  name \"B\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"vlans\": [\n    {\n      \"id\": 10,\n      \"name\": \"OLD\"\n    },\n    {\n      \"id\": 20,\n      \"name\": \"B\"\n    }\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"vlans\": [{\"id\": 10, \"name\": \"OLD\"}, {\"id\": 20, \"name\": \"B\"}]}"
+    }
+   }
+  },
+  "id-keyed|CISCO_IOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "vlans \"OLD\"",
+     "  id 10",
+     "  name \"OLD\"",
+     "vlans \"B\"",
+     "  id 20",
+     "  name \"B\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"vlans\": [\n    {\n      \"id\": 10,\n      \"name\": \"OLD\"\n    },\n    {\n      \"id\": 20,\n      \"name\": \"B\"\n    }\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"vlans\": [{\"id\": 10, \"name\": \"OLD\"}, {\"id\": 20, \"name\": \"B\"}]}"
+    }
+   }
+  },
+  "id-keyed|CISCO_IOS|None": {
+   "ok": {
+    "simple": [
+     "vlans \"OLD\"",
+     "  id 10",
+     "  name \"OLD\"",
+     "vlans \"B\"",
+     "  id 20",
+     "  name \"B\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"vlans\": [\n    {\n      \"id\": 10,\n      \"name\": \"OLD\"\n    },\n    {\n      \"id\": 20,\n      \"name\": \"B\"\n    }\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"vlans\": [{\"id\": 10, \"name\": \"OLD\"}, {\"id\": 20, \"name\": \"B\"}]}"
+    }
+   }
+  },
+  "id-keyed|JUNIPER_JUNOS|('id',)": {
+   "ok": {
+    "simple": [
+     "vlans 10",
+     "  id 10",
+     "  name \"OLD\"",
+     "vlans 20",
+     "  id 20",
+     "  name \"B\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"vlans\": [\n    {\n      \"id\": 10,\n      \"name\": \"OLD\"\n    },\n    {\n      \"id\": 20,\n      \"name\": \"B\"\n    }\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"vlans\": [{\"id\": 10, \"name\": \"OLD\"}, {\"id\": 20, \"name\": \"B\"}]}"
+    }
+   }
+  },
+  "id-keyed|JUNIPER_JUNOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "vlans \"OLD\"",
+     "  id 10",
+     "  name \"OLD\"",
+     "vlans \"B\"",
+     "  id 20",
+     "  name \"B\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"vlans\": [\n    {\n      \"id\": 10,\n      \"name\": \"OLD\"\n    },\n    {\n      \"id\": 20,\n      \"name\": \"B\"\n    }\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"vlans\": [{\"id\": 10, \"name\": \"OLD\"}, {\"id\": 20, \"name\": \"B\"}]}"
+    }
+   }
+  },
+  "id-keyed|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "vlans \"OLD\"",
+     "  id 10",
+     "  name \"OLD\"",
+     "vlans \"B\"",
+     "  id 20",
+     "  name \"B\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"vlans\": [\n    {\n      \"id\": 10,\n      \"name\": \"OLD\"\n    },\n    {\n      \"id\": 20,\n      \"name\": \"B\"\n    }\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"vlans\": [{\"id\": 10, \"name\": \"OLD\"}, {\"id\": 20, \"name\": \"B\"}]}"
+    }
+   }
+  },
+  "id-keyed|JUNIPER_JUNOS|None": {
+   "ok": {
+    "simple": [
+     "vlans \"OLD\"",
+     "  id 10",
+     "  name \"OLD\"",
+     "vlans \"B\"",
+     "  id 20",
+     "  name \"B\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"vlans\": [\n    {\n      \"id\": 10,\n      \"name\": \"OLD\"\n    },\n    {\n      \"id\": 20,\n      \"name\": \"B\"\n    }\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"vlans\": [{\"id\": 10, \"name\": \"OLD\"}, {\"id\": 20, \"name\": \"B\"}]}"
+    }
+   }
+  },
+  "keyed-list|ARISTA_EOS|('id',)": {
+   "err": "InvalidConfigError: List entries under 'interfaces' need one of ('id',) to identify them; pass list_keys= to name the identifying member"
+  },
+  "keyed-list|ARISTA_EOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "interfaces \"Et1\"",
+     "  name \"Et1\"",
+     "  mtu 1500",
+     "interfaces \"Et2\"",
+     "  name \"Et2\"",
+     "  mtu 9000"
+    ],
+    "to_json": {
+     "ok": "{\n  \"interfaces\": [\n    {\n      \"name\": \"Et1\",\n      \"mtu\": 1500\n    },\n    {\n      \"name\": \"Et2\",\n      \"mtu\": 9000\n    }\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"interfaces\": [{\"name\": \"Et1\", \"mtu\": 1500}, {\"name\": \"Et2\", \"mtu\": 9000}]}"
+    }
+   }
+  },
+  "keyed-list|ARISTA_EOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "interfaces \"Et1\"",
+     "  name \"Et1\"",
+     "  mtu 1500",
+     "interfaces \"Et2\"",
+     "  name \"Et2\"",
+     "  mtu 9000"
+    ],
+    "to_json": {
+     "ok": "{\n  \"interfaces\": [\n    {\n      \"name\": \"Et1\",\n      \"mtu\": 1500\n    },\n    {\n      \"name\": \"Et2\",\n      \"mtu\": 9000\n    }\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"interfaces\": [{\"name\": \"Et1\", \"mtu\": 1500}, {\"name\": \"Et2\", \"mtu\": 9000}]}"
+    }
+   }
+  },
+  "keyed-list|ARISTA_EOS|None": {
+   "ok": {
+    "simple": [
+     "interfaces \"Et1\"",
+     "  name \"Et1\"",
+     "  mtu 1500",
+     "interfaces \"Et2\"",
+     "  name \"Et2\"",
+     "  mtu 9000"
+    ],
+    "to_json": {
+     "ok": "{\n  \"interfaces\": [\n    {\n      \"name\": \"Et1\",\n      \"mtu\": 1500\n    },\n    {\n      \"name\": \"Et2\",\n      \"mtu\": 9000\n    }\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"interfaces\": [{\"name\": \"Et1\", \"mtu\": 1500}, {\"name\": \"Et2\", \"mtu\": 9000}]}"
+    }
+   }
+  },
+  "keyed-list|CISCO_IOS|('id',)": {
+   "err": "InvalidConfigError: List entries under 'interfaces' need one of ('id',) to identify them; pass list_keys= to name the identifying member"
+  },
+  "keyed-list|CISCO_IOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "interfaces \"Et1\"",
+     "  name \"Et1\"",
+     "  mtu 1500",
+     "interfaces \"Et2\"",
+     "  name \"Et2\"",
+     "  mtu 9000"
+    ],
+    "to_json": {
+     "ok": "{\n  \"interfaces\": [\n    {\n      \"name\": \"Et1\",\n      \"mtu\": 1500\n    },\n    {\n      \"name\": \"Et2\",\n      \"mtu\": 9000\n    }\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"interfaces\": [{\"name\": \"Et1\", \"mtu\": 1500}, {\"name\": \"Et2\", \"mtu\": 9000}]}"
+    }
+   }
+  },
+  "keyed-list|CISCO_IOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "interfaces \"Et1\"",
+     "  name \"Et1\"",
+     "  mtu 1500",
+     "interfaces \"Et2\"",
+     "  name \"Et2\"",
+     "  mtu 9000"
+    ],
+    "to_json": {
+     "ok": "{\n  \"interfaces\": [\n    {\n      \"name\": \"Et1\",\n      \"mtu\": 1500\n    },\n    {\n      \"name\": \"Et2\",\n      \"mtu\": 9000\n    }\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"interfaces\": [{\"name\": \"Et1\", \"mtu\": 1500}, {\"name\": \"Et2\", \"mtu\": 9000}]}"
+    }
+   }
+  },
+  "keyed-list|CISCO_IOS|None": {
+   "ok": {
+    "simple": [
+     "interfaces \"Et1\"",
+     "  name \"Et1\"",
+     "  mtu 1500",
+     "interfaces \"Et2\"",
+     "  name \"Et2\"",
+     "  mtu 9000"
+    ],
+    "to_json": {
+     "ok": "{\n  \"interfaces\": [\n    {\n      \"name\": \"Et1\",\n      \"mtu\": 1500\n    },\n    {\n      \"name\": \"Et2\",\n      \"mtu\": 9000\n    }\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"interfaces\": [{\"name\": \"Et1\", \"mtu\": 1500}, {\"name\": \"Et2\", \"mtu\": 9000}]}"
+    }
+   }
+  },
+  "keyed-list|JUNIPER_JUNOS|('id',)": {
+   "err": "InvalidConfigError: List entries under 'interfaces' need one of ('id',) to identify them; pass list_keys= to name the identifying member"
+  },
+  "keyed-list|JUNIPER_JUNOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "interfaces \"Et1\"",
+     "  name \"Et1\"",
+     "  mtu 1500",
+     "interfaces \"Et2\"",
+     "  name \"Et2\"",
+     "  mtu 9000"
+    ],
+    "to_json": {
+     "ok": "{\n  \"interfaces\": [\n    {\n      \"name\": \"Et1\",\n      \"mtu\": 1500\n    },\n    {\n      \"name\": \"Et2\",\n      \"mtu\": 9000\n    }\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"interfaces\": [{\"name\": \"Et1\", \"mtu\": 1500}, {\"name\": \"Et2\", \"mtu\": 9000}]}"
+    }
+   }
+  },
+  "keyed-list|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "interfaces \"Et1\"",
+     "  name \"Et1\"",
+     "  mtu 1500",
+     "interfaces \"Et2\"",
+     "  name \"Et2\"",
+     "  mtu 9000"
+    ],
+    "to_json": {
+     "ok": "{\n  \"interfaces\": [\n    {\n      \"name\": \"Et1\",\n      \"mtu\": 1500\n    },\n    {\n      \"name\": \"Et2\",\n      \"mtu\": 9000\n    }\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"interfaces\": [{\"name\": \"Et1\", \"mtu\": 1500}, {\"name\": \"Et2\", \"mtu\": 9000}]}"
+    }
+   }
+  },
+  "keyed-list|JUNIPER_JUNOS|None": {
+   "ok": {
+    "simple": [
+     "interfaces \"Et1\"",
+     "  name \"Et1\"",
+     "  mtu 1500",
+     "interfaces \"Et2\"",
+     "  name \"Et2\"",
+     "  mtu 9000"
+    ],
+    "to_json": {
+     "ok": "{\n  \"interfaces\": [\n    {\n      \"name\": \"Et1\",\n      \"mtu\": 1500\n    },\n    {\n      \"name\": \"Et2\",\n      \"mtu\": 9000\n    }\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"interfaces\": [{\"name\": \"Et1\", \"mtu\": 1500}, {\"name\": \"Et2\", \"mtu\": 9000}]}"
+    }
+   }
+  },
+  "nested|ARISTA_EOS|('id',)": {
+   "ok": {
+    "simple": [
+     "system",
+     "  dns",
+     "    server \"8.8.8.8\"",
+     "  ntp",
+     "    enabled false"
+    ],
+    "to_json": {
+     "ok": "{\n  \"system\": {\n    \"dns\": {\n      \"server\": \"8.8.8.8\"\n    },\n    \"ntp\": {\n      \"enabled\": false\n    }\n  }\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"system\": {\"dns\": {\"server\": \"8.8.8.8\"}, \"ntp\": {\"enabled\": false}}}"
+    }
+   }
+  },
+  "nested|ARISTA_EOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "system",
+     "  dns",
+     "    server \"8.8.8.8\"",
+     "  ntp",
+     "    enabled false"
+    ],
+    "to_json": {
+     "ok": "{\n  \"system\": {\n    \"dns\": {\n      \"server\": \"8.8.8.8\"\n    },\n    \"ntp\": {\n      \"enabled\": false\n    }\n  }\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"system\": {\"dns\": {\"server\": \"8.8.8.8\"}, \"ntp\": {\"enabled\": false}}}"
+    }
+   }
+  },
+  "nested|ARISTA_EOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "system",
+     "  dns",
+     "    server \"8.8.8.8\"",
+     "  ntp",
+     "    enabled false"
+    ],
+    "to_json": {
+     "ok": "{\n  \"system\": {\n    \"dns\": {\n      \"server\": \"8.8.8.8\"\n    },\n    \"ntp\": {\n      \"enabled\": false\n    }\n  }\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"system\": {\"dns\": {\"server\": \"8.8.8.8\"}, \"ntp\": {\"enabled\": false}}}"
+    }
+   }
+  },
+  "nested|ARISTA_EOS|None": {
+   "ok": {
+    "simple": [
+     "system",
+     "  dns",
+     "    server \"8.8.8.8\"",
+     "  ntp",
+     "    enabled false"
+    ],
+    "to_json": {
+     "ok": "{\n  \"system\": {\n    \"dns\": {\n      \"server\": \"8.8.8.8\"\n    },\n    \"ntp\": {\n      \"enabled\": false\n    }\n  }\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"system\": {\"dns\": {\"server\": \"8.8.8.8\"}, \"ntp\": {\"enabled\": false}}}"
+    }
+   }
+  },
+  "nested|CISCO_IOS|('id',)": {
+   "ok": {
+    "simple": [
+     "system",
+     "  dns",
+     "    server \"8.8.8.8\"",
+     "  ntp",
+     "    enabled false"
+    ],
+    "to_json": {
+     "ok": "{\n  \"system\": {\n    \"dns\": {\n      \"server\": \"8.8.8.8\"\n    },\n    \"ntp\": {\n      \"enabled\": false\n    }\n  }\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"system\": {\"dns\": {\"server\": \"8.8.8.8\"}, \"ntp\": {\"enabled\": false}}}"
+    }
+   }
+  },
+  "nested|CISCO_IOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "system",
+     "  dns",
+     "    server \"8.8.8.8\"",
+     "  ntp",
+     "    enabled false"
+    ],
+    "to_json": {
+     "ok": "{\n  \"system\": {\n    \"dns\": {\n      \"server\": \"8.8.8.8\"\n    },\n    \"ntp\": {\n      \"enabled\": false\n    }\n  }\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"system\": {\"dns\": {\"server\": \"8.8.8.8\"}, \"ntp\": {\"enabled\": false}}}"
+    }
+   }
+  },
+  "nested|CISCO_IOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "system",
+     "  dns",
+     "    server \"8.8.8.8\"",
+     "  ntp",
+     "    enabled false"
+    ],
+    "to_json": {
+     "ok": "{\n  \"system\": {\n    \"dns\": {\n      \"server\": \"8.8.8.8\"\n    },\n    \"ntp\": {\n      \"enabled\": false\n    }\n  }\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"system\": {\"dns\": {\"server\": \"8.8.8.8\"}, \"ntp\": {\"enabled\": false}}}"
+    }
+   }
+  },
+  "nested|CISCO_IOS|None": {
+   "ok": {
+    "simple": [
+     "system",
+     "  dns",
+     "    server \"8.8.8.8\"",
+     "  ntp",
+     "    enabled false"
+    ],
+    "to_json": {
+     "ok": "{\n  \"system\": {\n    \"dns\": {\n      \"server\": \"8.8.8.8\"\n    },\n    \"ntp\": {\n      \"enabled\": false\n    }\n  }\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"system\": {\"dns\": {\"server\": \"8.8.8.8\"}, \"ntp\": {\"enabled\": false}}}"
+    }
+   }
+  },
+  "nested|JUNIPER_JUNOS|('id',)": {
+   "ok": {
+    "simple": [
+     "system",
+     "  dns",
+     "    server \"8.8.8.8\"",
+     "  ntp",
+     "    enabled false"
+    ],
+    "to_json": {
+     "ok": "{\n  \"system\": {\n    \"dns\": {\n      \"server\": \"8.8.8.8\"\n    },\n    \"ntp\": {\n      \"enabled\": false\n    }\n  }\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"system\": {\"dns\": {\"server\": \"8.8.8.8\"}, \"ntp\": {\"enabled\": false}}}"
+    }
+   }
+  },
+  "nested|JUNIPER_JUNOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "system",
+     "  dns",
+     "    server \"8.8.8.8\"",
+     "  ntp",
+     "    enabled false"
+    ],
+    "to_json": {
+     "ok": "{\n  \"system\": {\n    \"dns\": {\n      \"server\": \"8.8.8.8\"\n    },\n    \"ntp\": {\n      \"enabled\": false\n    }\n  }\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"system\": {\"dns\": {\"server\": \"8.8.8.8\"}, \"ntp\": {\"enabled\": false}}}"
+    }
+   }
+  },
+  "nested|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "system",
+     "  dns",
+     "    server \"8.8.8.8\"",
+     "  ntp",
+     "    enabled false"
+    ],
+    "to_json": {
+     "ok": "{\n  \"system\": {\n    \"dns\": {\n      \"server\": \"8.8.8.8\"\n    },\n    \"ntp\": {\n      \"enabled\": false\n    }\n  }\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"system\": {\"dns\": {\"server\": \"8.8.8.8\"}, \"ntp\": {\"enabled\": false}}}"
+    }
+   }
+  },
+  "nested|JUNIPER_JUNOS|None": {
+   "ok": {
+    "simple": [
+     "system",
+     "  dns",
+     "    server \"8.8.8.8\"",
+     "  ntp",
+     "    enabled false"
+    ],
+    "to_json": {
+     "ok": "{\n  \"system\": {\n    \"dns\": {\n      \"server\": \"8.8.8.8\"\n    },\n    \"ntp\": {\n      \"enabled\": false\n    }\n  }\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"system\": {\"dns\": {\"server\": \"8.8.8.8\"}, \"ntp\": {\"enabled\": false}}}"
+    }
+   }
+  },
+  "scalar-list|ARISTA_EOS|('id',)": {
+   "ok": {
+    "simple": [
+     "tags \"a\"",
+     "tags \"b\"",
+     "tags 3"
+    ],
+    "to_json": {
+     "ok": "{\n  \"tags\": [\n    \"a\",\n    \"b\",\n    3\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"tags\": [\"a\", \"b\", 3]}"
+    }
+   }
+  },
+  "scalar-list|ARISTA_EOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "tags \"a\"",
+     "tags \"b\"",
+     "tags 3"
+    ],
+    "to_json": {
+     "ok": "{\n  \"tags\": [\n    \"a\",\n    \"b\",\n    3\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"tags\": [\"a\", \"b\", 3]}"
+    }
+   }
+  },
+  "scalar-list|ARISTA_EOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "tags \"a\"",
+     "tags \"b\"",
+     "tags 3"
+    ],
+    "to_json": {
+     "ok": "{\n  \"tags\": [\n    \"a\",\n    \"b\",\n    3\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"tags\": [\"a\", \"b\", 3]}"
+    }
+   }
+  },
+  "scalar-list|ARISTA_EOS|None": {
+   "ok": {
+    "simple": [
+     "tags \"a\"",
+     "tags \"b\"",
+     "tags 3"
+    ],
+    "to_json": {
+     "ok": "{\n  \"tags\": [\n    \"a\",\n    \"b\",\n    3\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"tags\": [\"a\", \"b\", 3]}"
+    }
+   }
+  },
+  "scalar-list|CISCO_IOS|('id',)": {
+   "ok": {
+    "simple": [
+     "tags \"a\"",
+     "tags \"b\"",
+     "tags 3"
+    ],
+    "to_json": {
+     "ok": "{\n  \"tags\": [\n    \"a\",\n    \"b\",\n    3\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"tags\": [\"a\", \"b\", 3]}"
+    }
+   }
+  },
+  "scalar-list|CISCO_IOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "tags \"a\"",
+     "tags \"b\"",
+     "tags 3"
+    ],
+    "to_json": {
+     "ok": "{\n  \"tags\": [\n    \"a\",\n    \"b\",\n    3\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"tags\": [\"a\", \"b\", 3]}"
+    }
+   }
+  },
+  "scalar-list|CISCO_IOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "tags \"a\"",
+     "tags \"b\"",
+     "tags 3"
+    ],
+    "to_json": {
+     "ok": "{\n  \"tags\": [\n    \"a\",\n    \"b\",\n    3\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"tags\": [\"a\", \"b\", 3]}"
+    }
+   }
+  },
+  "scalar-list|CISCO_IOS|None": {
+   "ok": {
+    "simple": [
+     "tags \"a\"",
+     "tags \"b\"",
+     "tags 3"
+    ],
+    "to_json": {
+     "ok": "{\n  \"tags\": [\n    \"a\",\n    \"b\",\n    3\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"tags\": [\"a\", \"b\", 3]}"
+    }
+   }
+  },
+  "scalar-list|JUNIPER_JUNOS|('id',)": {
+   "ok": {
+    "simple": [
+     "tags \"a\"",
+     "tags \"b\"",
+     "tags 3"
+    ],
+    "to_json": {
+     "ok": "{\n  \"tags\": [\n    \"a\",\n    \"b\",\n    3\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"tags\": [\"a\", \"b\", 3]}"
+    }
+   }
+  },
+  "scalar-list|JUNIPER_JUNOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "tags \"a\"",
+     "tags \"b\"",
+     "tags 3"
+    ],
+    "to_json": {
+     "ok": "{\n  \"tags\": [\n    \"a\",\n    \"b\",\n    3\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"tags\": [\"a\", \"b\", 3]}"
+    }
+   }
+  },
+  "scalar-list|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "tags \"a\"",
+     "tags \"b\"",
+     "tags 3"
+    ],
+    "to_json": {
+     "ok": "{\n  \"tags\": [\n    \"a\",\n    \"b\",\n    3\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"tags\": [\"a\", \"b\", 3]}"
+    }
+   }
+  },
+  "scalar-list|JUNIPER_JUNOS|None": {
+   "ok": {
+    "simple": [
+     "tags \"a\"",
+     "tags \"b\"",
+     "tags 3"
+    ],
+    "to_json": {
+     "ok": "{\n  \"tags\": [\n    \"a\",\n    \"b\",\n    3\n  ]\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"tags\": [\"a\", \"b\", 3]}"
+    }
+   }
+  },
+  "scalars|ARISTA_EOS|('id',)": {
+   "ok": {
+    "simple": [
+     "hostname \"sw1\"",
+     "mtu 9000",
+     "enabled true",
+     "ratio 1.5",
+     "nothing null"
+    ],
+    "to_json": {
+     "ok": "{\n  \"hostname\": \"sw1\",\n  \"mtu\": 9000,\n  \"enabled\": true,\n  \"ratio\": 1.5,\n  \"nothing\": null\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"hostname\": \"sw1\", \"mtu\": 9000, \"enabled\": true, \"ratio\": 1.5, \"nothing\": null}"
+    }
+   }
+  },
+  "scalars|ARISTA_EOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "hostname \"sw1\"",
+     "mtu 9000",
+     "enabled true",
+     "ratio 1.5",
+     "nothing null"
+    ],
+    "to_json": {
+     "ok": "{\n  \"hostname\": \"sw1\",\n  \"mtu\": 9000,\n  \"enabled\": true,\n  \"ratio\": 1.5,\n  \"nothing\": null\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"hostname\": \"sw1\", \"mtu\": 9000, \"enabled\": true, \"ratio\": 1.5, \"nothing\": null}"
+    }
+   }
+  },
+  "scalars|ARISTA_EOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "hostname \"sw1\"",
+     "mtu 9000",
+     "enabled true",
+     "ratio 1.5",
+     "nothing null"
+    ],
+    "to_json": {
+     "ok": "{\n  \"hostname\": \"sw1\",\n  \"mtu\": 9000,\n  \"enabled\": true,\n  \"ratio\": 1.5,\n  \"nothing\": null\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"hostname\": \"sw1\", \"mtu\": 9000, \"enabled\": true, \"ratio\": 1.5, \"nothing\": null}"
+    }
+   }
+  },
+  "scalars|ARISTA_EOS|None": {
+   "ok": {
+    "simple": [
+     "hostname \"sw1\"",
+     "mtu 9000",
+     "enabled true",
+     "ratio 1.5",
+     "nothing null"
+    ],
+    "to_json": {
+     "ok": "{\n  \"hostname\": \"sw1\",\n  \"mtu\": 9000,\n  \"enabled\": true,\n  \"ratio\": 1.5,\n  \"nothing\": null\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"hostname\": \"sw1\", \"mtu\": 9000, \"enabled\": true, \"ratio\": 1.5, \"nothing\": null}"
+    }
+   }
+  },
+  "scalars|CISCO_IOS|('id',)": {
+   "ok": {
+    "simple": [
+     "hostname \"sw1\"",
+     "mtu 9000",
+     "enabled true",
+     "ratio 1.5",
+     "nothing null"
+    ],
+    "to_json": {
+     "ok": "{\n  \"hostname\": \"sw1\",\n  \"mtu\": 9000,\n  \"enabled\": true,\n  \"ratio\": 1.5,\n  \"nothing\": null\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"hostname\": \"sw1\", \"mtu\": 9000, \"enabled\": true, \"ratio\": 1.5, \"nothing\": null}"
+    }
+   }
+  },
+  "scalars|CISCO_IOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "hostname \"sw1\"",
+     "mtu 9000",
+     "enabled true",
+     "ratio 1.5",
+     "nothing null"
+    ],
+    "to_json": {
+     "ok": "{\n  \"hostname\": \"sw1\",\n  \"mtu\": 9000,\n  \"enabled\": true,\n  \"ratio\": 1.5,\n  \"nothing\": null\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"hostname\": \"sw1\", \"mtu\": 9000, \"enabled\": true, \"ratio\": 1.5, \"nothing\": null}"
+    }
+   }
+  },
+  "scalars|CISCO_IOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "hostname \"sw1\"",
+     "mtu 9000",
+     "enabled true",
+     "ratio 1.5",
+     "nothing null"
+    ],
+    "to_json": {
+     "ok": "{\n  \"hostname\": \"sw1\",\n  \"mtu\": 9000,\n  \"enabled\": true,\n  \"ratio\": 1.5,\n  \"nothing\": null\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"hostname\": \"sw1\", \"mtu\": 9000, \"enabled\": true, \"ratio\": 1.5, \"nothing\": null}"
+    }
+   }
+  },
+  "scalars|CISCO_IOS|None": {
+   "ok": {
+    "simple": [
+     "hostname \"sw1\"",
+     "mtu 9000",
+     "enabled true",
+     "ratio 1.5",
+     "nothing null"
+    ],
+    "to_json": {
+     "ok": "{\n  \"hostname\": \"sw1\",\n  \"mtu\": 9000,\n  \"enabled\": true,\n  \"ratio\": 1.5,\n  \"nothing\": null\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"hostname\": \"sw1\", \"mtu\": 9000, \"enabled\": true, \"ratio\": 1.5, \"nothing\": null}"
+    }
+   }
+  },
+  "scalars|JUNIPER_JUNOS|('id',)": {
+   "ok": {
+    "simple": [
+     "hostname \"sw1\"",
+     "mtu 9000",
+     "enabled true",
+     "ratio 1.5",
+     "nothing null"
+    ],
+    "to_json": {
+     "ok": "{\n  \"hostname\": \"sw1\",\n  \"mtu\": 9000,\n  \"enabled\": true,\n  \"ratio\": 1.5,\n  \"nothing\": null\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"hostname\": \"sw1\", \"mtu\": 9000, \"enabled\": true, \"ratio\": 1.5, \"nothing\": null}"
+    }
+   }
+  },
+  "scalars|JUNIPER_JUNOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "hostname \"sw1\"",
+     "mtu 9000",
+     "enabled true",
+     "ratio 1.5",
+     "nothing null"
+    ],
+    "to_json": {
+     "ok": "{\n  \"hostname\": \"sw1\",\n  \"mtu\": 9000,\n  \"enabled\": true,\n  \"ratio\": 1.5,\n  \"nothing\": null\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"hostname\": \"sw1\", \"mtu\": 9000, \"enabled\": true, \"ratio\": 1.5, \"nothing\": null}"
+    }
+   }
+  },
+  "scalars|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "hostname \"sw1\"",
+     "mtu 9000",
+     "enabled true",
+     "ratio 1.5",
+     "nothing null"
+    ],
+    "to_json": {
+     "ok": "{\n  \"hostname\": \"sw1\",\n  \"mtu\": 9000,\n  \"enabled\": true,\n  \"ratio\": 1.5,\n  \"nothing\": null\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"hostname\": \"sw1\", \"mtu\": 9000, \"enabled\": true, \"ratio\": 1.5, \"nothing\": null}"
+    }
+   }
+  },
+  "scalars|JUNIPER_JUNOS|None": {
+   "ok": {
+    "simple": [
+     "hostname \"sw1\"",
+     "mtu 9000",
+     "enabled true",
+     "ratio 1.5",
+     "nothing null"
+    ],
+    "to_json": {
+     "ok": "{\n  \"hostname\": \"sw1\",\n  \"mtu\": 9000,\n  \"enabled\": true,\n  \"ratio\": 1.5,\n  \"nothing\": null\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"hostname\": \"sw1\", \"mtu\": 9000, \"enabled\": true, \"ratio\": 1.5, \"nothing\": null}"
+    }
+   }
+  },
+  "special-chars|ARISTA_EOS|('id',)": {
+   "ok": {
+    "simple": [
+     "desc \"a<b>c&d\\\"e'f\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"desc\": \"a<b>c&d\\\"e'f\"\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"desc\": \"a<b>c&d\\\"e'f\"}"
+    }
+   }
+  },
+  "special-chars|ARISTA_EOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "desc \"a<b>c&d\\\"e'f\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"desc\": \"a<b>c&d\\\"e'f\"\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"desc\": \"a<b>c&d\\\"e'f\"}"
+    }
+   }
+  },
+  "special-chars|ARISTA_EOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "desc \"a<b>c&d\\\"e'f\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"desc\": \"a<b>c&d\\\"e'f\"\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"desc\": \"a<b>c&d\\\"e'f\"}"
+    }
+   }
+  },
+  "special-chars|ARISTA_EOS|None": {
+   "ok": {
+    "simple": [
+     "desc \"a<b>c&d\\\"e'f\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"desc\": \"a<b>c&d\\\"e'f\"\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"desc\": \"a<b>c&d\\\"e'f\"}"
+    }
+   }
+  },
+  "special-chars|CISCO_IOS|('id',)": {
+   "ok": {
+    "simple": [
+     "desc \"a<b>c&d\\\"e'f\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"desc\": \"a<b>c&d\\\"e'f\"\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"desc\": \"a<b>c&d\\\"e'f\"}"
+    }
+   }
+  },
+  "special-chars|CISCO_IOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "desc \"a<b>c&d\\\"e'f\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"desc\": \"a<b>c&d\\\"e'f\"\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"desc\": \"a<b>c&d\\\"e'f\"}"
+    }
+   }
+  },
+  "special-chars|CISCO_IOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "desc \"a<b>c&d\\\"e'f\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"desc\": \"a<b>c&d\\\"e'f\"\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"desc\": \"a<b>c&d\\\"e'f\"}"
+    }
+   }
+  },
+  "special-chars|CISCO_IOS|None": {
+   "ok": {
+    "simple": [
+     "desc \"a<b>c&d\\\"e'f\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"desc\": \"a<b>c&d\\\"e'f\"\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"desc\": \"a<b>c&d\\\"e'f\"}"
+    }
+   }
+  },
+  "special-chars|JUNIPER_JUNOS|('id',)": {
+   "ok": {
+    "simple": [
+     "desc \"a<b>c&d\\\"e'f\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"desc\": \"a<b>c&d\\\"e'f\"\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"desc\": \"a<b>c&d\\\"e'f\"}"
+    }
+   }
+  },
+  "special-chars|JUNIPER_JUNOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "desc \"a<b>c&d\\\"e'f\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"desc\": \"a<b>c&d\\\"e'f\"\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"desc\": \"a<b>c&d\\\"e'f\"}"
+    }
+   }
+  },
+  "special-chars|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "desc \"a<b>c&d\\\"e'f\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"desc\": \"a<b>c&d\\\"e'f\"\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"desc\": \"a<b>c&d\\\"e'f\"}"
+    }
+   }
+  },
+  "special-chars|JUNIPER_JUNOS|None": {
+   "ok": {
+    "simple": [
+     "desc \"a<b>c&d\\\"e'f\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"desc\": \"a<b>c&d\\\"e'f\"\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"desc\": \"a<b>c&d\\\"e'f\"}"
+    }
+   }
+  },
+  "unicode|ARISTA_EOS|('id',)": {
+   "ok": {
+    "simple": [
+     "desc \"caf\\u00e9 \\u2013 dash\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"desc\": \"caf\\u00e9 \\u2013 dash\"\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"desc\": \"caf\\u00e9 \\u2013 dash\"}"
+    }
+   }
+  },
+  "unicode|ARISTA_EOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "desc \"caf\\u00e9 \\u2013 dash\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"desc\": \"caf\\u00e9 \\u2013 dash\"\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"desc\": \"caf\\u00e9 \\u2013 dash\"}"
+    }
+   }
+  },
+  "unicode|ARISTA_EOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "desc \"caf\\u00e9 \\u2013 dash\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"desc\": \"caf\\u00e9 \\u2013 dash\"\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"desc\": \"caf\\u00e9 \\u2013 dash\"}"
+    }
+   }
+  },
+  "unicode|ARISTA_EOS|None": {
+   "ok": {
+    "simple": [
+     "desc \"caf\\u00e9 \\u2013 dash\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"desc\": \"caf\\u00e9 \\u2013 dash\"\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"desc\": \"caf\\u00e9 \\u2013 dash\"}"
+    }
+   }
+  },
+  "unicode|CISCO_IOS|('id',)": {
+   "ok": {
+    "simple": [
+     "desc \"caf\\u00e9 \\u2013 dash\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"desc\": \"caf\\u00e9 \\u2013 dash\"\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"desc\": \"caf\\u00e9 \\u2013 dash\"}"
+    }
+   }
+  },
+  "unicode|CISCO_IOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "desc \"caf\\u00e9 \\u2013 dash\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"desc\": \"caf\\u00e9 \\u2013 dash\"\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"desc\": \"caf\\u00e9 \\u2013 dash\"}"
+    }
+   }
+  },
+  "unicode|CISCO_IOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "desc \"caf\\u00e9 \\u2013 dash\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"desc\": \"caf\\u00e9 \\u2013 dash\"\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"desc\": \"caf\\u00e9 \\u2013 dash\"}"
+    }
+   }
+  },
+  "unicode|CISCO_IOS|None": {
+   "ok": {
+    "simple": [
+     "desc \"caf\\u00e9 \\u2013 dash\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"desc\": \"caf\\u00e9 \\u2013 dash\"\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"desc\": \"caf\\u00e9 \\u2013 dash\"}"
+    }
+   }
+  },
+  "unicode|JUNIPER_JUNOS|('id',)": {
+   "ok": {
+    "simple": [
+     "desc \"caf\\u00e9 \\u2013 dash\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"desc\": \"caf\\u00e9 \\u2013 dash\"\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"desc\": \"caf\\u00e9 \\u2013 dash\"}"
+    }
+   }
+  },
+  "unicode|JUNIPER_JUNOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "desc \"caf\\u00e9 \\u2013 dash\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"desc\": \"caf\\u00e9 \\u2013 dash\"\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"desc\": \"caf\\u00e9 \\u2013 dash\"}"
+    }
+   }
+  },
+  "unicode|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "desc \"caf\\u00e9 \\u2013 dash\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"desc\": \"caf\\u00e9 \\u2013 dash\"\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"desc\": \"caf\\u00e9 \\u2013 dash\"}"
+    }
+   }
+  },
+  "unicode|JUNIPER_JUNOS|None": {
+   "ok": {
+    "simple": [
+     "desc \"caf\\u00e9 \\u2013 dash\""
+    ],
+    "to_json": {
+     "ok": "{\n  \"desc\": \"caf\\u00e9 \\u2013 dash\"\n}"
+    },
+    "to_json_flat": {
+     "ok": "{\"desc\": \"caf\\u00e9 \\u2013 dash\"}"
+    }
+   }
+  }
+ },
+ "netconf": {
+  "attrs|ARISTA_EOS|('id',)": {
+   "no_running": {
+    "err": "InvalidConfigError: Attribute changes cannot be expressed as NETCONF operations: '@b \"two\"'"
+   },
+   "remediation": [
+    "config",
+    "  no @b \"two\"",
+    "  @b \"three\""
+   ],
+   "with_running": {
+    "err": "InvalidConfigError: Attribute changes cannot be expressed as NETCONF operations: '@b \"two\"'"
+   }
+  },
+  "attrs|ARISTA_EOS|('name', 'id')": {
+   "no_running": {
+    "err": "InvalidConfigError: Attribute changes cannot be expressed as NETCONF operations: '@b \"two\"'"
+   },
+   "remediation": [
+    "config",
+    "  no @b \"two\"",
+    "  @b \"three\""
+   ],
+   "with_running": {
+    "err": "InvalidConfigError: Attribute changes cannot be expressed as NETCONF operations: '@b \"two\"'"
+   }
+  },
+  "attrs|ARISTA_EOS|('name', 'id', 'key')": {
+   "no_running": {
+    "err": "InvalidConfigError: Attribute changes cannot be expressed as NETCONF operations: '@b \"two\"'"
+   },
+   "remediation": [
+    "config",
+    "  no @b \"two\"",
+    "  @b \"three\""
+   ],
+   "with_running": {
+    "err": "InvalidConfigError: Attribute changes cannot be expressed as NETCONF operations: '@b \"two\"'"
+   }
+  },
+  "attrs|ARISTA_EOS|None": {
+   "no_running": {
+    "err": "InvalidConfigError: Attribute changes cannot be expressed as NETCONF operations: '@b \"two\"'"
+   },
+   "remediation": [
+    "config",
+    "  no @b \"two\"",
+    "  @b \"three\""
+   ],
+   "with_running": {
+    "err": "InvalidConfigError: Attribute changes cannot be expressed as NETCONF operations: '@b \"two\"'"
+   }
+  },
+  "attrs|CISCO_IOS|('id',)": {
+   "no_running": {
+    "err": "InvalidConfigError: Attribute changes cannot be expressed as NETCONF operations: '@b \"two\"'"
+   },
+   "remediation": [
+    "config",
+    "  no @b \"two\"",
+    "  @b \"three\""
+   ],
+   "with_running": {
+    "err": "InvalidConfigError: Attribute changes cannot be expressed as NETCONF operations: '@b \"two\"'"
+   }
+  },
+  "attrs|CISCO_IOS|('name', 'id')": {
+   "no_running": {
+    "err": "InvalidConfigError: Attribute changes cannot be expressed as NETCONF operations: '@b \"two\"'"
+   },
+   "remediation": [
+    "config",
+    "  no @b \"two\"",
+    "  @b \"three\""
+   ],
+   "with_running": {
+    "err": "InvalidConfigError: Attribute changes cannot be expressed as NETCONF operations: '@b \"two\"'"
+   }
+  },
+  "attrs|CISCO_IOS|('name', 'id', 'key')": {
+   "no_running": {
+    "err": "InvalidConfigError: Attribute changes cannot be expressed as NETCONF operations: '@b \"two\"'"
+   },
+   "remediation": [
+    "config",
+    "  no @b \"two\"",
+    "  @b \"three\""
+   ],
+   "with_running": {
+    "err": "InvalidConfigError: Attribute changes cannot be expressed as NETCONF operations: '@b \"two\"'"
+   }
+  },
+  "attrs|CISCO_IOS|None": {
+   "no_running": {
+    "err": "InvalidConfigError: Attribute changes cannot be expressed as NETCONF operations: '@b \"two\"'"
+   },
+   "remediation": [
+    "config",
+    "  no @b \"two\"",
+    "  @b \"three\""
+   ],
+   "with_running": {
+    "err": "InvalidConfigError: Attribute changes cannot be expressed as NETCONF operations: '@b \"two\"'"
+   }
+  },
+  "attrs|JUNIPER_JUNOS|('id',)": {
+   "no_running": {
+    "ok": "<config b=\"three\" xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\" />"
+   },
+   "remediation": [
+    "config",
+    "  @b \"two\"",
+    "  @b \"three\""
+   ],
+   "with_running": {
+    "ok": "<config b=\"three\" xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\" />"
+   }
+  },
+  "attrs|JUNIPER_JUNOS|('name', 'id')": {
+   "no_running": {
+    "ok": "<config b=\"three\" xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\" />"
+   },
+   "remediation": [
+    "config",
+    "  @b \"two\"",
+    "  @b \"three\""
+   ],
+   "with_running": {
+    "ok": "<config b=\"three\" xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\" />"
+   }
+  },
+  "attrs|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": "<config b=\"three\" xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\" />"
+   },
+   "remediation": [
+    "config",
+    "  @b \"two\"",
+    "  @b \"three\""
+   ],
+   "with_running": {
+    "ok": "<config b=\"three\" xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\" />"
+   }
+  },
+  "attrs|JUNIPER_JUNOS|None": {
+   "no_running": {
+    "ok": "<config b=\"three\" xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\" />"
+   },
+   "remediation": [
+    "config",
+    "  @b \"two\"",
+    "  @b \"three\""
+   ],
+   "with_running": {
+    "ok": "<config b=\"three\" xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\" />"
+   }
+  },
+  "empty-el|ARISTA_EOS|('id',)": {
+   "no_running": {
+    "err": "InvalidConfigError: XML rendering requires a single root node"
+   },
+   "remediation": [],
+   "with_running": {
+    "err": "InvalidConfigError: XML rendering requires a single root node"
+   }
+  },
+  "empty-el|ARISTA_EOS|('name', 'id')": {
+   "no_running": {
+    "err": "InvalidConfigError: XML rendering requires a single root node"
+   },
+   "remediation": [],
+   "with_running": {
+    "err": "InvalidConfigError: XML rendering requires a single root node"
+   }
+  },
+  "empty-el|ARISTA_EOS|('name', 'id', 'key')": {
+   "no_running": {
+    "err": "InvalidConfigError: XML rendering requires a single root node"
+   },
+   "remediation": [],
+   "with_running": {
+    "err": "InvalidConfigError: XML rendering requires a single root node"
+   }
+  },
+  "empty-el|ARISTA_EOS|None": {
+   "no_running": {
+    "err": "InvalidConfigError: XML rendering requires a single root node"
+   },
+   "remediation": [],
+   "with_running": {
+    "err": "InvalidConfigError: XML rendering requires a single root node"
+   }
+  },
+  "empty-el|CISCO_IOS|('id',)": {
+   "no_running": {
+    "err": "InvalidConfigError: XML rendering requires a single root node"
+   },
+   "remediation": [],
+   "with_running": {
+    "err": "InvalidConfigError: XML rendering requires a single root node"
+   }
+  },
+  "empty-el|CISCO_IOS|('name', 'id')": {
+   "no_running": {
+    "err": "InvalidConfigError: XML rendering requires a single root node"
+   },
+   "remediation": [],
+   "with_running": {
+    "err": "InvalidConfigError: XML rendering requires a single root node"
+   }
+  },
+  "empty-el|CISCO_IOS|('name', 'id', 'key')": {
+   "no_running": {
+    "err": "InvalidConfigError: XML rendering requires a single root node"
+   },
+   "remediation": [],
+   "with_running": {
+    "err": "InvalidConfigError: XML rendering requires a single root node"
+   }
+  },
+  "empty-el|CISCO_IOS|None": {
+   "no_running": {
+    "err": "InvalidConfigError: XML rendering requires a single root node"
+   },
+   "remediation": [],
+   "with_running": {
+    "err": "InvalidConfigError: XML rendering requires a single root node"
+   }
+  },
+  "empty-el|JUNIPER_JUNOS|('id',)": {
+   "no_running": {
+    "err": "InvalidConfigError: XML rendering requires a single root node"
+   },
+   "remediation": [],
+   "with_running": {
+    "err": "InvalidConfigError: XML rendering requires a single root node"
+   }
+  },
+  "empty-el|JUNIPER_JUNOS|('name', 'id')": {
+   "no_running": {
+    "err": "InvalidConfigError: XML rendering requires a single root node"
+   },
+   "remediation": [],
+   "with_running": {
+    "err": "InvalidConfigError: XML rendering requires a single root node"
+   }
+  },
+  "empty-el|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "no_running": {
+    "err": "InvalidConfigError: XML rendering requires a single root node"
+   },
+   "remediation": [],
+   "with_running": {
+    "err": "InvalidConfigError: XML rendering requires a single root node"
+   }
+  },
+  "empty-el|JUNIPER_JUNOS|None": {
+   "no_running": {
+    "err": "InvalidConfigError: XML rendering requires a single root node"
+   },
+   "remediation": [],
+   "with_running": {
+    "err": "InvalidConfigError: XML rendering requires a single root node"
+   }
+  },
+  "escapes|ARISTA_EOS|('id',)": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <d nc:operation=\"delete\">a&lt;b&amp;c</d>\n  <d>x&gt;y</d>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  no d \"a<b&c\"",
+    "  d \"x>y\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <d nc:operation=\"delete\">a&lt;b&amp;c</d>\n  <d>x&gt;y</d>\n</config>"
+   }
+  },
+  "escapes|ARISTA_EOS|('name', 'id')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <d nc:operation=\"delete\">a&lt;b&amp;c</d>\n  <d>x&gt;y</d>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  no d \"a<b&c\"",
+    "  d \"x>y\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <d nc:operation=\"delete\">a&lt;b&amp;c</d>\n  <d>x&gt;y</d>\n</config>"
+   }
+  },
+  "escapes|ARISTA_EOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <d nc:operation=\"delete\">a&lt;b&amp;c</d>\n  <d>x&gt;y</d>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  no d \"a<b&c\"",
+    "  d \"x>y\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <d nc:operation=\"delete\">a&lt;b&amp;c</d>\n  <d>x&gt;y</d>\n</config>"
+   }
+  },
+  "escapes|ARISTA_EOS|None": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <d nc:operation=\"delete\">a&lt;b&amp;c</d>\n  <d>x&gt;y</d>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  no d \"a<b&c\"",
+    "  d \"x>y\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <d nc:operation=\"delete\">a&lt;b&amp;c</d>\n  <d>x&gt;y</d>\n</config>"
+   }
+  },
+  "escapes|CISCO_IOS|('id',)": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <d nc:operation=\"delete\">a&lt;b&amp;c</d>\n  <d>x&gt;y</d>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  no d \"a<b&c\"",
+    "  d \"x>y\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <d nc:operation=\"delete\">a&lt;b&amp;c</d>\n  <d>x&gt;y</d>\n</config>"
+   }
+  },
+  "escapes|CISCO_IOS|('name', 'id')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <d nc:operation=\"delete\">a&lt;b&amp;c</d>\n  <d>x&gt;y</d>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  no d \"a<b&c\"",
+    "  d \"x>y\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <d nc:operation=\"delete\">a&lt;b&amp;c</d>\n  <d>x&gt;y</d>\n</config>"
+   }
+  },
+  "escapes|CISCO_IOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <d nc:operation=\"delete\">a&lt;b&amp;c</d>\n  <d>x&gt;y</d>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  no d \"a<b&c\"",
+    "  d \"x>y\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <d nc:operation=\"delete\">a&lt;b&amp;c</d>\n  <d>x&gt;y</d>\n</config>"
+   }
+  },
+  "escapes|CISCO_IOS|None": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <d nc:operation=\"delete\">a&lt;b&amp;c</d>\n  <d>x&gt;y</d>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  no d \"a<b&c\"",
+    "  d \"x>y\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <d nc:operation=\"delete\">a&lt;b&amp;c</d>\n  <d>x&gt;y</d>\n</config>"
+   }
+  },
+  "escapes|JUNIPER_JUNOS|('id',)": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <d>a&lt;b&amp;c</d>\n  <d>x&gt;y</d>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  d \"a<b&c\"",
+    "  d \"x>y\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <d>a&lt;b&amp;c</d>\n  <d>x&gt;y</d>\n</config>"
+   }
+  },
+  "escapes|JUNIPER_JUNOS|('name', 'id')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <d>a&lt;b&amp;c</d>\n  <d>x&gt;y</d>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  d \"a<b&c\"",
+    "  d \"x>y\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <d>a&lt;b&amp;c</d>\n  <d>x&gt;y</d>\n</config>"
+   }
+  },
+  "escapes|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <d>a&lt;b&amp;c</d>\n  <d>x&gt;y</d>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  d \"a<b&c\"",
+    "  d \"x>y\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <d>a&lt;b&amp;c</d>\n  <d>x&gt;y</d>\n</config>"
+   }
+  },
+  "escapes|JUNIPER_JUNOS|None": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <d>a&lt;b&amp;c</d>\n  <d>x&gt;y</d>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  d \"a<b&c\"",
+    "  d \"x>y\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <d>a&lt;b&amp;c</d>\n  <d>x&gt;y</d>\n</config>"
+   }
+  },
+  "mixed-text|ARISTA_EOS|('id',)": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">lead2<#text nc:operation=\"delete\">lead</#text>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  no #text \"lead\"",
+    "  #text \"lead2\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">lead2<#text nc:operation=\"delete\">lead</#text>\n</config>"
+   }
+  },
+  "mixed-text|ARISTA_EOS|('name', 'id')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">lead2<#text nc:operation=\"delete\">lead</#text>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  no #text \"lead\"",
+    "  #text \"lead2\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">lead2<#text nc:operation=\"delete\">lead</#text>\n</config>"
+   }
+  },
+  "mixed-text|ARISTA_EOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">lead2<#text nc:operation=\"delete\">lead</#text>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  no #text \"lead\"",
+    "  #text \"lead2\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">lead2<#text nc:operation=\"delete\">lead</#text>\n</config>"
+   }
+  },
+  "mixed-text|ARISTA_EOS|None": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">lead2<#text nc:operation=\"delete\">lead</#text>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  no #text \"lead\"",
+    "  #text \"lead2\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">lead2<#text nc:operation=\"delete\">lead</#text>\n</config>"
+   }
+  },
+  "mixed-text|CISCO_IOS|('id',)": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">lead2<#text nc:operation=\"delete\">lead</#text>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  no #text \"lead\"",
+    "  #text \"lead2\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">lead2<#text nc:operation=\"delete\">lead</#text>\n</config>"
+   }
+  },
+  "mixed-text|CISCO_IOS|('name', 'id')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">lead2<#text nc:operation=\"delete\">lead</#text>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  no #text \"lead\"",
+    "  #text \"lead2\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">lead2<#text nc:operation=\"delete\">lead</#text>\n</config>"
+   }
+  },
+  "mixed-text|CISCO_IOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">lead2<#text nc:operation=\"delete\">lead</#text>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  no #text \"lead\"",
+    "  #text \"lead2\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">lead2<#text nc:operation=\"delete\">lead</#text>\n</config>"
+   }
+  },
+  "mixed-text|CISCO_IOS|None": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">lead2<#text nc:operation=\"delete\">lead</#text>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  no #text \"lead\"",
+    "  #text \"lead2\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">lead2<#text nc:operation=\"delete\">lead</#text>\n</config>"
+   }
+  },
+  "mixed-text|JUNIPER_JUNOS|('id',)": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">lead2</config>"
+   },
+   "remediation": [
+    "config",
+    "  #text \"lead\"",
+    "  #text \"lead2\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">lead2</config>"
+   }
+  },
+  "mixed-text|JUNIPER_JUNOS|('name', 'id')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">lead2</config>"
+   },
+   "remediation": [
+    "config",
+    "  #text \"lead\"",
+    "  #text \"lead2\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">lead2</config>"
+   }
+  },
+  "mixed-text|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">lead2</config>"
+   },
+   "remediation": [
+    "config",
+    "  #text \"lead\"",
+    "  #text \"lead2\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">lead2</config>"
+   }
+  },
+  "mixed-text|JUNIPER_JUNOS|None": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">lead2</config>"
+   },
+   "remediation": [
+    "config",
+    "  #text \"lead\"",
+    "  #text \"lead2\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">lead2</config>"
+   }
+  },
+  "nested|ARISTA_EOS|('id',)": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <system>\n    <dns>\n      <server nc:operation=\"delete\">8.8.8.8</server>\n      <server>1.1.1.1</server>\n    </dns>\n  </system>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  system",
+    "    dns",
+    "      no server \"8.8.8.8\"",
+    "      server \"1.1.1.1\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <system>\n    <dns>\n      <server nc:operation=\"delete\">8.8.8.8</server>\n      <server>1.1.1.1</server>\n    </dns>\n  </system>\n</config>"
+   }
+  },
+  "nested|ARISTA_EOS|('name', 'id')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <system>\n    <dns>\n      <server nc:operation=\"delete\">8.8.8.8</server>\n      <server>1.1.1.1</server>\n    </dns>\n  </system>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  system",
+    "    dns",
+    "      no server \"8.8.8.8\"",
+    "      server \"1.1.1.1\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <system>\n    <dns>\n      <server nc:operation=\"delete\">8.8.8.8</server>\n      <server>1.1.1.1</server>\n    </dns>\n  </system>\n</config>"
+   }
+  },
+  "nested|ARISTA_EOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <system>\n    <dns>\n      <server nc:operation=\"delete\">8.8.8.8</server>\n      <server>1.1.1.1</server>\n    </dns>\n  </system>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  system",
+    "    dns",
+    "      no server \"8.8.8.8\"",
+    "      server \"1.1.1.1\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <system>\n    <dns>\n      <server nc:operation=\"delete\">8.8.8.8</server>\n      <server>1.1.1.1</server>\n    </dns>\n  </system>\n</config>"
+   }
+  },
+  "nested|ARISTA_EOS|None": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <system>\n    <dns>\n      <server nc:operation=\"delete\">8.8.8.8</server>\n      <server>1.1.1.1</server>\n    </dns>\n  </system>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  system",
+    "    dns",
+    "      no server \"8.8.8.8\"",
+    "      server \"1.1.1.1\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <system>\n    <dns>\n      <server nc:operation=\"delete\">8.8.8.8</server>\n      <server>1.1.1.1</server>\n    </dns>\n  </system>\n</config>"
+   }
+  },
+  "nested|CISCO_IOS|('id',)": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <system>\n    <dns>\n      <server nc:operation=\"delete\">8.8.8.8</server>\n      <server>1.1.1.1</server>\n    </dns>\n  </system>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  system",
+    "    dns",
+    "      no server \"8.8.8.8\"",
+    "      server \"1.1.1.1\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <system>\n    <dns>\n      <server nc:operation=\"delete\">8.8.8.8</server>\n      <server>1.1.1.1</server>\n    </dns>\n  </system>\n</config>"
+   }
+  },
+  "nested|CISCO_IOS|('name', 'id')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <system>\n    <dns>\n      <server nc:operation=\"delete\">8.8.8.8</server>\n      <server>1.1.1.1</server>\n    </dns>\n  </system>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  system",
+    "    dns",
+    "      no server \"8.8.8.8\"",
+    "      server \"1.1.1.1\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <system>\n    <dns>\n      <server nc:operation=\"delete\">8.8.8.8</server>\n      <server>1.1.1.1</server>\n    </dns>\n  </system>\n</config>"
+   }
+  },
+  "nested|CISCO_IOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <system>\n    <dns>\n      <server nc:operation=\"delete\">8.8.8.8</server>\n      <server>1.1.1.1</server>\n    </dns>\n  </system>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  system",
+    "    dns",
+    "      no server \"8.8.8.8\"",
+    "      server \"1.1.1.1\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <system>\n    <dns>\n      <server nc:operation=\"delete\">8.8.8.8</server>\n      <server>1.1.1.1</server>\n    </dns>\n  </system>\n</config>"
+   }
+  },
+  "nested|CISCO_IOS|None": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <system>\n    <dns>\n      <server nc:operation=\"delete\">8.8.8.8</server>\n      <server>1.1.1.1</server>\n    </dns>\n  </system>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  system",
+    "    dns",
+    "      no server \"8.8.8.8\"",
+    "      server \"1.1.1.1\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <system>\n    <dns>\n      <server nc:operation=\"delete\">8.8.8.8</server>\n      <server>1.1.1.1</server>\n    </dns>\n  </system>\n</config>"
+   }
+  },
+  "nested|JUNIPER_JUNOS|('id',)": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <system>\n    <dns>\n      <server>8.8.8.8</server>\n      <server>1.1.1.1</server>\n    </dns>\n  </system>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  system",
+    "    dns",
+    "      server \"8.8.8.8\"",
+    "      server \"1.1.1.1\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <system>\n    <dns>\n      <server>8.8.8.8</server>\n      <server>1.1.1.1</server>\n    </dns>\n  </system>\n</config>"
+   }
+  },
+  "nested|JUNIPER_JUNOS|('name', 'id')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <system>\n    <dns>\n      <server>8.8.8.8</server>\n      <server>1.1.1.1</server>\n    </dns>\n  </system>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  system",
+    "    dns",
+    "      server \"8.8.8.8\"",
+    "      server \"1.1.1.1\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <system>\n    <dns>\n      <server>8.8.8.8</server>\n      <server>1.1.1.1</server>\n    </dns>\n  </system>\n</config>"
+   }
+  },
+  "nested|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <system>\n    <dns>\n      <server>8.8.8.8</server>\n      <server>1.1.1.1</server>\n    </dns>\n  </system>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  system",
+    "    dns",
+    "      server \"8.8.8.8\"",
+    "      server \"1.1.1.1\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <system>\n    <dns>\n      <server>8.8.8.8</server>\n      <server>1.1.1.1</server>\n    </dns>\n  </system>\n</config>"
+   }
+  },
+  "nested|JUNIPER_JUNOS|None": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <system>\n    <dns>\n      <server>8.8.8.8</server>\n      <server>1.1.1.1</server>\n    </dns>\n  </system>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  system",
+    "    dns",
+    "      server \"8.8.8.8\"",
+    "      server \"1.1.1.1\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <system>\n    <dns>\n      <server>8.8.8.8</server>\n      <server>1.1.1.1</server>\n    </dns>\n  </system>\n</config>"
+   }
+  },
+  "repeated|ARISTA_EOS|('name', 'id')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface nc:operation=\"delete\">Et2</iface>\n  <iface>\n    <mtu nc:operation=\"delete\">1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  no iface \"Et2\"",
+    "  iface \"Et1\"",
+    "    no mtu \"1500\"",
+    "    mtu \"9000\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface nc:operation=\"delete\">\n    <name>Et2</name>\n  </iface>\n  <iface>\n    <mtu nc:operation=\"delete\">1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   }
+  },
+  "repeated|ARISTA_EOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface nc:operation=\"delete\">Et2</iface>\n  <iface>\n    <mtu nc:operation=\"delete\">1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  no iface \"Et2\"",
+    "  iface \"Et1\"",
+    "    no mtu \"1500\"",
+    "    mtu \"9000\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface nc:operation=\"delete\">\n    <name>Et2</name>\n  </iface>\n  <iface>\n    <mtu nc:operation=\"delete\">1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   }
+  },
+  "repeated|ARISTA_EOS|None": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface nc:operation=\"delete\">Et2</iface>\n  <iface>\n    <mtu nc:operation=\"delete\">1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  no iface \"Et2\"",
+    "  iface \"Et1\"",
+    "    no mtu \"1500\"",
+    "    mtu \"9000\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface nc:operation=\"delete\">\n    <name>Et2</name>\n  </iface>\n  <iface>\n    <mtu nc:operation=\"delete\">1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   }
+  },
+  "repeated|CISCO_IOS|('name', 'id')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface nc:operation=\"delete\">Et2</iface>\n  <iface>\n    <mtu nc:operation=\"delete\">1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  no iface \"Et2\"",
+    "  iface \"Et1\"",
+    "    no mtu \"1500\"",
+    "    mtu \"9000\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface nc:operation=\"delete\">\n    <name>Et2</name>\n  </iface>\n  <iface>\n    <mtu nc:operation=\"delete\">1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   }
+  },
+  "repeated|CISCO_IOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface nc:operation=\"delete\">Et2</iface>\n  <iface>\n    <mtu nc:operation=\"delete\">1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  no iface \"Et2\"",
+    "  iface \"Et1\"",
+    "    no mtu \"1500\"",
+    "    mtu \"9000\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface nc:operation=\"delete\">\n    <name>Et2</name>\n  </iface>\n  <iface>\n    <mtu nc:operation=\"delete\">1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   }
+  },
+  "repeated|CISCO_IOS|None": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface nc:operation=\"delete\">Et2</iface>\n  <iface>\n    <mtu nc:operation=\"delete\">1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  no iface \"Et2\"",
+    "  iface \"Et1\"",
+    "    no mtu \"1500\"",
+    "    mtu \"9000\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface nc:operation=\"delete\">\n    <name>Et2</name>\n  </iface>\n  <iface>\n    <mtu nc:operation=\"delete\">1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   }
+  },
+  "repeated|JUNIPER_JUNOS|('name', 'id')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface>Et2</iface>\n  <iface>\n    <mtu>1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  iface \"Et2\"",
+    "  iface \"Et1\"",
+    "    mtu \"1500\"",
+    "    mtu \"9000\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface>Et2</iface>\n  <iface>\n    <mtu>1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   }
+  },
+  "repeated|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface>Et2</iface>\n  <iface>\n    <mtu>1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  iface \"Et2\"",
+    "  iface \"Et1\"",
+    "    mtu \"1500\"",
+    "    mtu \"9000\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface>Et2</iface>\n  <iface>\n    <mtu>1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   }
+  },
+  "repeated|JUNIPER_JUNOS|None": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface>Et2</iface>\n  <iface>\n    <mtu>1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  iface \"Et2\"",
+    "  iface \"Et1\"",
+    "    mtu \"1500\"",
+    "    mtu \"9000\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface>Et2</iface>\n  <iface>\n    <mtu>1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   }
+  },
+  "simple|ARISTA_EOS|('id',)": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <hostname nc:operation=\"delete\">sw1</hostname>\n  <hostname>sw2</hostname>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  no hostname \"sw1\"",
+    "  hostname \"sw2\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <hostname nc:operation=\"delete\">sw1</hostname>\n  <hostname>sw2</hostname>\n</config>"
+   }
+  },
+  "simple|ARISTA_EOS|('name', 'id')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <hostname nc:operation=\"delete\">sw1</hostname>\n  <hostname>sw2</hostname>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  no hostname \"sw1\"",
+    "  hostname \"sw2\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <hostname nc:operation=\"delete\">sw1</hostname>\n  <hostname>sw2</hostname>\n</config>"
+   }
+  },
+  "simple|ARISTA_EOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <hostname nc:operation=\"delete\">sw1</hostname>\n  <hostname>sw2</hostname>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  no hostname \"sw1\"",
+    "  hostname \"sw2\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <hostname nc:operation=\"delete\">sw1</hostname>\n  <hostname>sw2</hostname>\n</config>"
+   }
+  },
+  "simple|ARISTA_EOS|None": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <hostname nc:operation=\"delete\">sw1</hostname>\n  <hostname>sw2</hostname>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  no hostname \"sw1\"",
+    "  hostname \"sw2\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <hostname nc:operation=\"delete\">sw1</hostname>\n  <hostname>sw2</hostname>\n</config>"
+   }
+  },
+  "simple|CISCO_IOS|('id',)": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <hostname nc:operation=\"delete\">sw1</hostname>\n  <hostname>sw2</hostname>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  no hostname \"sw1\"",
+    "  hostname \"sw2\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <hostname nc:operation=\"delete\">sw1</hostname>\n  <hostname>sw2</hostname>\n</config>"
+   }
+  },
+  "simple|CISCO_IOS|('name', 'id')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <hostname nc:operation=\"delete\">sw1</hostname>\n  <hostname>sw2</hostname>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  no hostname \"sw1\"",
+    "  hostname \"sw2\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <hostname nc:operation=\"delete\">sw1</hostname>\n  <hostname>sw2</hostname>\n</config>"
+   }
+  },
+  "simple|CISCO_IOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <hostname nc:operation=\"delete\">sw1</hostname>\n  <hostname>sw2</hostname>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  no hostname \"sw1\"",
+    "  hostname \"sw2\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <hostname nc:operation=\"delete\">sw1</hostname>\n  <hostname>sw2</hostname>\n</config>"
+   }
+  },
+  "simple|CISCO_IOS|None": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <hostname nc:operation=\"delete\">sw1</hostname>\n  <hostname>sw2</hostname>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  no hostname \"sw1\"",
+    "  hostname \"sw2\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <hostname nc:operation=\"delete\">sw1</hostname>\n  <hostname>sw2</hostname>\n</config>"
+   }
+  },
+  "simple|JUNIPER_JUNOS|('id',)": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <hostname>sw1</hostname>\n  <hostname>sw2</hostname>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  hostname \"sw1\"",
+    "  hostname \"sw2\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <hostname>sw1</hostname>\n  <hostname>sw2</hostname>\n</config>"
+   }
+  },
+  "simple|JUNIPER_JUNOS|('name', 'id')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <hostname>sw1</hostname>\n  <hostname>sw2</hostname>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  hostname \"sw1\"",
+    "  hostname \"sw2\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <hostname>sw1</hostname>\n  <hostname>sw2</hostname>\n</config>"
+   }
+  },
+  "simple|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <hostname>sw1</hostname>\n  <hostname>sw2</hostname>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  hostname \"sw1\"",
+    "  hostname \"sw2\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <hostname>sw1</hostname>\n  <hostname>sw2</hostname>\n</config>"
+   }
+  },
+  "simple|JUNIPER_JUNOS|None": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <hostname>sw1</hostname>\n  <hostname>sw2</hostname>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  hostname \"sw1\"",
+    "  hostname \"sw2\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <hostname>sw1</hostname>\n  <hostname>sw2</hostname>\n</config>"
+   }
+  },
+  "single-keyed|ARISTA_EOS|('id',)": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface>\n    <mtu nc:operation=\"delete\">1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  iface",
+    "    no mtu \"1500\"",
+    "    mtu \"9000\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface>\n    <mtu nc:operation=\"delete\">1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   }
+  },
+  "single-keyed|ARISTA_EOS|('name', 'id')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface>\n    <mtu nc:operation=\"delete\">1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  iface \"Et1\"",
+    "    no mtu \"1500\"",
+    "    mtu \"9000\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface>\n    <mtu nc:operation=\"delete\">1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   }
+  },
+  "single-keyed|ARISTA_EOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface>\n    <mtu nc:operation=\"delete\">1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  iface \"Et1\"",
+    "    no mtu \"1500\"",
+    "    mtu \"9000\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface>\n    <mtu nc:operation=\"delete\">1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   }
+  },
+  "single-keyed|ARISTA_EOS|None": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface>\n    <mtu nc:operation=\"delete\">1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  iface \"Et1\"",
+    "    no mtu \"1500\"",
+    "    mtu \"9000\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface>\n    <mtu nc:operation=\"delete\">1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   }
+  },
+  "single-keyed|CISCO_IOS|('id',)": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface>\n    <mtu nc:operation=\"delete\">1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  iface",
+    "    no mtu \"1500\"",
+    "    mtu \"9000\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface>\n    <mtu nc:operation=\"delete\">1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   }
+  },
+  "single-keyed|CISCO_IOS|('name', 'id')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface>\n    <mtu nc:operation=\"delete\">1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  iface \"Et1\"",
+    "    no mtu \"1500\"",
+    "    mtu \"9000\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface>\n    <mtu nc:operation=\"delete\">1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   }
+  },
+  "single-keyed|CISCO_IOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface>\n    <mtu nc:operation=\"delete\">1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  iface \"Et1\"",
+    "    no mtu \"1500\"",
+    "    mtu \"9000\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface>\n    <mtu nc:operation=\"delete\">1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   }
+  },
+  "single-keyed|CISCO_IOS|None": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface>\n    <mtu nc:operation=\"delete\">1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  iface \"Et1\"",
+    "    no mtu \"1500\"",
+    "    mtu \"9000\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface>\n    <mtu nc:operation=\"delete\">1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   }
+  },
+  "single-keyed|JUNIPER_JUNOS|('id',)": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface>\n    <mtu>1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  iface",
+    "    mtu \"1500\"",
+    "    mtu \"9000\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface>\n    <mtu>1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   }
+  },
+  "single-keyed|JUNIPER_JUNOS|('name', 'id')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface>\n    <mtu>1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  iface \"Et1\"",
+    "    mtu \"1500\"",
+    "    mtu \"9000\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface>\n    <mtu>1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   }
+  },
+  "single-keyed|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface>\n    <mtu>1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  iface \"Et1\"",
+    "    mtu \"1500\"",
+    "    mtu \"9000\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface>\n    <mtu>1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   }
+  },
+  "single-keyed|JUNIPER_JUNOS|None": {
+   "no_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface>\n    <mtu>1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   },
+   "remediation": [
+    "config",
+    "  iface \"Et1\"",
+    "    mtu \"1500\"",
+    "    mtu \"9000\""
+   ],
+   "with_running": {
+    "ok": "<config xmlns:nc=\"urn:ietf:params:xml:ns:netconf:base:1.0\">\n  <iface>\n    <mtu>1500</mtu>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+   }
+  }
+ },
+ "sources": {
+  "json": {
+   "empty-obj": {
+    "config": "{\"system\": {}}",
+    "target": "{\"system\": {}}"
+   },
+   "id-keyed": {
+    "config": "{\"vlans\": [{\"id\": 10, \"name\": \"OLD\"}, {\"id\": 20, \"name\": \"B\"}]}",
+    "target": "{\"vlans\": [{\"id\": 10, \"name\": \"NEW\"}]}"
+   },
+   "keyed-list": {
+    "config": "{\"interfaces\": [{\"name\": \"Et1\", \"mtu\": 1500}, {\"name\": \"Et2\", \"mtu\": 9000}]}",
+    "target": "{\"interfaces\": [{\"name\": \"Et1\", \"mtu\": 9000}]}"
+   },
+   "nested": {
+    "config": "{\"system\": {\"dns\": {\"server\": \"8.8.8.8\"}, \"ntp\": {\"enabled\": false}}}",
+    "target": "{\"system\": {\"dns\": {\"server\": \"1.1.1.1\"}}}"
+   },
+   "scalar-list": {
+    "config": "{\"tags\": [\"a\", \"b\", 3]}",
+    "target": "{\"tags\": [\"a\"]}"
+   },
+   "scalars": {
+    "config": "{\"hostname\": \"sw1\", \"mtu\": 9000, \"enabled\": true, \"ratio\": 1.5, \"nothing\": null}",
+    "target": "{\"hostname\": \"sw2\", \"mtu\": 1500, \"enabled\": false, \"ratio\": 2.5}"
+   },
+   "special-chars": {
+    "config": "{\"desc\": \"a<b>c&d\\\"e'f\"}",
+    "target": "{\"desc\": \"x<y\"}"
+   },
+   "unicode": {
+    "config": "{\"desc\": \"café – dash\"}",
+    "target": "{\"desc\": \"naïve\"}"
+   }
+  },
+  "xml": {
+   "attrs": {
+    "config": "<config a=\"1\" b=\"two\"><x y=\"z\">text</x></config>",
+    "target": "<config a=\"1\" b=\"three\"><x y=\"z\">text</x></config>"
+   },
+   "empty-el": {
+    "config": "<config><flag/></config>",
+    "target": "<config><flag/></config>"
+   },
+   "escapes": {
+    "config": "<config><d>a&lt;b&amp;c</d></config>",
+    "target": "<config><d>x&gt;y</d></config>"
+   },
+   "mixed-text": {
+    "config": "<config>lead<child>c</child></config>",
+    "target": "<config>lead2<child>c</child></config>"
+   },
+   "nested": {
+    "config": "<config><system><dns><server>8.8.8.8</server></dns></system></config>",
+    "target": "<config><system><dns><server>1.1.1.1</server></dns></system></config>"
+   },
+   "repeated": {
+    "config": "<config><iface><name>Et1</name><mtu>1500</mtu></iface><iface><name>Et2</name><mtu>9000</mtu></iface></config>",
+    "target": "<config><iface><name>Et1</name><mtu>9000</mtu></iface></config>"
+   },
+   "simple": {
+    "config": "<config><hostname>sw1</hostname></config>",
+    "target": "<config><hostname>sw2</hostname></config>"
+   },
+   "single-keyed": {
+    "config": "<config><iface><name>Et1</name><mtu>1500</mtu></iface></config>",
+    "target": "<config><iface><name>Et1</name><mtu>9000</mtu></iface></config>"
+   }
+  }
+ },
+ "xml": {
+  "attrs|ARISTA_EOS|('id',)": {
+   "ok": {
+    "simple": [
+     "config",
+     "  @a \"1\"",
+     "  @b \"two\"",
+     "  x",
+     "    @y \"z\"",
+     "    #text \"text\""
+    ],
+    "to_xml": {
+     "ok": "<config a=\"1\" b=\"two\">\n  <x y=\"z\">text</x>\n</config>"
+    }
+   }
+  },
+  "attrs|ARISTA_EOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  @a \"1\"",
+     "  @b \"two\"",
+     "  x",
+     "    @y \"z\"",
+     "    #text \"text\""
+    ],
+    "to_xml": {
+     "ok": "<config a=\"1\" b=\"two\">\n  <x y=\"z\">text</x>\n</config>"
+    }
+   }
+  },
+  "attrs|ARISTA_EOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  @a \"1\"",
+     "  @b \"two\"",
+     "  x",
+     "    @y \"z\"",
+     "    #text \"text\""
+    ],
+    "to_xml": {
+     "ok": "<config a=\"1\" b=\"two\">\n  <x y=\"z\">text</x>\n</config>"
+    }
+   }
+  },
+  "attrs|ARISTA_EOS|None": {
+   "ok": {
+    "simple": [
+     "config",
+     "  @a \"1\"",
+     "  @b \"two\"",
+     "  x",
+     "    @y \"z\"",
+     "    #text \"text\""
+    ],
+    "to_xml": {
+     "ok": "<config a=\"1\" b=\"two\">\n  <x y=\"z\">text</x>\n</config>"
+    }
+   }
+  },
+  "attrs|CISCO_IOS|('id',)": {
+   "ok": {
+    "simple": [
+     "config",
+     "  @a \"1\"",
+     "  @b \"two\"",
+     "  x",
+     "    @y \"z\"",
+     "    #text \"text\""
+    ],
+    "to_xml": {
+     "ok": "<config a=\"1\" b=\"two\">\n  <x y=\"z\">text</x>\n</config>"
+    }
+   }
+  },
+  "attrs|CISCO_IOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  @a \"1\"",
+     "  @b \"two\"",
+     "  x",
+     "    @y \"z\"",
+     "    #text \"text\""
+    ],
+    "to_xml": {
+     "ok": "<config a=\"1\" b=\"two\">\n  <x y=\"z\">text</x>\n</config>"
+    }
+   }
+  },
+  "attrs|CISCO_IOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  @a \"1\"",
+     "  @b \"two\"",
+     "  x",
+     "    @y \"z\"",
+     "    #text \"text\""
+    ],
+    "to_xml": {
+     "ok": "<config a=\"1\" b=\"two\">\n  <x y=\"z\">text</x>\n</config>"
+    }
+   }
+  },
+  "attrs|CISCO_IOS|None": {
+   "ok": {
+    "simple": [
+     "config",
+     "  @a \"1\"",
+     "  @b \"two\"",
+     "  x",
+     "    @y \"z\"",
+     "    #text \"text\""
+    ],
+    "to_xml": {
+     "ok": "<config a=\"1\" b=\"two\">\n  <x y=\"z\">text</x>\n</config>"
+    }
+   }
+  },
+  "attrs|JUNIPER_JUNOS|('id',)": {
+   "ok": {
+    "simple": [
+     "config",
+     "  @a \"1\"",
+     "  @b \"two\"",
+     "  x",
+     "    @y \"z\"",
+     "    #text \"text\""
+    ],
+    "to_xml": {
+     "ok": "<config a=\"1\" b=\"two\">\n  <x y=\"z\">text</x>\n</config>"
+    }
+   }
+  },
+  "attrs|JUNIPER_JUNOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  @a \"1\"",
+     "  @b \"two\"",
+     "  x",
+     "    @y \"z\"",
+     "    #text \"text\""
+    ],
+    "to_xml": {
+     "ok": "<config a=\"1\" b=\"two\">\n  <x y=\"z\">text</x>\n</config>"
+    }
+   }
+  },
+  "attrs|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  @a \"1\"",
+     "  @b \"two\"",
+     "  x",
+     "    @y \"z\"",
+     "    #text \"text\""
+    ],
+    "to_xml": {
+     "ok": "<config a=\"1\" b=\"two\">\n  <x y=\"z\">text</x>\n</config>"
+    }
+   }
+  },
+  "attrs|JUNIPER_JUNOS|None": {
+   "ok": {
+    "simple": [
+     "config",
+     "  @a \"1\"",
+     "  @b \"two\"",
+     "  x",
+     "    @y \"z\"",
+     "    #text \"text\""
+    ],
+    "to_xml": {
+     "ok": "<config a=\"1\" b=\"two\">\n  <x y=\"z\">text</x>\n</config>"
+    }
+   }
+  },
+  "empty-el|ARISTA_EOS|('id',)": {
+   "ok": {
+    "simple": [
+     "config",
+     "  flag"
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <flag />\n</config>"
+    }
+   }
+  },
+  "empty-el|ARISTA_EOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  flag"
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <flag />\n</config>"
+    }
+   }
+  },
+  "empty-el|ARISTA_EOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  flag"
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <flag />\n</config>"
+    }
+   }
+  },
+  "empty-el|ARISTA_EOS|None": {
+   "ok": {
+    "simple": [
+     "config",
+     "  flag"
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <flag />\n</config>"
+    }
+   }
+  },
+  "empty-el|CISCO_IOS|('id',)": {
+   "ok": {
+    "simple": [
+     "config",
+     "  flag"
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <flag />\n</config>"
+    }
+   }
+  },
+  "empty-el|CISCO_IOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  flag"
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <flag />\n</config>"
+    }
+   }
+  },
+  "empty-el|CISCO_IOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  flag"
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <flag />\n</config>"
+    }
+   }
+  },
+  "empty-el|CISCO_IOS|None": {
+   "ok": {
+    "simple": [
+     "config",
+     "  flag"
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <flag />\n</config>"
+    }
+   }
+  },
+  "empty-el|JUNIPER_JUNOS|('id',)": {
+   "ok": {
+    "simple": [
+     "config",
+     "  flag"
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <flag />\n</config>"
+    }
+   }
+  },
+  "empty-el|JUNIPER_JUNOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  flag"
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <flag />\n</config>"
+    }
+   }
+  },
+  "empty-el|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  flag"
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <flag />\n</config>"
+    }
+   }
+  },
+  "empty-el|JUNIPER_JUNOS|None": {
+   "ok": {
+    "simple": [
+     "config",
+     "  flag"
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <flag />\n</config>"
+    }
+   }
+  },
+  "escapes|ARISTA_EOS|('id',)": {
+   "ok": {
+    "simple": [
+     "config",
+     "  d \"a<b&c\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <d>a&lt;b&amp;c</d>\n</config>"
+    }
+   }
+  },
+  "escapes|ARISTA_EOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  d \"a<b&c\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <d>a&lt;b&amp;c</d>\n</config>"
+    }
+   }
+  },
+  "escapes|ARISTA_EOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  d \"a<b&c\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <d>a&lt;b&amp;c</d>\n</config>"
+    }
+   }
+  },
+  "escapes|ARISTA_EOS|None": {
+   "ok": {
+    "simple": [
+     "config",
+     "  d \"a<b&c\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <d>a&lt;b&amp;c</d>\n</config>"
+    }
+   }
+  },
+  "escapes|CISCO_IOS|('id',)": {
+   "ok": {
+    "simple": [
+     "config",
+     "  d \"a<b&c\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <d>a&lt;b&amp;c</d>\n</config>"
+    }
+   }
+  },
+  "escapes|CISCO_IOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  d \"a<b&c\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <d>a&lt;b&amp;c</d>\n</config>"
+    }
+   }
+  },
+  "escapes|CISCO_IOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  d \"a<b&c\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <d>a&lt;b&amp;c</d>\n</config>"
+    }
+   }
+  },
+  "escapes|CISCO_IOS|None": {
+   "ok": {
+    "simple": [
+     "config",
+     "  d \"a<b&c\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <d>a&lt;b&amp;c</d>\n</config>"
+    }
+   }
+  },
+  "escapes|JUNIPER_JUNOS|('id',)": {
+   "ok": {
+    "simple": [
+     "config",
+     "  d \"a<b&c\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <d>a&lt;b&amp;c</d>\n</config>"
+    }
+   }
+  },
+  "escapes|JUNIPER_JUNOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  d \"a<b&c\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <d>a&lt;b&amp;c</d>\n</config>"
+    }
+   }
+  },
+  "escapes|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  d \"a<b&c\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <d>a&lt;b&amp;c</d>\n</config>"
+    }
+   }
+  },
+  "escapes|JUNIPER_JUNOS|None": {
+   "ok": {
+    "simple": [
+     "config",
+     "  d \"a<b&c\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <d>a&lt;b&amp;c</d>\n</config>"
+    }
+   }
+  },
+  "mixed-text|ARISTA_EOS|('id',)": {
+   "ok": {
+    "simple": [
+     "config",
+     "  #text \"lead\"",
+     "  child \"c\""
+    ],
+    "to_xml": {
+     "ok": "<config>lead<child>c</child>\n</config>"
+    }
+   }
+  },
+  "mixed-text|ARISTA_EOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  #text \"lead\"",
+     "  child \"c\""
+    ],
+    "to_xml": {
+     "ok": "<config>lead<child>c</child>\n</config>"
+    }
+   }
+  },
+  "mixed-text|ARISTA_EOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  #text \"lead\"",
+     "  child \"c\""
+    ],
+    "to_xml": {
+     "ok": "<config>lead<child>c</child>\n</config>"
+    }
+   }
+  },
+  "mixed-text|ARISTA_EOS|None": {
+   "ok": {
+    "simple": [
+     "config",
+     "  #text \"lead\"",
+     "  child \"c\""
+    ],
+    "to_xml": {
+     "ok": "<config>lead<child>c</child>\n</config>"
+    }
+   }
+  },
+  "mixed-text|CISCO_IOS|('id',)": {
+   "ok": {
+    "simple": [
+     "config",
+     "  #text \"lead\"",
+     "  child \"c\""
+    ],
+    "to_xml": {
+     "ok": "<config>lead<child>c</child>\n</config>"
+    }
+   }
+  },
+  "mixed-text|CISCO_IOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  #text \"lead\"",
+     "  child \"c\""
+    ],
+    "to_xml": {
+     "ok": "<config>lead<child>c</child>\n</config>"
+    }
+   }
+  },
+  "mixed-text|CISCO_IOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  #text \"lead\"",
+     "  child \"c\""
+    ],
+    "to_xml": {
+     "ok": "<config>lead<child>c</child>\n</config>"
+    }
+   }
+  },
+  "mixed-text|CISCO_IOS|None": {
+   "ok": {
+    "simple": [
+     "config",
+     "  #text \"lead\"",
+     "  child \"c\""
+    ],
+    "to_xml": {
+     "ok": "<config>lead<child>c</child>\n</config>"
+    }
+   }
+  },
+  "mixed-text|JUNIPER_JUNOS|('id',)": {
+   "ok": {
+    "simple": [
+     "config",
+     "  #text \"lead\"",
+     "  child \"c\""
+    ],
+    "to_xml": {
+     "ok": "<config>lead<child>c</child>\n</config>"
+    }
+   }
+  },
+  "mixed-text|JUNIPER_JUNOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  #text \"lead\"",
+     "  child \"c\""
+    ],
+    "to_xml": {
+     "ok": "<config>lead<child>c</child>\n</config>"
+    }
+   }
+  },
+  "mixed-text|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  #text \"lead\"",
+     "  child \"c\""
+    ],
+    "to_xml": {
+     "ok": "<config>lead<child>c</child>\n</config>"
+    }
+   }
+  },
+  "mixed-text|JUNIPER_JUNOS|None": {
+   "ok": {
+    "simple": [
+     "config",
+     "  #text \"lead\"",
+     "  child \"c\""
+    ],
+    "to_xml": {
+     "ok": "<config>lead<child>c</child>\n</config>"
+    }
+   }
+  },
+  "nested|ARISTA_EOS|('id',)": {
+   "ok": {
+    "simple": [
+     "config",
+     "  system",
+     "    dns",
+     "      server \"8.8.8.8\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <system>\n    <dns>\n      <server>8.8.8.8</server>\n    </dns>\n  </system>\n</config>"
+    }
+   }
+  },
+  "nested|ARISTA_EOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  system",
+     "    dns",
+     "      server \"8.8.8.8\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <system>\n    <dns>\n      <server>8.8.8.8</server>\n    </dns>\n  </system>\n</config>"
+    }
+   }
+  },
+  "nested|ARISTA_EOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  system",
+     "    dns",
+     "      server \"8.8.8.8\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <system>\n    <dns>\n      <server>8.8.8.8</server>\n    </dns>\n  </system>\n</config>"
+    }
+   }
+  },
+  "nested|ARISTA_EOS|None": {
+   "ok": {
+    "simple": [
+     "config",
+     "  system",
+     "    dns",
+     "      server \"8.8.8.8\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <system>\n    <dns>\n      <server>8.8.8.8</server>\n    </dns>\n  </system>\n</config>"
+    }
+   }
+  },
+  "nested|CISCO_IOS|('id',)": {
+   "ok": {
+    "simple": [
+     "config",
+     "  system",
+     "    dns",
+     "      server \"8.8.8.8\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <system>\n    <dns>\n      <server>8.8.8.8</server>\n    </dns>\n  </system>\n</config>"
+    }
+   }
+  },
+  "nested|CISCO_IOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  system",
+     "    dns",
+     "      server \"8.8.8.8\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <system>\n    <dns>\n      <server>8.8.8.8</server>\n    </dns>\n  </system>\n</config>"
+    }
+   }
+  },
+  "nested|CISCO_IOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  system",
+     "    dns",
+     "      server \"8.8.8.8\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <system>\n    <dns>\n      <server>8.8.8.8</server>\n    </dns>\n  </system>\n</config>"
+    }
+   }
+  },
+  "nested|CISCO_IOS|None": {
+   "ok": {
+    "simple": [
+     "config",
+     "  system",
+     "    dns",
+     "      server \"8.8.8.8\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <system>\n    <dns>\n      <server>8.8.8.8</server>\n    </dns>\n  </system>\n</config>"
+    }
+   }
+  },
+  "nested|JUNIPER_JUNOS|('id',)": {
+   "ok": {
+    "simple": [
+     "config",
+     "  system",
+     "    dns",
+     "      server \"8.8.8.8\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <system>\n    <dns>\n      <server>8.8.8.8</server>\n    </dns>\n  </system>\n</config>"
+    }
+   }
+  },
+  "nested|JUNIPER_JUNOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  system",
+     "    dns",
+     "      server \"8.8.8.8\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <system>\n    <dns>\n      <server>8.8.8.8</server>\n    </dns>\n  </system>\n</config>"
+    }
+   }
+  },
+  "nested|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  system",
+     "    dns",
+     "      server \"8.8.8.8\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <system>\n    <dns>\n      <server>8.8.8.8</server>\n    </dns>\n  </system>\n</config>"
+    }
+   }
+  },
+  "nested|JUNIPER_JUNOS|None": {
+   "ok": {
+    "simple": [
+     "config",
+     "  system",
+     "    dns",
+     "      server \"8.8.8.8\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <system>\n    <dns>\n      <server>8.8.8.8</server>\n    </dns>\n  </system>\n</config>"
+    }
+   }
+  },
+  "repeated|ARISTA_EOS|('id',)": {
+   "err": "InvalidConfigError: Repeated <iface> elements need a child element named one of ('id',) to identify them; pass list_keys= to name the identifying element"
+  },
+  "repeated|ARISTA_EOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  iface \"Et1\"",
+     "    name \"Et1\"",
+     "    mtu \"1500\"",
+     "  iface \"Et2\"",
+     "    name \"Et2\"",
+     "    mtu \"9000\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <iface>\n    <name>Et1</name>\n    <mtu>1500</mtu>\n  </iface>\n  <iface>\n    <name>Et2</name>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+    }
+   }
+  },
+  "repeated|ARISTA_EOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  iface \"Et1\"",
+     "    name \"Et1\"",
+     "    mtu \"1500\"",
+     "  iface \"Et2\"",
+     "    name \"Et2\"",
+     "    mtu \"9000\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <iface>\n    <name>Et1</name>\n    <mtu>1500</mtu>\n  </iface>\n  <iface>\n    <name>Et2</name>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+    }
+   }
+  },
+  "repeated|ARISTA_EOS|None": {
+   "ok": {
+    "simple": [
+     "config",
+     "  iface \"Et1\"",
+     "    name \"Et1\"",
+     "    mtu \"1500\"",
+     "  iface \"Et2\"",
+     "    name \"Et2\"",
+     "    mtu \"9000\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <iface>\n    <name>Et1</name>\n    <mtu>1500</mtu>\n  </iface>\n  <iface>\n    <name>Et2</name>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+    }
+   }
+  },
+  "repeated|CISCO_IOS|('id',)": {
+   "err": "InvalidConfigError: Repeated <iface> elements need a child element named one of ('id',) to identify them; pass list_keys= to name the identifying element"
+  },
+  "repeated|CISCO_IOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  iface \"Et1\"",
+     "    name \"Et1\"",
+     "    mtu \"1500\"",
+     "  iface \"Et2\"",
+     "    name \"Et2\"",
+     "    mtu \"9000\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <iface>\n    <name>Et1</name>\n    <mtu>1500</mtu>\n  </iface>\n  <iface>\n    <name>Et2</name>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+    }
+   }
+  },
+  "repeated|CISCO_IOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  iface \"Et1\"",
+     "    name \"Et1\"",
+     "    mtu \"1500\"",
+     "  iface \"Et2\"",
+     "    name \"Et2\"",
+     "    mtu \"9000\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <iface>\n    <name>Et1</name>\n    <mtu>1500</mtu>\n  </iface>\n  <iface>\n    <name>Et2</name>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+    }
+   }
+  },
+  "repeated|CISCO_IOS|None": {
+   "ok": {
+    "simple": [
+     "config",
+     "  iface \"Et1\"",
+     "    name \"Et1\"",
+     "    mtu \"1500\"",
+     "  iface \"Et2\"",
+     "    name \"Et2\"",
+     "    mtu \"9000\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <iface>\n    <name>Et1</name>\n    <mtu>1500</mtu>\n  </iface>\n  <iface>\n    <name>Et2</name>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+    }
+   }
+  },
+  "repeated|JUNIPER_JUNOS|('id',)": {
+   "err": "InvalidConfigError: Repeated <iface> elements need a child element named one of ('id',) to identify them; pass list_keys= to name the identifying element"
+  },
+  "repeated|JUNIPER_JUNOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  iface \"Et1\"",
+     "    name \"Et1\"",
+     "    mtu \"1500\"",
+     "  iface \"Et2\"",
+     "    name \"Et2\"",
+     "    mtu \"9000\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <iface>\n    <name>Et1</name>\n    <mtu>1500</mtu>\n  </iface>\n  <iface>\n    <name>Et2</name>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+    }
+   }
+  },
+  "repeated|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  iface \"Et1\"",
+     "    name \"Et1\"",
+     "    mtu \"1500\"",
+     "  iface \"Et2\"",
+     "    name \"Et2\"",
+     "    mtu \"9000\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <iface>\n    <name>Et1</name>\n    <mtu>1500</mtu>\n  </iface>\n  <iface>\n    <name>Et2</name>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+    }
+   }
+  },
+  "repeated|JUNIPER_JUNOS|None": {
+   "ok": {
+    "simple": [
+     "config",
+     "  iface \"Et1\"",
+     "    name \"Et1\"",
+     "    mtu \"1500\"",
+     "  iface \"Et2\"",
+     "    name \"Et2\"",
+     "    mtu \"9000\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <iface>\n    <name>Et1</name>\n    <mtu>1500</mtu>\n  </iface>\n  <iface>\n    <name>Et2</name>\n    <mtu>9000</mtu>\n  </iface>\n</config>"
+    }
+   }
+  },
+  "simple|ARISTA_EOS|('id',)": {
+   "ok": {
+    "simple": [
+     "config",
+     "  hostname \"sw1\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <hostname>sw1</hostname>\n</config>"
+    }
+   }
+  },
+  "simple|ARISTA_EOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  hostname \"sw1\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <hostname>sw1</hostname>\n</config>"
+    }
+   }
+  },
+  "simple|ARISTA_EOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  hostname \"sw1\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <hostname>sw1</hostname>\n</config>"
+    }
+   }
+  },
+  "simple|ARISTA_EOS|None": {
+   "ok": {
+    "simple": [
+     "config",
+     "  hostname \"sw1\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <hostname>sw1</hostname>\n</config>"
+    }
+   }
+  },
+  "simple|CISCO_IOS|('id',)": {
+   "ok": {
+    "simple": [
+     "config",
+     "  hostname \"sw1\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <hostname>sw1</hostname>\n</config>"
+    }
+   }
+  },
+  "simple|CISCO_IOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  hostname \"sw1\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <hostname>sw1</hostname>\n</config>"
+    }
+   }
+  },
+  "simple|CISCO_IOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  hostname \"sw1\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <hostname>sw1</hostname>\n</config>"
+    }
+   }
+  },
+  "simple|CISCO_IOS|None": {
+   "ok": {
+    "simple": [
+     "config",
+     "  hostname \"sw1\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <hostname>sw1</hostname>\n</config>"
+    }
+   }
+  },
+  "simple|JUNIPER_JUNOS|('id',)": {
+   "ok": {
+    "simple": [
+     "config",
+     "  hostname \"sw1\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <hostname>sw1</hostname>\n</config>"
+    }
+   }
+  },
+  "simple|JUNIPER_JUNOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  hostname \"sw1\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <hostname>sw1</hostname>\n</config>"
+    }
+   }
+  },
+  "simple|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  hostname \"sw1\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <hostname>sw1</hostname>\n</config>"
+    }
+   }
+  },
+  "simple|JUNIPER_JUNOS|None": {
+   "ok": {
+    "simple": [
+     "config",
+     "  hostname \"sw1\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <hostname>sw1</hostname>\n</config>"
+    }
+   }
+  },
+  "single-keyed|ARISTA_EOS|('id',)": {
+   "ok": {
+    "simple": [
+     "config",
+     "  iface",
+     "    name \"Et1\"",
+     "    mtu \"1500\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <iface>\n    <name>Et1</name>\n    <mtu>1500</mtu>\n  </iface>\n</config>"
+    }
+   }
+  },
+  "single-keyed|ARISTA_EOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  iface \"Et1\"",
+     "    name \"Et1\"",
+     "    mtu \"1500\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <iface>\n    <name>Et1</name>\n    <mtu>1500</mtu>\n  </iface>\n</config>"
+    }
+   }
+  },
+  "single-keyed|ARISTA_EOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  iface \"Et1\"",
+     "    name \"Et1\"",
+     "    mtu \"1500\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <iface>\n    <name>Et1</name>\n    <mtu>1500</mtu>\n  </iface>\n</config>"
+    }
+   }
+  },
+  "single-keyed|ARISTA_EOS|None": {
+   "ok": {
+    "simple": [
+     "config",
+     "  iface \"Et1\"",
+     "    name \"Et1\"",
+     "    mtu \"1500\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <iface>\n    <name>Et1</name>\n    <mtu>1500</mtu>\n  </iface>\n</config>"
+    }
+   }
+  },
+  "single-keyed|CISCO_IOS|('id',)": {
+   "ok": {
+    "simple": [
+     "config",
+     "  iface",
+     "    name \"Et1\"",
+     "    mtu \"1500\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <iface>\n    <name>Et1</name>\n    <mtu>1500</mtu>\n  </iface>\n</config>"
+    }
+   }
+  },
+  "single-keyed|CISCO_IOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  iface \"Et1\"",
+     "    name \"Et1\"",
+     "    mtu \"1500\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <iface>\n    <name>Et1</name>\n    <mtu>1500</mtu>\n  </iface>\n</config>"
+    }
+   }
+  },
+  "single-keyed|CISCO_IOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  iface \"Et1\"",
+     "    name \"Et1\"",
+     "    mtu \"1500\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <iface>\n    <name>Et1</name>\n    <mtu>1500</mtu>\n  </iface>\n</config>"
+    }
+   }
+  },
+  "single-keyed|CISCO_IOS|None": {
+   "ok": {
+    "simple": [
+     "config",
+     "  iface \"Et1\"",
+     "    name \"Et1\"",
+     "    mtu \"1500\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <iface>\n    <name>Et1</name>\n    <mtu>1500</mtu>\n  </iface>\n</config>"
+    }
+   }
+  },
+  "single-keyed|JUNIPER_JUNOS|('id',)": {
+   "ok": {
+    "simple": [
+     "config",
+     "  iface",
+     "    name \"Et1\"",
+     "    mtu \"1500\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <iface>\n    <name>Et1</name>\n    <mtu>1500</mtu>\n  </iface>\n</config>"
+    }
+   }
+  },
+  "single-keyed|JUNIPER_JUNOS|('name', 'id')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  iface \"Et1\"",
+     "    name \"Et1\"",
+     "    mtu \"1500\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <iface>\n    <name>Et1</name>\n    <mtu>1500</mtu>\n  </iface>\n</config>"
+    }
+   }
+  },
+  "single-keyed|JUNIPER_JUNOS|('name', 'id', 'key')": {
+   "ok": {
+    "simple": [
+     "config",
+     "  iface \"Et1\"",
+     "    name \"Et1\"",
+     "    mtu \"1500\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <iface>\n    <name>Et1</name>\n    <mtu>1500</mtu>\n  </iface>\n</config>"
+    }
+   }
+  },
+  "single-keyed|JUNIPER_JUNOS|None": {
+   "ok": {
+    "simple": [
+     "config",
+     "  iface \"Et1\"",
+     "    name \"Et1\"",
+     "    mtu \"1500\""
+    ],
+    "to_xml": {
+     "ok": "<config>\n  <iface>\n    <name>Et1</name>\n    <mtu>1500</mtu>\n  </iface>\n</config>"
+    }
+   }
+  }
+ }
+}

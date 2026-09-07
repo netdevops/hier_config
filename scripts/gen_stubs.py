@@ -34,10 +34,17 @@ import inspect
 import pathlib
 import subprocess
 import sys
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import types
 
 BASELINE = "98a9a49"
 MODULES = ("base", "child", "children", "root")
 STUB_DIR = pathlib.Path(__file__).resolve().parent.parent / "hier_config"
+NATIVE_STUB = (
+    pathlib.Path(__file__).resolve().parent.parent / "stubs" / "_hier_config_rust.pyi"
+)
 
 # runtime class -> (stub module, base class in stub)
 CLASSES = {
@@ -645,6 +652,50 @@ def verify(targets: list[pathlib.Path], originals: dict[pathlib.Path, str]) -> i
     return 1
 
 
+def verify_extension_surface(native: types.ModuleType) -> int:
+    """Diff the live `_hier_config_rust` surface against its hand-written stub.
+
+    `stubs/_hier_config_rust.pyi` cannot be generated the way the tree stubs are
+    -- it mostly re-exports from `hier_config/*.pyi` so the signatures live in
+    exactly one place. It can still silently rot when a `#[pyfunction]` or
+    `#[pyclass]` is added on the Rust side, which downgrades every caller to
+    `Unknown` under pyright strict. This compares the two name sets so that
+    rot fails the lint gate instead of quietly eroding type coverage.
+    """
+    module = ast.parse(NATIVE_STUB.read_text())
+    declared: set[str] = set()
+    for node in ast.walk(module):
+        if isinstance(node, ast.Assign) and any(
+            isinstance(target, ast.Name) and target.id == "__all__"
+            for target in node.targets
+        ):
+            declared = {
+                element.value
+                for element in ast.walk(node.value)
+                if isinstance(element, ast.Constant) and isinstance(element.value, str)
+            }
+
+    exported = {
+        name
+        for name in vars(native)
+        if not name.startswith("_") and name != "annotations"
+    }
+    missing = sorted(exported - declared)
+    extra = sorted(declared - exported - {"HConfigChildrenIter", "GnmiRemediation"})
+    if not missing and not extra:
+        return 0
+
+    print(
+        "stubs/_hier_config_rust.pyi is out of sync with the extension:",
+        file=sys.stderr,
+    )
+    for name in missing:
+        print(f"  missing from the stub: {name}", file=sys.stderr)
+    for name in extra:
+        print(f"  declared but not exported: {name}", file=sys.stderr)
+    return 1
+
+
 def main() -> int:
     import _hier_config_rust as _native
 
@@ -702,9 +753,9 @@ def main() -> int:
             print(f"wrote hier_config/{module}.pyi  ({text.count(chr(10))} lines)")
 
     if check:
-        return verify(targets, originals)
+        return verify(targets, originals) or verify_extension_surface(_native)
     ruff_fix(targets)
-    return 0
+    return verify_extension_surface(_native)
 
 
 if __name__ == "__main__":

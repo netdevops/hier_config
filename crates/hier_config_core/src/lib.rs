@@ -8,6 +8,7 @@
 pub mod arena;
 pub mod constructors;
 pub mod driver;
+pub mod formats;
 pub mod models;
 pub mod parser;
 pub mod platforms;
@@ -25,6 +26,10 @@ pub use constructors::{
     reject_structured_format,
 };
 pub use driver::{Driver, DriverRules};
+pub use formats::{
+    FormatError, GnmiRemediation, from_json, from_json_value, from_xml, to_gnmi_json, to_json,
+    to_netconf_xml, to_xml,
+};
 pub use models::*;
 pub use parser::{
     config_preprocessor, convert_to_set_commands, from_dump, load_fast, load_fast_with_callbacks,

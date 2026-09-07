@@ -6,7 +6,7 @@ use std::sync::Arc;
 use hier_config_core::models::{Platform, TagRule};
 use hier_config_core::tree::Tree;
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyTuple, PyType};
+use pyo3::types::{PyTuple, PyType};
 
 use crate::base::{PyHConfigBase, extract_strings, parse_match_rules_seq};
 use crate::errors::to_py_err;
@@ -193,16 +193,14 @@ impl PyWorkflowRemediation {
     fn remediation_netconf_xml(
         &mut self,
         py: Python<'_>,
-        list_keys: Option<PyObject>,
-    ) -> PyResult<PyObject> {
+        list_keys: Option<Vec<String>>,
+    ) -> PyResult<String> {
         let remediation = self.remediation_config(py)?;
-        let kwargs = PyDict::new(py);
-        kwargs.set_item("running", self.running_config.clone_ref(py))?;
-        kwargs.set_item("list_keys", list_keys)?;
-        py.import("hier_config.formats")?
-            .getattr("hconfig_to_netconf_xml")?
-            .call((remediation,), Some(&kwargs))
-            .map(Bound::unbind)
+        crate::formats::formats_to_netconf_xml(
+            remediation.bind(py),
+            Some(self.running_config.bind(py)),
+            list_keys,
+        )
     }
 
     /// Renders the remediation as a gNMI-SetRequest-style dict.
@@ -212,16 +210,15 @@ impl PyWorkflowRemediation {
     fn remediation_json(
         &mut self,
         py: Python<'_>,
-        list_keys: Option<PyObject>,
+        list_keys: Option<Vec<String>>,
     ) -> PyResult<PyObject> {
         let remediation = self.remediation_config(py)?;
-        let kwargs = PyDict::new(py);
-        kwargs.set_item("running", self.running_config.clone_ref(py))?;
-        kwargs.set_item("list_keys", list_keys)?;
-        py.import("hier_config.formats")?
-            .getattr("hconfig_to_gnmi_json")?
-            .call((remediation,), Some(&kwargs))
-            .map(Bound::unbind)
+        crate::formats::formats_to_gnmi_json(
+            py,
+            remediation.bind(py),
+            Some(self.running_config.bind(py)),
+            list_keys,
+        )
     }
 
     #[getter]

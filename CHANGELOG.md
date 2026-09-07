@@ -26,6 +26,39 @@ v4 design decisions, for the record:
   algorithms are guaranteed (and now tested) not to mutate their input
   configs.
 
+### Changed
+
+- Structured-format conversions are now implemented in Rust. `from_json()`,
+  `to_json()`, `from_xml()`, `to_xml()`, `hconfig_to_netconf_xml()`, and
+  `hconfig_to_gnmi_json()` moved from `hier_config/formats.py` into
+  `hier_config_core::formats`; the Python module is now a thin, documented
+  wrapper. This removes the last inverted dependency in which the Rust
+  `WorkflowRemediation` bindings imported `hier_config.formats` back through
+  the interpreter, so NETCONF/gNMI rendering is available to pure-Rust
+  consumers. Behavior is pinned by a 385-case parity corpus
+  (`testdata/formats/expected.json`) generated from the previous Python
+  implementation.
+- `InvalidConfigError` is now defined in the extension module and re-exported
+  from `hier_config.exceptions`. Importing it from `hier_config.exceptions`
+  (the documented path) is unchanged.
+
+### Fixed
+
+- `from_json()` / `from_xml()` no longer silently de-duplicate repeated list
+  entries. Duplicates raise `DuplicateChildError` as documented, and the error
+  type survives the Rust boundary instead of being flattened to
+  `InvalidConfigError`.
+
+### Added
+
+- The lint gate now fails on type-stub and corpus drift.
+  `scripts/gen_stubs.py --check` additionally diffs the live
+  `_hier_config_rust` surface against `stubs/_hier_config_rust.pyi`, so a new
+  `#[pyfunction]` or `#[pyclass]` that is not declared in the stub — which
+  would silently degrade every caller to `Unknown` under pyright strict — is
+  caught in CI. `scripts/gen_formats_corpus.py --check` joins it to keep the
+  formats parity corpus honest.
+
 ### Removed
 
 - Dead driver algorithm. `HConfigDriverBase.idempotent_for()`,
