@@ -182,6 +182,11 @@ v4 design decisions, for the record:
 
 ### Changed
 
+- Migrated packaging, dependency management, and build backend from Poetry to
+  uv. Package metadata uses PEP 621 `[project]`, development dependencies use
+  PEP 735 `[dependency-groups]`, and the build backend is `uv_build`. Lockfile
+  migrated from `poetry.lock` to `uv.lock`. GitHub Actions workflows now use
+  `astral-sh/setup-uv@v5` with `uv sync` and native `uv build` / `uv publish`.
 - Restructured the documentation into User, Administrator, and Developer
   guides (`docs/user/`, `docs/admin/`, `docs/dev/`) with a rewritten landing
   page, new pages for loading configurations and remediation workflows, and
