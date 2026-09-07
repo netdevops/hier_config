@@ -4,7 +4,7 @@ Skipped by default: the `v3_output` fixture builds a virtual environment and
 downloads a release from PyPI. Run these by hand, or in a nightly or
 pre-release job:
 
-    poetry run pytest -m v3_differential -v
+    uv run pytest -m v3_differential -v
 
 `test_v3_baseline.py` covers the same ground against a committed recording on
 every push. These tests exist for the case that recording cannot catch: when
