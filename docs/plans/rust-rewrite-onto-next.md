@@ -37,12 +37,22 @@ Left unreconciled, the rewrite would ship a v4 that contradicts the v4 contract
 | `rust-rewrite` ahead | 58 commits |
 | Files changed on `next` | 191 |
 | Files changed on `rust-rewrite` | 515 |
-| **Textual overlap** | **52 files** |
+| **Textual overlap (path-identical)** | 52 files |
+| **Overlap incl. next's renames** | **70 files** |
 | Files we deleted that `next` touched | 1 (`poetry.lock`) |
 
-The 52-file overlap is the entire conflict surface. The other ~463 files we
+The 70-file overlap is the entire conflict surface. The other 446 files we
 changed are net-new (`crates/`, `stubs/`, `testdata/`, `Cargo.*`) and have no
 counterpart on `next` at all.
+
+> **Renames hide conflicts.** A plain path intersection reports only 52 files.
+> `next` performed 73 renames while restructuring the suite — for example
+> `tests/test_driver_cisco_ios.py` → `tests/integration/test_cisco_ios.py` and
+> `tests/test_workflow.py` → `tests/unit/test_workflows.py`. Eighteen files the
+> rewrite modified were moved rather than deleted, so they look net-new at their
+> old path and would silently resurrect a deleted file if landed wholesale.
+> Every comparison in this plan uses `git diff -M --find-renames=40%` and maps
+> each of our paths through that rename table before classifying it.
 
 ### What `next` added that the rewrite lacks
 
@@ -94,13 +104,13 @@ One merge commit, conflicts resolved once rather than per-commit.
 **Rejected, but it is the only real competitor.** It correctly avoids the
 N-times conflict problem. It fails on reviewability: the result tangles 58
 rewrite commits with 37 upstream commits into a single unreviewable diff, and
-it still requires hand-resolving all 52 overlapping files. It costs the same as
+it still requires hand-resolving all 70 overlapping files. It costs the same as
 Option C and produces a worse artifact.
 
 ### Option C — fresh branch from `next`, re-land in two categories *(recommended)*
 
 Branch `rust-on-next` from `upstream/next`. Land the ~463 net-new files
-wholesale (zero conflict surface). Then re-derive the 52 overlapping files
+wholesale (zero conflict surface). Then re-derive the 70 overlapping files
 against `next`'s versions rather than overwriting them.
 
 **Accepted trade-off:** we lose the rewrite's commit history. That history has
@@ -118,7 +128,7 @@ four modules of upstream feature work.
 Two insights drive the approach.
 
 **The conflict surface is small and well-bounded.** 463 of 515 changed files are
-net-new. They compile standalone and can land in one commit. Only 52 files need
+net-new. They compile standalone and can land in one commit. Only 70 files need
 human judgement.
 
 **`next` handed us a better oracle than we had.** #300 shipped
@@ -153,7 +163,7 @@ gitGraph
     checkout next
     branch rust-on-next
     commit id: "P2: land crates (463 files)"
-    commit id: "P3: re-derive 52 overlaps"
+    commit id: "P3: re-derive 70 overlaps"
     commit id: "P4: wire formats/registry"
     commit id: "P5: next suite green"
 ```
@@ -163,7 +173,7 @@ Category split driving the phases:
 ```mermaid
 flowchart LR
     R[rust-rewrite<br/>515 changed files] --> A["Category A<br/>~463 net-new<br/>crates/ stubs/ testdata/<br/><b>zero conflict</b>"]
-    R --> B["Category B<br/>52 overlapping<br/>shims, pyproject, CI, docs<br/><b>re-derive</b>"]
+    R --> B["Category B<br/>70 overlapping<br/>shims, drivers, tests, pyproject, CI, docs<br/><b>re-derive</b>"]
     A --> L[land wholesale<br/>one commit]
     B --> D[re-derive against<br/>next's versions]
     L --> V[run next's suite<br/>+ v3 baseline oracle]
@@ -197,12 +207,12 @@ flowchart LR
 - `cargo fmt --check`, `cargo clippy --all-targets --all-features -- -D warnings`
   and `cargo test --workspace` all pass.
 - `maturin develop --release` builds the extension.
-- No file touched in this phase appears in the 52-file overlap set.
+- No file touched in this phase appears in the 70-file overlap set.
 
 **Risks:** A file mis-classified as net-new silently clobbers `next` work.
 Mitigated by asserting the overlap set is disjoint before committing.
 
-### Phase 3 — Re-derive the 52 overlapping files
+### Phase 3 — Re-derive the 70 overlapping files
 
 **Sub-phase 3a — Python shim layer.** `base.py`, `root.py`, `child.py`,
 `children.py`, `workflows.py`, `constructors.py`, `models.py`, `exceptions.py`.
@@ -213,6 +223,41 @@ copy the `rust-rewrite` version over.
 overlap set. Reconcile `next`'s rule changes (notably #225 Fortinet, #286 public
 post-load callbacks) against the Rust driver rules.
 
+> **Sizing finding (recorded during execution).** Diffing `next` against the
+> merge base — rather than against the rewrite — shrinks this sub-phase
+> dramatically. Per-driver deltas are only 7–32 lines and are almost entirely
+> *mechanical*:
+>
+> 1. **Negation rule respelling (#220).** `NegationDefaultWhenRule` →
+>    `NegationRule(strategy=DEFAULT)`, `NegationDefaultWithRule` →
+>    `strategy=REPLACE`, `NegationSubRule` → `strategy=REGEX_SUB`. Semantics are
+>    unchanged, and #300 kept the three v3 fields as permanent compat fields
+>    resolved by `HConfigDriverRules.all_negation_rules()`. Every field name in
+>    the Rust `rules.json` files (`negate_with`, `negation_default_when`, …)
+>    still validates against `next`'s model, so **no Rust rules data has to
+>    change** and no Rust engine change is required: the core already evaluates
+>    REPLACE → DEFAULT → REGEX_SUB, which is the order `all_negation_rules()`
+>    reproduces.
+> 2. **Public post-load callbacks (#286).** Private callbacks were renamed
+>    public (`_remove_ipv4_acl_remarks` → `remove_ipv4_acl_remarks`). The
+>    rewrite runs the built-in post-load pipeline in Rust, so these functions
+>    have no Python home. They must be **re-exposed as public Python functions**
+>    operating on the public node API to preserve the v4 API surface, even
+>    though the built-in pipeline still executes natively.
+> 3. **`view_class` driver attribute.** Each driver now declares its view class.
+>
+> **Residual divergence needing a decision:** `next`'s `driver_base` documents
+> `negate_with()` as an overridable imperative hook; the rewrite's
+> `__init_subclass__` *rejects* subclasses defining it (only rule data crosses
+> into Rust). This is a real API incompatibility, not a mechanical rename.
+>
+> **Known caveat:** for a hand-written v4 `negation` list that *interleaves*
+> DEFAULT and REGEX_SUB rules, `next` evaluates them in list order whereas the
+> Rust core evaluates all DEFAULT before all REGEX_SUB. Rules folded from the v3
+> fields are unaffected (they are already grouped), so no shipped driver
+> diverges — but a native single ordered negation list would be required for
+> full fidelity.
+
 **Sub-phase 3c — Build and CI config.** `pyproject.toml`, `mkdocs.yml`,
 `.github/workflows/*`. Merge `next`'s test-path restructure with our maturin
 build. Delete `poetry.lock`.
@@ -222,7 +267,7 @@ build. Delete `poetry.lock`.
 `next`'s restructure wins on layout; our Rust content is folded into it.
 
 **Acceptance criteria:**
-- Every one of the 52 files is individually accounted for.
+- Every one of the 70 files is individually accounted for.
 - `python scripts/build.py lint` exits 0.
 - `mkdocs build --strict` passes.
 - No `next` feature is silently reverted (verified by Phase 5).

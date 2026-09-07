@@ -1,9 +1,14 @@
-class HierConfigError(Exception):
-    """Base exception for all hier_config errors."""
+"""Exception hierarchy for hier_config.
 
+`HierConfigError` and `DuplicateChildError` are defined in the Rust extension
+because the core raises them directly; re-exporting rather than redefining them
+keeps `except DuplicateChildError:` matching errors raised from native code.
+The remaining errors are raised only from Python and subclass the native base.
+"""
 
-class DuplicateChildError(HierConfigError):
-    """Raised when attempting to add a duplicate child."""
+from __future__ import annotations
+
+from _hier_config_rust import DuplicateChildError, HierConfigError
 
 
 class DriverNotFoundError(HierConfigError):
@@ -16,3 +21,12 @@ class InvalidConfigError(HierConfigError):
 
 class IncompatibleDriverError(HierConfigError):
     """Raised when configs with mismatched drivers are used together."""
+
+
+__all__ = (
+    "DriverNotFoundError",
+    "DuplicateChildError",
+    "HierConfigError",
+    "IncompatibleDriverError",
+    "InvalidConfigError",
+)

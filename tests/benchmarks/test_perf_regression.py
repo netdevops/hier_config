@@ -76,7 +76,7 @@ sys.path.insert(0, %(root)r)
 
 from hier_config import get_hconfig, get_hconfig_fast_load
 from hier_config.models import Platform
-from tests.test_benchmarks import _generate_large_ios_config
+from tests.benchmarks.test_benchmarks import _generate_large_ios_config
 
 op = sys.argv[1]
 reps = int(sys.argv[2])
