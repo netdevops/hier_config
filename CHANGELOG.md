@@ -110,7 +110,12 @@ v4 design decisions, for the record:
   `stack_members` and `ipv4_default_gw` share one Rust signature and three
   Python types — and it found the two stub bugs above on its first run.
   Parameter types remain unverifiable by construction and stay the type
-  checkers' responsibility.
+  checkers' responsibility. A member whose every observed value is empty is
+  reported as unobserved rather than failed — an empty container cannot
+  contradict an element type — so the set of unobserved members is pinned in
+  `stubs/unobserved-allowlist.txt`. An unlisted gap and a stale entry both
+  fail, which stops a newly added stub member from arriving with no
+  verification at all and stops an entry outliving the gap it documents.
 
 ### Removed
 

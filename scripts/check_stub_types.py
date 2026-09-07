@@ -44,7 +44,9 @@ from __future__ import annotations
 
 import argparse
 import ast
+import collections.abc
 import ipaddress
+import itertools
 import sys
 import types
 import typing
@@ -53,6 +55,8 @@ from pathlib import Path
 
 if typing.TYPE_CHECKING:
     from collections.abc import Iterator, Sequence
+
+    from hier_config.root import HConfig
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -67,6 +71,11 @@ STUB_FILES = (
     REPO_ROOT / "hier_config" / "root.pyi",
     REPO_ROOT / "hier_config" / "workflows.pyi",
 )
+
+# Members that no fixture exercises with a non-empty value. Listing one keeps
+# the check quiet about it; omitting a genuinely unobserved member, or listing
+# one that later becomes observed, is an error. See the file's header.
+UNOBSERVED_ALLOWLIST = REPO_ROOT / "stubs" / "unobserved-allowlist.txt"
 
 # Zero-argument methods that are safe to call on a probe. Properties are
 # invoked automatically; methods are opt-in so that probing never mutates the
@@ -115,6 +124,39 @@ class Report:
     verified: list[str] = field(default_factory=list[str])
     unobserved: list[str] = field(default_factory=list[str])
     mismatches: list[str] = field(default_factory=list[str])
+
+
+def _allowlist() -> set[str]:
+    lines = UNOBSERVED_ALLOWLIST.read_text(encoding="utf-8").splitlines()
+    return {
+        stripped
+        for line in lines
+        if (stripped := line.strip()) and not stripped.startswith("#")
+    }
+
+
+def audit_coverage(report: Report) -> list[str]:
+    """Return the ways the unobserved set has drifted from the allowlist."""
+    allowed = _allowlist()
+    unobserved = {entry.split(" ", 1)[0] for entry in report.unobserved}
+    verified = set(report.verified)
+    problems = [
+        f"{member}: no fixture produces a non-empty value, and it is not in "
+        f"{UNOBSERVED_ALLOWLIST.name}; add a fixture that exercises it, or "
+        f"record the gap there"
+        for member in sorted(unobserved - allowed)
+    ]
+    problems.extend(
+        f"{member}: now verified against a live value, so its entry in "
+        f"{UNOBSERVED_ALLOWLIST.name} is stale; delete the line"
+        for member in sorted(allowed & verified)
+    )
+    problems.extend(
+        f"{member}: listed in {UNOBSERVED_ALLOWLIST.name} but no longer "
+        f"declared in any stub; delete the line"
+        for member in sorted(allowed - unobserved - verified)
+    )
+    return problems
 
 
 def _returns(node: ast.FunctionDef) -> str | None:
@@ -169,7 +211,7 @@ def collect_declarations() -> list[Declaration]:
 
 def _namespace() -> dict[str, object]:
     import hier_config
-    from hier_config import formats, models, platforms, root, workflows
+    from hier_config import children, formats, models, platforms, root, workflows
     from hier_config.platforms import models as platform_models
     from hier_config.platforms import view_base
 
@@ -181,6 +223,7 @@ def _namespace() -> dict[str, object]:
     }
     space.update(vars(typing))
     for module in (
+        children,
         platforms,
         platform_models,
         view_base,
@@ -197,7 +240,31 @@ def _namespace() -> dict[str, object]:
                 if not name.startswith("_")
             },
         )
+    _add_stub_aliases(space)
     return space
+
+
+def _add_stub_aliases(space: dict[str, object]) -> None:
+    """Resolve `X: TypeAlias = ...` declarations that exist only in the stubs."""
+    for path in STUB_FILES:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in tree.body:
+            if (
+                not isinstance(node, ast.AnnAssign)
+                or not isinstance(node.target, ast.Name)
+                or node.value is None
+                or ast.unparse(node.annotation) != "TypeAlias"
+            ):
+                continue
+            try:
+                # ruff: ignore[suspicious-eval-usage]
+                # pylint: disable-next=eval-used
+                space[node.target.id] = eval(
+                    ast.unparse(node.value),
+                    dict(space),
+                )
+            except PROBE_ERRORS:  # pragma: no cover - alias specific
+                continue
 
 
 def _resolve(annotation: str, space: dict[str, object]) -> object:
@@ -223,6 +290,9 @@ def _check_union(value: object, args: Sequence[object]) -> str | None:
 
 # `tuple[T, ...]` -- a homogeneous tuple -- resolves to exactly two args.
 VARIADIC_TUPLE_ARGS = 2
+
+#: `typing.get_origin` of a `Callable[...]` annotation.
+CallableOrigin = typing.cast("object", collections.abc.Callable)
 
 
 def _check_tuple(value: tuple[object, ...], args: Sequence[object]) -> str | None:
@@ -270,6 +340,9 @@ def check_value(value: object, annotation: object) -> str | None:
             )
         return None
 
+    if origin is CallableOrigin:
+        return None if callable(value) else f"{type(value).__name__} is not callable"
+
     if origin is typing.Union or origin is types.UnionType:
         return _check_union(value, args)
     if not _origin_ok(value, origin):
@@ -296,7 +369,7 @@ def _is_empty(value: object) -> bool:
     return False
 
 
-def _configs() -> Iterator[object]:
+def _configs() -> Iterator[tuple[str, object]]:
     from hier_config import HConfig, Platform
 
     prefixes = {
@@ -320,7 +393,7 @@ def _configs() -> Iterator[object]:
             if prefix is None:
                 continue
             try:
-                yield HConfig.from_text(prefixes[prefix], path.read_text())
+                yield prefix, HConfig.from_text(prefixes[prefix], path.read_text())
             except PROBE_ERRORS:  # pragma: no cover - fixture specific
                 continue
 
@@ -338,9 +411,12 @@ def build_probes() -> dict[str, list[object]]:
             "HConfigChild",
             "HConfigChildren",
             "HConfigView",
+            "WorkflowRemediation",
         )
     }
-    for config in _configs():
+    by_platform: dict[str, list[object]] = {}
+    for platform, config in _configs():
+        by_platform.setdefault(platform, []).append(config)
         probes["HConfig"].append(config)
         probes["HConfigBase"].append(config)
         children: list[object] = list(config.all_children())  # type: ignore[attr-defined]
@@ -362,7 +438,50 @@ def build_probes() -> dict[str, list[object]]:
         for probe in probes["ConfigViewInterface"]
         if isinstance(probe, ConfigViewInterface)
     ]
+    probes["WorkflowRemediation"] = _workflow_probes(by_platform)
     return probes
+
+
+def _workflow_probes(by_platform: dict[str, list[object]]) -> list[object]:
+    """Pair same-platform configs so remediation and rollback are exercised."""
+    from hier_config.workflows import WorkflowRemediation
+
+    built: list[object] = []
+    for configs in by_platform.values():
+        for running, generated in itertools.pairwise(configs):
+            try:
+                workflow = WorkflowRemediation(running, generated)  # type: ignore[arg-type]
+            except PROBE_ERRORS:  # pragma: no cover - platform specific
+                continue
+            built.append(workflow)
+    built.extend(_plugin_workflow_probes(by_platform))
+    return built
+
+
+def _plugin_workflow_probes(by_platform: dict[str, list[object]]) -> list[object]:
+    """Build one workflow carrying a plugin so `plugins` is non-empty.
+
+    Without this every corpus workflow reports an empty tuple, which would
+    leave the `Callable` arm of `check_value` permanently unexercised.
+    """
+    from hier_config.workflows import WorkflowRemediation
+
+    def _noop(config: HConfig) -> None:  # pylint: disable=unused-argument
+        """A minimal remediation transform."""
+
+    for configs in by_platform.values():
+        if len(configs) < VARIADIC_TUPLE_ARGS:
+            continue
+        try:
+            workflow = WorkflowRemediation(
+                configs[0],  # type: ignore[arg-type]
+                configs[1],  # type: ignore[arg-type]
+                plugins=[_noop],
+            )
+        except PROBE_ERRORS:  # pragma: no cover - platform specific
+            continue
+        return [workflow]
+    return []
 
 
 def _observe(probe: object, declaration: Declaration) -> object | None:
@@ -440,14 +559,18 @@ def main(argv: Sequence[str] | None = None) -> int:
     report = check(collect_declarations())
     for mismatch in report.mismatches:
         print(f"error: {mismatch}")
+    drift = audit_coverage(report)
+    for problem in drift:
+        print(f"error: {problem}")
     if args.verbose:
         for entry in report.unobserved:
             print(f"note: unobserved {entry}")
     print(
         f"checked {len(report.verified)} return types against live objects; "
-        f"{len(report.unobserved)} unobserved, {len(report.mismatches)} mismatched",
+        f"{len(report.unobserved)} unobserved (allowlisted), "
+        f"{len(report.mismatches)} mismatched",
     )
-    return 1 if args.check and report.mismatches else 0
+    return 1 if args.check and (report.mismatches or drift) else 0
 
 
 if __name__ == "__main__":
