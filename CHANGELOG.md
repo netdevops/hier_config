@@ -16,15 +16,37 @@ v4 design decisions, for the record:
   `WorkflowRemediation` remains the recommended workflow API and already
   validates driver compatibility (`IncompatibleDriverError`).
 - Drivers remain declaratively-configured with sanctioned imperative
-  extension points (#222): #220 removed the negation-related override needs;
-  `idempotent_for()`, `negate_with()`, and `config_preprocessor()` stay
-  overridable for logic that rules cannot express.
+  extension points (#222): #220 removed the negation-related override needs.
+  `config_preprocessor()` stays freely overridable. The Rust core now resolves
+  `idempotent_for()`, `negate_with()`, and `sectional_exit()` itself, so an
+  override of those three must be marked `@core_owned` to acknowledge that the
+  core, not the subclass, decides the behavior.
 - Config trees stay mutable (#224): full immutability would break the
   callback/plugin mutation model for marginal benefit. The remediation
   algorithms are guaranteed (and now tested) not to mutate their input
   configs.
 
 ### Added
+
+- Rust core. Parsing, the tree, post-load fixups, and the remediation engine
+  are implemented in Rust (`crates/`) and exposed through PyO3 as the
+  `_hier_config_rust` extension. There is no pure-Python fallback, so
+  hier_config now ships as a compiled wheel rather than a pure-Python one.
+  Wheels are published for Linux (x86_64, aarch64), macOS, and Windows on
+  CPython 3.10-3.14; other targets build from source and need a Rust
+  toolchain. Behavior is covered by a shared JSON case corpus under
+  `testdata/cases/` that both the Rust and Python suites execute, so the two
+  implementations cannot silently diverge. See
+  [Rust core behavior changes](docs/user/rust-core-changes.md) for the full
+  list of differences and
+  [Performance & Benchmarks](docs/dev/benchmarks.md) for measurements.
+- `core_owned` decorator on `hier_config.platforms.driver_base`. It marks a
+  driver member whose behavior the Rust core owns, in two places: a post-load
+  callback the core already runs (so the Python copy is skipped rather than
+  applied twice), and an override of one of the three engine-resolved hooks
+  above (so the guard lets the definition through). The marker is a
+  declaration, not a switch — it never causes the core to call the Python
+  implementation.
 
 - Permanent v3 API compatibility (#300). Every v3 name that v4 renamed or
   removed is restored as a thin delegation to its v4 counterpart, with no
@@ -182,18 +204,22 @@ v4 design decisions, for the record:
 
 ### Changed
 
-- Migrated packaging, dependency management, and build backend from Poetry to
-  uv. Package metadata uses PEP 621 `[project]`, development dependencies use
-  PEP 735 `[dependency-groups]`, and the build backend is `uv_build`. Lockfile
-  migrated from `poetry.lock` to `uv.lock`. GitHub Actions workflows now use
-  `astral-sh/setup-uv@v7` with `uv sync` and native `uv build` / `uv publish`,
-  and `setup-uv` manages the Python version for each matrix leg.
-  Package metadata now carries the
-  README as its long description and an SPDX `License-Expression: MIT` (the
-  OSI license classifier is gone, as PEP 639 requires); `LICENSE` is shipped
-  in the sdist and wheel via `license-files`, so the setuptools-only
-  `MANIFEST.in` was removed. The unmaintained `pytest-runner` dev dependency
-  was dropped. (#301)
+- Migrated packaging and dependency management from Poetry to uv, and build
+  backend to maturin for native PyO3 extension compilation. Package metadata
+  uses PEP 621 `[project]`, development dependencies use PEP 735
+  `[dependency-groups]`, and the build backend is `maturin`. Lockfiles are
+  `uv.lock` and `Cargo.lock`; `poetry.lock` was removed. GitHub Actions
+  workflows use `astral-sh/setup-uv@v7` with `uv sync` and maturin-action.
+  Package metadata carries the README as its long description and an SPDX
+  `License-Expression: MIT` (`license-files = ["LICENSE"]`); the setuptools-only
+  `MANIFEST.in` was removed, and the unmaintained `pytest-runner` dev dependency
+  was dropped. Contributors need a Rust toolchain and must compile via
+  `maturin develop --release` (or `uv run maturin develop --release`) before
+  running Python tests. (#301)
+- `HConfig.from_dump()` runs a driver's remediation-transform callbacks after
+  the tree is fully built rather than incrementally during the load, so a
+  callback observes the complete config. Callbacks that relied on seeing a
+  partially-loaded tree will behave differently.
 - Restructured the documentation into User, Administrator, and Developer
   guides (`docs/user/`, `docs/admin/`, `docs/dev/`) with a rewritten landing
   page, new pages for loading configurations and remediation workflows, and
@@ -257,7 +283,14 @@ v4 design decisions, for the record:
 
 ### Removed
 
-Nothing. Every name previously listed here — `get_hconfig()`,
+- The Python config-text loader. `HConfig.from_text()` and `from_lines()` now
+  parse in the core; the Python parsing path they replaced is gone. This is
+  internal, but a subclass that overrode a loader helper no longer has an
+  effect.
+- The unfinished native view subsystem. Config views are Python-only, as they
+  were in v3 — see `hier_config/platforms/*/view.py`.
+
+Every name previously listed under this heading — `get_hconfig()`,
 `get_hconfig_fast_load()`, `get_hconfig_from_dump()`,
 `get_hconfig_fast_generic_load()`, `HConfigChild.use_default_for_negation()`,
 the three v3 negation rule models and their `HConfigDriverRules` fields,
