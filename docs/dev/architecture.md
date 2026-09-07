@@ -62,6 +62,28 @@ Both `HConfig` and `HConfigChild` inherit from `HConfigBase`, which provides:
 - Traversal: `all_children`, `all_children_sorted`.
 - Diffing: `unified_diff`.
 
+### Type stubs (`hier_config/*.pyi`)
+
+`HConfig`, `HConfigChild`, `HConfigChildren`, and `HConfigBase` are compiled
+PyO3 classes, and neither mypy, pyright, nor griffe (mkdocstrings) can
+introspect a compiled extension. The shipped `.pyi` stubs are what gives those
+tools — and downstream users' own annotations — real types instead of `Any`.
+
+Those four stubs are **generated, not hand-written**. `scripts/gen_stubs.py`
+reflects over the live extension and re-attaches the v3.7.0 docstrings:
+
+```bash
+python scripts/gen_stubs.py           # regenerate after changing the PyO3 surface
+python scripts/build.py check-stubs   # fail if the committed stubs are stale
+```
+
+The check runs as part of `lint` and `lint-and-test`, so a PyO3 signature change
+that is not reflected in the stubs fails the gate rather than silently shipping
+wrong type information. Never edit these four files by hand.
+
+`hier_config/exceptions.pyi` and `hier_config/workflows.pyi` are outside the
+generator and are maintained by hand.
+
 ### Tree algorithms (`hier_config/tree_algorithms.py`)
 
 The comparison algorithms are extracted into a standalone module operating on nodes through their public tree API:
