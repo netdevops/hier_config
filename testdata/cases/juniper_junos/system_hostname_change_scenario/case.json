@@ -1,0 +1,5 @@
+{
+  "platform": "JUNIPER_JUNOS",
+  "description": "Changing system hostname on Juniper JUNOS",
+  "assert_rollback": false
+}

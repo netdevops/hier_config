@@ -1,0 +1,2 @@
+# Maximum cognitive complexity floor for functions in the workspace.
+cognitive-complexity-threshold = 15

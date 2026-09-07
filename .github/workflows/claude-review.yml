@@ -39,13 +39,19 @@ jobs:
       with:
         python-version: "3.12"
 
-    - name: Install poetry
-      uses: snok/install-poetry@v1
+    - name: Set up Rust
+      uses: dtolnay/rust-toolchain@stable
       with:
-        version: 1.5.1
+        toolchain: 1.98.1
+    - uses: Swatinem/rust-cache@v2
 
-    - name: Install the project dependencies
-      run: poetry install --no-interaction --no-root
+    # The skill's gates import `hier_config`, which has no pure-Python
+    # fallback, so the extension has to be built here.
+    - name: Install the project and its tooling
+      run: |
+        python -m pip install --upgrade pip
+        pip install --group dev
+        maturin develop --release --locked
 
     - name: Install the docs dependencies
       run: pip install -r docs/requirements.txt
@@ -62,7 +68,8 @@ jobs:
           `${{ github.event.pull_request.base.ref }}`, so use
           `git diff ${{ github.event.pull_request.base.ref }}...HEAD` for the diff.
 
-          The Python environment is ready. Do not run `poetry install`.
+          The Python environment is ready, with the compiled extension already
+          built. Do not reinstall dependencies or run `maturin develop`.
 
           Report only. Do not change, stage, or commit any file.
 

@@ -1,0 +1,5 @@
+{
+  "platform": "GENERIC",
+  "description": "AAA server group remediation with server removals and additions",
+  "assert_rollback": true
+}

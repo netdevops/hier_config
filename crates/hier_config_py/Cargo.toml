@@ -1,0 +1,33 @@
+[package]
+name = "hier_config"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+# This crate exists only to be built into a Python wheel by maturin; it is a
+# cdylib extension module, not a consumable Rust library (that is
+# `hier_config_core`). Marking it unpublishable prevents an accidental
+# `cargo publish` and lets its unversioned intra-workspace path dependency stand.
+publish = false
+
+[lib]
+name = "_hier_config_rust"
+crate-type = ["cdylib", "rlib"]
+
+[lints]
+workspace = true
+
+[dependencies]
+hier_config_core.workspace = true
+mimalloc = "0.1.52"
+pyo3.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+
+[package.metadata.maturin]
+name = "hier_config"
+python-source = "../.."
+module-name = "hier_config._hier_config_rust"
+
+

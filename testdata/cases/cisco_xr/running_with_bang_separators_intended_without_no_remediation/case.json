@@ -1,0 +1,5 @@
+{
+  "platform": "CISCO_XR",
+  "description": "Running config with indented ! separators and intended without produces no remediation",
+  "assert_rollback": true
+}

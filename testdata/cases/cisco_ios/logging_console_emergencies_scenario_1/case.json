@@ -1,0 +1,5 @@
+{
+  "platform": "CISCO_IOS",
+  "description": "Logging console emergencies transition from no logging console",
+  "assert_rollback": true
+}

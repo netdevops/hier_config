@@ -1,0 +1,5 @@
+{
+  "platform": "NOKIA_SRL",
+  "description": "Test adding an interface address",
+  "assert_rollback": false
+}

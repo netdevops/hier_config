@@ -1,0 +1,5 @@
+{
+  "platform": "CISCO_XR",
+  "description": "Test route-policy deletion without duplicate child error",
+  "assert_rollback": true
+}

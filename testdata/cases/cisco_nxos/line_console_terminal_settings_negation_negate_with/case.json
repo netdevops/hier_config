@@ -1,0 +1,5 @@
+{
+  "platform": "CISCO_NXOS",
+  "description": "Verify negation_negate_with resets terminal settings on line console to platform defaults",
+  "assert_rollback": true
+}

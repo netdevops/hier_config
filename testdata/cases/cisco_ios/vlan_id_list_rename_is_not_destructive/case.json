@@ -1,0 +1,5 @@
+{
+  "platform": "CISCO_IOS",
+  "description": "Renaming one VLAN in a collapsed list does not negate the whole list",
+  "assert_rollback": true
+}

@@ -1,0 +1,5 @@
+{
+  "platform": "CISCO_XR",
+  "description": "Differing ! comment text between running and intended produces no remediation",
+  "assert_rollback": true
+}

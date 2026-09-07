@@ -1,0 +1,5 @@
+{
+  "platform": "NOKIA_SRL",
+  "description": "Test removing an interface configuration",
+  "assert_rollback": false
+}

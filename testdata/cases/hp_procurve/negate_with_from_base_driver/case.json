@@ -1,0 +1,5 @@
+{
+  "platform": "HP_PROCURVE",
+  "description": "Test negate_with uses parent driver rule when applicable",
+  "assert_rollback": true
+}
