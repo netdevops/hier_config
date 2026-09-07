@@ -70,6 +70,14 @@ v4 design decisions, for the record:
   promised `match_rules`. Calling them by keyword as documented raised
   `TypeError` despite type checking cleanly. The native signatures now match
   the published names.
+- Two type stubs contradicted the objects they describe, found by the new
+  return-type check. `HConfigBase.all_children_sorted()` was declared
+  `Iterator[HConfigChild]` but returns an eager sequence, so the documented
+  `next(...)` raised `TypeError: 'tuple' object is not an iterator`; it is now
+  `Sequence[HConfigChild]`, matching its `all_children_sorted_by_tags`
+  sibling. `ConfigViewInterface.poe` was declared `bool` but is
+  `Option<bool>` in the core and returns `None` on EOS, NX-OS and XR; it is
+  now `bool | None`.
 
 ### Added
 
@@ -89,8 +97,20 @@ v4 design decisions, for the record:
   PyO3 enum and sentinel-default idioms live in
   `stubs/stubtest-allowlist.txt`; unused entries fail, so the list cannot rot.
   Return and parameter *type* annotations remain outside its reach — they are
-  not introspectable from a compiled extension — and stay the type checkers'
-  responsibility.
+  not introspectable from a compiled extension.
+- `scripts/check_stub_types.py` now runs in the lint gate, closing the
+  return-type half of that gap. Because annotations cannot be read back from a
+  compiled extension, the stub is the type checkers' *premise* rather than
+  something they verify: rewriting `vlan_ids -> frozenset[int]` as
+  `dict[str, bytes]` changes the pyright strict error count by zero. The
+  script instead exercises each declared member against a corpus of real
+  configs and checks the observed value against its annotation, descending
+  into container element types. Generating the stub from Rust would not help
+  — 30% of exported methods return an opaque `PyObject`, so `vlans`,
+  `stack_members` and `ipv4_default_gw` share one Rust signature and three
+  Python types — and it found the two stub bugs above on its first run.
+  Parameter types remain unverifiable by construction and stay the type
+  checkers' responsibility.
 
 ### Removed
 

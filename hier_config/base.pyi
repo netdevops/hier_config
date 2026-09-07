@@ -65,7 +65,7 @@ class HConfigBase:
     def all_children(self) -> Iterator[HConfigChild]:
         """Recursively find and yield all children at each hierarchy."""
 
-    def all_children_sorted(self) -> Iterator[HConfigChild]:
+    def all_children_sorted(self) -> Sequence[HConfigChild]:
         """Recursively find and yield all children sorted at each hierarchy."""
 
     def all_children_sorted_by_tags(

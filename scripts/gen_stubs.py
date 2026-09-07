@@ -139,6 +139,7 @@ OVERRIDES: dict[str, tuple[str, str | None]] = {
 # lie -- callers can index these results and iterate them more than once.  Only
 # the return annotation is replaced, so the recovered docstring survives intact.
 RETURN_OVERRIDES: dict[str, str] = {
+    "HConfigBase.all_children_sorted": "Sequence[HConfigChild]",
     "HConfigBase.all_children_sorted_by_tags": "Sequence[HConfigChild]",
     "HConfigBase.get_children": "Sequence[HConfigChild]",
     "HConfigBase.get_children_deep": "Sequence[HConfigChild]",

@@ -37,6 +37,7 @@ def lint(*, fix: bool = False) -> None:
             _check_displacement_markers_command(),
             _check_stubs_command(),
             _stubtest_command(),
+            _check_stub_types_command(),
             _check_formats_corpus_command(),
         ),
     )
@@ -58,6 +59,7 @@ def lint_and_test(*, fix: bool = False) -> None:
             _check_displacement_markers_command(),
             _check_stubs_command(),
             _stubtest_command(),
+            _check_stub_types_command(),
             _check_formats_corpus_command(),
         ),
     )
@@ -157,15 +159,31 @@ def stubtest() -> None:
 
 
 def _stubtest_command() -> str:
-    # `gen_stubs.py --check` guards *names*; this guards *signatures*. Runtime
-    # introspection cannot see annotations, so return and parameter types
-    # remain the type checkers' responsibility.
+    # `gen_stubs.py --check` guards *names*; this guards *signatures*, and
+    # `check_stub_types.py` guards *return types* by observing live objects.
+    # Runtime introspection cannot see annotations, and nothing observes an
+    # argument that was never passed, so parameter *types* remain the type
+    # checkers' responsibility alone.
     return (
         f"{sys.executable} -m mypy.stubtest"
         " --mypy-config-file pyproject.toml"
         " --allowlist stubs/stubtest-allowlist.txt"
         " _hier_config_rust hier_config"
     )
+
+
+@app.command()
+def check_stub_types() -> None:
+    """Fail when a declared return type contradicts what the extension returns."""
+    _run(_check_stub_types_command())
+
+
+def _check_stub_types_command() -> str:
+    # Return annotations are not recoverable from a compiled .so, so for an
+    # extension module the stub is the type checkers' only source of truth: a
+    # wrong return type is the premise they reason from, not an error they can
+    # find. This observes real objects instead, element types included.
+    return f"{sys.executable} scripts/check_stub_types.py --check"
 
 
 @app.command()
