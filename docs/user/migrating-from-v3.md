@@ -214,11 +214,13 @@ know whether that page applies to you:
 - **hier_config ships as a compiled wheel.** Wheels cover CPython 3.10-3.14 on
   Linux, macOS, and Windows; anything else builds from source and needs a Rust
   toolchain.
-- **Three driver hooks are now resolved in the core.** Overriding
-  `idempotent_for()`, `negate_with()`, or `sectional_exit()` raises `TypeError`
-  unless the override is marked `@core_owned`, which acknowledges that the core
-  — not your subclass — decides the behavior. `config_preprocessor()` is
-  unaffected. **Audit every `HConfigDriverBase` subclass before upgrading.**
+- **Four driver hooks are now resolved in the core.** `idempotent_for()`,
+  `negate_with()`, `sectional_exit()`, and `swap_negation()` no longer exist on
+  `HConfigDriverBase`, and defining any of them on a subclass raises
+  `TypeError`. The core decides all four behaviors from the driver's rules and
+  its `declaration_prefix`/`negation_prefix`, so there is no opt-out.
+  `config_preprocessor()` is unaffected. **Audit every `HConfigDriverBase`
+  subclass before upgrading.**
 - **`_instantiate_rules()` is no longer abstract.** A driver that does not
   override it now constructs successfully and fails later with
   `NotImplementedError` instead of failing at instantiation.

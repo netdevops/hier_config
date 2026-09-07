@@ -572,6 +572,7 @@ def _unreachable_hook(*_args: object, **_kwargs: object) -> None:
         (HConfigDriverHPProcurve, "idempotent_for"),
         (HConfigDriverCiscoIOS, "negate_with"),
         (HConfigDriverCiscoIOS, "sectional_exit"),
+        (HConfigDriverCiscoIOS, "swap_negation"),
     ),
 )
 def test_removed_driver_hook_override_raises(

@@ -4,64 +4,35 @@ from hier_config.models import Platform
 from hier_config.platforms.vyos.driver import HConfigDriverVYOS
 
 
-def test_swap_negation_delete_to_set() -> None:
-    """Test swapping from 'delete' to 'set' prefix (covers lines 9-11)."""
-    platform = Platform.VYOS
+def test_negation_delete_to_set() -> None:
+    """Negating a `delete` command yields the matching `set` command."""
+    root = HConfig.from_text(Platform.VYOS)
+    child = HConfigChild(root, "delete system host-name router1")
+
+    assert child.negate().text == "set system host-name router1"
+
+
+def test_negation_set_to_delete() -> None:
+    """Negating a `set` command yields the matching `delete` command."""
+    root = HConfig.from_text(Platform.VYOS)
+    child = HConfigChild(root, "set system host-name router1")
+
+    assert child.negate().text == "delete system host-name router1"
+
+
+def test_negation_without_a_prefix_is_a_no_op() -> None:
+    """Text carrying neither prefix has nothing to swap."""
+    root = HConfig.from_text(Platform.VYOS)
+    child = HConfigChild(root, "system host-name router1")
+
+    assert child.negate().text == "system host-name router1"
+
+
+def test_prefixes() -> None:
+    """The driver advertises the prefixes the core negates with."""
     driver = HConfigDriverVYOS()
-    root = HConfig.from_text(platform)
 
-    # Create a child with 'delete' prefix
-    child = HConfigChild(root, "delete interfaces ethernet eth0 address 192.168.1.1/24")
-
-    # Swap negation should convert to 'set'
-    result = driver.swap_negation(child)
-
-    assert result.text == "set interfaces ethernet eth0 address 192.168.1.1/24"
-    assert result.text.startswith("set ")
-
-
-def test_swap_negation_set_to_delete() -> None:
-    """Test swapping from 'set' to 'delete' prefix (covers lines 10, 12)."""
-    platform = Platform.VYOS
-    driver = HConfigDriverVYOS()
-    root = HConfig.from_text(platform)
-
-    # Create a child with 'set' prefix
-    child = HConfigChild(root, "set interfaces ethernet eth0 address 192.168.1.1/24")
-
-    # Swap negation should convert to 'delete'
-    result = driver.swap_negation(child)
-
-    assert result.text == "delete interfaces ethernet eth0 address 192.168.1.1/24"
-    assert result.text.startswith("delete ")
-
-
-def test_swap_negation_no_prefix() -> None:
-    """Test swap_negation behavior when text has neither prefix (covers VyOS-specific behavior)."""
-    platform = Platform.VYOS
-    driver = HConfigDriverVYOS()
-    root = HConfig.from_text(platform)
-
-    # Create a child without proper prefix
-    child = HConfigChild(root, "interfaces ethernet eth0 address 192.168.1.1/24")
-    original_text = child.text
-
-    # VyOS driver doesn't raise an error, it just returns the child unchanged
-    result = driver.swap_negation(child)
-
-    # Text should remain unchanged since neither if/elif matched
-    assert result.text == original_text
-
-
-def test_declaration_prefix() -> None:
-    """Test declaration_prefix property (covers line 18)."""
-    driver = HConfigDriverVYOS()
     assert driver.declaration_prefix == "set "
-
-
-def test_negation_prefix() -> None:
-    """Test negation_prefix property (covers line 22)."""
-    driver = HConfigDriverVYOS()
     assert driver.negation_prefix == "delete "
 
 

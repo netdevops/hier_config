@@ -25,17 +25,22 @@ def test_get_hconfig_driver() -> None:
 
 
 def test_driver_base_properties() -> None:
-    """Test base driver properties and swap_negation."""
+    """Negation prefixes are driver metadata the Rust core reads."""
     driver = get_hconfig_driver(Platform.GENERIC)
 
     assert not driver.declaration_prefix
     assert driver.negation_prefix == "no "
 
+    vyos = get_hconfig_driver(Platform.VYOS)
+    assert vyos.declaration_prefix == "set "
+    assert vyos.negation_prefix == "delete "
+
+
+def test_negation_swapping_is_owned_by_the_core() -> None:
+    """The core, not the driver, swaps negation on a child."""
     config = HConfig.from_text(Platform.GENERIC)
     child = HConfigChild(config, "interface GigabitEthernet0/0")
-    result = driver.swap_negation(child)
-    assert result.text == "no interface GigabitEthernet0/0"
+    assert child.negate().text == "no interface GigabitEthernet0/0"
 
     child2 = HConfigChild(config, "no interface GigabitEthernet0/1")
-    result2 = driver.swap_negation(child2)
-    assert result2.text == "interface GigabitEthernet0/1"
+    assert child2.negate().text == "interface GigabitEthernet0/1"

@@ -1,4 +1,3 @@
-from hier_config.child import HConfigChild
 from hier_config.models import Platform
 from hier_config.platforms.driver_base import (
     HConfigDriverBase,
@@ -37,18 +36,6 @@ class HConfigDriverJuniperJUNOS(HConfigDriverBase):
     @property
     def declaration_prefix(self) -> str:
         return "set "
-
-    def swap_negation(self, child: HConfigChild) -> HConfigChild:
-        """Swap negation of a `self.text`."""
-        if child.text.startswith(self.negation_prefix):
-            child.text = f"{self.declaration_prefix}{child.text_without_negation}"
-        elif child.text.startswith(self.declaration_prefix):
-            child.text = f"{self.negation_prefix}{child.text.removeprefix(self.declaration_prefix)}"
-        else:
-            message = f"{child.text=} did not start with {self.negation_prefix} or {self.declaration_prefix}."
-            raise ValueError(message)
-
-        return child
 
     @staticmethod
     def config_preprocessor(config_text: str) -> str:

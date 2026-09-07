@@ -15,9 +15,6 @@ Every driver subclasses `HConfigDriverBase` (`hier_config/platforms/driver_base.
 - `negation_prefix` (property) — the string prepended to negate a command. Default `"no "`.
 - `declaration_prefix` (property) — the string prepended to positive commands on set-style platforms. Default `""`.
 - `config_preprocessor(config_text)` — static method transforming raw text before parsing (e.g. flattening JunOS curly-brace config into `set` commands).
-- `negate_with(config)` — return a fixed replacement negation string for a child. The default implementation reads REPLACE-strategy rules from `rules.negation`; override for imperative negation logic.
-- `swap_negation(child)` — toggle the negation of a child's text. The default adds/strips `negation_prefix`.
-- `idempotent_for(config, other_children)` — find the child that an idempotent command overwrites. The default derives a structural idempotency key from the lineage and match rules.
 - `view_class` (class attribute) — the `HConfigViewBase` subclass instantiated by `get_hconfig_view()`. `None` (default) means the platform has no config view.
 
 The simplest possible driver is the generic one:
@@ -170,29 +167,16 @@ print(workflow.remediation_config)
 
 Alternatively, skip registration and pass an instance directly: `HConfig.from_text(CustomHConfigDriver(), config_text)`.
 
-## Key methods in `HConfigDriverBase`
+## Behavior the core owns
 
-The rule-checking methods the tree calls during remediation:
+Negation, idempotency, and sectional exiting are resolved entirely inside the
+Rust core from the driver's *rule data* — there are no `negate_with()`,
+`swap_negation()`, `idempotent_for()`, or `sectional_exit()` methods to
+override, and defining one on a subclass raises `TypeError`. Shape these
+behaviors through `rules.negation`, `rules.negate_with`,
+`rules.idempotent_commands`, and `rules.sectional_exiting` instead.
 
-```python
-def idempotent_for(
-    self,
-    config: HConfigChild,
-    other_children: Iterable[HConfigChild],
-) -> HConfigChild | None:
-    """Return the child that `config` idempotently overwrites, if any."""
-
-def negate_with(self, config: HConfigChild) -> str | None:
-    """Return a fixed replacement negation string for `config`, if any."""
-
-def swap_negation(self, child: HConfigChild) -> HConfigChild:
-    """Toggle the negation of `child.text`."""
-
-def sectional_exit(self, config: HConfigChild) -> str | None:
-    """Return the exit token to render at the end of a section."""
-```
-
-Idempotency matching is structural: `idempotent_for` builds an *idempotency key* from the child's lineage and the rule's match criteria (prefix matched, regex capture groups, ...), so two commands are only considered interchangeable when their structural identities agree. Craft your `MatchRule`s to capture the identifying parts of a command (e.g. `re_search=r"^neighbor (\S+) description"`).
+Idempotency matching is structural: the core builds an *idempotency key* from the child's lineage and the rule's match criteria (prefix matched, regex capture groups, ...), so two commands are only considered interchangeable when their structural identities agree. Craft your `MatchRule`s to capture the identifying parts of a command (e.g. `re_search=r"^neighbor (\S+) description"`).
 
 ## Adding a config view
 

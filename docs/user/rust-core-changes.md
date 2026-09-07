@@ -30,7 +30,7 @@ no longer interned, so `is` comparisons that held in 3.x now return `False`.
 
 | Change | Impact | Silent? |
 | --- | --- | --- |
-| `idempotent_for()`, `negate_with()`, `sectional_exit()` overrides raise `TypeError` | Custom drivers fail at import | **Yes** |
+| `idempotent_for()`, `negate_with()`, `sectional_exit()`, `swap_negation()` removed; overrides raise `TypeError` | Custom drivers fail at import | **Yes** |
 | `config_preprocessor()`, `declaration_prefix` overrides only partially honored | Custom drivers emit stock output in some paths | **Yes** |
 | `HConfigChildren.__eq__` compares child `text` in insertion order | Equality results can flip in either direction | **Yes** |
 | Source installs need a Rust toolchain | Only affects `--no-binary` / unsupported platforms | No — build error |
@@ -105,48 +105,32 @@ reached.
 | `negation_prefix` property | ✅ Supported |
 | Appending to `driver.rules.*` collections | ✅ Supported |
 | `post_load_callbacks` | ✅ Supported (additive; project callbacks are built in) |
-| `swap_negation()` | ⚠️ Direct calls work; not invoked by the engine |
-| `idempotent_for()` | ⚠️ Override rejected unless marked `@core_owned` |
-| `negate_with()` | ⚠️ Override rejected unless marked `@core_owned` |
-| `sectional_exit()` | ⚠️ Override rejected unless marked `@core_owned` |
+| `swap_negation()` | ❌ **Removed** — defining it raises `TypeError` |
+| `idempotent_for()` | ❌ **Removed** — defining it raises `TypeError` |
+| `negate_with()` | ❌ **Removed** — defining it raises `TypeError` |
+| `sectional_exit()` | ❌ **Removed** — defining it raises `TypeError` |
 | `config_preprocessor()` | ⚠️ Runs in `HConfig.from_text()`; skipped by `from_lines()` |
 | `declaration_prefix` property | ❌ **Silently ignored** |
 
-`idempotent_for()`, `negate_with()`, and `sectional_exit()` still exist, but the
-engine resolves all three inside the Rust core, so a plain Python override is
-never consulted. Rather than let that fail silently, `__init_subclass__` raises
-`TypeError` at class-creation time.
-
-If your override intentionally duplicates what the core already does — the
-in-tree platform drivers are in exactly this position — mark it with the
-`@core_owned` decorator to acknowledge that the core owns the behavior and let
-the definition through:
-
-```python
-from hier_config.platforms.driver_base import HConfigDriverBase, core_owned
-
-
-class MyDriver(HConfigDriverBase):
-    @core_owned
-    def negate_with(self, config): ...
-```
-
-The marker is a declaration, not a switch: it suppresses the guard, it does not
-make the engine call your override. If you need genuinely different negation
-behavior, express it as rules (see [Negation
-rules](migrating-from-v3.md#negation-rules)) rather than as a method.
+`idempotent_for()`, `negate_with()`, `sectional_exit()`, and `swap_negation()`
+no longer exist on `HConfigDriverBase`. The engine resolves all four inside the
+Rust core from the driver's rules and its `negation_prefix` /
+`declaration_prefix`, so a Python override could never be consulted. Rather than
+let that fail silently, `__init_subclass__` raises `TypeError` at class-creation
+time for any subclass that defines one. There is no opt-out: express the intent
+as rules (see [Negation rules](migrating-from-v3.md#negation-rules)) instead.
 
 The private helpers that existed only to serve these hooks —
-`_idempotent_for_helper()` and `_negation_negate_with_helper()` — are removed.
-`_idempotency_key()` is unaffected.
+`_idempotent_for_helper()`, `_negation_negate_with_helper()`, and
+`_idempotency_key()` — are removed along with them.
 
-See [Key methods in `HConfigDriverBase`](../dev/creating-drivers.md#key-methods-in-hconfigdriverbase)
+See [Key methods in `HConfigDriverBase`](../dev/creating-drivers.md#behavior-the-core-owns)
 for the authoritative reference, which is pinned by
 `tests/native/test_extension_surface.py`.
 
 ### Detecting the problem
 
-You do not have to instrument anything for the three removed hooks — importing
+You do not have to instrument anything for the four removed hooks — importing
 the module raises:
 
 ```text
@@ -208,8 +192,10 @@ driver.rules.negate_with.append(
 )
 ```
 
-`sectional_exit()` maps to appending a
-`SectionalExitingRule` to `driver.rules.sectional_exiting`.
+`sectional_exit()` maps to appending a `SectionalExitingRule` to
+`driver.rules.sectional_exiting`. `swap_negation()` has no rule equivalent: the
+core derives it from `negation_prefix` and `declaration_prefix`, which remain
+overridable properties.
 [Customizing Driver Rules](../admin/customizing-rules.md) has worked examples
 for each rule type.
 
