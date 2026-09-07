@@ -11,17 +11,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v6
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v5
     - name: Set up Python
       uses: actions/setup-python@v6
       with:
         python-version: '3.10'
-    - name: Install poetry
-      uses: snok/install-poetry@v1
-      with:
-        version: 1.5.1
     - name: Build and publish to PyPI
       env:
-        TWINE_API_KEY: ${{ secrets.TWINE_API_KEY }}
+        UV_PUBLISH_TOKEN: ${{ secrets.TWINE_API_KEY }}
       run: |
-        poetry config pypi-token.pypi $TWINE_API_KEY
-        poetry publish --build
+        uv build
+        uv publish

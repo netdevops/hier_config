@@ -57,7 +57,7 @@ v4 design decisions, for the record:
   so the downstream app ecosystem (hier-config-gpt, -api, -mcp, -cli) is
   released against the new hier_config version automatically.
 - Admin-only `prepare release` workflow (`.github/workflows/prepare-release.yml`):
-  run from any branch with a major/minor/patch/prerelease bump choice, it bumps
+  run from any branch with a major/minor/patch/alpha/beta/rc bump choice, it bumps
   the version, rotates `CHANGELOG.md` (`scripts/rotate_changelog.py`, skipped
   for prereleases), opens a `chore(release): prepare X.Y.Z` PR, and creates a
   draft GitHub release. The PyPI deploy workflow now triggers on release
@@ -78,7 +78,7 @@ v4 design decisions, for the record:
 - `.github/workflows/claude-review.yml`: a GitHub Actions workflow that runs
   the in-repo `hier-config-review` skill against every pull request through
   `anthropics/claude-code-action` and posts the findings as a PR comment. The
-  job installs the poetry and docs environments first, so the skill's lint,
+  job installs the uv and docs environments first, so the skill's lint,
   test, and `mkdocs build --strict` gates run for real. It is skipped for draft
   and fork pull requests, where `CLAUDE_CODE_OAUTH_TOKEN` is unavailable.
 - Aruba AOS-CX platform support (`Platform.ARUBA_AOSCX`): a new driver and
@@ -182,6 +182,18 @@ v4 design decisions, for the record:
 
 ### Changed
 
+- Migrated packaging, dependency management, and build backend from Poetry to
+  uv. Package metadata uses PEP 621 `[project]`, development dependencies use
+  PEP 735 `[dependency-groups]`, and the build backend is `uv_build`. Lockfile
+  migrated from `poetry.lock` to `uv.lock`. GitHub Actions workflows now use
+  `astral-sh/setup-uv@v5` with `uv sync` and native `uv build` / `uv publish`,
+  and the build matrix pins `UV_PYTHON` to the matrix Python version so each
+  leg is tested on the interpreter it names. Package metadata now carries the
+  README as its long description and an SPDX `License-Expression: MIT` (the
+  OSI license classifier is gone, as PEP 639 requires); `LICENSE` is shipped
+  in the sdist and wheel via `license-files`, so the setuptools-only
+  `MANIFEST.in` was removed. The unmaintained `pytest-runner` dev dependency
+  was dropped. (#NNN — replace with the PR number before merge)
 - Restructured the documentation into User, Administrator, and Developer
   guides (`docs/user/`, `docs/admin/`, `docs/dev/`) with a rewritten landing
   page, new pages for loading configurations and remediation workflows, and

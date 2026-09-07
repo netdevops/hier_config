@@ -14,46 +14,47 @@ hier_config is a Python library that compares network device configurations (run
 
 ## Build & Test Commands
 
-All commands use **poetry** (not pip):
+All commands use **uv** (not pip):
 
 ```bash
 # Full lint + test suite (equivalent to CI's lint + pytest --coverage steps)
-poetry run ./scripts/build.py lint-and-test
+uv run ./scripts/build.py lint-and-test
 
 # Lint only (ruff, mypy, pyright, pylint, yamllint, flynt — run in parallel)
-poetry run ./scripts/build.py lint
+uv run ./scripts/build.py lint
 
 # Tests only (95% coverage required)
-poetry run ./scripts/build.py pytest --coverage
+uv run ./scripts/build.py pytest --coverage
 
 # Run a single test
-poetry run pytest tests/integration/test_cisco_xr.py::test_name -v
+uv run pytest tests/integration/test_cisco_xr.py::test_name -v
 
 # Run a single test file
-poetry run pytest tests/integration/test_cisco_xr.py -v
+uv run pytest tests/integration/test_cisco_xr.py -v
 
 # Run only unit tests / only integration tests
-poetry run pytest tests/unit/ -v
-poetry run pytest tests/integration/ -v
+uv run pytest tests/unit/ -v
+uv run pytest tests/integration/ -v
 
 # Auto-fix formatting
-poetry run ruff format hier_config tests scripts
+uv run ruff format hier_config tests scripts
 
 # Validate docs (CI runs this unconditionally on every push/PR)
-poetry run mkdocs build --strict
+uv run mkdocs build --strict
 
 # Benchmarks (deselected by default via the `benchmark` marker)
-poetry run pytest -m benchmark -v -s
+uv run pytest -m benchmark -v -s
 
 # Diff this tree against a live hier-config v3 install
 # (deselected by default via the `v3_differential` marker; builds a venv)
-poetry run pytest -m v3_differential -v
+uv run pytest -m v3_differential -v
 ```
 
 CI facts that matter for changes:
 
 - **Python matrix**: CI tests on Python 3.10–3.14 and ruff targets `py310` — write 3.10-compatible syntax even though your local interpreter may be newer.
-- **Docs job**: CI builds docs with `mkdocs build --strict` on every push/PR using `docs/requirements.txt` (pip, not poetry). Adding an mkdocs plugin requires updating **both** `pyproject.toml` and `docs/requirements.txt`.
+- **Docs job**: CI builds docs with `mkdocs build --strict` on every push/PR using `docs/requirements.txt` (pip, not uv). Adding an mkdocs plugin requires updating **both** `pyproject.toml` and `docs/requirements.txt`.
+- **Lockfile**: CI syncs with `uv sync --frozen`, so any dependency change must ship a regenerated `uv.lock`. Use `uv add` / `uv add --dev` (or `uv lock` after editing `pyproject.toml` by hand) and commit the updated lockfile.
 
 ## Architecture in Brief
 
@@ -101,7 +102,7 @@ These are enforced by CI and by reviewers; violations block merges:
 
 ## Before Opening a PR
 
-- [ ] `poetry run ./scripts/build.py lint-and-test` exits 0.
+- [ ] `uv run ./scripts/build.py lint-and-test` exits 0.
 - [ ] Tests written first (TDD) and cover the change.
 - [ ] `CHANGELOG.md` updated under `## [Unreleased]`.
 - [ ] Docs updated if public API or driver behavior changed; `mkdocs build --strict` passes if docs touched.

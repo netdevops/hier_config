@@ -12,6 +12,10 @@ concurrency:
 jobs:
   review:
     runs-on: ubuntu-latest
+    env:
+      # The review agent runs `uv run …`, which re-locks and re-syncs by
+      # default. Keep it frozen so the job cannot rewrite `uv.lock`.
+      UV_FROZEN: "1"
     # Secrets, including CLAUDE_CODE_OAUTH_TOKEN, are unavailable to fork
     # pull requests.
     if: >-
@@ -34,18 +38,18 @@ jobs:
         git fetch --no-tags origin \
           +refs/heads/${{ github.event.pull_request.base.ref }}:refs/heads/${{ github.event.pull_request.base.ref }} || true
 
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        enable-cache: true
+
     - name: Set up Python
       uses: actions/setup-python@v6
       with:
         python-version: "3.12"
 
-    - name: Install poetry
-      uses: snok/install-poetry@v1
-      with:
-        version: 1.5.1
-
     - name: Install the project dependencies
-      run: poetry install --no-interaction --no-root
+      run: uv sync --frozen --no-install-project
 
     - name: Install the docs dependencies
       run: pip install -r docs/requirements.txt
@@ -62,7 +66,7 @@ jobs:
           `${{ github.event.pull_request.base.ref }}`, so use
           `git diff ${{ github.event.pull_request.base.ref }}...HEAD` for the diff.
 
-          The Python environment is ready. Do not run `poetry install`.
+          The Python environment is ready. Do not run `uv sync`.
 
           Report only. Do not change, stage, or commit any file.
 

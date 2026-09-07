@@ -1,7 +1,7 @@
 """Performance benchmarks for hier_config.
 
 These tests are skipped by default. Run with:
-    poetry run pytest -m benchmark -v
+    uv run pytest -m benchmark -v
 """
 
 import time

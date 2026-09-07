@@ -10,12 +10,12 @@ hier_config is a Python library that compares network device configurations (run
 
 ## Build & Test
 
-All commands use poetry (not pip):
+All commands use uv (not pip):
 
 ```bash
-poetry run ./scripts/build.py lint          # CI lint step
-poetry run ./scripts/build.py pytest --coverage   # CI test step, 95% coverage floor
-poetry run ./scripts/build.py lint-and-test # both in one command
+uv run ./scripts/build.py lint          # CI lint step
+uv run ./scripts/build.py pytest --coverage   # CI test step, 95% coverage floor
+uv run ./scripts/build.py lint-and-test # both in one command
 ```
 
 CI also runs the test step across Python 3.10–3.14 (code must stay 3.10-compatible) and builds docs with `mkdocs build --strict` on every push/PR.
