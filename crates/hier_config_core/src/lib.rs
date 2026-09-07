@@ -15,7 +15,6 @@ pub mod regex_cache;
 pub mod remediation;
 pub mod text_match;
 pub mod tree;
-pub mod view;
 pub mod workflow;
 
 pub use arena::{Arena, NodeId};
