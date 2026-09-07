@@ -1,46 +1,12 @@
-[project]
-name = "hier-config"
-version = "4.0.0b3"
-description = "A network configuration query and comparison library, used to build remediation configurations."
-readme = "README.md"
-license = "MIT"
-license-files = ["LICENSE"]
-authors = [
-    { name = "Andrew Edwards", email = "edwards.andrew@heb.com" },
-    { name = "James Williams", email = "james.williams@networktocode.com" },
-    { name = "Jan Brooks", email = "jan.brooks@rackspace.com" },
-]
-requires-python = ">=3.10.0,<4.0"
-classifiers = [
-    "Development Status :: 5 - Production/Stable",
-    "Intended Audience :: Developers",
-    "Intended Audience :: Information Technology",
-    "Intended Audience :: System Administrators",
-    "Intended Audience :: Telecommunications Industry",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3.14",
-    "Natural Language :: English",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-    "Topic :: System :: Networking",
-]
-dependencies = [
-    "pydantic>=2.9,<3.0",
-]
-
-[build-system]
-requires = ["uv_build>=0.11.11,<0.12.0"]
-build-backend = "uv_build"
-
-[tool.uv.build-backend]
-module-root = "."
-
+# Dev tooling, PEP 735. Standard and tool-agnostic: `pip install --group dev`
+# and `uv sync --group dev` both read it. Deliberately unpinned -- the linters
+# are expected to float so new rules surface here rather than in a consumer's CI.
+# Docs tooling is intentionally NOT duplicated here; `docs/requirements.txt` is
+# its single source of truth because Read the Docs installs from that file.
 [dependency-groups]
 dev = [
     "flynt",
+    "maturin",
     "mkdocs",
     "mkdocs-include-markdown-plugin",
     "mkdocs-redirects",
@@ -58,6 +24,60 @@ dev = [
     "types-pyyaml",
     "yamllint",
 ]
+
+[build-system]
+requires = ["maturin>=1.5,<2.0"]
+build-backend = "maturin"
+
+# PEP 621 metadata. maturin is the build backend and reads *this* table.
+# Without this, the wheel shipped with `Requires-Dist: None` and no description,
+# classifiers, license, or requires-python, so `pip install hier-config` produced a
+# package that raised `ModuleNotFoundError: pydantic` on import.
+[project]
+name = "hier-config"
+description = "A network configuration query and comparison library, used to build remediation configurations."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Andrew Edwards", email = "edwards.andrew@heb.com" },
+    { name = "James Williams", email = "james.williams@networktocode.com" },
+    { name = "Jan Brooks", email = "jan.brooks@rackspace.com" },
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
+    "Intended Audience :: Telecommunications Industry",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Natural Language :: English",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Networking",
+]
+# Imported at module load by hier_config/models.py, utils.py, and platforms/.
+# `pyyaml` backs the documented `hier_config.utils` loaders; without it declared,
+# `import hier_config.utils` raises ModuleNotFoundError on a clean install.
+dependencies = ["pydantic>=2.9,<3", "pyyaml>=6,<7"]
+# Sourced from `[workspace.package] version` in Cargo.toml so the Rust crate and the
+# Python distribution cannot drift apart.
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/netdevops/hier_config"
+Repository = "https://github.com/netdevops/hier_config"
+
+[tool.maturin]
+manifest-path = "crates/hier_config_py/Cargo.toml"
+python-packages = ["hier_config"]
+module-name = "_hier_config_rust"
+
 
 
 [tool.pyright]
@@ -164,5 +184,6 @@ parametrize-values-type = "tuple"
 markers = [
     "benchmark: performance benchmark tests (deselect with '-m \"not benchmark\"')",
     "v3_differential: compare against a live hier-config v3 install (select with '-m v3_differential')",
+    "displaced_by: superseded by Rust-native coverage; see scripts/check_displacement_markers.py",
 ]
 addopts = "-m 'not benchmark and not v3_differential'"

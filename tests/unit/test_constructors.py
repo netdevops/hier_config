@@ -1,4 +1,10 @@
-"""Tests for hier_config/constructors.py."""
+"""Tests for hier_config/constructors.py.
+
+Indent-adjustment and banner-delimiter detection are implemented in the Rust
+core, so their unit coverage lives in ``crates/hier_config_core/src/parser.rs``
+(``test_adjust_indent`` and ``test_is_end_of_banner``). The banner behaviour
+tests below still exercise those paths through the public loader.
+"""
 
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -10,8 +16,6 @@ from hier_config import (
     get_hconfig_view,
 )
 from hier_config.constructors import (
-    _adjust_indent,  # pyright: ignore[reportPrivateUsage]
-    _config_from_string_lines_end_of_banner_test,  # pyright: ignore[reportPrivateUsage]
     _load_from_string_lines,  # pyright: ignore[reportPrivateUsage]
 )
 from hier_config.exceptions import DriverNotFoundError, InvalidConfigError
@@ -164,51 +168,6 @@ def test_get_hconfig_fast_load_with_string_conversion() -> None:
     assert len(result.children) > 0
 
 
-def test_adjust_indent_with_indent_adjust_values() -> None:
-    """Test _adjust_indent with indent_adjust values (lines 206-207)."""
-    driver = get_hconfig_driver(Platform.CISCO_IOS)
-
-    line = "policy-map test"
-    indent_adjust = 0
-    end_indent_adjust: list[str] = []
-
-    result = _adjust_indent(driver, line, indent_adjust, end_indent_adjust)
-    assert isinstance(result, tuple)
-    assert len(result) == 2
-    new_indent, new_end = result
-    assert isinstance(new_indent, int)
-    assert isinstance(new_end, list)
-
-
-def test_banner_end_detection_with_delimiter() -> None:
-    """Test banner end detection with delimiter (lines 216-220)."""
-    line = "^C"
-    result = _config_from_string_lines_end_of_banner_test(
-        line, frozenset({"EOF", "%", "!"}), ["^C"]
-    )
-    assert result is True
-
-    line = "%"
-    result = _config_from_string_lines_end_of_banner_test(
-        line, frozenset({"EOF", "%", "!"}), []
-    )
-    assert result is True
-
-    line = "!"
-    result = _config_from_string_lines_end_of_banner_test(
-        line, frozenset({"EOF", "%", "!"}), []
-    )
-    assert result is True
-
-    line = "This is banner text^C"
-    result = _config_from_string_lines_end_of_banner_test(
-        line, frozenset({"EOF"}), ["^C"]
-    )
-    assert result is True
-
-    line = "This is just regular text"
-    result = _config_from_string_lines_end_of_banner_test(line, frozenset({"EOF"}), [])
-    assert result is False
 
 
 def test_load_from_string_lines_with_banner_start() -> None:
@@ -312,21 +271,6 @@ interface GigabitEthernet0/0
     assert banner_found
 
 
-def test_indent_adjust_with_multiple_adjustments() -> None:
-    """Test indent adjustment with multiple active adjustments (lines 206-207)."""
-    driver = get_hconfig_driver(Platform.CISCO_IOS)
-
-    line = "class test-class"
-    indent_adjust = 1
-    end_indent_adjust = ["!"]
-
-    result = _adjust_indent(driver, line, indent_adjust, end_indent_adjust)
-    assert isinstance(result, tuple)
-    assert len(result) == 2
-    new_indent, new_end = result
-    assert isinstance(new_indent, int)
-    assert isinstance(new_end, list)
-
 
 def test_get_hconfig_from_dump_parent_depth_traversal() -> None:
     """Test parent depth calculation during dump loading (line 116)."""
@@ -384,14 +328,6 @@ Unauthorized access prohibited
             break
     assert banner_found
 
-
-def test_adjust_indent_with_no_active_adjustments() -> None:
-    """Test _adjust_indent when no adjustments are active (lines 206-207)."""
-    driver = get_hconfig_driver(Platform.CISCO_IOS)
-
-    line = "description test"
-    result = _adjust_indent(driver, line, 0, [])
-    assert result == (0, [])
 
 
 def test_banner_with_aruba_switch_quote_delimiter() -> None:

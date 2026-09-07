@@ -1,21 +1,18 @@
-import re
-from collections.abc import Iterable
-
-from hier_config.child import HConfigChild
-from hier_config.models import (
-    IdempotentCommandsRule,
-    MatchRule,
-    NegationRule,
-    NegationStrategy,
-    OrderingRule,
-    PerLineSubRule,
+from hier_config.models import Platform
+from hier_config.platforms.driver_base import (
+    HConfigDriverBase,
+    HConfigDriverRules,
+    core_owned,
+    load_platform_rules,
 )
-from hier_config.platforms.driver_base import HConfigDriverBase, HConfigDriverRules
-from hier_config.platforms.hp_procurve.functions import hp_procurve_expand_range
+from hier_config.platforms.hp_procurve.functions import (
+    hp_procurve_expand_range,
+)
 from hier_config.platforms.hp_procurve.view import HConfigViewHPProcurve
 from hier_config.root import HConfig
 
 
+@core_owned
 def fixup_hp_procurve_aaa_port_access(config: HConfig) -> None:
     """Expands the interface ranges present in aaa port-access commands.
 
@@ -40,6 +37,7 @@ def fixup_hp_procurve_aaa_port_access(config: HConfig) -> None:
         aaa_port_access.delete()
 
 
+@core_owned
 def fixup_hp_procurve_vlan(config: HConfig) -> None:
     """Move native/tagged vlan config to the interface config for easier modeling and remediation.
 
@@ -90,6 +88,7 @@ def fixup_hp_procurve_vlan(config: HConfig) -> None:
             no_untagged_interfaces.delete()
 
 
+@core_owned
 def fixup_hp_procurve_device_profile(config: HConfig) -> None:
     """Separates the device-profile tagged-vlans onto individual lines.
 
@@ -115,228 +114,34 @@ def fixup_hp_procurve_device_profile(config: HConfig) -> None:
 class HConfigDriverHPProcurve(HConfigDriverBase):
     """Driver for HP ProCurve / Aruba AOSS switches.
 
-    Extends idempotency and negation-with logic to handle ProCurve-specific
-    command patterns such as ``aaa port-access``, ``radius-server``, and
-    ``tacacs-server`` with variable-length key fields.  Post-load callbacks
-    normalise VLAN membership (moving it under interface blocks), expand
-    port-access interface ranges, and split device-profile tagged-VLAN lists.
+    Idempotency and negation for ProCurve-specific command patterns such as
+    ``aaa port-access``, ``radius-server`` and ``tacacs-server`` with
+    variable-length key fields are expressed as ordinary rules: the
+    ``re_search`` capture group supplies the idempotency key, and
+    ``NegationDefaultWithRule.use`` templates the negation command from it.
+    Post-load callbacks normalise VLAN membership (moving it under interface
+    blocks), expand port-access interface ranges, and split device-profile
+    tagged-VLAN lists.
     Platform enum: ``Platform.HP_PROCURVE``.
     """
 
+    platform = Platform.HP_PROCURVE
     view_class = HConfigViewHPProcurve
 
-    def idempotent_for(
-        self,
-        config: HConfigChild,
-        other_children: Iterable[HConfigChild],
-    ) -> HConfigChild | None:
-        if result := super().idempotent_for(config, other_children):
-            return result
+    @classmethod
+    def _instantiate_rules(cls) -> HConfigDriverRules:
+        """Load the canonical rules and attach this platform's post-load callbacks.
 
-        if config.parent is config.root:
-            rules = (
-                (
-                    r"^aaa port-access authenticator \S+ (tx-period|supplicant-timeout) \d+$",
-                    5,
-                ),
-                (r"^aaa port-access \S+ auth-(priority|order) ", 4),
-                (r"^aaa port-access authenticator \S+ client-limit \d+$", 5),
-                (r"^aaa port-access mac-based \S+ (addr-limit|logoff-period) \d+$", 5),
-                (r"^aaa port-access \S+ critical-auth user-role ", 5),
-                (r"^radius-server host \S+ encrypted-key \S+$", 4),
-            )
-            for expression, stop_index in rules:
-                if result := self._idempotent_for_helper(
-                    expression,
-                    stop_index,
-                    config,
-                    other_children,
-                ):
-                    return result
-
-        return None
-
-    @staticmethod
-    def _idempotent_for_helper(
-        expression: str,
-        end_index: int,
-        config: HConfigChild,
-        other_children: Iterable[HConfigChild],
-    ) -> HConfigChild | None:
-        if re.search(expression, config.text):
-            words = config.text.split()
-            startswith = " ".join(words[:end_index])
-            for other_child in other_children:
-                if other_child.text.startswith(startswith):
-                    return other_child
-        return None
-
-    def negate_with(self, config: HConfigChild) -> str | None:
-        result = super().negate_with(config)
-        if isinstance(result, str):
-            return result
-
-        if config.parent is not config.root:
-            return None
-
-        rules = (
-            (
-                r"^aaa port-access authenticator \S+ (tx-period|supplicant-timeout) \d+$",
-                5,
-                "",
-                "30",
-            ),
-            (r"^aaa port-access authenticator \S+ client-limit \d+$", 5, "no", ""),
-            (r"^aaa port-access mac-based \S+ addr-limit \d+$", 5, "", "1"),
-            (r"^aaa port-access mac-based \S+ logoff-period \d+$", 5, "", "300"),
-            (r"^aaa port-access \S+ critical-auth user-role ", 5, "no", ""),
-            (r"^tacacs-server host \S+ ", 3, "no", ""),
-            (r"^radius-server host \S+ time-window \d+$", 4, "", "300"),
-            (
-                r"^radius-server host \S+ time-window plus-or-minus-time-window$",
-                4,
-                "",
-                "positive-time-window",
-            ),
-            (r"^radius-server host \S+ encrypted-key \S+$", 3, "no", ""),
-        )
-        for expression, end_index, prepend, append in rules:
-            if result := self._negation_negate_with_helper(
-                expression,
-                end_index,
-                prepend,
-                append,
-                config,
-            ):
-                return result
-        return None
-
-    @staticmethod
-    def _negation_negate_with_helper(
-        expression: str,
-        end_index: int,
-        prepend: str,
-        append: str,
-        config: HConfigChild,
-    ) -> str | None:
-        if re.search(expression, config.text):
-            words = config.text.split()
-            return " ".join([prepend, *words[:end_index], append]).strip()
-        return None
-
-    @staticmethod
-    def _instantiate_rules() -> HConfigDriverRules:
-        return HConfigDriverRules(
-            negation=[
-                NegationRule(
-                    strategy=NegationStrategy.REPLACE,
-                    match_rules=(
-                        MatchRule(startswith="interface "),
-                        MatchRule(equals="disable"),
-                    ),
-                    use="enable",
-                ),
-                NegationRule(
-                    strategy=NegationStrategy.REPLACE,
-                    match_rules=(
-                        MatchRule(startswith="interface "),
-                        MatchRule(startswith="name "),
-                    ),
-                    use="no name",
-                ),
-            ],
-            per_line_sub=[
-                PerLineSubRule(search=r"^\s*[#!].*", replace=""),
-                PerLineSubRule(search=r"^; .*", replace=""),
-                PerLineSubRule(search=r"^Running configuration:*", replace=""),
-            ],
-            idempotent_commands=[
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(
-                            startswith="aaa authentication port-access eap-radius"
-                        ),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith="aaa accounting update periodic "),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith="interface "),
-                        MatchRule(startswith="untagged vlan "),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith="interface "),
-                        MatchRule(startswith="name "),
-                    ),
-                ),
-            ],
-            ordering=[
-                # no aaa port-access {{ interface_name }} auth-priority  -- needs to happen before auth-order
-                OrderingRule(
-                    match_rules=(
-                        MatchRule(re_search=r"^no aaa port-access \S+ auth-priority"),
-                    ),
-                    weight=-10,
-                ),
-                # `no aaa port-access authenticator 5/43` needs to come before other similar commands
-                # e.g. `no aaa port-access authenticator 5/43 client-limit`
-                OrderingRule(
-                    match_rules=(
-                        MatchRule(re_search=r"^no aaa port-access authenticator \S+$"),
-                    ),
-                    weight=-10,
-                ),
-                # `aaa server-group radius "ise" host 172.16.1.1` should be defined after reference
-                OrderingRule(
-                    match_rules=(
-                        MatchRule(re_search=r"^aaa server-group radius \S+ host "),
-                    ),
-                    weight=10,
-                ),
-                # Need to add vlans before removing to prevent accidentally adding untagged vlan 1
-                OrderingRule(
-                    match_rules=(
-                        MatchRule(startswith="interface "),
-                        MatchRule(startswith=("no tagged vlan ", "no untagged vlan ")),
-                    ),
-                    weight=10,
-                ),
-                OrderingRule(
-                    match_rules=(MatchRule(startswith="no tacacs-server "),),
-                    weight=10,
-                ),
-                # In case a server is a member of a group, `no radius-server host 172.16.1.1 dyn-authorization` cannot
-                # be used before adding another server to that group
-                OrderingRule(
-                    match_rules=(
-                        MatchRule(
-                            re_search=r"^no radius-server host \S+ dyn-authorization$"
-                        ),
-                    ),
-                    weight=15,
-                ),
-                # Cannot use `no aaa server-group radius "ise" host 172.16.1.1` after removing that host
-                OrderingRule(
-                    match_rules=(
-                        MatchRule(re_search=r"^no aaa server-group radius \S+ host "),
-                    ),
-                    weight=20,
-                ),
-                # `no radius-server host 172.16.1.1` should be called last (cannot leave a server group empty)
-                OrderingRule(
-                    match_rules=(MatchRule(re_search=r"^no radius-server host \S+$"),),
-                    weight=30,
-                ),
-            ],
+        The callbacks are declared here so custom drivers can discover and
+        reuse them (#286); the Rust core applies them during parsing, so
+        `hier_config.constructors` skips the redundant Python pass.
+        """
+        return load_platform_rules(
+            cls.platform,
             post_load_callbacks=[
-                fixup_hp_procurve_aaa_port_access,
-                fixup_hp_procurve_device_profile,
-                fixup_hp_procurve_vlan,
+            fixup_hp_procurve_vlan,
+            fixup_hp_procurve_aaa_port_access,
+            fixup_hp_procurve_device_profile,
             ],
         )
+

@@ -610,6 +610,55 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_is_end_of_banner() {
+        let end_lines: HashSet<String> =
+            ["EOF", "%", "!"].iter().map(|s| (*s).to_string()).collect();
+        let contains = vec!["^C".to_string()];
+        let no_end_lines: HashSet<String> = HashSet::default();
+
+        // A caret-prefixed line always terminates a banner.
+        assert!(is_end_of_banner("^C", &end_lines, &contains));
+        // Exact matches against the configured end lines terminate it.
+        assert!(is_end_of_banner("%", &end_lines, &[]));
+        assert!(is_end_of_banner("!", &end_lines, &[]));
+        // So does a trailing delimiter on a content line.
+        assert!(is_end_of_banner(
+            "This is banner text^C",
+            &no_end_lines,
+            &contains
+        ));
+        // Ordinary banner content does not.
+        assert!(!is_end_of_banner(
+            "This is just regular text",
+            &no_end_lines,
+            &[]
+        ));
+    }
+
+    #[test]
+    fn test_adjust_indent() {
+        let prepared = vec![(
+            Arc::new(Regex::new("^policy-map").unwrap()),
+            "^ *class".to_string(),
+        )];
+
+        // A matching line opens a new virtual indent level.
+        let (indent, ends) = adjust_indent(&prepared, "policy-map test", 0, Vec::new());
+        assert_eq!(indent, 1);
+        assert_eq!(ends, vec!["^ *class".to_string()]);
+
+        // A non-matching line leaves both accumulators untouched.
+        let (indent, ends) = adjust_indent(&prepared, "hostname Router1", 0, Vec::new());
+        assert_eq!(indent, 0);
+        assert!(ends.is_empty());
+
+        // With no rules configured there is nothing to adjust.
+        let (indent, ends) = adjust_indent(&[], "policy-map test", 0, Vec::new());
+        assert_eq!(indent, 0);
+        assert!(ends.is_empty());
+    }
+
+    #[test]
     fn test_parse_simple_cisco_config() {
         let config = "
 hostname Router1

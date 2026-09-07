@@ -1,7 +1,10 @@
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterable
+from functools import cache
+from json import loads
+from pathlib import Path
 from re import Match, search
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING, Any, ClassVar, cast
 
 from pydantic import Field, PositiveInt
 
@@ -21,6 +24,7 @@ from hier_config.models import (
     OrderingRule,
     ParentAllowsDuplicateChildRule,
     PerLineSubRule,
+    Platform,
     SectionalExitingRule,
     SectionalOverwriteNoNegateRule,
     SectionalOverwriteRule,
@@ -30,6 +34,14 @@ from hier_config.root import HConfig
 
 if TYPE_CHECKING:
     from hier_config.platforms.view_base import HConfigViewBase
+
+#: Reads a platform's canonical rules JSON out of the compiled core. ``None``
+#: when the extension is unavailable, in which case the on-disk copy is read.
+get_platform_rules_json: Callable[[str], str] | None
+try:
+    from _hier_config_rust import get_platform_rules_json
+except ImportError:  # pragma: no cover - the extension is a hard requirement
+    get_platform_rules_json = None
 
 
 def _full_text_sub_rules_default() -> list[FullTextSubRule]:
@@ -188,6 +200,109 @@ class HConfigDriverRules(BaseModel):  # pylint: disable=too-many-instance-attrib
         ]
 
 
+@cache
+def _load_platform_data(platform_name: str) -> dict[str, Any]:
+    """Read a platform's canonical rule definitions.
+
+    The JSON embedded in the Rust core is the single source of truth for the
+    built-in platforms, so Python and Rust cannot drift apart. Falls back to
+    the checked-in copy when running against an uninstalled extension.
+    """
+    raw_json = None
+    if get_platform_rules_json is not None:
+        try:
+            raw_json = get_platform_rules_json(platform_name)
+        except ValueError:
+            raw_json = None
+    if raw_json is None:
+        platform_dir = (
+            Path(__file__).resolve().parents[2]
+            / "crates"
+            / "hier_config_core"
+            / "src"
+            / "platforms"
+            / platform_name
+        )
+        raw_json = (platform_dir / "rules.json").read_text(encoding="utf-8")
+    return cast("dict[str, Any]", loads(raw_json))
+
+
+@cache
+def _cached_platform_rules(platform_name: str) -> HConfigDriverRules:
+    return HConfigDriverRules.model_validate(_load_platform_data(platform_name)["rules"])
+
+
+def clear_rules_cache() -> None:
+    """Clear cached platform rules and raw platform data."""
+    _load_platform_data.cache_clear()
+    _cached_platform_rules.cache_clear()
+
+
+def load_platform_rules(
+    platform: Platform | str,
+    *,
+    post_load_callbacks: list[Callable[[HConfig], None]] | None = None,
+) -> HConfigDriverRules:
+    """Load the default driver rules for `platform`."""
+    name = (
+        platform.name.lower()
+        if isinstance(platform, Platform)
+        else str(platform).lower()
+    )
+    cached = _cached_platform_rules(name)
+    # Every rule model is frozen, so copying the lists is enough to isolate
+    # callers from one another; a deep copy would clone immutable rule objects
+    # for no benefit and dominates driver construction time.
+    update: dict[str, Any] = {
+        field: list(cast("list[object]", value))
+        for field, value in cached.__dict__.items()
+        if isinstance(value, list)
+    }
+    if post_load_callbacks is not None:
+        update["post_load_callbacks"] = list(post_load_callbacks)
+    return cached.model_copy(update=update)
+
+
+#: Driver hooks the v4 engine never calls. See `__init_subclass__`.
+_REMOVED_HOOKS = ("idempotent_for", "negate_with", "sectional_exit")
+
+
+#: Platforms whose stock post-load fixups are applied by the Rust core during
+#: parsing. Their Python equivalents stay public so custom drivers can reuse
+#: them, but re-running one over an already-fixed tree would be wasted work, so
+#: `hier_config.constructors` skips core-owned callbacks for these platforms.
+CORE_POST_LOAD_PLATFORMS: frozenset[Platform] = frozenset(
+    {
+        Platform.ARUBA_AOSCX,
+        Platform.CISCO_IOS,
+        Platform.CISCO_XR,
+        Platform.HP_PROCURVE,
+    }
+)
+
+_CORE_OWNED_ATTR = "__hier_config_core_owned__"
+
+
+def core_owned(callback: Callable[[HConfig], None]) -> Callable[[HConfig], None]:
+    """Mark a post-load callback as one the Rust core already applies.
+
+    The marker only suppresses the redundant Python pass for the platforms in
+    `CORE_POST_LOAD_PLATFORMS`. A custom driver on any other platform that
+    reuses one of these callbacks still gets it executed normally.
+    """
+    setattr(callback, _CORE_OWNED_ATTR, True)
+    return callback
+
+
+def runs_in_core(callback: Callable[[HConfig], None], platform: Platform | None) -> bool:
+    """Report whether the core already applied `callback` for `platform`."""
+    return platform in CORE_POST_LOAD_PLATFORMS and getattr(
+        callback, _CORE_OWNED_ATTR, False
+    )
+
+
+
+
 class HConfigDriverBase(ABC):
     """Defines all hier_config options, rules, and rule checking methods.
     Override methods as needed.
@@ -198,8 +313,34 @@ class HConfigDriverBase(ABC):
     #: a view for a custom platform or to override a built-in view.
     view_class: ClassVar[type["HConfigViewBase"] | None] = None
 
+    #: Platform whose canonical rules `_instantiate_rules()` loads by default.
+    #: `None` means the driver must override `_instantiate_rules()`.
+    platform: ClassVar[Platform | None] = None
+
     def __init__(self) -> None:
         self.rules = self._instantiate_rules()
+
+    def __init_subclass__(cls, **kwargs: object) -> None:
+        """Reject subclasses that define a hook the v4 engine cannot call.
+
+        Only rule *data* crosses into the Rust core, so a Python override of
+        `idempotent_for`, `negate_with` or `sectional_exit` is never invoked.
+        Silently ignoring one produces wrong remediation with no signal, so
+        defining one is an error. Express the behavior as an
+        `IdempotentCommandsRule`, a `NegationRule`, or a
+        `SectionalExitingRule` instead -- all support `re_search` capture
+        groups, and `NegationRule.use` supports backreferences.
+        """
+        super().__init_subclass__(**kwargs)
+        for hook in _REMOVED_HOOKS:
+            if hook in cls.__dict__:
+                msg = (
+                    f"{cls.__name__} defines {hook}(), which the v4 engine never "
+                    f"calls: only rule data crosses into the Rust core. Express "
+                    f"this as a rule on HConfigDriverRules instead. See "
+                    f"https://hier-config.readthedocs.io/en/latest/user/migration-v3-to-v4/"
+                )
+                raise TypeError(msg)
 
     def idempotent_for(
         self,
@@ -531,7 +672,18 @@ class HConfigDriverBase(ABC):
         """
         return config_text
 
-    @staticmethod
-    @abstractmethod
-    def _instantiate_rules() -> HConfigDriverRules:
-        pass
+    @classmethod
+    def _instantiate_rules(cls) -> HConfigDriverRules:
+        """Build this driver's rule set.
+
+        Built-in drivers declare `platform` and inherit this implementation,
+        which loads the canonical rules the Rust core also compiles against, so
+        the two can never disagree. Custom drivers either do the same or
+        override this to return an `HConfigDriverRules` they build themselves.
+        """
+        if cls.platform is not None:
+            return load_platform_rules(cls.platform)
+        message = (
+            "Driver subclasses must define platform or implement _instantiate_rules()"
+        )
+        raise NotImplementedError(message)
