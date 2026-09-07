@@ -1,6 +1,7 @@
 from hier_config.models import Platform
 from hier_config.platforms.driver_base import HConfigDriverBase
 from hier_config.child import HConfigChild
+from hier_config.platforms.functions import convert_to_set_commands
 
 
 class HConfigDriverJuniperJUNOS(HConfigDriverBase):
@@ -39,3 +40,7 @@ class HConfigDriverJuniperJUNOS(HConfigDriverBase):
             raise ValueError(message)
 
         return child
+
+    @staticmethod
+    def config_preprocessor(config_text: str) -> str:
+        return convert_to_set_commands(config_text)
