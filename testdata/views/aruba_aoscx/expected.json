@@ -1,0 +1,185 @@
+{
+  "hostname": "example-aoscx",
+  "ipv4_default_gw": "10.0.0.1",
+  "location": "",
+  "module_numbers": [
+    1
+  ],
+  "stack_members": [],
+  "vlans": [
+    {
+      "id": 10,
+      "name": "USERS"
+    },
+    {
+      "id": 20,
+      "name": null
+    },
+    {
+      "id": 99,
+      "name": null
+    }
+  ],
+  "interface_names_mentioned": [
+    "1/1/1",
+    "1/1/2",
+    "lag 1",
+    "vlan 10"
+  ],
+  "interfaces": [
+    {
+      "name": "lag 1",
+      "number": "1",
+      "parent_name": null,
+      "description": "",
+      "enabled": true,
+      "is_bundle": true,
+      "is_subinterface": false,
+      "is_loopback": false,
+      "is_svi": false,
+      "module_number": null,
+      "port_number": 1,
+      "subinterface_number": null,
+      "ipv4_interfaces": [],
+      "vrf": "",
+      "bundle_id": "1",
+      "bundle_name": "lag 1",
+      "bundle_member_interfaces": [
+        "1/1/1"
+      ],
+      "native_vlan": 99,
+      "tagged_all": false,
+      "tagged_vlans": [
+        10,
+        20
+      ],
+      "dot1q_mode": "2",
+      "has_nac": false,
+      "nac_control_direction_in": false,
+      "nac_host_mode": null,
+      "nac_mab_first": false,
+      "nac_max_dot1x_clients": null,
+      "nac_max_mab_clients": null,
+      "duplex": "auto",
+      "poe": true,
+      "speed": null,
+      "raises": {
+        "nac_max_dot1x_clients": "NotImplementedError",
+        "nac_max_mab_clients": "NotImplementedError"
+      }
+    },
+    {
+      "name": "1/1/1",
+      "number": "1/1/1",
+      "parent_name": "lag 1",
+      "description": "access port",
+      "enabled": true,
+      "is_bundle": false,
+      "is_subinterface": false,
+      "is_loopback": false,
+      "is_svi": false,
+      "module_number": 1,
+      "port_number": 1,
+      "subinterface_number": null,
+      "ipv4_interfaces": [],
+      "vrf": "",
+      "bundle_id": "1",
+      "bundle_name": "lag 1",
+      "bundle_member_interfaces": [],
+      "native_vlan": 10,
+      "tagged_all": false,
+      "tagged_vlans": [],
+      "dot1q_mode": "1",
+      "has_nac": true,
+      "nac_control_direction_in": false,
+      "nac_host_mode": null,
+      "nac_mab_first": false,
+      "nac_max_dot1x_clients": null,
+      "nac_max_mab_clients": null,
+      "duplex": "full",
+      "poe": true,
+      "speed": [
+        1000
+      ],
+      "raises": {
+        "nac_max_dot1x_clients": "NotImplementedError",
+        "nac_max_mab_clients": "NotImplementedError"
+      }
+    },
+    {
+      "name": "1/1/2",
+      "number": "1/1/2",
+      "parent_name": null,
+      "description": "",
+      "enabled": false,
+      "is_bundle": false,
+      "is_subinterface": false,
+      "is_loopback": false,
+      "is_svi": false,
+      "module_number": 1,
+      "port_number": 2,
+      "subinterface_number": null,
+      "ipv4_interfaces": [],
+      "vrf": "",
+      "bundle_id": null,
+      "bundle_name": null,
+      "bundle_member_interfaces": [],
+      "native_vlan": null,
+      "tagged_all": true,
+      "tagged_vlans": [],
+      "dot1q_mode": "3",
+      "has_nac": false,
+      "nac_control_direction_in": false,
+      "nac_host_mode": null,
+      "nac_mab_first": false,
+      "nac_max_dot1x_clients": null,
+      "nac_max_mab_clients": null,
+      "duplex": "auto",
+      "poe": false,
+      "speed": null,
+      "raises": {
+        "nac_max_dot1x_clients": "NotImplementedError",
+        "nac_max_mab_clients": "NotImplementedError"
+      }
+    },
+    {
+      "name": "vlan 10",
+      "number": "10",
+      "parent_name": null,
+      "description": "",
+      "enabled": false,
+      "is_bundle": false,
+      "is_subinterface": false,
+      "is_loopback": false,
+      "is_svi": true,
+      "module_number": null,
+      "port_number": 10,
+      "subinterface_number": null,
+      "ipv4_interfaces": [
+        "203.0.113.1/24"
+      ],
+      "vrf": "RED",
+      "bundle_id": null,
+      "bundle_name": null,
+      "bundle_member_interfaces": [],
+      "native_vlan": null,
+      "tagged_all": false,
+      "tagged_vlans": [],
+      "dot1q_mode": null,
+      "has_nac": false,
+      "nac_control_direction_in": false,
+      "nac_host_mode": null,
+      "nac_mab_first": false,
+      "nac_max_dot1x_clients": null,
+      "nac_max_mab_clients": null,
+      "duplex": "auto",
+      "poe": true,
+      "speed": null,
+      "raises": {
+        "nac_max_dot1x_clients": "NotImplementedError",
+        "nac_max_mab_clients": "NotImplementedError"
+      }
+    }
+  ],
+  "raises": {}
+}

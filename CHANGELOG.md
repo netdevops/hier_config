@@ -40,6 +40,19 @@ v4 design decisions, for the record:
   [Rust core behavior changes](docs/user/rust-core-changes.md) for the full
   list of differences and
   [Performance & Benchmarks](docs/dev/benchmarks.md) for measurements.
+- Standalone Rust usage. `hier_config_core` is now usable as a plain Rust
+  crate with no Python interpreter involved: the built-in drivers already
+  embed their rules as JSON in Rust, and a native view layer
+  (`crates/hier_config_core/src/view/`) plus one-call constructors
+  (`config_from_text`, `config_view`) complete the surface. Views are ported
+  for the six platforms that have a Python `view.py`
+  (Arista EOS, Aruba AOS-CX, Cisco IOS, Cisco NX-OS, Cisco XR, HP ProCurve)
+  using traits with default method bodies, so a platform implements only what
+  its Python sibling overrides. **The Python view layer is unchanged.** The two
+  are pinned together by a shared corpus under `testdata/views/` that is
+  generated from Python and asserted from both sides, so neither can drift.
+  See [Native view divergences](docs/user/rust-core-changes.md) for the
+  handful of properties where Rust returns `None` instead of raising.
 - `core_owned` decorator on `hier_config.platforms.driver_base`. It marks a
   driver member whose behavior the Rust core owns, in two places: a post-load
   callback the core already runs (so the Python copy is skipped rather than

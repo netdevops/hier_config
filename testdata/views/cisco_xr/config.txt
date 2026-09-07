@@ -1,0 +1,15 @@
+hostname EXAMPLE-XR
+interface Bundle-Ether1
+ description bundle
+interface GigabitEthernet0/0/0/0
+ description member
+ bundle id 1 mode active
+interface GigabitEthernet0/0/0/1.100
+ encapsulation dot1q 100
+ vrf RED
+ ipv4 address 192.0.2.1 255.255.255.0
+interface Loopback0
+ ipv4 address 198.51.100.1/32
+router static
+ address-family ipv4 unicast
+  0.0.0.0/0 10.0.0.1

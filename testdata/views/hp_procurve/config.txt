@@ -1,0 +1,29 @@
+hostname "EXAMPLE-PROCURVE"
+ip default-gateway 10.0.0.1
+stacking
+ member 1 type "JL123A" mac-address abc123-abc123
+ member 2 type "JL123A" mac-address def456-def456
+trunk 1/45,1/46 trk1 trunk
+aaa port-access authenticator 1/1
+aaa port-access authenticator 1/1 client-limit 32
+aaa port-access mac-based 1/2
+aaa port-access mac-based 1/2 addr-limit 5
+aaa port-access 1/1 controlled-direction in
+aaa port-access 1/1 auth-order mac-based authenticator
+interface Trk1
+ name "uplink bundle"
+interface 1/1
+ name "access port"
+ untagged vlan 10
+ tagged vlan 20
+ speed-duplex 1000-full
+interface 1/2
+ disable
+ untagged vlan 10
+interface 1/45
+ name "member"
+vlan 10
+ name "USERS"
+ ip address 203.0.113.1 255.255.255.0
+vlan 20
+ name "GUEST"

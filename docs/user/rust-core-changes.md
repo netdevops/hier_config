@@ -438,6 +438,36 @@ Comments written by built-in post-load callbacks now surface through
 `HConfigChild.comments`. In earlier builds they were stored but not visible from
 Python.
 
+### Native view divergences
+
+The Python view layer is unchanged, so **none of these affect Python users.**
+They apply only when you consume the native Rust view in `hier_config_core`,
+which returns values where the Python property raises:
+
+| Platform | Property | Python | Rust |
+| --- | --- | --- | --- |
+| Cisco IOS, Aruba AOS-CX | `nac_max_dot1x_clients`, `nac_max_mab_clients` | `NotImplementedError` | `None` |
+| Arista EOS, Cisco NX-OS, Cisco XR | `module_number` | `AttributeError` | `None` |
+| HP `ProCurve` | `bundle_member_interfaces` | `ValueError` on a non-trunk interface | empty list |
+
+Rust favors a total function over a panic, because a panic in a getter is not a
+usable error-handling contract for a library. The shared corpus records each
+raising pair in its `raises` map and allow-lists it, so a *new* divergence is a
+test failure rather than a silent drift.
+
+Two Python behaviors are reproduced faithfully even though they look like bugs,
+because changing them would be a behavior change rather than a port:
+
+- HP `ProCurve` `speed` is always `None`. The Python implementation passes the
+  whole `speed-duplex 1000-full` line into a parser that expects just the value,
+  so no branch ever matches. `duplex` works only incidentally, by matching the
+  line's `half`/`full` suffix.
+- Cisco IOS `speed` raises `ValueError` in Python whenever the configured value
+  is `auto`, because it calls `int()` on it. Rust returns `None`.
+
+If either should change, it should change in Python first and flow into the port
+through a regenerated corpus.
+
 ## Import surface
 
 No import paths were removed or moved.
@@ -445,8 +475,9 @@ No import paths were removed or moved.
 - `hier_config.base`, `.child`, `.children`, and `.root` are re-export shims over
   the extension. `tests/test_import_surface.py` pins them.
 - `hier_config.platforms.view_base` and every
-  `hier_config/platforms/<platform>/view.py` are facades over the native view
-  types. Public API and import paths are unchanged.
+  `hier_config/platforms/<platform>/view.py` are unchanged pure Python. The
+  Rust core carries a parallel native view for standalone Rust use; the two are
+  pinned together by the shared corpus under `testdata/views/`.
 - Type stubs (`hier_config/*.pyi`) are shipped, so downstream annotations resolve
   to real types instead of `Any`.
 - Native classes report `__module__` correctly, which makes `HConfig` and

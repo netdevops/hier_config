@@ -1,0 +1,23 @@
+hostname EXAMPLE-AOSCX
+ip route 0.0.0.0/0 10.0.0.1
+vlan 10
+ name USERS
+vlan 20
+interface lag 1
+ no shutdown
+ vlan trunk native 99
+ vlan trunk allowed 10,20
+interface 1/1/1
+ no shutdown
+ description access port
+ lag 1
+ vlan access 10
+ aaa authentication port-access dot1x authenticator
+ duplex full
+ speed 1000
+interface 1/1/2
+ vlan trunk allowed all
+ no power-over-ethernet
+interface vlan 10
+ ip address 203.0.113.1/24
+ vrf attach RED

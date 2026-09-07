@@ -194,6 +194,29 @@ for iface in view.interface_views:
     print(iface.description)
 ```
 
+### Native views
+
+`hier_config_core` carries an equivalent view layer in Rust (`crates/hier_config_core/src/view/`) so the crate is usable without a Python interpreter. It mirrors the Python design with traits instead of mixins:
+
+- `ConfigOps` / `InterfaceOps` — every method has a default body, so a platform implements only what its Python sibling overrides. Optional capabilities are gated by `supports_vlan()`, `supports_nac()`, `supports_physical()`, and `bundle_prefix()`.
+- `ConfigView<'a>` / `InterfaceView<'a>` — borrow a `Tree` and delegate each property to the platform's ops, falling back to the `default_*` implementation.
+- `view_ops_for_platform(Platform)` — returns `None` for the platforms that deliberately have no Python `view.py`. The match is exhaustive, so adding a `Platform` variant is a compile error until a decision is recorded.
+
+```rust
+use hier_config_core::{Platform, config_from_text, config_view};
+
+let tree = config_from_text(Platform::CiscoIos, config_text)?;
+if let Some(view) = config_view(&tree) {
+    for iface in view.interface_views() {
+        println!("{}", iface.description());
+    }
+}
+```
+
+The two implementations are pinned together by a shared corpus at `testdata/views/`. `scripts/gen_view_corpus.py` generates each `expected.json` **from Python**; `crates/hier_config_core/tests/view_corpus.rs` asserts the native view reproduces it, and `tests/native/test_view_corpus.py` re-runs the generator in `--check` mode so a Python view change fails until the snapshots are regenerated — which in turn fails the Rust test until the port is updated. Snapshots must never be regenerated from Rust.
+
+A small number of properties raise in Python (for example `nac_max_dot1x_clients` on Cisco IOS) rather than returning a value. Those pairs are recorded in each snapshot's `raises` map and allow-listed in `EXPECTED_PYTHON_RAISES`; see [Rust core behavior changes](../user/rust-core-changes.md) for the divergences the native view deliberately keeps.
+
 ---
 
 ## Reporting layer
