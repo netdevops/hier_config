@@ -1,7 +1,13 @@
-from hier_config.models import Platform
-from hier_config.platforms.driver_base import core_owned, HConfigDriverBase
-from hier_config.child import HConfigChild
 from collections.abc import Iterable
+
+from hier_config.child import HConfigChild
+from hier_config.models import Platform
+from hier_config.platforms.driver_base import (
+    HConfigDriverBase,
+    HConfigDriverRules,
+    core_owned,
+    load_platform_rules,
+)
 
 
 class HConfigDriverFortinetFortiOS(HConfigDriverBase):
@@ -13,6 +19,11 @@ class HConfigDriverFortinetFortiOS(HConfigDriverBase):
     """
 
     platform = Platform.FORTINET_FORTIOS
+
+    @staticmethod
+    def _instantiate_rules() -> HConfigDriverRules:
+        """Load the canonical rules the Rust core compiles against."""
+        return load_platform_rules(Platform.FORTINET_FORTIOS)
 
     @property
     def negation_prefix(self) -> str:

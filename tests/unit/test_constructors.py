@@ -168,8 +168,6 @@ def test_get_hconfig_fast_load_with_string_conversion() -> None:
     assert len(result.children) > 0
 
 
-
-
 def test_load_from_string_lines_with_banner_start() -> None:
     """Test banner start detection and handling (lines 237-253, 258-269)."""
     driver = get_hconfig_driver(Platform.CISCO_IOS)
@@ -271,7 +269,6 @@ interface GigabitEthernet0/0
     assert banner_found
 
 
-
 def test_get_hconfig_from_dump_parent_depth_traversal() -> None:
     """Test parent depth calculation during dump loading (line 116)."""
     config = """hostname router1
@@ -327,7 +324,6 @@ Unauthorized access prohibited
             assert "!" in child.text
             break
     assert banner_found
-
 
 
 def test_banner_with_aruba_switch_quote_delimiter() -> None:

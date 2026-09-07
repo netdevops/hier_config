@@ -209,8 +209,8 @@ def test_callbacks_registered_through_instantiate_rules_override() -> None:
     class _CustomDriver(HConfigDriverBase):
         platform = Platform.GENERIC
 
-        @classmethod
-        def _instantiate_rules(cls) -> HConfigDriverRules:
+        @staticmethod
+        def _instantiate_rules() -> HConfigDriverRules:
             return load_platform_rules(
                 Platform.GENERIC, post_load_callbacks=[_callback]
             )
@@ -550,8 +550,8 @@ def test_config_preprocessor_override_is_not_honored() -> None:
     class Driver(HConfigDriverCiscoIOS):
         """Driver overriding the config preprocessor."""
 
-        @classmethod
-        def config_preprocessor(cls, config_text: str) -> str:
+        @staticmethod
+        def config_preprocessor(config_text: str) -> str:
             calls.append(config_text)
             return config_text.replace("SECRET", "REDACTED")
 

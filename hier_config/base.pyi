@@ -59,10 +59,13 @@ class HConfigBase:
     ) -> HConfigChild:
         """Add a nested copy of a child_to_add to self.children."""
 
-    def all_children(self) -> Sequence[HConfigChild]:
+    def add_tags(self, tag: str | Iterable[str]) -> None:
+        """v4 name for `tags_add()`."""
+
+    def all_children(self) -> Iterator[HConfigChild]:
         """Recursively find and yield all children at each hierarchy."""
 
-    def all_children_sorted(self) -> Sequence[HConfigChild]:
+    def all_children_sorted(self) -> Iterator[HConfigChild]:
         """Recursively find and yield all children sorted at each hierarchy."""
 
     def all_children_sorted_by_tags(
@@ -82,7 +85,10 @@ class HConfigBase:
     def del_child(self, child: HConfigChild) -> None: ...
     def del_child_by_text(self, text: str) -> None: ...
     def delete_sectional_exit(self) -> None: ...
-    def depth(self) -> int: ...
+    @property
+    def depth(self) -> int:
+        """Distance from the root of the configuration tree."""
+
     def dump_simple(self, *, sectional_exiting: bool = False) -> tuple[str, ...]: ...
     def get_child(
         self,
@@ -115,6 +121,11 @@ class HConfigBase:
         """Find children recursively given a tuple of MatchRules."""
 
     def get_children_object(self) -> HConfigChildren: ...
+    def indented_text(
+        self, style: TextStyle = "without_comments", tag: str | None = None
+    ) -> str:
+        """v4 name for `cisco_style_text()`."""
+
     @property
     def is_branch(self) -> bool:
         """True if there are children or is an instance of HConfig."""
@@ -127,6 +138,9 @@ class HConfigBase:
     def lines(self, *, sectional_exiting: bool = False) -> Iterable[str]: ...
     def move_child(self, child: HConfigChild) -> None: ...
     def path(self) -> Sequence[str]: ...
+    def remove_tags(self, tag: str | Iterable[str]) -> None:
+        """v4 name for `tags_remove()`."""
+
     @property
     def tags(self) -> frozenset[str]:
         """Recursive access to tags on all leaf nodes."""
@@ -138,6 +152,9 @@ class HConfigBase:
 
     def tags_remove(self, tag: str | Iterable[str]) -> None:
         """Remove a tag from self._tags on all leaf nodes."""
+
+    def to_lines(self, *, sectional_exiting: bool = False) -> tuple[str, ...]:
+        """v4 name for `dump_simple()`."""
 
     def unified_diff(self, target: HConfig | HConfigChild) -> Sequence[str]:
         """Yield unified-diff lines comparing self to target.

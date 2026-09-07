@@ -1,13 +1,10 @@
 from contextlib import suppress
-from itertools import islice
 from json import JSONDecodeError, loads
 from logging import getLogger
 from pathlib import Path
-from re import search, sub
 
 from hier_config.platforms.driver_base import HConfigDriverBase, runs_in_core
 
-from .child import HConfigChild
 from .exceptions import DriverNotFoundError, InvalidConfigError
 from .models import Dump, Platform
 from .platforms.view_base import HConfigViewBase
@@ -82,7 +79,6 @@ def _reject_structured_format(config_text: str) -> None:
         raise InvalidConfigError(message)
 
 
-
 def _new_config(driver: HConfigDriverBase) -> HConfig:
     """Construct an ``HConfig`` and claim it as its tree's canonical root.
 
@@ -110,7 +106,7 @@ def hconfig_from_text(
     config = _new_config(resolve_driver(platform_or_driver))
 
     if isinstance(config_raw, Path):
-        config._load_file_native(str(config_raw), True)  # noqa: SLF001, FBT003
+        config._load_file_native(str(config_raw), True)  # ruff: ignore[private-member-access, boolean-positional-value-in-call]
     else:
         _reject_structured_format(config_raw)
         _load_from_string_lines(config, config_raw)
@@ -126,7 +122,7 @@ def _load_from_string_lines(config: HConfig, config_text: str) -> None:
     Kept as a private seam so callers (and tests) can drive parsing on an
     already-constructed tree without going through `hconfig_from_text`.
     """
-    config._load_native(config_text, True)  # noqa: SLF001, FBT003
+    config._load_native(config_text, True)  # ruff: ignore[private-member-access, boolean-positional-value-in-call]
 
 
 def hconfig_from_dump(
@@ -139,7 +135,7 @@ def hconfig_from_dump(
     """
     driver = resolve_driver(platform_or_driver)
     config = _new_config(driver)
-    config._load_from_dump_native(dump.lines)  # noqa: SLF001
+    config._load_from_dump_native(dump.lines)  # ruff: ignore[private-member-access]
     _run_post_load_callbacks(config, driver)
     return config
 
@@ -160,7 +156,7 @@ def hconfig_from_lines(
         _reject_structured_format(lines)
         lines = lines.splitlines()
 
-    config._load_fast_native(list(lines), True)  # noqa: SLF001, FBT003
+    config._load_fast_native(list(lines), True)  # ruff: ignore[private-member-access, boolean-positional-value-in-call]
 
     _run_post_load_callbacks(config, driver)
 

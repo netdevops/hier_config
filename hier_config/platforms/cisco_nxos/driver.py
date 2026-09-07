@@ -1,6 +1,10 @@
 from hier_config.models import Platform
-from hier_config.platforms.driver_base import HConfigDriverBase
 from hier_config.platforms.cisco_nxos.view import HConfigViewCiscoNXOS
+from hier_config.platforms.driver_base import (
+    HConfigDriverBase,
+    HConfigDriverRules,
+    load_platform_rules,
+)
 
 
 class HConfigDriverCiscoNXOS(HConfigDriverBase):
@@ -14,3 +18,8 @@ class HConfigDriverCiscoNXOS(HConfigDriverBase):
 
     platform = Platform.CISCO_NXOS
     view_class = HConfigViewCiscoNXOS
+
+    @staticmethod
+    def _instantiate_rules() -> HConfigDriverRules:
+        """Load the canonical rules the Rust core compiles against."""
+        return load_platform_rules(Platform.CISCO_NXOS)

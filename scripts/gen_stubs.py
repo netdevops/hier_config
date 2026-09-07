@@ -80,13 +80,27 @@ HEADERS = {
     ],
     "root": [
         "from collections.abc import Iterable, Iterator, Sequence",
+        "from os import PathLike",
         "from typing import Any",
         "",
         "from hier_config.base import HConfigBase",
         "from hier_config.child import HConfigChild",
-        "from hier_config.models import Dump, MatchRule, Platform, TagRule",
+        "from hier_config.models import Dump, DumpLine, MatchRule, Platform, TagRule",
+        "from hier_config.tree_algorithms import FutureReport",
         "from hier_config.platforms.driver_base import HConfigDriverBase",
     ],
+}
+
+# v4 renamed a number of members (#300) and kept the v3 spellings as permanent
+# aliases, so both names reach the same Rust implementation and necessarily share
+# a signature.  Recovering the v4 name's signature from its v3 counterpart means
+# the two can never drift, and the v3.7.0 docstring is inherited for free.
+V4_ALIASES: dict[str, str] = {
+    "add_tags": "tags_add",
+    "indented_text": "cisco_style_text",
+    "remediation": "config_to_get_to",
+    "remove_tags": "tags_remove",
+    "to_lines": "dump_simple",
 }
 
 # Members the extension exposes that have no v3.7.0 `def` to recover a signature
@@ -118,8 +132,6 @@ OVERRIDES: dict[str, tuple[str, str | None]] = {
 # lie -- callers can index these results and iterate them more than once.  Only
 # the return annotation is replaced, so the recovered docstring survives intact.
 RETURN_OVERRIDES: dict[str, str] = {
-    "HConfigBase.all_children": "Sequence[HConfigChild]",
-    "HConfigBase.all_children_sorted": "Sequence[HConfigChild]",
     "HConfigBase.all_children_sorted_by_tags": "Sequence[HConfigChild]",
     "HConfigBase.get_children": "Sequence[HConfigChild]",
     "HConfigBase.get_children_deep": "Sequence[HConfigChild]",
@@ -133,6 +145,55 @@ RETURN_OVERRIDES: dict[str, str] = {
 # verbatim.  `OVERRIDES` renders exactly one `def`, so anything needing
 # `@overload` has to live here.
 RAW_OVERRIDES: dict[str, list[str]] = {
+    "HConfig.__hash__": [
+        "    def __hash__(self) -> int: ...",
+    ],
+    "HConfigBase.__hash__": [
+        "    def __hash__(self) -> int: ...",
+    ],
+    "HConfigChild.__hash__": [
+        "    def __hash__(self) -> int: ...",
+    ],
+    "HConfigChildren.__hash__": [
+        "    def __hash__(self) -> int: ...",
+    ],
+    "HConfig.__eq__": [
+        "    def __eq__(self, other: object) -> bool: ...",
+    ],
+    "HConfigBase.__eq__": [
+        "    def __eq__(self, other: object) -> bool: ...",
+    ],
+    "HConfigChild.__eq__": [
+        "    def __eq__(self, other: object) -> bool: ...",
+    ],
+    "HConfigChildren.__eq__": [
+        "    def __eq__(self, other: object) -> bool: ...",
+    ],
+    # v4 turned `depth` from a method into a property (see the migration guide).
+    "HConfigBase.depth": [
+        "    @property",
+        "    def depth(self) -> int:",
+        '        """Distance from the root of the configuration tree."""',
+    ],
+    # `hier_config.constructors` drives these private native loaders directly.
+    "HConfig._load_native": [
+        "    def _load_native(self, config_text: str, run_post_load: bool) -> None: ...",
+    ],
+    "HConfig._load_fast_native": [
+        "    def _load_fast_native(",
+        "        self, lines: Iterable[str], run_post_load: bool",
+        "    ) -> None: ...",
+    ],
+    "HConfig._load_file_native": [
+        "    def _load_file_native(self, path: str, run_post_load: bool) -> None: ...",
+    ],
+    "HConfig._load_from_dump_native": [
+        "    def _load_from_dump_native(self, lines: Iterable[DumpLine]) -> None: ...",
+    ],
+    "HConfigChild._default": [
+        "    def _default(self) -> None:",
+        '        """Prefix the line with `default `, in place."""',
+    ],
     # Subscripting accepts an index/key or a slice, and the return type depends
     # on which: a slice yields a `list`.  Collapsing that to one signature would
     # force every caller to narrow a union the type checker could have resolved.
@@ -144,6 +205,69 @@ RAW_OVERRIDES: dict[str, list[str]] = {
         "    @overload",
         "    def __getitem__(self, subscript: slice) -> list[HConfigChild]:",
         '        """Return self[key]."""',
+    ],
+    # New in v4, so there is no v3.7.0 `def` to recover.  Types are taken from
+    # the Rust definitions in `crates/hier_config_py/src/root.rs`.
+    "HConfig.from_text": [
+        "    @classmethod",
+        "    def from_text(",
+        "        cls,",
+        "        platform_or_driver: Platform | str | HConfigDriverBase,",
+        "        config_text: str | PathLike[str] | None = None,",
+        "    ) -> HConfig: ...",
+    ],
+    "HConfig.from_lines": [
+        "    @classmethod",
+        "    def from_lines(",
+        "        cls,",
+        "        platform_or_driver: Platform | str | HConfigDriverBase,",
+        "        lines: Iterable[str],",
+        "    ) -> HConfig: ...",
+    ],
+    "HConfig.from_dump": [
+        "    @classmethod",
+        "    def from_dump(",
+        "        cls,",
+        "        platform_or_driver: Platform | str | HConfigDriverBase,",
+        "        dump: Dump,",
+        "    ) -> HConfig: ...",
+    ],
+    "HConfig.from_json": [
+        "    @classmethod",
+        "    def from_json(",
+        "        cls,",
+        "        platform_or_driver: Platform | str | HConfigDriverBase,",
+        "        data: str | dict[str, Any],",
+        "        *,",
+        "        list_keys: tuple[str, ...] | None = None,",
+        "    ) -> HConfig: ...",
+    ],
+    "HConfig.from_xml": [
+        "    @classmethod",
+        "    def from_xml(",
+        "        cls,",
+        "        platform_or_driver: Platform | str | HConfigDriverBase,",
+        "        source: str,",
+        "        *,",
+        "        list_keys: tuple[str, ...] | None = None,",
+        "    ) -> HConfig: ...",
+    ],
+    "HConfig.to_json": [
+        "    def to_json(self, *, indent: int | None = 2) -> str:",
+        '        """Render a tree built by `from_json` back to JSON text."""',
+    ],
+    "HConfig.to_xml": [
+        "    def to_xml(self, *, indent: int | None = 2) -> str:",
+        '        """Render a tree built by `from_xml` back to XML text."""',
+    ],
+    "HConfig.future_with_report": [
+        "    def future_with_report(",
+        "        self,",
+        "        config: HConfig,",
+        "        *,",
+        "        prune_empty_branches: bool = False,",
+        "    ) -> tuple[HConfig, FutureReport]:",
+        '        """Like `future()`, but also reports how negations resolved."""',
     ],
 }
 
@@ -181,7 +305,21 @@ SKIP = {
 #
 # `__eq__` is deliberately absent: `object.__eq__` already carries the right
 # signature, so re-emitting it would add noise without adding information.
-FORCE_EMIT = {"HConfigChild.__lt__"}
+# `__eq__` is the same situation: the extension overrides it on every class,
+# but `object` defines it too, so the "not inherited" test drops it. Without it
+# in the stub a type checker assumes identity comparison and reports every
+# `config == <other type>` assertion as a non-overlapping equality check.
+FORCE_EMIT = {
+    "HConfigChild.__lt__",
+    "HConfig.__eq__",
+    "HConfigBase.__eq__",
+    "HConfigChild.__eq__",
+    "HConfigChildren.__eq__",
+    "HConfig.__hash__",
+    "HConfigBase.__hash__",
+    "HConfigChild.__hash__",
+    "HConfigChildren.__hash__",
+}
 
 
 def original_defs() -> dict[str, ast.AST]:
@@ -263,6 +401,13 @@ def runtime_owned(cls: type) -> list[str]:
         and (n not in inherited or f"{cls.__name__}.{n}" in FORCE_EMIT)
         and (not n.startswith("_") or (n.startswith("__") and n.endswith("__")))
     ]
+    names += [
+        n
+        for n in vars(cls)
+        if n.startswith("_")
+        and not (n.startswith("__") and n.endswith("__"))
+        and f"{cls.__name__}.{n}" in RAW_OVERRIDES
+    ]
     return sorted(names)
 
 
@@ -318,6 +463,14 @@ def render(
     # Fall back to a definition of the same name on any v3.7.0 class.
     if node is None:
         node = next((v for k, v in defs.items() if k.rsplit(".", 1)[1] == name), None)
+    # ...then to the v3 spelling this member is the v4 alias of.
+    if node is None and (alias := V4_ALIASES.get(name)):
+        node = defs.get(f"{cls_name}.{alias}") or next(
+            (v for k, v in defs.items() if k.rsplit(".", 1)[1] == alias), None
+        )
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            node = copy.deepcopy(node)
+            node.name = name
 
     raw = RAW_OVERRIDES.get(f"{cls_name}.{name}")
     if raw:
@@ -379,7 +532,11 @@ def render(
     else:
         sig = getattr(obj, "__text_signature__", None)
         if sig:
-            sig = sig.replace("($self", "(self").replace("($module", "(cls")
+            sig = (
+                sig.replace("($self", "(self")
+                .replace("($cls", "(cls")
+                .replace("($module", "(cls")
+            )
             lines.append(f"    def {name}{sig}: ...")
         else:
             lines.append(f"    {name}: Any")

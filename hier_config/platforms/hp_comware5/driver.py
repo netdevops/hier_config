@@ -1,5 +1,9 @@
 from hier_config.models import Platform
-from hier_config.platforms.driver_base import HConfigDriverBase
+from hier_config.platforms.driver_base import (
+    HConfigDriverBase,
+    HConfigDriverRules,
+    load_platform_rules,
+)
 
 
 class HConfigDriverHPComware5(HConfigDriverBase):
@@ -11,6 +15,11 @@ class HConfigDriverHPComware5(HConfigDriverBase):
     """
 
     platform = Platform.HP_COMWARE5
+
+    @staticmethod
+    def _instantiate_rules() -> HConfigDriverRules:
+        """Load the canonical rules the Rust core compiles against."""
+        return load_platform_rules(Platform.HP_COMWARE5)
 
     @property
     def negation_prefix(self) -> str:

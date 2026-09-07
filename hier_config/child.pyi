@@ -25,8 +25,13 @@ class HConfigChild(HConfigBase):
     """
 
     def __init__(self, parent: HConfig | HConfigChild, text: str) -> None: ...
+    def __eq__(self, other: object) -> bool: ...
+    def __hash__(self) -> int: ...
     def __lt__(self, other: HConfigChild) -> bool:
         """Return self<value."""
+
+    def _default(self) -> None:
+        """Prefix the line with `default `, in place."""
 
     def add_children_deep(self, lines: Iterable[str]) -> HConfigChild:
         """Add child instances of HConfigChild deeply."""

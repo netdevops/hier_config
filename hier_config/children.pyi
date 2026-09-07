@@ -27,6 +27,7 @@ class HConfigChildren:
     def __delitem__(self, key: str, /) -> None:
         """Delete self[key]."""
 
+    def __eq__(self, other: object) -> bool: ...
     @overload
     def __getitem__(self, subscript: int | str) -> HConfigChild:
         """Return self[key]."""
@@ -35,6 +36,7 @@ class HConfigChildren:
     def __getitem__(self, subscript: slice) -> list[HConfigChild]:
         """Return self[key]."""
 
+    def __hash__(self) -> int: ...
     def __iter__(self) -> Iterator[HConfigChild]:
         """Implement iter(self)."""
 
