@@ -28,6 +28,21 @@ v4 design decisions, for the record:
 
 ### Changed
 
+- The config view layer is now implemented entirely in Rust and exposed through
+  PyO3. `hier_config/platforms/view_base.py` and every platform `view.py` are
+  facades over the native `HConfigView` / `ConfigViewInterface` classes,
+  removing ~1,300 lines of duplicated Python and the `testdata/views/`
+  anti-drift corpus that existed only to pin the two implementations together.
+  `HConfigViewBase` and `ConfigViewInterfaceBase` remain as aliases, the
+  per-platform view classes keep their names, and the capability-marker
+  `isinstance()` protocol from #227 is preserved via `ViewMarkerMeta`, which
+  answers from the native `capabilities` data.
+- **Breaking:** three view properties that raised in v3 now return a value:
+  `nac_max_dot1x_clients` / `nac_max_mab_clients` return `None` instead of
+  raising `NotImplementedError` (Cisco IOS, Aruba AOS-CX); `module_number`
+  returns `None` instead of raising `AttributeError` (Arista EOS, Cisco NX-OS,
+  Cisco XR); and `bundle_member_interfaces` returns `()` instead of raising on a
+  non-trunk interface (HP ProCurve). Replace `try`/`except` with a falsy check.
 - Structured-format conversions are now implemented in Rust. `from_json()`,
   `to_json()`, `from_xml()`, `to_xml()`, `hconfig_to_netconf_xml()`, and
   `hconfig_to_gnmi_json()` moved from `hier_config/formats.py` into
@@ -56,8 +71,9 @@ v4 design decisions, for the record:
   `_hier_config_rust` surface against `stubs/_hier_config_rust.pyi`, so a new
   `#[pyfunction]` or `#[pyclass]` that is not declared in the stub — which
   would silently degrade every caller to `Unknown` under pyright strict — is
-  caught in CI. `scripts/gen_formats_corpus.py --check` joins it to keep the
-  formats parity corpus honest.
+  caught in CI, as is a `#[getter]` or `#[pymethod]` added to an existing
+  `#[pyclass]` without a matching stub member. `scripts/gen_formats_corpus.py
+  --check` joins it to keep the formats parity corpus honest.
 
 ### Removed
 

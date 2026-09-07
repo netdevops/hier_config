@@ -497,21 +497,25 @@ Implications and stance, per the team's shared security & PCI baseline
 
 ## Open Questions
 
-- [ ] Should the Python view layer eventually delegate to the Rust
+- [x] Should the Python view layer eventually delegate to the Rust
       implementation (Option A), collapsing to a single implementation once the
-      Rust view has soaked? *Autopilot-decided — not user-confirmed:* deferred;
-      Option B ships first, with the corpus as the drift guard.
+      Rust view has soaked? — resolved: **yes**, done. The Python view layer is
+      now a facade over the PyO3 bindings and `testdata/views/` was deleted with
+      the implementation it guarded. *Autopilot-decided — not user-confirmed:*
+      the three properties that raised in Python now return `None` / `()`,
+      which is a v4 breaking change (see `docs/user/rust-core-changes.md`).
 - [ ] Should the six platforms with no Python view (fortinet_fortios,
       hp_comware5, huawei_vrp, juniper_junos, nokia_srl, vyos) gain Rust views?
       *Autopilot-decided — not user-confirmed:* no, for this plan — a Rust-only
       surface with no Python counterpart cannot be corpus-verified, which is the
       failure mode `abf3d6f` documented.
-- [ ] Should the native view be exposed through PyO3 so Python callers can opt
-      into it? *Autopilot-decided — not user-confirmed:* not in this plan;
-      exposing it invites two live paths with different performance profiles
-      before parity has soaked.
-- [ ] Should `hier_config/formats.py` (JSON / XML / NETCONF / gNMI) also move to
-      Rust? Not requested; recorded so the gap is not lost.
+- [x] Should the native view be exposed through PyO3 so Python callers can opt
+      into it? — resolved: **yes**, and it is now the *only* path. There are no
+      longer two implementations to diverge, so the "two live paths" risk this
+      question guarded against no longer applies.
+- [x] Should `hier_config/formats.py` (JSON / XML / NETCONF / gNMI) also move to
+      Rust? — resolved: **yes**, done. Pinned by a 385-case parity corpus at
+      `testdata/formats/expected.json`.
 
 ## Cross-references
 

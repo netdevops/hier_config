@@ -2,8 +2,6 @@
 
 from ipaddress import IPv4Address
 
-import pytest
-
 from hier_config import HConfig, Platform, get_hconfig_view
 from hier_config.platforms.cisco_ios.view import ConfigViewInterfaceCiscoIOS
 from hier_config.platforms.models import InterfaceDuplex, NACHostMode, StackMember
@@ -317,8 +315,8 @@ def test_nac_mab_first_false() -> None:
     assert interface_view.nac_mab_first is False
 
 
-def test_nac_max_dot1x_clients_not_implemented() -> None:
-    """Test nac_max_dot1x_clients raises NotImplementedError (covers line 132)."""
+def test_nac_max_dot1x_clients_unset_is_none() -> None:
+    """IOS does not express a per-port client limit, so it reads as None."""
     config = HConfig.from_text(Platform.CISCO_IOS)
     config.add_child("interface GigabitEthernet0/0")
 
@@ -326,12 +324,11 @@ def test_nac_max_dot1x_clients_not_implemented() -> None:
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
     assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
 
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.nac_max_dot1x_clients
+    assert interface_view.nac_max_dot1x_clients is None
 
 
-def test_nac_max_mab_clients_not_implemented() -> None:
-    """Test nac_max_mab_clients raises NotImplementedError (covers line 137)."""
+def test_nac_max_mab_clients_unset_is_none() -> None:
+    """IOS does not express a per-port client limit, so it reads as None."""
     config = HConfig.from_text(Platform.CISCO_IOS)
     config.add_child("interface GigabitEthernet0/0")
 
@@ -339,8 +336,7 @@ def test_nac_max_mab_clients_not_implemented() -> None:
     interface_view = view.interface_view_by_name("GigabitEthernet0/0")
     assert isinstance(interface_view, ConfigViewInterfaceCiscoIOS)
 
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.nac_max_mab_clients
+    assert interface_view.nac_max_mab_clients is None
 
 
 def test_native_vlan_subinterface() -> None:

@@ -1,86 +1,33 @@
-from collections.abc import Iterable
-from ipaddress import IPv4Address, IPv4Interface
+"""Cisco IOS XR configuration views.
 
-from hier_config.child import HConfigChild
-from hier_config.platforms.functions import parse_ipv4_interface
+The view implementation lives in the Rust core; these classes are the
+platform-specific names the public API has always exposed. ``HConfigViewCiscoIOSXR``
+is a real subclass, so ``driver.view_class`` construction is unchanged.
+``ConfigViewInterfaceCiscoIOSXR`` is a marker: the native view is platform-aware, so
+``isinstance`` is resolved from the view's ``platform`` attribute.
+"""
+
+# Marker and alias classes carry no methods of their own; every property is
+# inherited from the native view.
+# pylint: disable=too-few-public-methods
+
+from __future__ import annotations
+
+from hier_config.models import Platform
 from hier_config.platforms.view_base import (
-    HConfigViewBase,
-    InterfaceBundleViewMixin,
-    InterfaceVlanViewMixin,
+    ConfigViewInterface,
+    HConfigView,
+    ViewMarkerMeta,
 )
 
-
-class ConfigViewInterfaceCiscoIOSXR(
-    InterfaceBundleViewMixin,
-    InterfaceVlanViewMixin,
-):
-    """Interface config view for Cisco IOS XR.
-
-    IOS XR has no switchports, so the VLAN view only reports sub-interface
-    dot1q encapsulations; ``tagged_all`` is always False and ``tagged_vlans``
-    is always empty.
-    """
-
-    _bundle_membership_prefix = "bundle id "
-
-    @property
-    def ipv4_interfaces(self) -> Iterable[IPv4Interface]:
-        for ipv4_address_obj in self.config.get_children(startswith="ipv4 address "):
-            if interface := parse_ipv4_interface(ipv4_address_obj.text.split()[2:]):
-                yield interface
-
-    @property
-    def native_vlan(self) -> int | None:
-        # VLANs only exist on sub-interfaces (e.g. `encapsulation dot1q 100`)
-        if self.is_subinterface and (
-            vlan := self.config.get_child(startswith="encapsulation dot1q ")
-        ):
-            return int(vlan.text.split()[2])
-        return None
-
-    @property
-    def vrf(self) -> str:
-        if vrf := self.config.get_child(startswith="vrf "):
-            return vrf.text.split()[1]
-        return ""
-
-    @property
-    def _bundle_prefix(self) -> str:
-        return "Bundle-Ether"
+__all__ = ("ConfigViewInterfaceCiscoIOSXR", "HConfigViewCiscoIOSXR")
 
 
-class HConfigViewCiscoIOSXR(HConfigViewBase):
-    """Full-tree config view for Cisco IOS XR.
+class ConfigViewInterfaceCiscoIOSXR(ConfigViewInterface, metaclass=ViewMarkerMeta):
+    """A single Cisco IOS XR interface."""
 
-    VLANs are derived from sub-interface encapsulations; IOS XR does not
-    support stacking.
-    """
+    view_platform = Platform.CISCO_XR
 
-    @property
-    def hostname(self) -> str | None:
-        if child := self.config.get_child(startswith="hostname "):
-            return child.text.split()[1].lower()
-        return None
 
-    @property
-    def interface_views(self) -> Iterable[ConfigViewInterfaceCiscoIOSXR]:
-        for interface in self.interfaces:
-            yield ConfigViewInterfaceCiscoIOSXR(interface)
-
-    @property
-    def interfaces(self) -> Iterable[HConfigChild]:
-        return self.config.get_children(startswith="interface ")
-
-    @property
-    def ipv4_default_gw(self) -> IPv4Address | None:
-        if (
-            (router_static := self.config.get_child(equals="router static"))
-            and (
-                address_family := router_static.get_child(
-                    equals="address-family ipv4 unicast",
-                )
-            )
-            and (route := address_family.get_child(startswith="0.0.0.0/0 "))
-        ):
-            return IPv4Address(route.text.split()[1])
-        return None
+class HConfigViewCiscoIOSXR(HConfigView):
+    """A Cisco IOS XR device configuration."""

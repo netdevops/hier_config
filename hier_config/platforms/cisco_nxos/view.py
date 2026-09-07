@@ -1,60 +1,33 @@
-from collections.abc import Iterable
-from ipaddress import IPv4Address, IPv4Interface
+"""Cisco NX-OS configuration views.
 
-from hier_config.child import HConfigChild
-from hier_config.platforms.functions import parse_ipv4_interface
+The view implementation lives in the Rust core; these classes are the
+platform-specific names the public API has always exposed. ``HConfigViewCiscoNXOS``
+is a real subclass, so ``driver.view_class`` construction is unchanged.
+``ConfigViewInterfaceCiscoNXOS`` is a marker: the native view is platform-aware, so
+``isinstance`` is resolved from the view's ``platform`` attribute.
+"""
+
+# Marker and alias classes carry no methods of their own; every property is
+# inherited from the native view.
+# pylint: disable=too-few-public-methods
+
+from __future__ import annotations
+
+from hier_config.models import Platform
 from hier_config.platforms.view_base import (
-    HConfigViewBase,
-    InterfaceBundleViewMixin,
-    InterfaceVlanViewMixin,
+    ConfigViewInterface,
+    HConfigView,
+    ViewMarkerMeta,
 )
 
-
-class ConfigViewInterfaceCiscoNXOS(
-    InterfaceBundleViewMixin,
-    InterfaceVlanViewMixin,
-):
-    """Interface config view for Cisco NX-OS."""
-
-    _bundle_membership_prefix = "channel-group "
-
-    @property
-    def ipv4_interfaces(self) -> Iterable[IPv4Interface]:
-        for ipv4_address_obj in self.config.get_children(startswith="ip address "):
-            if interface := parse_ipv4_interface(ipv4_address_obj.text.split()[2:]):
-                yield interface
-
-    @property
-    def vrf(self) -> str:
-        if vrf := self.config.get_child(startswith="vrf member "):
-            return vrf.text.split()[2]
-        return ""
-
-    @property
-    def _bundle_prefix(self) -> str:
-        return "port-channel"
+__all__ = ("ConfigViewInterfaceCiscoNXOS", "HConfigViewCiscoNXOS")
 
 
-class HConfigViewCiscoNXOS(HConfigViewBase):
-    """Full-tree config view for Cisco NX-OS."""
+class ConfigViewInterfaceCiscoNXOS(ConfigViewInterface, metaclass=ViewMarkerMeta):
+    """A single Cisco NX-OS interface."""
 
-    @property
-    def hostname(self) -> str | None:
-        if child := self.config.get_child(startswith="hostname "):
-            return child.text.split()[1].lower()
-        return None
+    view_platform = Platform.CISCO_NXOS
 
-    @property
-    def interface_views(self) -> Iterable[ConfigViewInterfaceCiscoNXOS]:
-        for interface in self.interfaces:
-            yield ConfigViewInterfaceCiscoNXOS(interface)
 
-    @property
-    def interfaces(self) -> Iterable[HConfigChild]:
-        return self.config.get_children(startswith="interface ")
-
-    @property
-    def ipv4_default_gw(self) -> IPv4Address | None:
-        if gateway := self.config.get_child(startswith="ip route 0.0.0.0/0 "):
-            return IPv4Address(gateway.text.split()[3])
-        return None
+class HConfigViewCiscoNXOS(HConfigView):
+    """A Cisco NX-OS device configuration."""

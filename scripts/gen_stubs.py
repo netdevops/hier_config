@@ -652,6 +652,50 @@ def verify(targets: list[pathlib.Path], originals: dict[pathlib.Path, str]) -> i
     return 1
 
 
+def verify_stub_class_members(native: types.ModuleType) -> int:
+    """Diff each hand-written stub class body against the live pyclass.
+
+    `verify_extension_surface` only compares module-level names, so a `#[getter]`
+    or `#[pymethod]` added to an existing `#[pyclass]` would stay invisible to
+    type checkers. This walks every class declared directly in the stub and
+    compares its declared members against `dir()` on the runtime type.
+    """
+    module = ast.parse(NATIVE_STUB.read_text())
+    failures = 0
+    for node in module.body:
+        if not isinstance(node, ast.ClassDef):
+            continue
+        runtime = getattr(native, node.name, None)
+        if runtime is None:
+            continue
+        declared = {
+            member.name
+            for member in node.body
+            if isinstance(member, ast.FunctionDef) and not member.name.startswith("_")
+        } | {
+            target.id
+            for member in node.body
+            if isinstance(member, ast.AnnAssign)
+            for target in [member.target]
+            if isinstance(target, ast.Name)
+        }
+        exported = {name for name in dir(runtime) if not name.startswith("_")}
+        missing = sorted(exported - declared)
+        extra = sorted(declared - exported)
+        if not missing and not extra:
+            continue
+        failures = 1
+        print(
+            f"stubs/_hier_config_rust.pyi class {node.name} is out of sync:",
+            file=sys.stderr,
+        )
+        for name in missing:
+            print(f"  missing from the stub: {name}", file=sys.stderr)
+        for name in extra:
+            print(f"  declared but not present: {name}", file=sys.stderr)
+    return failures
+
+
 def verify_extension_surface(native: types.ModuleType) -> int:
     """Diff the live `_hier_config_rust` surface against its hand-written stub.
 
@@ -753,9 +797,13 @@ def main() -> int:
             print(f"wrote hier_config/{module}.pyi  ({text.count(chr(10))} lines)")
 
     if check:
-        return verify(targets, originals) or verify_extension_surface(_native)
+        return (
+            verify(targets, originals)
+            or verify_extension_surface(_native)
+            or verify_stub_class_members(_native)
+        )
     ruff_fix(targets)
-    return verify_extension_surface(_native)
+    return verify_extension_surface(_native) or verify_stub_class_members(_native)
 
 
 if __name__ == "__main__":

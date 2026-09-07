@@ -77,7 +77,7 @@ def test_get_hconfig_view_inherited_by_driver_subclass() -> None:
 def test_get_hconfig_view_custom_driver_view_class() -> None:
     """A user-defined driver can supply its own view via view_class (#187, #229)."""
 
-    class CustomView(HConfigViewCiscoIOS):
+    class CustomView(HConfigViewCiscoIOS):  # pylint: disable=too-few-public-methods
         """User-defined view."""
 
     class CustomDriver(HConfigDriverCiscoIOS):
