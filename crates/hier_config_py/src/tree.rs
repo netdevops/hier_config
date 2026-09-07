@@ -69,7 +69,10 @@ impl SharedTree {
 
         let rules_obj = driver_bound.getattr("rules")?;
         let kwargs = PyDict::new(py);
-        let exclude_set = PySet::new(py, ["post_load_callbacks"])?;
+        let exclude_set = PySet::new(
+            py,
+            ["post_load_callbacks", "remediation_transform_callbacks"],
+        )?;
         kwargs.set_item("exclude", exclude_set)?;
         let json_str = rules_obj
             .getattr("model_dump_json")?

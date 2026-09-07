@@ -29,9 +29,9 @@ impl std::fmt::Display for TreeError {
             Self::InvalidParent(id) => write!(f, "Invalid parent: {id:?}"),
             Self::UnterminatedBanner(text) => write!(
                 f,
-                "Unterminated banner: reached the end of the configuration while \
-still parsing {text:?}. Banners must be closed by their delimiter or by a \
-'!' line."
+                "Unterminated banner: we are still in a banner for some reason at \
+the end of the configuration while parsing {text:?}. Banners must be closed by \
+their delimiter or by a '!' line."
             ),
         }
     }
