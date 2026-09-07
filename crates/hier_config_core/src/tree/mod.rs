@@ -89,9 +89,7 @@ impl Tree {
     /// # Ok::<(), hier_config_core::TreeError>(())
     /// ```
     pub fn from_str(platform: Platform, config_raw: &str) -> Result<Self, TreeError> {
-        let mut tree = Self::for_platform(platform);
-        crate::parser::load_from_str(&mut tree, config_raw)?;
-        Ok(tree)
+        crate::parser::parse_tree(Driver::for_platform(platform), config_raw)
     }
 
     /// Creates a new tree for a specific platform and loads a configuration string into it,
@@ -109,9 +107,11 @@ impl Tree {
     where
         F: Fn(&mut Self),
     {
-        let mut tree = Self::for_platform(platform);
-        crate::parser::load_from_str_with_callbacks(&mut tree, config_raw, callbacks)?;
-        Ok(tree)
+        crate::parser::parse_tree_with_callbacks(
+            Driver::for_platform(platform),
+            config_raw,
+            callbacks,
+        )
     }
 
     /// Applies a custom callback to mutate this tree.

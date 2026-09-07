@@ -29,7 +29,7 @@ class HConfigBase:
         """True if self else False"""
 
     def __contains__(self, item: str) -> bool:
-        """Return bool(key in self)."""
+        """Return key in self."""
 
     def __iter__(self) -> Iterator[HConfigChild]:
         """Implement iter(self)."""

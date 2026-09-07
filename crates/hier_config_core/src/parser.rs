@@ -143,31 +143,62 @@ fn is_end_of_banner(
     banner_end_contains.iter().any(|c| config_line.contains(c))
 }
 
-fn analyze_indent(
-    tree: &mut Tree,
-    most_recent_item: NodeId,
-    mut current_section: NodeId,
-    indent: i32,
-    line: &str,
-) -> Result<(NodeId, NodeId), TreeError> {
-    // Walks back up the tree
-    while indent <= tree.arena[current_section].real_indent_level && current_section != tree.root {
-        if let Some(parent) = tree.arena[current_section].parent {
-            current_section = parent;
-        } else {
-            break;
+/// Cursor tracking the current insertion position in a [`Tree`].
+#[derive(Debug, Clone, Copy)]
+pub struct ParserCursor {
+    pub current_section: NodeId,
+    pub most_recent_item: NodeId,
+}
+
+impl ParserCursor {
+    /// Creates a cursor positioned at `root`.
+    #[must_use]
+    pub const fn new(root: NodeId) -> Self {
+        Self {
+            current_section: root,
+            most_recent_item: root,
         }
     }
 
-    // Walks down the tree by one step
-    if indent > tree.arena[most_recent_item].real_indent_level {
-        current_section = most_recent_item;
+    /// Inserts a new line into the tree at the appropriate hierarchy level given its indentation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TreeError`] if the child cannot be attached, such as a duplicate child.
+    pub fn record_line(
+        &mut self,
+        tree: &mut Tree,
+        indent: i32,
+        line: &str,
+    ) -> Result<NodeId, TreeError> {
+        // Walks back up the tree
+        while indent <= tree.arena[self.current_section].real_indent_level
+            && self.current_section != tree.root
+        {
+            if let Some(parent) = tree.arena[self.current_section].parent {
+                self.current_section = parent;
+            } else {
+                break;
+            }
+        }
+
+        // Walks down the tree by one step
+        if indent > tree.arena[self.most_recent_item].real_indent_level {
+            self.current_section = self.most_recent_item;
+        }
+
+        let new_child = tree.add_child(self.current_section, line, true, false)?;
+        tree.arena[new_child].real_indent_level = indent;
+        self.most_recent_item = new_child;
+
+        Ok(new_child)
     }
 
-    let new_child = tree.add_child(current_section, line, true, false)?;
-    tree.arena[new_child].real_indent_level = indent;
-
-    Ok((new_child, current_section))
+    /// Resets the cursor to the tree root following a banner or section reset.
+    pub const fn reset_to_root(&mut self, root: NodeId, most_recent_item: NodeId) {
+        self.current_section = root;
+        self.most_recent_item = most_recent_item;
+    }
 }
 
 fn adjust_indent(
@@ -326,54 +357,84 @@ impl BannerState {
         }
         false
     }
+}
 
-    fn handle_continuation(
-        &mut self,
-        tree: &mut Tree,
-        raw_line: &str,
-        most_recent_item: &mut NodeId,
-        current_section: &mut NodeId,
-    ) -> Result<(), TreeError> {
-        if raw_line != "!" {
-            self.temp_banner.push(raw_line.to_string());
+/// Tracks dynamic indentation adjustments triggered by platform indent rules.
+struct IndentTracker {
+    adjust: i32,
+    end_expressions: Vec<String>,
+}
+
+impl IndentTracker {
+    const fn new() -> Self {
+        Self {
+            adjust: 0,
+            end_expressions: Vec::new(),
+        }
+    }
+
+    fn update(&mut self, indent_rules: &[(Arc<Regex>, String)], line_content: &str) {
+        if !indent_rules.is_empty() {
+            let (adj, ends) = adjust_indent(
+                indent_rules,
+                line_content,
+                self.adjust,
+                std::mem::take(&mut self.end_expressions),
+            );
+            self.adjust = adj;
+            self.end_expressions = ends;
         }
 
-        if is_end_of_banner(raw_line, &self.banner_end_lines, &self.banner_end_contains) {
-            self.in_banner = false;
-            let banner_text = self.temp_banner.join("\n");
-            let child = tree.add_child(tree.root, &banner_text, true, false)?;
-            tree.arena[child].real_indent_level = 0;
-            *most_recent_item = child;
-            *current_section = tree.root;
-            self.temp_banner.clear();
+        if !self.end_expressions.is_empty()
+            && let Some(re) = crate::regex_cache::regex(&self.end_expressions[0])
+            && re.is_match(line_content)
+        {
+            self.adjust -= 1;
+            self.end_expressions.remove(0);
         }
-        Ok(())
     }
 }
 
-fn update_indent_adjust(
-    indent_rules: &[(Arc<Regex>, String)],
-    line_content: &str,
-    indent_adjust: &mut i32,
-    end_indent_adjust: &mut Vec<String>,
-) {
-    if !indent_rules.is_empty() {
-        let (adj, ends) = adjust_indent(
-            indent_rules,
-            line_content,
-            *indent_adjust,
-            std::mem::take(end_indent_adjust),
-        );
-        *indent_adjust = adj;
-        *end_indent_adjust = ends;
+/// Encapsulates mutable parsing state across configuration lines.
+struct ParserState {
+    cursor: ParserCursor,
+    indent: IndentTracker,
+    banner: BannerState,
+    normalized: String,
+}
+
+impl ParserState {
+    fn new(root: NodeId) -> Self {
+        Self {
+            cursor: ParserCursor::new(root),
+            indent: IndentTracker::new(),
+            banner: BannerState::new(),
+            normalized: String::with_capacity(256),
+        }
     }
 
-    if !end_indent_adjust.is_empty()
-        && let Some(re) = crate::regex_cache::regex(&end_indent_adjust[0])
-        && re.is_match(line_content)
-    {
-        *indent_adjust -= 1;
-        end_indent_adjust.remove(0);
+    fn handle_banner_continuation(
+        &mut self,
+        tree: &mut Tree,
+        raw_line: &str,
+    ) -> Result<(), TreeError> {
+        if raw_line != "!" {
+            self.banner.temp_banner.push(raw_line.to_string());
+        }
+
+        if is_end_of_banner(
+            raw_line,
+            &self.banner.banner_end_lines,
+            &self.banner.banner_end_contains,
+        ) {
+            self.banner.in_banner = false;
+            let banner_text = self.banner.temp_banner.join("\n");
+            let child = tree.add_child(tree.root, &banner_text, true, false)?;
+            tree.arena[child].real_indent_level = 0;
+            self.cursor.reset_to_root(tree.root, child);
+            self.banner.temp_banner.clear();
+        }
+        Ok(())
     }
 }
 
@@ -400,33 +461,23 @@ pub fn parse_into_tree(tree: &mut Tree, config_raw: &str) -> Result<(), TreeErro
         })
         .collect();
 
-    let mut current_section = tree.root;
-    let mut most_recent_item = current_section;
-    let mut indent_adjust = 0;
-    let mut end_indent_adjust: Vec<String> = Vec::new();
-    let mut banner = BannerState::new();
-    let mut normalized = String::with_capacity(256);
+    let mut state = ParserState::new(tree.root);
 
     // Most lines become a node, so sizing the arena up front avoids repeatedly
     // reallocating and copying the node table while parsing a large configuration.
     tree.arena.reserve(config_text.lines().count());
 
     for raw_line in config_text.lines() {
-        if banner.in_banner {
-            banner.handle_continuation(
-                tree,
-                raw_line,
-                &mut most_recent_item,
-                &mut current_section,
-            )?;
+        if state.banner.in_banner {
+            state.handle_banner_continuation(tree, raw_line)?;
             continue;
         }
 
-        if banner.check_start(raw_line) {
+        if state.banner.check_start(raw_line) {
             continue;
         }
 
-        let normalized_line = normalize_whitespace(raw_line, &mut normalized);
+        let normalized_line = normalize_whitespace(raw_line, &mut state.normalized);
         let line = per_line_subs.apply(normalized_line);
         let line_trimmed_right = line.trim_end();
         if line_trimmed_right.is_empty() {
@@ -435,30 +486,22 @@ pub fn parse_into_tree(tree: &mut Tree, config_raw: &str) -> Result<(), TreeErro
 
         let actual_indent =
             line_trimmed_right.len() - line_trimmed_right.trim_start_matches(' ').len();
-        let this_indent = i32::try_from(actual_indent).unwrap_or(i32::MAX) + indent_adjust;
+        let this_indent = i32::try_from(actual_indent).unwrap_or(i32::MAX) + state.indent.adjust;
         let line_content = line_trimmed_right.trim_start();
 
-        let (new_item, new_section) = analyze_indent(
-            tree,
-            most_recent_item,
-            current_section,
-            this_indent,
-            line_content,
-        )?;
-        most_recent_item = new_item;
-        current_section = new_section;
+        state.cursor.record_line(tree, this_indent, line_content)?;
 
-        update_indent_adjust(
-            &indent_rules,
-            line_content,
-            &mut indent_adjust,
-            &mut end_indent_adjust,
-        );
+        state.indent.update(&indent_rules, line_content);
     }
 
-    if banner.in_banner {
+    if state.banner.in_banner {
         return Err(TreeError::UnterminatedBanner(
-            banner.temp_banner.first().cloned().unwrap_or_default(),
+            state
+                .banner
+                .temp_banner
+                .first()
+                .cloned()
+                .unwrap_or_default(),
         ));
     }
 
@@ -477,8 +520,7 @@ pub fn parse_into_tree(tree: &mut Tree, config_raw: &str) -> Result<(), TreeErro
 ///
 /// Returns [`TreeError`] if a line cannot be inserted into the tree.
 pub fn load_fast(tree: &mut Tree, lines: &[&str], run_post_load: bool) -> Result<(), TreeError> {
-    let mut current_section = tree.root;
-    let mut most_recent_item = current_section;
+    let mut cursor = ParserCursor::new(tree.root);
 
     let per_line_subs = PreparedSubs::new(&tree.driver.rules.per_line_sub);
     // Reused across lines so the slow path allocates at most once for the whole parse.
@@ -520,15 +562,7 @@ pub fn load_fast(tree: &mut Tree, lines: &[&str], run_post_load: bool) -> Result
             &normalized
         };
 
-        let (new_item, new_section) = analyze_indent(
-            tree,
-            most_recent_item,
-            current_section,
-            indent,
-            normalized_line,
-        )?;
-        most_recent_item = new_item;
-        current_section = new_section;
+        cursor.record_line(tree, indent, normalized_line)?;
     }
 
     crate::post_load::delete_sectional_exit_recursive(tree);
@@ -559,6 +593,70 @@ where
         cb(tree);
     }
     Ok(())
+}
+
+/// Parses configuration text into a new [`Tree`], applying all post-load stages.
+///
+/// This provides a pure, transactional constructor: on failure no partially-populated
+/// tree is left behind.
+///
+/// # Errors
+///
+/// Returns [`TreeError`] if a line cannot be parsed or attached to the tree.
+pub fn parse_tree(driver: Driver, config_raw: &str) -> Result<Tree, TreeError> {
+    let mut tree = Tree::new(driver);
+    load_from_str(&mut tree, config_raw)?;
+    Ok(tree)
+}
+
+/// Parses configuration text into a new [`Tree`], running stock post-load callbacks
+/// followed additively by the provided custom callbacks.
+///
+/// # Errors
+///
+/// Returns [`TreeError`] if a line cannot be parsed or attached to the tree.
+pub fn parse_tree_with_callbacks<F>(
+    driver: Driver,
+    config_raw: &str,
+    callbacks: impl IntoIterator<Item = F>,
+) -> Result<Tree, TreeError>
+where
+    F: Fn(&mut Tree),
+{
+    let mut tree = Tree::new(driver);
+    load_from_str_with_callbacks(&mut tree, config_raw, callbacks)?;
+    Ok(tree)
+}
+
+/// Parses pre-formatted lines into a new [`Tree`], running post-load stages as requested.
+///
+/// # Errors
+///
+/// Returns [`TreeError`] if a line cannot be parsed or attached to the tree.
+pub fn parse_fast(driver: Driver, lines: &[&str], run_post_load: bool) -> Result<Tree, TreeError> {
+    let mut tree = Tree::new(driver);
+    load_fast(&mut tree, lines, run_post_load)?;
+    Ok(tree)
+}
+
+/// Parses pre-formatted lines into a new [`Tree`], running stock post-load callbacks (if enabled)
+/// followed additively by the provided custom callbacks.
+///
+/// # Errors
+///
+/// Returns [`TreeError`] if a line cannot be parsed or attached to the tree.
+pub fn parse_fast_with_callbacks<F>(
+    driver: Driver,
+    lines: &[&str],
+    run_post_load: bool,
+    callbacks: impl IntoIterator<Item = F>,
+) -> Result<Tree, TreeError>
+where
+    F: Fn(&mut Tree),
+{
+    let mut tree = Tree::new(driver);
+    load_fast_with_callbacks(&mut tree, lines, run_post_load, callbacks)?;
+    Ok(tree)
 }
 
 /// Loads a `Tree` from a serialized `Dump`.
@@ -765,5 +863,65 @@ interface GigabitEthernet0/1
                 .iter()
                 .any(|id| tree.arena[id].text.starts_with("banner motd"))
         );
+    }
+
+    #[test]
+    fn test_pure_parse_tree_and_parse_fast() {
+        use std::cell::Cell;
+
+        let config = "hostname Router1\ninterface GigabitEthernet0/1\n description Link\n";
+        let tree = parse_tree(Driver::for_platform(Platform::CiscoIos), config).unwrap();
+        assert_eq!(tree.len(), 3);
+
+        let custom_run = Cell::new(false);
+        let tree_with_cb = parse_tree_with_callbacks(
+            Driver::for_platform(Platform::CiscoIos),
+            config,
+            [&|_t: &mut Tree| {
+                custom_run.set(true);
+            }],
+        )
+        .unwrap();
+        assert!(custom_run.get());
+        assert_eq!(tree_with_cb.len(), 3);
+
+        let lines = ["hostname FastRouter", "interface Fast0/0"];
+        let fast_tree = parse_fast(Driver::for_platform(Platform::CiscoIos), &lines, true).unwrap();
+        assert_eq!(fast_tree.len(), 2);
+
+        let fast_cb_run = Cell::new(false);
+        let fast_tree_cb = parse_fast_with_callbacks(
+            Driver::for_platform(Platform::CiscoIos),
+            &lines,
+            true,
+            [&|_t: &mut Tree| {
+                fast_cb_run.set(true);
+            }],
+        )
+        .unwrap();
+        assert!(fast_cb_run.get());
+        assert_eq!(fast_tree_cb.len(), 2);
+    }
+
+    #[test]
+    fn test_parser_cursor_walks_hierarchy() {
+        let mut tree = Tree::for_platform(Platform::Generic);
+        let mut cursor = ParserCursor::new(tree.root);
+
+        let top1 = cursor.record_line(&mut tree, 0, "parent1").unwrap();
+        assert_eq!(cursor.current_section, tree.root);
+        assert_eq!(cursor.most_recent_item, top1);
+
+        let child1 = cursor.record_line(&mut tree, 1, "child1").unwrap();
+        assert_eq!(cursor.current_section, top1);
+        assert_eq!(cursor.most_recent_item, child1);
+
+        let child2 = cursor.record_line(&mut tree, 1, "child2").unwrap();
+        assert_eq!(cursor.current_section, top1);
+        assert_eq!(cursor.most_recent_item, child2);
+
+        let top2 = cursor.record_line(&mut tree, 0, "parent2").unwrap();
+        assert_eq!(cursor.current_section, tree.root);
+        assert_eq!(cursor.most_recent_item, top2);
     }
 }

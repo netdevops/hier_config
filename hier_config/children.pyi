@@ -22,7 +22,7 @@ class HConfigChildren:
     """
 
     def __contains__(self, item: str) -> bool:
-        """Return bool(key in self)."""
+        """Return key in self."""
 
     def __delitem__(self, key: str, /) -> None:
         """Delete self[key]."""

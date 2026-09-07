@@ -44,7 +44,7 @@ interface Vlan4
   description switch_mgmt_10.0.4.0/24
 ";
 
-    let mut workflow =
+    let workflow =
         WorkflowRemediation::from_strings(Platform::CiscoIos, running_raw, generated_raw).unwrap();
 
     // Check remediation
@@ -132,4 +132,31 @@ fn test_workflow_take_remediation_and_rollback() {
     let roll_dump = roll_tree.dump_simple(false);
     assert!(roll_dump.contains(&"no vlan 20".to_string()));
     assert!(roll_dump.contains(&"vlan 10".to_string()));
+}
+
+#[test]
+fn test_workflow_immutable_concurrent_queries() {
+    let workflow = WorkflowRemediation::from_strings(
+        Platform::CiscoIos,
+        "hostname r1\nvlan 10",
+        "hostname r1\nvlan 20",
+    )
+    .unwrap();
+
+    std::thread::scope(|s| {
+        let t1 = s.spawn(|| workflow.remediation_text(&[], &[]).unwrap());
+        let t2 = s.spawn(|| workflow.rollback_text(&[], &[]).unwrap());
+        let t3 = s.spawn(|| {
+            let rem = workflow.remediation_config().unwrap();
+            rem.len()
+        });
+
+        let rem_text = t1.join().unwrap();
+        let roll_text = t2.join().unwrap();
+        let rem_len = t3.join().unwrap();
+
+        assert!(rem_text.contains("vlan 20"));
+        assert!(roll_text.contains("vlan 10"));
+        assert!(rem_len > 0);
+    });
 }
