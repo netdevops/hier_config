@@ -1,3 +1,6 @@
+from collections.abc import Iterable
+
+from hier_config.child import HConfigChild
 from hier_config.models import Platform
 from hier_config.platforms.cisco_xr.view import HConfigViewCiscoIOSXR
 from hier_config.platforms.driver_base import (
@@ -7,8 +10,6 @@ from hier_config.platforms.driver_base import (
     load_platform_rules,
 )
 from hier_config.root import HConfig
-from hier_config.child import HConfigChild
-from collections.abc import Iterable
 
 
 @core_owned
@@ -44,8 +45,8 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):
     platform = Platform.CISCO_XR
     view_class = HConfigViewCiscoIOSXR
 
-    @classmethod
-    def _instantiate_rules(cls) -> HConfigDriverRules:
+    @staticmethod
+    def _instantiate_rules() -> HConfigDriverRules:
         """Load the canonical rules and attach this platform's post-load callbacks.
 
         The callbacks are declared here so custom drivers can discover and
@@ -53,9 +54,9 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):
         `hier_config.constructors` skips the redundant Python pass.
         """
         return load_platform_rules(
-            cls.platform,
+            Platform.CISCO_XR,
             post_load_callbacks=[
-            fixup_xr_comments,
+                fixup_xr_comments,
             ],
         )
 

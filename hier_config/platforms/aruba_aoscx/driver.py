@@ -62,8 +62,8 @@ class HConfigDriverArubaAOSCX(HConfigDriverBase):
     platform = Platform.ARUBA_AOSCX
     view_class = HConfigViewArubaAOSCX
 
-    @classmethod
-    def _instantiate_rules(cls) -> HConfigDriverRules:
+    @staticmethod
+    def _instantiate_rules() -> HConfigDriverRules:
         """Load the canonical rules and attach this platform's post-load callbacks.
 
         The callbacks are declared here so custom drivers can discover and
@@ -71,10 +71,9 @@ class HConfigDriverArubaAOSCX(HConfigDriverBase):
         `hier_config.constructors` skips the redundant Python pass.
         """
         return load_platform_rules(
-            cls.platform,
+            Platform.ARUBA_AOSCX,
             post_load_callbacks=[
-            split_vlan_id_lists,
-            split_interface_vlan_trunk_allowed,
+                split_vlan_id_lists,
+                split_interface_vlan_trunk_allowed,
             ],
         )
-

@@ -81,6 +81,22 @@ module-name = "_hier_config_rust"
 
 [tool.pyright]
 typeCheckingMode = "strict"
+venvPath = "."
+venv = ".venv"
+# Resolves `_hier_config_rust`, the compiled extension. See stubs/ for why.
+stubPath = "stubs"
+# A deliberately dynamic probe: it monkeypatches, subclasses and attaches
+# attributes to the native types to prove the object protocol still behaves
+# like the pure-Python original. Static analysis cannot model that by design,
+# which is why ruff already exempts it via `per-file-ignores = ["ALL"]`.
+exclude = ["tests/parity/probe_object_protocol.py"]
+
+
+[tool.pylint.main]
+# `_hier_config_rust` is a compiled PyO3 extension. Without this, pylint refuses
+# to import it and reports every re-export in the `hier_config/*.py` shims as
+# `no-name-in-module`, plus knock-on `not-callable`/`no-member` false positives.
+extension-pkg-allow-list = ["_hier_config_rust"]
 
 
 [tool.pylint.message_control]
@@ -126,9 +142,17 @@ show_column_numbers = true
 show_error_codes = true
 show_error_context = true
 warn_unreachable = true
+# Resolves `_hier_config_rust`, the compiled extension. See stubs/ for why.
+mypy_path = "stubs"
 plugins = [
     "pydantic.mypy"
 ]
+
+# See the matching `exclude` under [tool.pyright]: a deliberately dynamic probe
+# that static analysis cannot model, already exempted from ruff as well.
+[[tool.mypy.overrides]]
+module = "tests.parity.probe_object_protocol"
+ignore_errors = true
 
 
 [tool.ruff]
@@ -173,11 +197,52 @@ parametrize-values-type = "tuple"
 [tool.ruff.lint.per-file-ignores]
 "**/tests/*" = ["PLC2701", "S101"]
 "tests/benchmarks/test_benchmarks.py" = ["T201", "PLR6301", "PERF401"]
+# The deadlock regression test shells out with a hard timeout so a re-introduced
+# self-copy deadlock fails the run instead of hanging CI forever. The command is
+# built from `sys.executable` and a literal script, never from user input.
+"tests/unit/test_child.py" = ["S404", "S603"]
+# The perf gate shells out so each measurement gets a cold interpreter, keeping
+# import-time and cache-warming costs out of the timings. The command is built
+# from `sys.executable` and a literal script, never from user input.
+"tests/benchmarks/test_perf_regression.py" = ["S404", "S603", "T201"]
+"tests/parity/probe_object_protocol.py" = ["ALL"]
+# These modules exist solely to re-export the compiled extension under the
+# public `hier_config` namespace. `_hier_config_rust` is deliberately
+# underscore-prefixed -- it is an implementation detail that callers should
+# reach through `hier_config`, not import directly -- so importing it by name
+# is exactly what these shims are for.
+"hier_config/base.py" = ["PLC2701"]
+"hier_config/child.py" = ["PLC2701"]
+"hier_config/children.py" = ["PLC2701"]
+"hier_config/exceptions.py" = ["PLC2701"]
+# B024: `HConfigDriverBase` stays an `ABC` for backward compatibility with
+# downstream `isinstance` checks and custom subclasses. v4 gave
+# `_instantiate_rules` a concrete default (platforms declare rules in Rust), so
+# no abstract member remains -- but dropping `ABC` would be a silent API break.
+"hier_config/platforms/driver_base.py" = ["PLC2701", "B024"]
+# `view_base.py` keeps `HConfigViewBase`/`ConfigViewInterfaceBase` as `ABC`s for
+# backward compatibility with downstream `isinstance` checks and custom
+# subclasses, even where a method has become a concrete delegation.
+"hier_config/platforms/view_base.py" = ["PLC2701", "B024"]
 # HConfig's classmethod constructors and WorkflowRemediation's format
 # renderers defer their loader imports to call time to avoid circular
 # imports and keep `import hier_config` light.
-"hier_config/root.py" = ["PLC0415"]
-"hier_config/workflows.py" = ["PLC0415"]
+"hier_config/root.py" = ["PLC2701", "PLC0415"]
+"hier_config/workflows.py" = ["PLC2701", "PLC0415"]
+# The `.pyi` stubs beside those shims are the *documented*, typed view of the
+# compiled classes: mkdocstrings renders the API reference from them, and
+# without them `mkdocs build` cannot resolve the re-export aliases at all.
+# That means PYI021 (no docstrings in stubs) is deliberately inverted here --
+# the docstrings are the reason the files exist.
+"hier_config/*.pyi" = ["PYI021", "D", "ANN001", "ANN204", "ANN201"]
+# Code generator, not shipped library code. It deliberately shells out to `git`
+# (with literal argv, never user input) to read the v3.7.0 baseline, treats
+# introspection failures as "no metadata available" via broad `except` clauses,
+# and prints progress. The renderer is a single branchy dispatch on member kind,
+# which is clearer as one function than split to satisfy a complexity budget.
+"scripts/gen_stubs.py" = ["S404", "S603", "T201", "BLE001", "S607", "PLC2701",
+    "PLC0415", "S112", "C901", "PLR0912", "PLR0915", "FBT001", "FBT002",
+    "INP001", "RUF005", "FURB113"]
 
 [tool.pytest.ini_options]
 markers = [

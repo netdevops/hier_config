@@ -10,4 +10,10 @@ class DriverNotFoundError(HierConfigError): ...
 class InvalidConfigError(HierConfigError): ...
 class IncompatibleDriverError(HierConfigError): ...
 
-__all__: tuple[str, ...]
+__all__ = (
+    "DriverNotFoundError",
+    "DuplicateChildError",
+    "HierConfigError",
+    "IncompatibleDriverError",
+    "InvalidConfigError",
+)

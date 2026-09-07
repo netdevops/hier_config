@@ -3,10 +3,15 @@
 # griffe (mkdocstrings) and mypy cannot introspect a compiled extension,
 # so this stub is the documented, typed view of the native class.
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
+from typing import Any, TypeAlias
 
 from hier_config.models import Platform, TagRule
 from hier_config.root import HConfig
+
+#: A remediation transform. `RemediationPlugin` instances are callable, so a
+#: plain function with the same shape works anywhere a plugin does.
+RemediationTransform: TypeAlias = Callable[[HConfig], None]
 
 class WorkflowRemediation:
     """Manages configuration workflows for a network device by comparing
@@ -54,7 +59,12 @@ class WorkflowRemediation:
         self,
         running_config: HConfig,
         generated_config: HConfig,
+        plugins: Iterable[RemediationTransform] | None = None,
     ) -> None: ...
+    @property
+    def plugins(self) -> tuple[RemediationTransform, ...]:
+        """The remediation plugins applied to every generated remediation."""
+
     @property
     def running_config(self) -> HConfig: ...
     @property
@@ -108,6 +118,33 @@ class WorkflowRemediation:
         exclude_tags: Iterable[str] = (),
     ) -> str:
         """Rollback configuration as text, filtered by included and excluded tags."""
+
+    def rollback_config_filtered_text(
+        self,
+        include_tags: Iterable[str] = (),
+        exclude_tags: Iterable[str] = (),
+    ) -> str:
+        """Rollback configuration as text, filtered by included and excluded tags."""
+
+    def remediation_netconf_xml(
+        self,
+        *,
+        list_keys: tuple[str, ...] | None = None,
+    ) -> str:
+        """Render the remediation as a NETCONF edit-config payload.
+
+        Requires running and generated configs built by `HConfig.from_xml()`.
+        """
+
+    def remediation_json(
+        self,
+        *,
+        list_keys: tuple[str, ...] | None = None,
+    ) -> dict[str, Any]:
+        """Render the remediation as a gNMI-SetRequest-style dict.
+
+        Requires running and generated configs built by `HConfig.from_json()`.
+        """
 
     @classmethod
     def from_strings(

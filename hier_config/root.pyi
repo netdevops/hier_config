@@ -6,12 +6,14 @@
 # see docs/dev/architecture.md.
 
 from collections.abc import Iterable, Sequence
+from os import PathLike
 from typing import Any
 
 from hier_config.base import HConfigBase
 from hier_config.child import HConfigChild
-from hier_config.models import Dump
+from hier_config.models import Dump, DumpLine, Platform
 from hier_config.platforms.driver_base import HConfigDriverBase
+from hier_config.tree_algorithms import FutureReport
 
 class HConfig(HConfigBase):
     """A class for representing and comparing Cisco like configurations in a
@@ -20,6 +22,12 @@ class HConfig(HConfigBase):
 
     def __init__(self, driver: HConfigDriverBase) -> None: ...
     def __deepcopy__(self, _memo: dict[int, Any]) -> HConfig: ...
+    def __eq__(self, other: object) -> bool: ...
+    def __hash__(self) -> int: ...
+    def _load_fast_native(self, lines: Iterable[str], run_post_load: bool) -> None: ...
+    def _load_file_native(self, path: str, run_post_load: bool) -> None: ...
+    def _load_from_dump_native(self, lines: Iterable[DumpLine]) -> None: ...
+    def _load_native(self, config_text: str, run_post_load: bool) -> None: ...
     def add_ancestor_copy_of(
         self, parent_to_add: HConfigChild
     ) -> HConfig | HConfigChild:
@@ -49,6 +57,40 @@ class HConfig(HConfigBase):
     def dump(self) -> Dump:
         """Dump loaded HConfig data."""
 
+    @classmethod
+    def from_dump(
+        cls,
+        platform_or_driver: Platform | str | HConfigDriverBase,
+        dump: Dump,
+    ) -> HConfig: ...
+    @classmethod
+    def from_json(
+        cls,
+        platform_or_driver: Platform | str | HConfigDriverBase,
+        data: str | dict[str, Any],
+        *,
+        list_keys: tuple[str, ...] | None = None,
+    ) -> HConfig: ...
+    @classmethod
+    def from_lines(
+        cls,
+        platform_or_driver: Platform | str | HConfigDriverBase,
+        lines: Iterable[str],
+    ) -> HConfig: ...
+    @classmethod
+    def from_text(
+        cls,
+        platform_or_driver: Platform | str | HConfigDriverBase,
+        config_text: str | PathLike[str] | None = None,
+    ) -> HConfig: ...
+    @classmethod
+    def from_xml(
+        cls,
+        platform_or_driver: Platform | str | HConfigDriverBase,
+        source: str,
+        *,
+        list_keys: tuple[str, ...] | None = None,
+    ) -> HConfig: ...
     def future(self, config: HConfig, *, prune_empty_branches: bool = False) -> HConfig:
         """EXPERIMENTAL - predict the future config after config is applied to self.
 
@@ -61,6 +103,14 @@ class HConfig(HConfigBase):
         that were already empty are kept.
         """
 
+    def future_with_report(
+        self,
+        config: HConfig,
+        *,
+        prune_empty_branches: bool = False,
+    ) -> tuple[HConfig, FutureReport]:
+        """Like `future()`, but also reports how negations resolved."""
+
     def instantiate_child(self, text: str) -> HConfigChild: ...
     def merge(self, other: HConfig | Iterable[HConfig]) -> HConfig:
         """Merges other HConfig objects into this one."""
@@ -69,12 +119,21 @@ class HConfig(HConfigBase):
     def parent(self) -> HConfig: ...
     @property
     def real_indent_level(self) -> int: ...
+    def remediation(self, target: HConfig, delta: HConfig | None = None) -> HConfig:
+        """v4 name for `config_to_get_to()`."""
+
     @property
     def root(self) -> HConfig:
         """The HConfig object at the base of the tree."""
 
     def set_order_weight(self) -> HConfig:
         """Sets self.order integer on all children."""
+
+    def to_json(self, *, indent: int | None = 2) -> str:
+        """Render a tree built by `from_json` back to JSON text."""
+
+    def to_xml(self, *, indent: int | None = 2) -> str:
+        """Render a tree built by `from_xml` back to XML text."""
 
     def unused_objects(self) -> Sequence[HConfigChild]:
         """Yield top-level children that are defined objects with no references.

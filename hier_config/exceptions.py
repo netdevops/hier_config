@@ -10,6 +10,9 @@ from __future__ import annotations
 
 from _hier_config_rust import DuplicateChildError, HierConfigError
 
+# Exception classes are message carriers; they have no methods by design.
+# pylint: disable=too-few-public-methods
+
 
 class DriverNotFoundError(HierConfigError):
     """Raised when a platform driver cannot be found."""

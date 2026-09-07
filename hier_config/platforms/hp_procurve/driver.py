@@ -1,3 +1,7 @@
+import re
+from collections.abc import Iterable
+
+from hier_config.child import HConfigChild
 from hier_config.models import Platform
 from hier_config.platforms.driver_base import (
     HConfigDriverBase,
@@ -10,9 +14,6 @@ from hier_config.platforms.hp_procurve.functions import (
 )
 from hier_config.platforms.hp_procurve.view import HConfigViewHPProcurve
 from hier_config.root import HConfig
-from hier_config.child import HConfigChild
-from collections.abc import Iterable
-import re
 
 
 @core_owned
@@ -131,8 +132,8 @@ class HConfigDriverHPProcurve(HConfigDriverBase):
     platform = Platform.HP_PROCURVE
     view_class = HConfigViewHPProcurve
 
-    @classmethod
-    def _instantiate_rules(cls) -> HConfigDriverRules:
+    @staticmethod
+    def _instantiate_rules() -> HConfigDriverRules:
         """Load the canonical rules and attach this platform's post-load callbacks.
 
         The callbacks are declared here so custom drivers can discover and
@@ -140,11 +141,11 @@ class HConfigDriverHPProcurve(HConfigDriverBase):
         `hier_config.constructors` skips the redundant Python pass.
         """
         return load_platform_rules(
-            cls.platform,
+            Platform.HP_PROCURVE,
             post_load_callbacks=[
-            fixup_hp_procurve_vlan,
-            fixup_hp_procurve_aaa_port_access,
-            fixup_hp_procurve_device_profile,
+                fixup_hp_procurve_vlan,
+                fixup_hp_procurve_aaa_port_access,
+                fixup_hp_procurve_device_profile,
             ],
         )
 

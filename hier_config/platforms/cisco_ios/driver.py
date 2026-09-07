@@ -56,8 +56,8 @@ class HConfigDriverCiscoIOS(HConfigDriverBase):
     platform = Platform.CISCO_IOS
     view_class = HConfigViewCiscoIOS
 
-    @classmethod
-    def _instantiate_rules(cls) -> HConfigDriverRules:
+    @staticmethod
+    def _instantiate_rules() -> HConfigDriverRules:
         """Load the canonical rules and attach this platform's post-load callbacks.
 
         The callbacks are declared here so custom drivers can discover and
@@ -65,12 +65,11 @@ class HConfigDriverCiscoIOS(HConfigDriverBase):
         `hier_config.constructors` skips the redundant Python pass.
         """
         return load_platform_rules(
-            cls.platform,
+            Platform.CISCO_IOS,
             post_load_callbacks=[
-            remove_ipv6_acl_sequence_numbers,
-            remove_ipv4_acl_remarks,
-            add_acl_sequence_numbers,
-            split_vlan_id_lists,
+                remove_ipv6_acl_sequence_numbers,
+                remove_ipv4_acl_remarks,
+                add_acl_sequence_numbers,
+                split_vlan_id_lists,
             ],
         )
-

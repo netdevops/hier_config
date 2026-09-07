@@ -1,10 +1,10 @@
-from abc import ABC, abstractmethod
+from abc import ABC
 from collections.abc import Callable, Iterable
 from functools import cache
 from json import loads
 from pathlib import Path
 from re import Match, search
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, cast
 
 from pydantic import Field, PositiveInt
 
@@ -229,7 +229,9 @@ def _load_platform_data(platform_name: str) -> dict[str, Any]:
 
 @cache
 def _cached_platform_rules(platform_name: str) -> HConfigDriverRules:
-    return HConfigDriverRules.model_validate(_load_platform_data(platform_name)["rules"])
+    return HConfigDriverRules.model_validate(
+        _load_platform_data(platform_name)["rules"]
+    )
 
 
 def clear_rules_cache() -> None:
@@ -281,20 +283,30 @@ CORE_POST_LOAD_PLATFORMS: frozenset[Platform] = frozenset(
 )
 
 _CORE_OWNED_ATTR = "__hier_config_core_owned__"
+_CoreOwnedT = TypeVar("_CoreOwnedT", bound=Callable[..., object])
 
 
-def core_owned(callback: Callable[[HConfig], None]) -> Callable[[HConfig], None]:
-    """Mark a post-load callback as one the Rust core already applies.
+def core_owned(callback: _CoreOwnedT) -> _CoreOwnedT:
+    """Mark a callable as one the Rust core already implements.
 
-    The marker only suppresses the redundant Python pass for the platforms in
-    `CORE_POST_LOAD_PLATFORMS`. A custom driver on any other platform that
-    reuses one of these callbacks still gets it executed normally.
+    Two kinds of callable carry this marker:
+
+    - Post-load callbacks. The marker suppresses the redundant Python pass for
+      the platforms in `CORE_POST_LOAD_PLATFORMS`. A custom driver on any other
+      platform that reuses one of these callbacks still gets it executed
+      normally.
+    - Overrides of the hooks in `_REMOVED_HOOKS`. Those are normally rejected
+      because the core owns the behavior; the marker records that this
+      particular override *is* the core implementation, mirrored in Python for
+      reuse by custom drivers.
     """
     setattr(callback, _CORE_OWNED_ATTR, True)
     return callback
 
 
-def runs_in_core(callback: Callable[[HConfig], None], platform: Platform | None) -> bool:
+def runs_in_core(
+    callback: Callable[[HConfig], None], platform: Platform | None
+) -> bool:
     """Report whether the core already applied `callback` for `platform`."""
     return platform in CORE_POST_LOAD_PLATFORMS and getattr(
         callback, _CORE_OWNED_ATTR, False
@@ -304,8 +316,6 @@ def runs_in_core(callback: Callable[[HConfig], None], platform: Platform | None)
 def _is_core_owned(obj: object) -> bool:
     """Report whether `obj` is marked as mirrored by the Rust core."""
     return getattr(obj, _CORE_OWNED_ATTR, False) is True
-
-
 
 
 class HConfigDriverBase(ABC):
@@ -681,18 +691,17 @@ class HConfigDriverBase(ABC):
         """
         return config_text
 
-    @classmethod
-    def _instantiate_rules(cls) -> HConfigDriverRules:
+    @staticmethod
+    def _instantiate_rules() -> HConfigDriverRules:
         """Build this driver's rule set.
 
-        Built-in drivers declare `platform` and inherit this implementation,
-        which loads the canonical rules the Rust core also compiles against, so
-        the two can never disagree. Custom drivers either do the same or
-        override this to return an `HConfigDriverRules` they build themselves.
+        Built-in drivers return `load_platform_rules(<platform>)`, the same
+        canonical rules the Rust core compiles against, so the two can never
+        disagree. Custom drivers return an `HConfigDriverRules` they build
+        themselves.
+
+        Not abstract, so `HConfigDriverBase` stays instantiable for the
+        introspection tests and tooling that rely on it.
         """
-        if cls.platform is not None:
-            return load_platform_rules(cls.platform)
-        message = (
-            "Driver subclasses must define platform or implement _instantiate_rules()"
-        )
+        message = "Driver subclasses must implement _instantiate_rules()"
         raise NotImplementedError(message)
