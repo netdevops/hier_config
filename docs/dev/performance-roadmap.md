@@ -2,7 +2,7 @@
 
 The Rust rewrite deliberately preserved the pure-Python package's public API. That constraint has been pushed to its limit: the remaining hot paths are bounded by **CPython object construction**, not by Rust.
 
-This document records what is *left* to do. It lists the two remaining optimisations, what each would cost to unlock, and the measurements that justify them. Work that has already shipped is not tracked here — see `CHANGELOG.md` for history, [Performance & Benchmarks](benchmarks.md) for the 3.x to 4.0 benchmark story, [Architecture](architecture.md#data-layout-decisions-in-the-core) for the data-layout decisions and invariants that came out of it, and the [3.x → 4.0 migration guide](../user/migration-v3-to-v4.md) for consumer-facing consequences.
+This document records what is *left* to do. It lists the two remaining optimisations, what each would cost to unlock, and the measurements that justify them. Work that has already shipped is not tracked here — see `CHANGELOG.md` for history, [Performance & Benchmarks](benchmarks.md) for the 3.x to 4.0 benchmark story, [Architecture](architecture.md#core-tree-model) for the data-layout decisions and invariants that came out of it, and the [3.x → 4.0 migration guide](../user/rust-core-changes.md) for consumer-facing consequences.
 
 ---
 
@@ -65,7 +65,7 @@ At ~246 ns per line against a measured floor of ~250 ns for constructing objects
 
 ### What it breaks
 
-`DumpLine` is exported from `hier_config.models`, rendered in [the API reference](../user/api-reference.md), and reachable as `Dump.lines[n]`. On the class itself:
+`DumpLine` is exported from `hier_config.models`, rendered in [the API reference](api-reference.md), and reachable as `Dump.lines[n]`. On the class itself:
 
 - `.model_dump()`, `.model_dump_json()`, `.model_validate()`, `.model_validate_json()`, `.model_copy()`, `.model_json_schema()`, `.model_fields`, `.model_config`;
 - `TypeAdapter(DumpLine)` and `TypeAdapter(Dump)`;
@@ -110,7 +110,7 @@ What is left is the `Py::new` per node itself. That is only avoidable by not con
 
 - **More Rust-side work on `dump`.** It is at ~246 ns/line against a ~250 ns CPython floor. Item 1 or nothing.
 - **More work on `remediation`, `parse`, `fast_load`, or `deepcopy`.** All Rust-bound with the compatible headroom already collected. Confirm against a native harness before assuming otherwise.
-- **Dropping node interning wholesale** rather than the current conservative split. The extra gain over keeping single-node identity is small, and it breaks the one identity case the suite pins. See [Architecture](architecture.md#data-layout-decisions-in-the-core).
+- **Dropping node interning wholesale** rather than the current conservative split. The extra gain over keeping single-node identity is small, and it breaks the one identity case the suite pins. See [Architecture](architecture.md#core-tree-model).
 - **Removing `Dump` / `DumpLine` from the public surface.** Serialising a config is a legitimate documented use case; changing the class shape is justified, deleting the API is not.
 
 ---
@@ -121,7 +121,7 @@ What is left is the `Py::new` per node itself. That is only avoidable by not con
 2. **Confirm the build actually succeeded** before trusting numbers. A failed `maturin develop` leaves the *previous* extension installed and produces convincing, wrong results.
 3. **Separate Rust cost from boundary cost** before optimising. A native Rust harness exercising the same core operation tells you immediately whether the interpreter or the algorithm is the constraint — both items above only became obvious once that split was measured.
 4. **Profile the Python glue too, not just the core.** The largest single win in the pre-4.0 pass (50x on driver construction) was a `model_copy(deep=True)` in `hier_config/platforms/driver_base.py`, found only after the Rust core had already been optimised twice. A native core makes it easy to stop looking at Python.
-5. **Re-baseline the gate.** `MAX_COST_UNITS` in `tests/benchmarks/test_perf_regression.py` is set at ~1.5x observed cost. Tighten it after a win so the gain cannot silently regress; see [Testing Conventions](testing.md#performance-regression-gate).
+5. **Re-baseline the gate.** `MAX_COST_UNITS` in `tests/benchmarks/test_perf_regression.py` is set at ~1.5x observed cost. Tighten it after a win so the gain cannot silently regress; see [Testing Conventions](testing.md#benchmarks).
 6. **Delete temporary harnesses.** Profiling examples under `crates/hier_config_core/examples/` are build-time cost for every contributor; remove them once the numbers are recorded here.
 7. **Check whether an "API break" has actually shipped** before pricing it in. An unreleased interface costs nothing to change, and treating it as expensive has already caused one item to be deferred for no reason.
 

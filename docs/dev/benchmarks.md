@@ -387,5 +387,5 @@ fails CI before merging.
   `__slots__` class) planned for 5.0.
 - [Architecture Overview](architecture.md) — The internal design of the Rust
   core, memory layout, and PyO3 handle lifecycle.
-- [3.x to 4.0 Migration Guide](../user/migration-v3-to-v4.md) — Guide for
+- [3.x to 4.0 Migration Guide](../user/rust-core-changes.md) — Guide for
   upgrading existing codebases to hier_config 4.0.

@@ -1,10 +1,15 @@
-# Migrating from 3.x to 4.0
+# Rust core behavior changes
 
 hier_config 4.0 replaces the pure-Python core with a Rust implementation exposed
-through PyO3. The public API, module layout, and import paths are unchanged, so
-most projects upgrade by bumping the pin and re-running their test suite. For the
-measured 3x to 259x speedup figures and the architectural story behind the
-rewrite, see [Performance & Benchmarks](../dev/benchmarks.md).
+through PyO3. This page covers the behavior differences that fall out of that
+engine swap. It is the companion to [Migrating from v3](migrating-from-v3.md),
+which covers the v4 API renames; read that one first, then this one. For the
+measured speedup figures and the architectural story behind the rewrite, see
+[Performance & Benchmarks](../dev/benchmarks.md).
+
+Module layout and import paths are unchanged, and every v3 name remains a
+supported alias, so most projects upgrade by bumping the pin and re-running
+their test suite.
 
 The exceptions are concentrated in two areas. The larger one is **custom driver
 subclasses**: four `HConfigDriverBase` hooks that worked in 3.x are no longer
@@ -101,21 +106,43 @@ reached.
 | Appending to `driver.rules.*` collections | ✅ Supported |
 | `post_load_callbacks` | ✅ Supported (additive; project callbacks are built in) |
 | `swap_negation()` | ⚠️ Direct calls work; not invoked by the engine |
-| `idempotent_for()` | 🚫 **Removed** — overriding raises `TypeError` |
-| `negate_with()` | 🚫 **Removed** — overriding raises `TypeError` |
-| `sectional_exit()` | 🚫 **Removed** — overriding raises `TypeError` |
-| `config_preprocessor()` | ⚠️ Runs in `get_hconfig()`; skipped by `get_hconfig_fast_load()` |
+| `idempotent_for()` | ⚠️ Override rejected unless marked `@core_owned` |
+| `negate_with()` | ⚠️ Override rejected unless marked `@core_owned` |
+| `sectional_exit()` | ⚠️ Override rejected unless marked `@core_owned` |
+| `config_preprocessor()` | ⚠️ Runs in `HConfig.from_text()`; skipped by `from_lines()` |
 | `declaration_prefix` property | ❌ **Silently ignored** |
 
-The three removed hooks no longer exist on `HConfigDriverBase`. Because an
-override could never be reached by the engine, defining one now fails loudly at
-class-creation time rather than producing wrong remediation silently.  The
-private helpers that existed only to serve them —
-`_idempotent_for_helper()` and `_negation_negate_with_helper()` — are removed
-too.  `_idempotency_key()` is unaffected.
+`idempotent_for()`, `negate_with()`, and `sectional_exit()` still exist, but the
+engine resolves all three inside the Rust core, so a plain Python override is
+never consulted. Rather than let that fail silently, `__init_subclass__` raises
+`TypeError` at class-creation time.
 
-See [Overridable driver hooks](custom-drivers.md#overridable-driver-hooks) for the
-authoritative reference, which is pinned by `tests/test_extension_surface.py`.
+If your override intentionally duplicates what the core already does — the
+in-tree platform drivers are in exactly this position — mark it with the
+`@core_owned` decorator to acknowledge that the core owns the behavior and let
+the definition through:
+
+```python
+from hier_config.platforms.driver_base import HConfigDriverBase, core_owned
+
+
+class MyDriver(HConfigDriverBase):
+    @core_owned
+    def negate_with(self, config): ...
+```
+
+The marker is a declaration, not a switch: it suppresses the guard, it does not
+make the engine call your override. If you need genuinely different negation
+behavior, express it as rules (see [Negation
+rules](migrating-from-v3.md#negation-rules)) rather than as a method.
+
+The private helpers that existed only to serve these hooks —
+`_idempotent_for_helper()` and `_negation_negate_with_helper()` — are removed.
+`_idempotency_key()` is unaffected.
+
+See [Key methods in `HConfigDriverBase`](../dev/creating-drivers.md#key-methods-in-hconfigdriverbase)
+for the authoritative reference, which is pinned by
+`tests/native/test_extension_surface.py`.
 
 ### Detecting the problem
 
@@ -183,8 +210,8 @@ driver.rules.negate_with.append(
 
 `sectional_exit()` maps to appending a
 `SectionalExitingRule` to `driver.rules.sectional_exiting`.
-[Customizing Existing Drivers](custom-drivers.md#customizing-existing-drivers)
-has worked examples for each rule type.
+[Customizing Driver Rules](../admin/customizing-rules.md) has worked examples
+for each rule type.
 
 ### Migrating `config_preprocessor()`
 
@@ -199,28 +226,30 @@ config = get_hconfig(driver, config_text)
 If the rewrite is line-shaped rather than text-shaped, a
 `per_line_sub` rule or a `post_load_callback` is usually a better fit.
 
-### `HConfigDriverBase` is no longer abstract
+### `_instantiate_rules()` is concrete, not abstract
 
-3.x declared `class HConfigDriverBase(ABC)`. 4.0 drops the `ABC` base and keys
-platform resolution off a `platform: Platform | None` class attribute instead:
+`HConfigDriverBase` remains an `ABC`, and `_instantiate_rules()` remains a
+`staticmethod` — existing overrides need no change. What moved is the base
+implementation: it is no longer decorated `@abstractmethod`, and instead raises
+`NotImplementedError` when called.
+
+The distinction matters for one case. In 3.x a subclass that forgot
+`_instantiate_rules()` could not be instantiated at all; in 4.0 it constructs
+successfully and fails at the point the rules are first needed. Subclasses that
+do define the override behave identically.
+
+Each in-tree driver now declares its own override rather than deriving the
+platform from a class attribute:
 
 ```python
-import abc
-from hier_config.platforms.driver_base import HConfigDriverBase
-
-isinstance(HConfigDriverBase, abc.ABCMeta)  # False in 4.0
-HConfigDriverBase.__abstractmethods__       # None in 4.0
+@staticmethod
+def _instantiate_rules() -> HConfigDriverRules:
+    return load_platform_rules(Platform.CISCO_IOS)
 ```
 
-Subclasses that set `platform` inherit that platform's rules from
-`crates/hier_config_core/src/platforms/<platform>/rules.json` automatically.
-Instantiating a subclass that defines neither `platform` nor `_instantiate_rules()`
-raises `NotImplementedError`.
-
-`_instantiate_rules()` and `config_preprocessor()` are declared as
-`classmethod`s in 4.0 (they were `staticmethod`s in 3.x). Existing
-`@staticmethod` overrides still resolve correctly through the descriptor
-protocol, so no change is required.
+`load_platform_rules()` reads the canonical rules the Rust core compiles
+against, so a custom driver that wants stock platform behavior plus additions
+can call it and then append to the returned collections.
 
 ### Invalid rules now raise
 
@@ -309,20 +338,22 @@ return interned `HConfigChild` handles, so identity checks hold:
 view.config is config.children["interface Eth1"]  # True
 ```
 
-### Traversal methods return sequences, not generators
+### Some traversal methods return tuples, not generators
 
-`all_children()`, `all_children_sorted()`, `all_children_sorted_by_tags()`, and
-`HConfig.unused_objects()` now return a **tuple** instead of a generator.
+`all_children()` and `all_children_sorted()` remain true generators and stream
+lazily out of the core, so `isinstance(x, types.GeneratorType)`, `.send()`,
+`.throw()`, and `.close()` all still work and a partial walk still costs only
+what it visits.
 
-The results were always computed eagerly in the native core — the generator was
-a wrapper around an already-materialized list, so it added a Python frame per
-call and bought nothing. Returning the sequence directly is what made the ~20%
-`iteration` improvement possible.
+`all_children_sorted_by_tags()` and `HConfig.unused_objects()` return a **tuple**
+instead. Neither can produce a result before it has seen the whole tree, so the
+3.x generator was a wrapper around an already-materialized list: it added a
+Python frame per item and bought no laziness.
 
-This is mostly additive at runtime:
+For those two, the change is mostly additive at runtime:
 
 ```python
-children = config.all_children()
+children = config.all_children_sorted_by_tags(frozenset({"safe"}), frozenset())
 len(children)          # now works
 children[0]            # now works
 list(children)         # now repeatable -- no longer exhausted after one pass
@@ -331,12 +362,12 @@ list(children)         # now repeatable -- no longer exhausted after one pass
 Two things break:
 
 - **Static annotations.** `Sequence` is not an `Iterator`, so
-  `x: Iterator[HConfigChild] = config.all_children()` is now a mypy/pyright
+  `x: Iterator[HConfigChild] = config.unused_objects()` is now a mypy/pyright
   error. Change the annotation to `Sequence[HConfigChild]`, or to
   `Iterable[HConfigChild]` if you want to accept both.
 - **Generator-specific operations.** `isinstance(x, types.GeneratorType)` is now
-  `False`, and `.send()`, `.throw()`, and `.close()` no longer exist. If you
-  need a true iterator, wrap the call: `iter(config.all_children())`.
+  `False` for these two, and `.send()`, `.throw()`, and `.close()` no longer
+  exist. If you need a true iterator, wrap the call: `iter(...)`.
 
 Ordinary `for` loops, comprehensions, unpacking, and `tuple(...)` /
 `list(...)` calls are unaffected.
@@ -441,7 +472,7 @@ Relative to the start of the 4.0 cycle:
 | `fast_load` | −7% |
 
 The iteration gain comes from the two breaks documented above —
-[sequence returns](#traversal-methods-return-sequences-not-generators) and
+[sequence returns](#some-traversal-methods-return-tuples-not-generators) and
 [bulk-traversal de-interning](#handle-identity-across-bulk-traversals). The
 others come from a Rust-internal change with no Python-visible surface.
 
