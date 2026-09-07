@@ -1,0 +1,132 @@
+{
+  "hostname": "example-xr",
+  "ipv4_default_gw": "10.0.0.1",
+  "location": "",
+  "module_numbers": [],
+  "stack_members": [],
+  "vlans": [
+    {
+      "id": 100,
+      "name": null
+    }
+  ],
+  "interface_names_mentioned": [
+    "Bundle-Ether1",
+    "GigabitEthernet0/0/0/0",
+    "GigabitEthernet0/0/0/1.100",
+    "Loopback0"
+  ],
+  "interfaces": [
+    {
+      "name": "Bundle-Ether1",
+      "number": "1",
+      "parent_name": null,
+      "description": "bundle",
+      "enabled": true,
+      "is_bundle": true,
+      "is_subinterface": false,
+      "is_loopback": false,
+      "is_svi": false,
+      "module_number": null,
+      "port_number": 1,
+      "subinterface_number": null,
+      "ipv4_interfaces": [],
+      "vrf": "",
+      "bundle_id": null,
+      "bundle_name": null,
+      "bundle_member_interfaces": [
+        "GigabitEthernet0/0/0/0"
+      ],
+      "native_vlan": null,
+      "tagged_all": false,
+      "tagged_vlans": [],
+      "dot1q_mode": null,
+      "raises": {
+        "module_number": "AttributeError"
+      }
+    },
+    {
+      "name": "GigabitEthernet0/0/0/0",
+      "number": "0/0/0/0",
+      "parent_name": null,
+      "description": "member",
+      "enabled": true,
+      "is_bundle": false,
+      "is_subinterface": false,
+      "is_loopback": false,
+      "is_svi": false,
+      "module_number": null,
+      "port_number": 0,
+      "subinterface_number": null,
+      "ipv4_interfaces": [],
+      "vrf": "",
+      "bundle_id": "1",
+      "bundle_name": "Bundle-Ether1",
+      "bundle_member_interfaces": [],
+      "native_vlan": null,
+      "tagged_all": false,
+      "tagged_vlans": [],
+      "dot1q_mode": null,
+      "raises": {
+        "module_number": "AttributeError"
+      }
+    },
+    {
+      "name": "GigabitEthernet0/0/0/1.100",
+      "number": "0/0/0/1.100",
+      "parent_name": "GigabitEthernet0/0/0/1",
+      "description": "",
+      "enabled": true,
+      "is_bundle": false,
+      "is_subinterface": true,
+      "is_loopback": false,
+      "is_svi": false,
+      "module_number": null,
+      "port_number": 1,
+      "subinterface_number": 100,
+      "ipv4_interfaces": [
+        "192.0.2.1/24"
+      ],
+      "vrf": "RED",
+      "bundle_id": null,
+      "bundle_name": null,
+      "bundle_member_interfaces": [],
+      "native_vlan": 100,
+      "tagged_all": false,
+      "tagged_vlans": [],
+      "dot1q_mode": "1",
+      "raises": {
+        "module_number": "AttributeError"
+      }
+    },
+    {
+      "name": "Loopback0",
+      "number": "0",
+      "parent_name": null,
+      "description": "",
+      "enabled": true,
+      "is_bundle": false,
+      "is_subinterface": false,
+      "is_loopback": true,
+      "is_svi": false,
+      "module_number": null,
+      "port_number": 0,
+      "subinterface_number": null,
+      "ipv4_interfaces": [
+        "198.51.100.1/32"
+      ],
+      "vrf": "",
+      "bundle_id": null,
+      "bundle_name": null,
+      "bundle_member_interfaces": [],
+      "native_vlan": null,
+      "tagged_all": false,
+      "tagged_vlans": [],
+      "dot1q_mode": null,
+      "raises": {
+        "module_number": "AttributeError"
+      }
+    }
+  ],
+  "raises": {}
+}

@@ -263,6 +263,42 @@ class CustomHConfigDriver(HConfigDriverBase):
 
 `get_hconfig_view(config)` now resolves the view automatically for the registered platform.
 
+### Adding a native (Rust) view
+
+A Python view is enough for Python consumers. Built-in platforms additionally carry a native view in `crates/hier_config_core/src/view/platforms/<name>.rs` so `hier_config_core` is usable as a standalone Rust crate.
+
+The Rust side uses traits with default method bodies rather than mixins, so a port implements only the hooks its Python sibling overrides:
+
+```rust
+use hier_config_core::view::config::ConfigOps;
+use hier_config_core::view::interface::{InterfaceOps, InterfaceView};
+
+#[derive(Debug, Clone, Copy)]
+pub struct CustomInterfaceOps;
+
+impl InterfaceOps for CustomInterfaceOps {
+    fn supports_vlan(&self) -> bool {
+        true
+    }
+
+    fn vrf(&self, view: &InterfaceView<'_>) -> String {
+        view.child_word("vrf member ", 2).unwrap_or_default()
+    }
+}
+
+pub static INTERFACE_OPS: CustomInterfaceOps = CustomInterfaceOps;
+```
+
+Register the platform in `view_ops_for_platform` (`crates/hier_config_core/src/view/platforms/mod.rs`). That match is exhaustive on `Platform`, so a new enum variant will not compile until you either supply hooks or explicitly record the platform as view-less.
+
+Then add a corpus case so the two implementations cannot drift:
+
+1. Write `testdata/views/<name>/config.txt` exercising every property the platform overrides.
+2. Run `python scripts/gen_view_corpus.py` to generate `expected.json` **from Python**. Never hand-write it and never regenerate it from Rust — Python is the reference.
+3. Run `cargo test -p hier_config_core --test view_corpus` and fix the Rust port until it matches.
+
+Platforms without a Python `view.py` deliberately have no native view: there would be no reference behavior for the corpus to pin.
+
 ## Contributing the driver upstream
 
 Built-in drivers live in `hier_config/platforms/<name>/driver.py` and are wired into:

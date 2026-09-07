@@ -1,0 +1,17 @@
+hostname EXAMPLE-NXOS
+ip route 0.0.0.0/0 10.0.0.1
+vlan 10
+ name USERS
+interface port-channel1
+ switchport mode trunk
+ switchport trunk allowed vlan 10,20
+interface Ethernet1/1
+ description member
+ channel-group 1
+ switchport access vlan 10
+interface Ethernet1/2.50
+ encapsulation dot1q 50
+ vrf member RED
+ ip address 192.0.2.1/24
+interface Vlan10
+ ip address 203.0.113.1/24

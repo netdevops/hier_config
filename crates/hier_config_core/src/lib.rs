@@ -6,6 +6,7 @@
 #![forbid(unsafe_code)]
 
 pub mod arena;
+pub mod constructors;
 pub mod driver;
 pub mod models;
 pub mod parser;
@@ -15,9 +16,14 @@ pub mod regex_cache;
 pub mod remediation;
 pub mod text_match;
 pub mod tree;
+pub mod view;
 pub mod workflow;
 
 pub use arena::{Arena, NodeId};
+pub use constructors::{
+    ConstructorError, StructuredFormat, config_from_text, config_view, detect_structured_format,
+    reject_structured_format,
+};
 pub use driver::{Driver, DriverRules};
 pub use models::*;
 pub use parser::{
@@ -26,6 +32,12 @@ pub use parser::{
 };
 pub use text_match::TextMatch;
 pub use tree::{Children, Node, Tree, TreeError};
+pub use view::config::{ConfigOps, ConfigView};
+pub use view::interface::{InterfaceOps, InterfaceView};
+pub use view::models::{
+    InterfaceDot1qMode, InterfaceDuplex, Ipv4Interface, NacHostMode, StackMember, Vlan,
+};
+pub use view::view_ops_for_platform;
 pub use workflow::{WorkflowError, WorkflowRemediation};
 
 /// Placeholder version check
