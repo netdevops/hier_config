@@ -150,6 +150,11 @@ jobs:
       uses: actions/setup-python@v6
       with:
         python-version: ${{ env.PYTHON_DEFAULT }}
+    - name: Set up virtual environment
+      run: |
+        python -m venv .venv
+        echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
+        echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/.venv" >> $GITHUB_ENV
     - name: Set up Rust
       uses: dtolnay/rust-toolchain@stable
       with:
@@ -191,6 +196,11 @@ jobs:
       with:
         enable-cache: true
         python-version: ${{ matrix.python-version }}
+    - name: Set up virtual environment
+      run: |
+        python -m venv .venv
+        echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
+        echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/.venv" >> $GITHUB_ENV
     - name: Set up Rust
       uses: dtolnay/rust-toolchain@stable
       with:
@@ -257,6 +267,11 @@ jobs:
       uses: actions/setup-python@v6
       with:
         python-version: ${{ env.PYTHON_DEFAULT }}
+    - name: Set up virtual environment
+      run: |
+        python -m venv .venv
+        echo "$GITHUB_WORKSPACE/.venv/bin" >> $GITHUB_PATH
+        echo "VIRTUAL_ENV=$GITHUB_WORKSPACE/.venv" >> $GITHUB_ENV
     - name: Set up Rust
       uses: dtolnay/rust-toolchain@stable
       with:

@@ -342,13 +342,34 @@ fn parse(source: &str) -> Result<Element, FormatError> {
                 close(&mut stack, &mut root, element)?;
             }
             Event::Text(text) if !stack.is_empty() => {
-                let decoded = text
-                    .unescape()
+                let raw = text.xml10_content().map_err(|error| {
+                    FormatError::Invalid(format!("The config is not valid XML: {error}"))
+                })?;
+                let decoded = quick_xml::escape::unescape(&raw)
                     .map_err(|error| {
                         FormatError::Invalid(format!("The config is not valid XML: {error}"))
                     })?
                     .into_owned();
                 append_characters(&mut stack, &decoded);
+            }
+            Event::GeneralRef(entity_ref) if !stack.is_empty() => {
+                let resolved = if let Some(ch) = entity_ref.resolve_char_ref().map_err(|error| {
+                    FormatError::Invalid(format!("The config is not valid XML: {error}"))
+                })? {
+                    ch.to_string()
+                } else {
+                    let name = entity_ref.decode().map_err(|error| {
+                        FormatError::Invalid(format!("The config is not valid XML: {error}"))
+                    })?;
+                    quick_xml::escape::resolve_xml_entity(&name)
+                        .ok_or_else(|| {
+                            FormatError::Invalid(format!(
+                                "The config is not valid XML: unknown entity &{name};"
+                            ))
+                        })?
+                        .to_owned()
+                };
+                append_characters(&mut stack, &resolved);
             }
             // `ElementTree` surfaces CDATA content verbatim as character data.
             Event::CData(data) if !stack.is_empty() => {
@@ -390,7 +411,7 @@ fn open(
             continue;
         }
         let value = attribute
-            .unescape_value()
+            .normalized_value(quick_xml::XmlVersion::Implicit1_0)
             .map_err(|error| FormatError::Invalid(format!("The config is not valid XML: {error}")))?
             .into_owned();
         element.set(key.to_owned(), value);
