@@ -28,6 +28,14 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: Run tests
+      # Pin every uv invocation to the matrix interpreter; without UV_PYTHON,
+      # uv resolves an interpreter by discovery and the matrix leg may not test
+      # the Python version it claims to.
+      env:
+        UV_PYTHON: ${{ matrix.python-version }}
+        # `uv run` re-locks and re-syncs by default; keep it frozen so a stale
+        # lockfile fails the job instead of being silently rewritten.
+        UV_FROZEN: "1"
       run: |
         uv sync --frozen --no-install-project
         uv run python scripts/build.py lint

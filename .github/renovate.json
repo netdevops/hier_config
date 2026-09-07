@@ -28,7 +28,7 @@
     {
       "description": "For library runtime deps, only refresh the lockfile rather than raising the lower-bound constraint (keeps the library installable for users on older minor versions)",
       "matchManagers": ["pep621"],
-      "matchDepTypes": ["dependencies"],
+      "matchDepTypes": ["project.dependencies"],
       "rangeStrategy": "update-lockfile"
     },
     {
