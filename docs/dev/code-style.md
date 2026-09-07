@@ -1,6 +1,6 @@
 # Code Style & Standards
 
-All standards below are enforced by `poetry run ./scripts/build.py lint`, which runs ruff (format + check), mypy, pyright, pylint, yamllint, and flynt in parallel. CI fails if any tool reports an issue.
+All standards below are enforced by `uv run ./scripts/build.py lint`, which runs ruff (format + check), mypy, pyright, pylint, yamllint, and flynt in parallel. CI fails if any tool reports an issue.
 
 ## Lint & Type Checking Stack
 

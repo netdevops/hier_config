@@ -9,9 +9,9 @@ published.
 1. **Run the prepare-release workflow**: Actions → *prepare release* → *Run
    workflow*. Pick the branch to release from (`master` for stable releases,
    `next` for v4 prereleases) and the bump type — `major`, `minor`, `patch`,
-   or `prerelease`. The workflow is restricted to repository admins. It:
-    - Bumps `version` in `pyproject.toml` with `poetry version <bump>`.
-    - For non-prerelease bumps, moves the `## [Unreleased]` entries in
+   `alpha`, `beta`, or `rc`. The workflow is restricted to repository admins. It:
+    - Bumps `version` in `pyproject.toml` and updates `uv.lock` with `uv version --bump <bump>`.
+    - For non-prerelease bumps (i.e. `major`, `minor`, or `patch`), moves the `## [Unreleased]` entries in
       `CHANGELOG.md` under a new `## [X.Y.Z] - YYYY-MM-DD` heading
       (`scripts/rotate_changelog.py`) and starts a fresh empty
       `## [Unreleased]` section.
@@ -27,8 +27,8 @@ published.
    branch when the draft is published, so always merge the PR first.
 4. **Publishing happens automatically**: the `deploy to pypi` workflow
    (`.github/workflows/deploy-pypi.yml`) triggers when the release is
-   published and runs `poetry publish --build` using the `TWINE_API_KEY`
-   repository secret.
+   published and runs `uv build` and `uv publish` using the `TWINE_API_KEY`
+   repository secret (mapped to `UV_PUBLISH_TOKEN`).
 
 ## Ecosystem Fan-Out
 

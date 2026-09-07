@@ -7,18 +7,17 @@ Fork, then clone the repo:
 git@github.com:YOUR-USERNAME/hier_config.git
 ```
 
-Install Poetry:
+Install uv:
 
 ```
-https://python-poetry.org/docs/#installation
+https://docs.astral.sh/uv/getting-started/installation/
 ```
 
 Set up your environment:
 
 ```
 cd hier_config
-poetry install
-poetry shell   # Poetry 2.x: requires the shell plugin, or use `poetry run <cmd>` / `poetry env activate`
+uv sync
 ```
 
 Create a branch from the right base: v4 features and breaking changes branch from **`next`**; v3.x maintenance fixes branch from **`master`**.
@@ -175,5 +174,5 @@ Read the [Architecture Overview](docs/dev/architecture.md) before making structu
 
 **PyCharm**
 
-- Enable the **mypy** plugin (Settings → Plugins → mypy) and point it at `poetry run mypy`.
+- Enable the **mypy** plugin (Settings → Plugins → mypy) and point it at `uv run mypy`.
 - Configure ruff as an external tool for on-save formatting.

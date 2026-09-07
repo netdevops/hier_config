@@ -26,9 +26,9 @@ pip install hier-config==<version>
 
 ## Install from source
 
-1. [Install Poetry](https://python-poetry.org/docs/#installation)
+1. [Install uv](https://docs.astral.sh/uv/getting-started/installation/)
 2. Clone the repository: `git clone git@github.com:netdevops/hier_config.git`
-3. Install the project: `cd hier_config && poetry install`
+3. Install the project: `cd hier_config && uv sync`
 
 ## Next steps
 

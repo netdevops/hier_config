@@ -25,14 +25,14 @@ List every changed file and classify it: library code (`hier_config/`), tests (`
 Run these and report exact failures (tool, file, line, message):
 
 ```bash
-poetry run ./scripts/build.py lint
-poetry run ./scripts/build.py pytest --coverage
+uv run ./scripts/build.py lint
+uv run ./scripts/build.py pytest --coverage
 ```
 
 Also run the docs build — CI runs it unconditionally on every push/PR, not just when docs change:
 
 ```bash
-poetry run mkdocs build --strict
+uv run mkdocs build --strict
 ```
 
 Remember CI's test matrix covers Python 3.10–3.14: flag syntax or stdlib usage newer than 3.10 even if local checks pass.

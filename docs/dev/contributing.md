@@ -4,13 +4,13 @@ This page summarizes how to set up a development environment, run the checks tha
 
 ## Development setup
 
-The project uses **Poetry** (not pip) for dependency management:
+The project uses **uv** (not pip) for dependency management:
 
 ```bash
 # Fork on GitHub, then:
 git clone git@github.com:YOUR-USERNAME/hier_config.git
 cd hier_config
-poetry install
+uv sync
 git checkout -b YOUR-BRANCH
 ```
 
@@ -22,27 +22,27 @@ The single command that runs everything CI runs:
 
 ```bash
 # Full lint + test suite
-poetry run ./scripts/build.py lint-and-test
+uv run ./scripts/build.py lint-and-test
 
 # Lint only (ruff, mypy, pyright, pylint, yamllint, flynt — run in parallel)
-poetry run ./scripts/build.py lint
+uv run ./scripts/build.py lint
 
 # Tests only (95% coverage required)
-poetry run ./scripts/build.py pytest --coverage
+uv run ./scripts/build.py pytest --coverage
 
 # Auto-fix formatting
-poetry run ruff format hier_config tests scripts
+uv run ruff format hier_config tests scripts
 ```
 
 Useful pytest invocations:
 
 ```bash
 # Run a single test
-poetry run pytest tests/unit/platforms/test_cisco_xr.py::test_name -v
+uv run pytest tests/unit/platforms/test_cisco_xr.py::test_name -v
 
 # Run only unit tests / integration tests
-poetry run pytest tests/unit/ -v
-poetry run pytest tests/integration/ -v
+uv run pytest tests/unit/ -v
+uv run pytest tests/integration/ -v
 ```
 
 ## Test-driven development
@@ -61,7 +61,7 @@ Tests mirror the source structure and are split into categories:
 
 - **`tests/unit/`** — unit tests for individual classes and functions (tree layer, constructors, workflows, reporting, per-platform driver behavior under `platforms/`, config views under `platforms/views/`).
 - **`tests/integration/`** — driver remediation scenarios (running config → generated config → remediation), cross-platform remediation/future/difference tests, and roundtrip workflow validation.
-- **`tests/benchmarks/`** — performance benchmarks, skipped by default (run with `poetry run pytest -m benchmark -v -s`).
+- **`tests/benchmarks/`** — performance benchmarks, skipped by default (run with `uv run pytest -m benchmark -v -s`).
 
 Coverage must stay at or above **95%**.
 

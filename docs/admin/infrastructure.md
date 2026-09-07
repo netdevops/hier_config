@@ -6,7 +6,7 @@ This page is for project maintainers and describes the repository's automation.
 
 `.github/workflows/build-and-test.yml` runs on every push and pull request to `master`:
 
-- **build** job: a Python 3.10–3.14 matrix that installs dependencies with poetry, then runs `scripts/build.py lint` (ruff, mypy, pyright, pylint, yamllint, flynt in parallel) and `scripts/build.py pytest --coverage` (95% coverage floor).
+- **build** job: a Python 3.10–3.14 matrix that installs dependencies with uv, then runs `scripts/build.py lint` (ruff, mypy, pyright, pylint, yamllint, flynt in parallel) and `scripts/build.py pytest --coverage` (95% coverage floor).
 - **docs** job: installs `docs/requirements.txt` with pip (mirroring what Read the Docs installs) and runs `mkdocs build --strict`, so broken links or nav entries fail the PR instead of shipping silently.
 
 `.github/workflows/prepare-release.yml` is an admin-only, manually-run workflow that bumps the version, rotates the changelog, opens the release PR, and creates a draft GitHub release; `.github/workflows/deploy-pypi.yml` publishes to PyPI when that release is published — see [Releases](releases.md).
@@ -24,14 +24,14 @@ Docs are built with MkDocs and published by **Read the Docs** (`.readthedocs.yml
 Preview locally:
 
 ```bash
-poetry install
-poetry run mkdocs serve
+uv sync
+uv run mkdocs serve
 ```
 
 Validate the way CI does:
 
 ```bash
-poetry run mkdocs build --strict
+uv run mkdocs build --strict
 ```
 
 ### Moving or Renaming Doc Pages
