@@ -208,6 +208,12 @@ v4 design decisions, for the record:
   621 metadata with a PEP 735 `dev` dependency group; `poetry.lock` is gone.
   Contributors need a Rust toolchain and must run `maturin develop --release`
   before the Python suite will see a change under `crates/`.
+- `all_children_sorted()` returns a tuple rather than a generator, matching
+  `all_children_sorted_by_tags()` and `HConfig.unused_objects()`. Sorting has to
+  see the whole tree before it can yield anything, so the generator bought no
+  laziness and cost a Python frame per node; a full walk is now about six times
+  faster. `all_children()` is still a generator. Iteration and comprehension are
+  unaffected; only code that called `.send()`/`.close()` on the result breaks.
 - `HConfig.from_dump()` runs a driver's remediation-transform callbacks after
   the tree is fully built rather than incrementally during the load, so a
   callback observes the complete config. Callbacks that relied on seeing a
