@@ -722,10 +722,10 @@ def verify_extension_surface(native: types.ModuleType) -> int:
     exported = {
         name
         for name in vars(native)
-        if not name.startswith("_") and name != "annotations"
+        if name == "__version__" or (not name.startswith("_") and name != "annotations")
     }
     missing = sorted(exported - declared)
-    extra = sorted(declared - exported - {"HConfigChildrenIter", "GnmiRemediation"})
+    extra = sorted(declared - exported)
     if not missing and not extra:
         return 0
 

@@ -63,6 +63,13 @@ v4 design decisions, for the record:
   entries. Duplicates raise `DuplicateChildError` as documented, and the error
   type survives the Rust boundary instead of being flattened to
   `InvalidConfigError`.
+- Keyword arguments documented in the type stubs are accepted again.
+  `tags_add()`, `tags_remove()`, `add_tags()` and `remove_tags()` took
+  `tag_or_tags` at runtime while the stubs promised `tag`, and
+  `get_child_deep()` / `get_children_deep()` took `rules` while the stubs
+  promised `match_rules`. Calling them by keyword as documented raised
+  `TypeError` despite type checking cleanly. The native signatures now match
+  the published names.
 
 ### Added
 
@@ -74,6 +81,16 @@ v4 design decisions, for the record:
   caught in CI, as is a `#[getter]` or `#[pymethod]` added to an existing
   `#[pyclass]` without a matching stub member. `scripts/gen_formats_corpus.py
   --check` joins it to keep the formats parity corpus honest.
+- `mypy.stubtest` now runs in the lint gate (`python scripts/build.py
+  stubtest`), comparing every `.pyi` stub against the object it actually
+  describes. The name-level guards above cannot see *signatures*, so a stub
+  could promise a parameter the compiled extension rejects — code that type
+  checks but raises `TypeError`. Audited, documented exemptions for pydantic,
+  PyO3 enum and sentinel-default idioms live in
+  `stubs/stubtest-allowlist.txt`; unused entries fail, so the list cannot rot.
+  Return and parameter *type* annotations remain outside its reach — they are
+  not introspectable from a compiled extension — and stay the type checkers'
+  responsibility.
 
 ### Removed
 

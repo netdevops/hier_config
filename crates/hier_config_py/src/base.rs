@@ -98,16 +98,16 @@ impl PyHConfigBase {
         Ok(())
     }
 
-    pub fn tags_add(&self, tag_or_tags: &Bound<'_, PyAny>) -> PyResult<()> {
-        let tags = extract_strings(tag_or_tags)?;
+    pub fn tags_add(&self, tag: &Bound<'_, PyAny>) -> PyResult<()> {
+        let tags = extract_strings(tag)?;
         let tag_refs: Vec<&str> = tags.iter().map(String::as_str).collect();
         let mut tree = self.tree.tree.write().unwrap();
         tree.tags_add(self.node_id, &tag_refs);
         Ok(())
     }
 
-    pub fn tags_remove(&self, tag_or_tags: &Bound<'_, PyAny>) -> PyResult<()> {
-        let tags = extract_strings(tag_or_tags)?;
+    pub fn tags_remove(&self, tag: &Bound<'_, PyAny>) -> PyResult<()> {
+        let tags = extract_strings(tag)?;
         let tag_refs: Vec<&str> = tags.iter().map(String::as_str).collect();
         let mut tree = self.tree.tree.write().unwrap();
         tree.tags_remove(self.node_id, &tag_refs);
@@ -115,13 +115,13 @@ impl PyHConfigBase {
     }
 
     /// v4 name for `tags_add()`.
-    pub fn add_tags(&self, tag_or_tags: &Bound<'_, PyAny>) -> PyResult<()> {
-        self.tags_add(tag_or_tags)
+    pub fn add_tags(&self, tag: &Bound<'_, PyAny>) -> PyResult<()> {
+        self.tags_add(tag)
     }
 
     /// v4 name for `tags_remove()`.
-    pub fn remove_tags(&self, tag_or_tags: &Bound<'_, PyAny>) -> PyResult<()> {
-        self.tags_remove(tag_or_tags)
+    pub fn remove_tags(&self, tag: &Bound<'_, PyAny>) -> PyResult<()> {
+        self.tags_remove(tag)
     }
 
     /// v4 name for `cisco_style_text()`.
@@ -462,9 +462,9 @@ impl PyHConfigBase {
     pub fn get_child_deep(
         &self,
         py: Python<'_>,
-        rules: &Bound<'_, PyAny>,
+        match_rules: &Bound<'_, PyAny>,
     ) -> PyResult<Option<PyObject>> {
-        let parsed_rules = parse_match_rules_seq(py, rules)?;
+        let parsed_rules = parse_match_rules_seq(py, match_rules)?;
         let child_id = {
             let tree = self.tree.tree.read().unwrap();
             let matches = tree.get_children_deep(self.node_id, &parsed_rules);
@@ -482,9 +482,9 @@ impl PyHConfigBase {
     pub fn get_children_deep(
         &self,
         py: Python<'_>,
-        rules: &Bound<'_, PyAny>,
+        match_rules: &Bound<'_, PyAny>,
     ) -> PyResult<Vec<PyObject>> {
-        let parsed_rules = parse_match_rules_seq(py, rules)?;
+        let parsed_rules = parse_match_rules_seq(py, match_rules)?;
         let child_ids = {
             let tree = self.tree.tree.read().unwrap();
             tree.get_children_deep(self.node_id, &parsed_rules)

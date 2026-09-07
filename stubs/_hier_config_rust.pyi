@@ -18,6 +18,9 @@
 # typed via `py.typed`.
 
 from ipaddress import IPv4Address, IPv4Interface
+from typing import final
+
+from typing_extensions import disjoint_base
 
 from hier_config.base import HConfigBase as HConfigBase
 from hier_config.child import HConfigChild as HConfigChild
@@ -25,7 +28,7 @@ from hier_config.children import HConfigChildren as HConfigChildren
 from hier_config.exceptions import DuplicateChildError as DuplicateChildError
 from hier_config.exceptions import HierConfigError as HierConfigError
 from hier_config.exceptions import InvalidConfigError as InvalidConfigError
-from hier_config.formats import GnmiRemediation as GnmiRemediation
+from hier_config.formats import GnmiRemediation
 from hier_config.models import Platform as Platform
 from hier_config.platforms.models import (
     InterfaceDot1qMode as InterfaceDot1qMode,
@@ -45,8 +48,11 @@ from hier_config.platforms.models import (
 from hier_config.root import HConfig as HConfig
 from hier_config.workflows import WorkflowRemediation as WorkflowRemediation
 
+__version__: str
+
 # Declared here rather than re-exported: this iterator is returned by
 # `HConfigChildren.__iter__` but has no stub of its own under `hier_config/`.
+@final
 class HConfigChildrenIter:
     def __iter__(self) -> HConfigChildrenIter: ...
     def __next__(self) -> HConfigChild: ...
@@ -62,7 +68,12 @@ def config_preprocessor(platform_str: str, config_text: str) -> str: ...
 def formats_from_json(
     driver_obj: object, data: str, list_keys: list[str] | None = None
 ) -> HConfig: ...
-def formats_to_json(config: HConfig, indent: int | None = 2) -> str: ...
+# PyO3 renders any non-literal `#[pyo3(signature = ...)]` default as `...` in
+# `__text_signature__`, so the value cannot be spelled here without diverging
+# from runtime introspection. The documented default (2) lives on the public
+# wrapper `hier_config.formats.hconfig_to_json`, which is ordinary checked
+# Python.
+def formats_to_json(config: HConfig, indent: int | None = ...) -> str: ...
 def formats_from_xml(
     driver_obj: object, source: str, list_keys: list[str] | None = None
 ) -> HConfig: ...
@@ -82,8 +93,9 @@ def formats_to_gnmi_json(
 # is the documented Python-facing facade that re-exports these under their
 # historical names and adds the capability marker classes. Member names here are
 # checked against the extension at lint time by `gen_stubs.py --check`.
+@disjoint_base
 class ConfigViewInterface:
-    def __init__(self, config: HConfigChild) -> None: ...
+    def __new__(cls, config: HConfigChild) -> ConfigViewInterface: ...
     @property
     def bundle_id(self) -> str | None: ...
     @property
@@ -155,8 +167,9 @@ class ConfigViewInterface:
     @property
     def vrf(self) -> str: ...
 
+@disjoint_base
 class HConfigView:
-    def __init__(self, config: HConfig) -> None: ...
+    def __new__(cls, config: HConfig) -> HConfigView: ...
     @property
     def bundle_interface_views(self) -> list[ConfigViewInterface]: ...
     @property
@@ -164,7 +177,7 @@ class HConfigView:
     @staticmethod
     def dot1q_mode_from_vlans(
         untagged_vlan: int | None = None,
-        tagged_vlans: tuple[int, ...] = (),
+        tagged_vlans: tuple[int, ...] | None = None,
         *,
         tagged_all: bool = False,
     ) -> InterfaceDot1qMode | None: ...
@@ -195,10 +208,9 @@ class HConfigView:
     def vlans(self) -> list[Vlan]: ...
 
 
-__all__ = (
+__all__ = [
     "ConfigViewInterface",
     "DuplicateChildError",
-    "GnmiRemediation",
     "HConfig",
     "HConfigBase",
     "HConfigChild",
@@ -218,4 +230,5 @@ __all__ = (
     "formats_to_netconf_xml",
     "formats_to_xml",
     "get_platform_rules_json",
-)
+    "__version__",
+]
