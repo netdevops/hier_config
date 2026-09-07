@@ -244,6 +244,13 @@ parametrize-values-type = "tuple"
 "scripts/gen_stubs.py" = ["S404", "S603", "T201", "BLE001", "S607", "PLC2701",
     "PLC0415", "S112", "C901", "PLR0912", "PLR0915", "FBT001", "FBT002",
     "INP001", "RUF005", "FURB113"]
+# Lint gate, not shipped library code. It imports `hier_config` and the
+# compiled extension inside functions because the module has to be importable
+# to report a *missing* build rather than dying at import time (PLC0415), it
+# prints its findings (T201), and `check_value` is a single flat dispatch over
+# annotation forms -- one return per form is clearer than nesting them to fit a
+# return-count budget (PLR0911).
+"scripts/check_stub_types.py" = ["PLC0415", "PLR0911", "T201", "INP001"]
 
 [tool.pytest.ini_options]
 markers = [
