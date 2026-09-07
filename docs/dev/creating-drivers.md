@@ -15,7 +15,7 @@ Every driver subclasses `HConfigDriverBase` (`hier_config/platforms/driver_base.
 - `negation_prefix` (property) — the string prepended to negate a command. Default `"no "`.
 - `declaration_prefix` (property) — the string prepended to positive commands on set-style platforms. Default `""`.
 - `config_preprocessor(config_text)` — static method transforming raw text before parsing (e.g. flattening JunOS curly-brace config into `set` commands).
-- `view_class` (class attribute) — the `HConfigViewBase` subclass instantiated by `get_hconfig_view()`. `None` (default) means the platform has no config view.
+- `view_class` (class attribute) — the `HConfigView` subclass instantiated by `get_hconfig_view()`. `None` (default) means the platform has no config view.
 
 The simplest possible driver is the generic one:
 
@@ -180,84 +180,17 @@ Idempotency matching is structural: the core builds an *idempotency key* from th
 
 ## Adding a config view
 
-To give the platform a typed [config view](../user/config-views.md), implement the two view classes and point the driver at them.
+Config views are implemented in Rust. Adding one to a platform means writing the
+native ops and re-exporting them from Python; there is no Python property code
+to write.
 
-**1. Interface view** — subclass the capability mixins the platform genuinely supports (each mixin already subclasses `ConfigViewInterfaceBase`, so listing the base explicitly is redundant — the in-tree views don't):
-
-```python
-from hier_config.platforms.view_base import (
-    InterfaceBundleViewMixin,
-    InterfaceVlanViewMixin,
-)
-
-
-class ConfigViewInterfaceCustomNOS(
-    InterfaceBundleViewMixin,
-    InterfaceVlanViewMixin,
-):
-    """Typed view over one `interface ...` block."""
-
-    # Implement the abstract properties, e.g.:
-    @property
-    def ipv4_interfaces(self):
-        for child in self.config.get_children(startswith="ip address "):
-            ...
-
-    @property
-    def vrf(self) -> str:
-        ...
-
-    # ...plus the abstract members required by each inherited mixin.
-```
-
-Inheriting a mixin is a contract: `isinstance(view, InterfaceVlanViewMixin)` tells users the capability exists, so only inherit mixins whose properties the platform can actually populate.
-
-**2. Device view** — subclass `HConfigViewBase` and implement its abstract members (`hostname`, `interface_views`, `interfaces`, `ipv4_default_gw`; `dot1q_mode_from_vlans` is a concrete static helper you can call, not implement):
-
-```python
-from hier_config.platforms.view_base import HConfigViewBase
-
-
-class HConfigViewCustomNOS(HConfigViewBase):
-    @property
-    def interfaces(self):
-        return self.config.get_children(startswith="interface ")
-
-    @property
-    def interface_views(self):
-        for interface in self.interfaces:
-            yield ConfigViewInterfaceCustomNOS(interface)
-
-    @property
-    def hostname(self) -> str | None:
-        if child := self.config.get_child(startswith="hostname "):
-            return child.text.split()[1].lower()
-        return None
-
-    # ...remaining abstract members
-```
-
-**3. Declare it on the driver:**
-
-```python
-class CustomHConfigDriver(HConfigDriverBase):
-    view_class = HConfigViewCustomNOS
-    ...
-```
-
-`get_hconfig_view(config)` now resolves the view automatically for the registered platform.
-
-### Adding a native (Rust) view
-
-A Python view is enough for Python consumers. Built-in platforms additionally carry a native view in `crates/hier_config_core/src/view/platforms/<name>.rs` so `hier_config_core` is usable as a standalone Rust crate.
-
-The Rust side uses traits with default method bodies rather than mixins, so a port implements only the hooks its Python sibling overrides:
+**1. Native ops** — implement `InterfaceOps` and `ConfigOps` in
+`crates/hier_config_core/src/view/platforms/<name>.rs`. Every trait method has a
+default body, so override only what the platform does differently. Capabilities
+are declared by `bundle_prefix()`, `supports_vlan()`, `supports_nac()`, and
+`supports_physical()`.
 
 ```rust
-use hier_config_core::view::config::ConfigOps;
-use hier_config_core::view::interface::{InterfaceOps, InterfaceView};
-
-#[derive(Debug, Clone, Copy)]
 pub struct CustomInterfaceOps;
 
 impl InterfaceOps for CustomInterfaceOps {
@@ -265,23 +198,59 @@ impl InterfaceOps for CustomInterfaceOps {
         true
     }
 
-    fn vrf(&self, view: &InterfaceView<'_>) -> String {
-        view.child_word("vrf member ", 2).unwrap_or_default()
+    fn bundle_prefix(&self) -> Option<&'static str> {
+        Some("port-channel")
     }
 }
 
 pub static INTERFACE_OPS: CustomInterfaceOps = CustomInterfaceOps;
 ```
 
-Register the platform in `view_ops_for_platform` (`crates/hier_config_core/src/view/platforms/mod.rs`). That match is exhaustive on `Platform`, so a new enum variant will not compile until you either supply hooks or explicitly record the platform as view-less.
+Register the platform in `view_ops_for_platform`
+(`crates/hier_config_core/src/view/platforms/mod.rs`). That match is exhaustive
+on `Platform`, so a new enum variant will not compile until you either supply
+hooks or explicitly record the platform as view-less.
 
-Then add a corpus case so the two implementations cannot drift:
+**2. Python facade** — add `hier_config/platforms/<name>/view.py` following the
+in-tree template. The interface class is a marker whose `isinstance` behavior is
+driven by the native platform tag; the device class is a plain subclass that
+`get_hconfig_view()` instantiates:
 
-1. Write `testdata/views/<name>/config.txt` exercising every property the platform overrides.
-2. Run `python scripts/gen_view_corpus.py` to generate `expected.json` **from Python**. Never hand-write it and never regenerate it from Rust — Python is the reference.
-3. Run `cargo test -p hier_config_core --test view_corpus` and fix the Rust port until it matches.
+```python
+from hier_config.models import Platform
+from hier_config.platforms.view_base import (
+    ConfigViewInterface,
+    HConfigView,
+    ViewMarkerMeta,
+)
 
-Platforms without a Python `view.py` deliberately have no native view: there would be no reference behavior for the corpus to pin.
+
+class ConfigViewInterfaceCustomNOS(
+    ConfigViewInterface,
+    metaclass=ViewMarkerMeta,
+):
+    """Marker for `isinstance` narrowing; behavior lives in Rust."""
+
+    view_platform = Platform.CUSTOM_NOS
+
+
+class HConfigViewCustomNOS(HConfigView):
+    """Device-level view for CustomNOS."""
+```
+
+**3. Wire it up** — point the driver at the device view:
+
+```python
+class HConfigDriverCustomNOS(HConfigDriverBase):
+    view_class = HConfigViewCustomNOS
+```
+
+Declaring a capability is a contract: `isinstance(view, InterfaceVlanViewMixin)`
+tells users the capability exists, so only enable `supports_vlan()` and friends
+when the platform can actually populate those properties.
+
+Platforms without native ops deliberately have no config view; `view_class`
+stays `None` and `get_hconfig_view()` raises.
 
 ## Contributing the driver upstream
 

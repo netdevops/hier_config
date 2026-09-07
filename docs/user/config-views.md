@@ -2,7 +2,7 @@
 
 This page covers config views — a typed, Pythonic layer for extracting structured data (hostnames, interfaces, VLANs, IP addresses) from a parsed configuration without writing regex. Use it when you need to *read* facts out of a config rather than remediate it.
 
-A config view wraps an `HConfig` tree and exposes Python properties in a platform-independent way: the framework combines abstract base classes (`HConfigViewBase`, `ConfigViewInterfaceBase`) with platform-specific implementations (e.g. `HConfigViewCiscoIOS`, `ConfigViewInterfaceCiscoIOS`) so the same code works across vendors.
+A config view wraps an `HConfig` tree and exposes Python properties in a platform-independent way: `HConfigView` and `ConfigViewInterface` present the same property set on every platform, with the per-platform parsing supplied by the Rust core, so the same code works across vendors. The platform-specific names (e.g. `HConfigViewCiscoIOS`, `ConfigViewInterfaceCiscoIOS`) remain available for type narrowing.
 
 ## Why use config views?
 
@@ -38,7 +38,7 @@ Platforms without a view raise `DriverNotFoundError`. Views are currently provid
 
 ## The capability mixin model
 
-`ConfigViewInterfaceBase` carries only the core interface properties that every platform supports. Optional capabilities are modeled as mixins that a platform view inherits *only when it genuinely supports them*:
+`ConfigViewInterface` exposes the union of all interface properties, but a platform only *supports* a subset of them. Optional capabilities are modeled as marker classes that a view matches *only when the platform genuinely supports them*:
 
 - `InterfaceBundleViewMixin` — bundle / port-channel properties (`bundle_id`, `bundle_name`, `bundle_member_interfaces`, `is_bundle`).
 - `InterfaceVlanViewMixin` — 802.1Q VLAN properties (`native_vlan`, `tagged_vlans`, `tagged_all`, `dot1q_mode`).
@@ -79,7 +79,7 @@ Current platform capabilities: Cisco IOS, HP ProCurve, and Aruba AOS-CX inherit 
 
 ## Interface view properties
 
-### Core properties (`ConfigViewInterfaceBase` — all platforms)
+### Core properties (`ConfigViewInterface` — all platforms)
 
 | **Property** | **Type** | **Description** |
 |--------------|----------|-----------------|

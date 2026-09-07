@@ -147,11 +147,11 @@ except HierConfigError as exc:
 
 ## Config views
 
-`ConfigViewInterfaceBase` no longer declares every property abstract with
-per-platform `NotImplementedError` stubs. Core properties (`name`,
-`description`, `enabled`, `ipv4_interfaces`, ...) are always available;
-optional capabilities live on mixins, and you check support with
-`isinstance()` instead of catching `NotImplementedError`:
+The view layer is implemented in Rust and exposed through PyO3;
+`hier_config.platforms.*.view` re-exports the native classes. Core properties
+(`name`, `description`, `enabled`, `ipv4_interfaces`, ...) are always
+available; optional capabilities are advertised by capability markers, and you
+check support with `isinstance()` instead of catching `NotImplementedError`:
 
 ```python
 # v3
@@ -167,7 +167,9 @@ if isinstance(interface_view, InterfaceVlanViewMixin):
     vlans = interface_view.tagged_vlans
 ```
 
-See [Config Views](config-views.md) for the mixin catalog.
+See [Config Views](config-views.md) for the capability catalog and
+[Rust core behavior changes](rust-core-changes.md) for the three properties
+that now return `None` instead of raising.
 
 ## Behavior changes to review
 

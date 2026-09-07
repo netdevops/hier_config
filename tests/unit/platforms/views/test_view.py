@@ -1,7 +1,6 @@
 """Tests for view_base.py ConfigViewInterfaceBase and HConfigViewBase classes."""
 
 from hier_config import HConfig, Platform, get_hconfig_view
-from hier_config.platforms.cisco_ios.view import ConfigViewInterfaceCiscoIOS
 from hier_config.platforms.models import InterfaceDot1qMode
 from hier_config.platforms.view_base import (
     ConfigViewInterfaceBase,
@@ -169,7 +168,6 @@ def test_interface_view_abstract_properties_coverage() -> None:
     assert hasattr(InterfaceBundleViewMixin, "bundle_member_interfaces")
     assert hasattr(InterfaceBundleViewMixin, "bundle_name")
     assert hasattr(InterfaceBundleViewMixin, "is_bundle")
-    assert hasattr(InterfaceBundleViewMixin, "_bundle_prefix")
 
     assert hasattr(InterfaceVlanViewMixin, "dot1q_mode")
     assert hasattr(InterfaceVlanViewMixin, "native_vlan")
@@ -248,25 +246,18 @@ def test_dot1q_mode_from_vlans_available_on_all_views() -> None:
         assert view.dot1q_mode_from_vlans(untagged_vlan=1) == InterfaceDot1qMode.ACCESS
 
 
-def test_bundle_mixin_without_membership_prefix_is_inert() -> None:
-    """An unset _bundle_membership_prefix must not match arbitrary children (#278).
+def test_bundle_membership_prefix_is_platform_data() -> None:
+    """A bundle-capable view derives membership from its platform (#278).
 
-    get_child(startswith="") matches any first child, so the defaults must
-    short-circuit rather than return garbage for a platform that inherits the
-    bundle mixin without declaring its membership command prefix.
+    The membership command prefix is static per platform in the Rust core, so a
+    non-membership child can no longer be mistaken for one.
     """
     config = HConfig.from_text(
         Platform.CISCO_IOS,
         "interface Port-channel10\n description not-a-bundle-command\n",
     )
-    interface = config.get_child(startswith="interface ")
-    assert interface is not None
-
-    class PrefixlessBundleView(ConfigViewInterfaceCiscoIOS):
-        """IOS view with the membership prefix unset."""
-
-        _bundle_membership_prefix = ""
-
-    view = PrefixlessBundleView(interface)
+    view = get_hconfig_view(config).interface_view_by_name("Port-channel10")
+    assert view is not None
+    assert view.is_bundle
     assert view.bundle_id is None
     assert not tuple(view.bundle_member_interfaces)

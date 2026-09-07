@@ -49,17 +49,16 @@ pub trait InterfaceOps: fmt::Debug + Send + Sync {
         false
     }
 
-    /// Whether the platform models physical interface attributes.
     /// Whether the platform's view exposes NAC (802.1X) properties.
     fn supports_nac(&self) -> bool {
         false
     }
 
+    /// Whether the platform models physical interface attributes.
     fn supports_physical(&self) -> bool {
         false
     }
 
-    /// The configured IPv4 interface addresses.
     /// The interface name, e.g. `GigabitEthernet1/0/1`.
     fn name<'a>(&self, view: &InterfaceView<'a>) -> &'a str {
         view.default_name()

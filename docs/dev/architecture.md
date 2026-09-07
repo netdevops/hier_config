@@ -200,11 +200,11 @@ Internally it calls `running_config.remediation(generated_config)` (which delega
 
 ## View layer
 
-The view layer (`hier_config/platforms/view_base.py` and platform-specific `view.py` files) provides structured, typed access to configuration elements without modifying the underlying tree.
+The view layer provides structured, typed access to configuration elements without modifying the underlying tree. Since v4 it is **implemented entirely in Rust**; `hier_config/platforms/view_base.py` and the platform-specific `view.py` files are thin facades over the native classes.
 
-- `HConfigViewBase` — abstract device-level base; subclasses implement `hostname`, `interface_views`, `interfaces`, and `ipv4_default_gw` (`dot1q_mode_from_vlans` is a concrete static helper).
-- `ConfigViewInterfaceBase` — abstract per-interface base; exposes core properties like `name`, `description`, `enabled`, `ipv4_interfaces`, and `vrf`.
-- Optional capability mixins — `InterfaceBundleViewMixin` (`bundle_id`, `bundle_member_interfaces`, ...), `InterfaceVlanViewMixin` (`native_vlan`, `tagged_vlans`, `dot1q_mode`, ...), `InterfaceNACViewMixin` (`has_nac`, `nac_host_mode`, ...), and `InterfacePhysicalViewMixin` (`duplex`, `speed`, `poe`, `module_number`). Platform views inherit only the mixins they support; users check capability with `isinstance(view, InterfaceVlanViewMixin)`.
+- `HConfigView` (aliased `HConfigViewBase`) — device-level view exposing `hostname`, `interface_views`, `interfaces`, `ipv4_default_gw`, `vlans`, `stack_members`, and the `dot1q_mode_from_vlans` static helper.
+- `ConfigViewInterface` (aliased `ConfigViewInterfaceBase`) — per-interface view exposing core properties like `name`, `description`, `enabled`, `ipv4_interfaces`, and `vrf`.
+- Optional capability mixins — `InterfaceBundleViewMixin` (`bundle_id`, `bundle_member_interfaces`, ...), `InterfaceVlanViewMixin` (`native_vlan`, `tagged_vlans`, `dot1q_mode`, ...), `InterfaceNACViewMixin` (`has_nac`, `nac_host_mode`, ...), and `InterfacePhysicalViewMixin` (`duplex`, `speed`, `poe`, `module_number`). The mixins are now *marker* classes: the native view carries a `capabilities` frozenset, and `ViewMarkerMeta.__instancecheck__` answers `isinstance(view, InterfaceVlanViewMixin)` from that data. The user-facing capability protocol is unchanged.
 
 Views are resolved through the driver's `view_class` attribute:
 
@@ -235,9 +235,9 @@ if let Some(view) = config_view(&tree) {
 }
 ```
 
-The two implementations are pinned together by a shared corpus at `testdata/views/`. `scripts/gen_view_corpus.py` generates each `expected.json` **from Python**; `crates/hier_config_core/tests/view_corpus.rs` asserts the native view reproduces it, and `tests/native/test_view_corpus.py` re-runs the generator in `--check` mode so a Python view change fails until the snapshots are regenerated — which in turn fails the Rust test until the port is updated. Snapshots must never be regenerated from Rust.
+Python and Rust can no longer drift, because there is only one implementation: `hier_config.platforms.*.view` re-exports the PyO3 bindings in `crates/hier_config_py/src/view.rs`. The anti-drift corpus that pinned the two together (`testdata/views/`) was removed with the Python implementation it existed to guard.
 
-A small number of properties raise in Python (for example `nac_max_dot1x_clients` on Cisco IOS) rather than returning a value. Those pairs are recorded in each snapshot's `raises` map and allow-listed in `EXPECTED_PYTHON_RAISES`; see [Rust core behavior changes](../user/rust-core-changes.md) for the divergences the native view deliberately keeps.
+A small number of properties raised in Python v3 rather than returning a value; the native view returns `None` or an empty tuple instead. See [Rust core behavior changes](../user/rust-core-changes.md).
 
 ---
 

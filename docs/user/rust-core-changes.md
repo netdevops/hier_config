@@ -424,22 +424,32 @@ Comments written by built-in post-load callbacks now surface through
 `HConfigChild.comments`. In earlier builds they were stored but not visible from
 Python.
 
-### Native view divergences
+### View properties return `None` instead of raising
 
-The Python view layer is unchanged, so **none of these affect Python users.**
-They apply only when you consume the native Rust view in `hier_config_core`,
-which returns values where the Python property raises:
+The view layer is now the native Rust implementation, exposed through PyO3, so
+these divergences **do** affect Python users. Three properties that raised in v3
+now return a value:
 
-| Platform | Property | Python | Rust |
+| Platform | Property | v3 | v4 |
 | --- | --- | --- | --- |
 | Cisco IOS, Aruba AOS-CX | `nac_max_dot1x_clients`, `nac_max_mab_clients` | `NotImplementedError` | `None` |
 | Arista EOS, Cisco NX-OS, Cisco XR | `module_number` | `AttributeError` | `None` |
-| HP `ProCurve` | `bundle_member_interfaces` | `ValueError` on a non-trunk interface | empty list |
+| HP `ProCurve` | `bundle_member_interfaces` | `ValueError` on a non-trunk interface | `()` |
 
 Rust favors a total function over a panic, because a panic in a getter is not a
-usable error-handling contract for a library. The shared corpus records each
-raising pair in its `raises` map and allow-lists it, so a *new* divergence is a
-test failure rather than a silent drift.
+usable error-handling contract for a library. If you caught any of these
+exceptions, replace the `try`/`except` with a falsy check:
+
+```python
+# v3
+try:
+    limit = interface_view.nac_max_dot1x_clients
+except NotImplementedError:
+    limit = None
+
+# v4
+limit = interface_view.nac_max_dot1x_clients
+```
 
 Two Python behaviors are reproduced faithfully even though they look like bugs,
 because changing them would be a behavior change rather than a port:
@@ -451,8 +461,8 @@ because changing them would be a behavior change rather than a port:
 - Cisco IOS `speed` raises `ValueError` in Python whenever the configured value
   is `auto`, because it calls `int()` on it. Rust returns `None`.
 
-If either should change, it should change in Python first and flow into the port
-through a regenerated corpus.
+Both are single-implementation behaviors now; changing either is a behavior
+change to the library, not a porting decision.
 
 ## Import surface
 
