@@ -14,6 +14,10 @@ uv sync
 git checkout -b YOUR-BRANCH
 ```
 
+Dependencies are locked in `uv.lock`, and CI installs with `uv sync --frozen`.
+If you change dependencies, use `uv add` / `uv add --dev` (or run `uv lock`
+after editing `pyproject.toml`) and commit the updated `uv.lock`.
+
 Python 3.10+ is required.
 
 ## Build and test commands

@@ -4,7 +4,7 @@ This page is for project maintainers and describes the repository's automation.
 
 ## Continuous Integration
 
-`.github/workflows/build-and-test.yml` runs on every push and pull request to `master`:
+`.github/workflows/build-and-test.yml` runs on every push and pull request to `master` and `next`:
 
 - **build** job: a Python 3.10–3.14 matrix that installs dependencies with uv, then runs `scripts/build.py lint` (ruff, mypy, pyright, pylint, yamllint, flynt in parallel) and `scripts/build.py pytest --coverage` (95% coverage floor).
 - **docs** job: installs `docs/requirements.txt` with pip (mirroring what Read the Docs installs) and runs `mkdocs build --strict`, so broken links or nav entries fail the PR instead of shipping silently.

@@ -54,6 +54,7 @@ CI facts that matter for changes:
 
 - **Python matrix**: CI tests on Python 3.10–3.14 and ruff targets `py310` — write 3.10-compatible syntax even though your local interpreter may be newer.
 - **Docs job**: CI builds docs with `mkdocs build --strict` on every push/PR using `docs/requirements.txt` (pip, not uv). Adding an mkdocs plugin requires updating **both** `pyproject.toml` and `docs/requirements.txt`.
+- **Lockfile**: CI syncs with `uv sync --frozen`, so any dependency change must ship a regenerated `uv.lock`. Use `uv add` / `uv add --dev` (or `uv lock` after editing `pyproject.toml` by hand) and commit the updated lockfile.
 
 ## Architecture in Brief
 

@@ -11,6 +11,12 @@ published.
    `next` for v4 prereleases) and the bump type — `major`, `minor`, `patch`,
    `alpha`, `beta`, or `rc`. The workflow is restricted to repository admins. It:
     - Bumps `version` in `pyproject.toml` and updates `uv.lock` with `uv version --bump <bump>`.
+      `uv version` refuses a bump that would not increase the version, so from a
+      prerelease you can only move forward along `alpha` → `beta` → `rc`: from
+      `4.0.0b3`, `beta` gives `4.0.0b4` and `rc` gives `4.0.0rc1`, while `alpha`
+      fails. From a *stable* version a bare `alpha`/`beta`/`rc` bump also fails —
+      start a new prerelease line by running `uv version --bump minor --bump beta`
+      locally and opening the release PR by hand.
     - For non-prerelease bumps (i.e. `major`, `minor`, or `patch`), moves the `## [Unreleased]` entries in
       `CHANGELOG.md` under a new `## [X.Y.Z] - YYYY-MM-DD` heading
       (`scripts/rotate_changelog.py`) and starts a fresh empty

@@ -32,13 +32,13 @@ Open your pull request against the same branch you based on (`next` for v4 work)
 Make sure linters, type-checkers, and tests pass:
 
 ```
-python scripts/build.py lint-and-test
+uv run python scripts/build.py lint-and-test
 ```
 
 Make your change. Add tests for your change. Make the linters, type-checkers, and tests pass:
 
 ```
-python scripts/build.py lint-and-test
+uv run python scripts/build.py lint-and-test
 ```
 
 Push to your fork and submit a pull request.
@@ -59,31 +59,31 @@ Some things that will increase the chance that your pull request is accepted:
 Run the full test suite:
 
 ```bash
-pytest
+uv run pytest
 ```
 
 Run a single test file:
 
 ```bash
-pytest tests/integration/test_cisco_ios.py
+uv run pytest tests/integration/test_cisco_ios.py
 ```
 
 Stop on the first failure:
 
 ```bash
-pytest -x
+uv run pytest -x
 ```
 
 Run tests in parallel (requires `pytest-xdist`):
 
 ```bash
-pytest -n auto
+uv run pytest -n auto
 ```
 
 Run with coverage:
 
 ```bash
-pytest --cov=hier_config
+uv run pytest --cov=hier_config
 ```
 
 ---
@@ -93,20 +93,20 @@ pytest --cov=hier_config
 The build script runs all of these over `hier_config`, `tests`, and `scripts`:
 
 ```bash
-ruff check .                  # style + lint
-ruff format --check .         # formatting (no changes)
-mypy hier_config/ tests/ scripts/     # type checking
-pyright hier_config/ tests/ scripts/  # additional type checking
-pylint hier_config/ tests/ scripts/   # extended lint rules
-yamllint .                    # YAML files
-flynt -d -tc -f hier_config tests scripts  # f-string conversion check
+uv run ruff check .                  # style + lint
+uv run ruff format --check .         # formatting (no changes)
+uv run mypy hier_config/ tests/ scripts/     # type checking
+uv run pyright hier_config/ tests/ scripts/  # additional type checking
+uv run pylint hier_config/ tests/ scripts/   # extended lint rules
+uv run yamllint .                    # YAML files
+uv run flynt -d -tc -f hier_config tests scripts  # f-string conversion check
 ```
 
 To auto-fix ruff issues:
 
 ```bash
-ruff check --fix .
-ruff format .
+uv run ruff check --fix .
+uv run ruff format .
 ```
 
 ---
