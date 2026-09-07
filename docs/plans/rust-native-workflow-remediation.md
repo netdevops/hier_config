@@ -12,7 +12,7 @@
 - **Last updated:** 2026-09-07
 - **Related:**
   - Architecture: [`docs/dev/architecture.md`](../dev/architecture.md)
-  - Extending & Drivers: [`docs/dev/extending.md`](../dev/extending.md)
+  - Extending & Drivers: [`docs/dev/extending.md`](../dev/creating-drivers.md)
   - Python Test Suite Trim Plan: [`python-test-suite-trim.md`](python-test-suite-trim.md)
 - **Supersedes / Superseded by:** n/a
 
@@ -439,7 +439,7 @@ sequenceDiagram
 ## Cross-references
 
 - Architecture: [`docs/dev/architecture.md`](../dev/architecture.md)
-- Workflows User Guide: [`docs/user/custom-workflows.md`](../user/custom-workflows.md)
+- Workflows User Guide: [`docs/user/custom-workflows.md`](../user/remediation-workflows.md)
 - Python Workflow implementation: `hier_config/workflows.py`
 - Core Remediation engine: `crates/hier_config_core/src/remediation.rs`
 - PyO3 Root implementation: `crates/hier_config_py/src/root.rs`
