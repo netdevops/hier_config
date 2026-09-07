@@ -720,16 +720,15 @@ impl PyHConfig {
         *handle = Some(hconfig.clone_ref(py).into_any());
         drop(handle);
 
-        let unresolved = SharedTree::get_or_create_children_batch(
-            &shared_tree,
-            py,
-            &report.unresolved_negations,
-        )?;
-        let replacements = SharedTree::get_or_create_children_batch(
-            &shared_tree,
-            py,
-            &report.idempotency_replacements,
-        )?;
+        let wrap = |ids: &[hier_config_core::NodeId]| -> PyResult<Vec<PyObject>> {
+            ids.iter()
+                .map(|&id| {
+                    SharedTree::get_or_create_child(&shared_tree, py, id, None).map(Py::into_any)
+                })
+                .collect()
+        };
+        let unresolved = wrap(&report.unresolved_negations)?;
+        let replacements = wrap(&report.idempotency_replacements)?;
         let py_report = py
             .import("hier_config.tree_algorithms")?
             .getattr("FutureReport")?

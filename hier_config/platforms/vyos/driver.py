@@ -1,6 +1,7 @@
 from hier_config.models import Platform
 from hier_config.platforms.driver_base import HConfigDriverBase
 from hier_config.child import HConfigChild
+from hier_config.platforms.functions import convert_to_set_commands
 
 
 class HConfigDriverVYOS(HConfigDriverBase):
@@ -30,3 +31,7 @@ class HConfigDriverVYOS(HConfigDriverBase):
             child.text = f"{self.negation_prefix}{child.text.removeprefix(self.declaration_prefix)}"
 
         return child
+
+    @staticmethod
+    def config_preprocessor(config_text: str) -> str:
+        return convert_to_set_commands(config_text)
