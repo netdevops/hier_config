@@ -40,7 +40,9 @@ no longer interned, so `is` comparisons that held in 3.x now return `False`.
 | `future()` negation handling corrected | Bug fix; fewer stray `no ...` lines survive | **Yes** |
 | `DuplicateChildError` now inherits `HierConfigError` | Broader `except` clauses now catch it | No |
 | `all_children*()` / `unused_objects()` return a tuple, not a generator | `Iterator[...]` annotations fail type-checking | No — type error |
+| `len(config)` counts all descendants in O(1) without materializing handles | Replaces temporary tuple allocation with O(1) count | **Yes** |
 | Bulk traversals no longer intern handles | `child_a is child_b` across traversals is now `False` | **Yes** |
+| `WorkflowRemediation` cached via `OnceLock` | Thread-safe, lock-free immutable property access | **Yes** |
 | `pydantic` and `pyyaml` now declared as runtime deps | Fixes an undeclared-import bug in 3.x | No |
 
 Everything else — `hier_config.base`, `.child`, `.children`, `.root`,
@@ -324,6 +326,65 @@ return interned `HConfigChild` handles, so identity checks hold:
 view.config is config.children["interface Eth1"]  # True
 ```
 
+### Tree sizing and descendant counting (`len(config)` vs `len(config.children)`)
+
+A subtle semantic distinction that often surfaces during migration is what
+`len(config)` actually measures:
+
+- `len(config)` returns the total count of **all recursive descendants** across
+  the configuration tree (every child, grandchild, etc., excluding the root node
+  itself).
+- `len(config.children)` returns the count of **direct top-level children**
+  (e.g., top-level interface or router stanzas).
+- `len(child)` returns the number of **descendants** underneath that specific
+  child node.
+
+In 3.x, `len(config)` was implemented in Python as `len(tuple(self.all_children()))`.
+On large configs (e.g. 10,000+ lines), this built a temporary 10,000-element tuple
+and allocated Python wrapper handles for every node in the entire tree simply to
+count them.
+
+In 4.0 with the Rust core:
+
+- `len(config)` on the root is an **$O(1)$ query** via `tree.node_count()`
+  (checking the underlying arena length minus one), allocating zero memory and
+  materializing zero handles.
+- `len(child)` walks descendants with a zero-allocation iterator, counting
+  nodes without building temporary tuples or allocating intermediate collections.
+
+```python
+# Count top-level stanzas only:
+num_stanzas = len(config.children)
+
+# Count total lines/nodes across the entire hierarchy:
+total_nodes = len(config)  # O(1) on root in 4.0, zero-allocation
+```
+
+### Traversals: direct children vs recursive descendants
+
+The library distinguishes between direct child access and recursive descendant
+traversals:
+
+- `config.children` is a mapping-like container of direct children (1 level deep).
+- `config.all_children()` yields all descendant nodes recursively in depth-first
+  pre-order as a Python generator.
+- `config.all_children_sorted()` returns all descendant nodes recursively sorted
+  by `order_weight` as an immutable tuple (`Sequence[HConfigChild]`).
+- `config.all_children_sorted_by_tags(...)` returns filtered descendant nodes
+  matching tag rules as an immutable tuple.
+
+In the standalone Rust core (`hier_config_core`), this distinction is formalized
+directly on `Tree`:
+
+- `tree.children(node_id)` and `tree.sorted_children(node_id)` return direct
+  child slices or sorted vectors.
+- `tree.descendants(node_id)` and `tree.descendants_sorted(node_id)` return
+  zero-allocation, stack-based depth-first iterators (`Descendants<'a>`,
+  `DescendantsSorted<'a>`), which replace recursive vector-accumulating passes.
+- `tree.all_children(node_id)` and `tree.all_children_sorted(node_id)` return
+  materialized `Vec<NodeId>` when an eager collection is specifically required.
+- `tree.node_count(node_id)` evaluates the total descendant count (O(1) on root).
+
 ### Some traversal methods return tuples, not generators
 
 `all_children()` is still a true generator, so `isinstance(x,
@@ -464,6 +525,18 @@ because changing them would be a behavior change rather than a port:
 Both are single-implementation behaviors now; changing either is a behavior
 change to the library, not a porting decision.
 
+### `WorkflowRemediation` thread-safety and lazy caching
+
+`WorkflowRemediation` calculates and lazily caches its `remediation_config` and
+`rollback_config` trees on first access using `std::sync::OnceLock`.
+
+All query methods and properties on `WorkflowRemediation` take `&self` immutably
+without requiring exclusive locks or internal mutable re-borrowing. This
+guarantees thread-safe access from both Python and Rust, eliminates runtime PyO3
+`BorrowMutError` under concurrent read access across threads, and guarantees
+that the input running and generated trees are never mutated during diff
+calculation.
+
 ## Import surface
 
 No import paths were removed or moved.
@@ -528,7 +601,10 @@ Remaining optimizations under consideration are tracked in the
    `Sequence[HConfigChild]`.
 9. Grep for `is` / `is not` / `id()` comparisons on `HConfigChild` objects and
    switch them to `==` / `!=` unless the handle came from a single-node lookup.
-10. Run your suite, then diff real remediation output for a representative device
+10. Check usage of `len(config)`: `len(config)` counts all recursive descendant
+    nodes across the entire tree, whereas `len(config.children)` counts direct
+    top-level children.
+11. Run your suite, then diff real remediation output for a representative device
     sample against 3.x rather than relying on unit tests alone.
 
 ## Getting help

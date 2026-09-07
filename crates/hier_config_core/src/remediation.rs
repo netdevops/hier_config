@@ -25,130 +25,184 @@ pub fn config_to_get_to_into(
     target: &Tree,
     delta: &mut Tree,
 ) -> Result<(), TreeError> {
-    let delta_root = delta.root;
-    config_to_get_to_node(source, source.root, target, target.root, delta, delta_root)
+    RemediationContext::new(source, target, delta).compute()
 }
 
-fn config_to_get_to_node(
-    source: &Tree,
-    source_node: NodeId,
-    target: &Tree,
-    target_node: NodeId,
-    delta: &mut Tree,
-    delta_node: NodeId,
-) -> Result<(), TreeError> {
-    config_to_get_to_left(source, source_node, target, target_node, delta, delta_node)?;
-    config_to_get_to_right(source, source_node, target, target_node, delta, delta_node)?;
-    Ok(())
+/// Context managing the computation of remediation changes between a source and target tree into a delta tree.
+#[derive(Debug)]
+pub struct RemediationContext<'a> {
+    pub source: &'a Tree,
+    pub target: &'a Tree,
+    pub delta: &'a mut Tree,
 }
 
-fn config_to_get_to_left(
-    source: &Tree,
-    source_node: NodeId,
-    target: &Tree,
-    target_node: NodeId,
-    delta: &mut Tree,
-    delta_node: NodeId,
-) -> Result<(), TreeError> {
-    let target_children: Vec<NodeId> = target.arena[target_node].children.iter().collect();
-
-    for self_child_id in source.arena[source_node].children.iter() {
-        let self_text = &source.arena[self_child_id].text;
-
-        if target.arena[target_node].children.contains(self_text) {
-            continue;
-        }
-
-        if source.is_idempotent_command(self_child_id, target, &target_children) {
-            continue;
-        }
-
-        let negated_text = source.compute_negation(self_child_id);
-        let negated_id = delta.add_child(delta_node, &negated_text, false, false)?;
-
-        let child_count = source.arena[self_child_id].children.len();
-        if child_count > 0 {
-            delta.arena[negated_id]
-                .comments_mut()
-                .insert(format!("removes {} lines", child_count + 1));
+impl<'a> RemediationContext<'a> {
+    /// Creates a new remediation context.
+    pub const fn new(source: &'a Tree, target: &'a Tree, delta: &'a mut Tree) -> Self {
+        Self {
+            source,
+            target,
+            delta,
         }
     }
 
-    Ok(())
-}
+    /// Computes the delta from source root to target root into the delta root.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TreeError`] if constructing the remediation tree fails.
+    pub fn compute(&mut self) -> Result<(), TreeError> {
+        let delta_root = self.delta.root;
+        self.compute_node(self.source.root, self.target.root, delta_root)
+    }
 
-fn config_to_get_to_right(
-    source: &Tree,
-    source_node: NodeId,
-    target: &Tree,
-    target_node: NodeId,
-    delta: &mut Tree,
-    delta_node: NodeId,
-) -> Result<(), TreeError> {
-    for target_child_id in target.arena[target_node].children.iter() {
-        let target_text = &target.arena[target_child_id].text;
+    fn compute_node(
+        &mut self,
+        source_node: NodeId,
+        target_node: NodeId,
+        delta_node: NodeId,
+    ) -> Result<(), TreeError> {
+        self.compute_left(source_node, target_node, delta_node)?;
+        self.compute_right(source_node, target_node, delta_node)?;
+        Ok(())
+    }
 
-        if let Some(self_child_id) = source.arena[source_node].children.get(target_text) {
-            if source.use_sectional_overwrite(self_child_id) {
-                overwrite_with(
-                    source,
-                    self_child_id,
-                    target,
-                    target_child_id,
-                    delta,
-                    delta_node,
-                    true,
-                )?;
+    fn compute_left(
+        &mut self,
+        source_node: NodeId,
+        target_node: NodeId,
+        delta_node: NodeId,
+    ) -> Result<(), TreeError> {
+        let target_children: Vec<NodeId> = self.target.arena[target_node].children.iter().collect();
+
+        for self_child_id in self.source.arena[source_node].children.iter() {
+            let self_text = &self.source.arena[self_child_id].text;
+
+            if self.target.arena[target_node].children.contains(self_text) {
                 continue;
             }
 
-            if source.use_sectional_overwrite_without_negation(self_child_id) {
-                overwrite_with(
-                    source,
-                    self_child_id,
-                    target,
-                    target_child_id,
-                    delta,
-                    delta_node,
-                    false,
-                )?;
+            if self
+                .source
+                .is_idempotent_command(self_child_id, self.target, &target_children)
+            {
                 continue;
             }
 
-            // Create temporary child in delta to collect subtree changes
-            let subtree_id = delta.add_child(delta_node, target_text, false, false)?;
-            config_to_get_to_node(
-                source,
-                self_child_id,
-                target,
-                target_child_id,
-                delta,
-                subtree_id,
-            )?;
+            let negated_text = self.source.compute_negation(self_child_id);
+            let negated_id = self
+                .delta
+                .add_child(delta_node, &negated_text, false, false)?;
 
-            if delta.arena[subtree_id].children.is_empty() {
-                delta.delete_child(subtree_id);
-            }
-        } else {
-            // Target child is absent from source
-            if delta.arena[delta_node].children.contains(target_text) {
-                continue;
-            }
-
-            let new_item_id = delta.add_deep_copy_of(delta_node, target, target_child_id, false)?;
-            delta.arena[new_item_id].new_in_config = true;
-            for desc_id in delta.all_children(new_item_id) {
-                delta.arena[desc_id].new_in_config = true;
-            }
-            if !delta.arena[new_item_id].children.is_empty() {
-                delta.arena[new_item_id]
+            let child_count = self.source.arena[self_child_id].children.len();
+            if child_count > 0 {
+                self.delta.arena[negated_id]
                     .comments_mut()
-                    .insert("new section".to_string());
+                    .insert(format!("removes {} lines", child_count + 1));
             }
         }
+
+        Ok(())
     }
 
-    Ok(())
+    fn compute_right(
+        &mut self,
+        source_node: NodeId,
+        target_node: NodeId,
+        delta_node: NodeId,
+    ) -> Result<(), TreeError> {
+        for target_child_id in self.target.arena[target_node].children.iter() {
+            let target_text = &self.target.arena[target_child_id].text;
+
+            if let Some(self_child_id) = self.source.arena[source_node].children.get(target_text) {
+                if self.source.use_sectional_overwrite(self_child_id) {
+                    self.overwrite_with(self_child_id, target_child_id, delta_node, true)?;
+                    continue;
+                }
+
+                if self
+                    .source
+                    .use_sectional_overwrite_without_negation(self_child_id)
+                {
+                    self.overwrite_with(self_child_id, target_child_id, delta_node, false)?;
+                    continue;
+                }
+
+                // Create temporary child in delta to collect subtree changes
+                let subtree_id = self
+                    .delta
+                    .add_child(delta_node, target_text, false, false)?;
+                self.compute_node(self_child_id, target_child_id, subtree_id)?;
+
+                if self.delta.arena[subtree_id].children.is_empty() {
+                    self.delta.delete_child(subtree_id);
+                }
+            } else {
+                // Target child is absent from source
+                if self.delta.arena[delta_node].children.contains(target_text) {
+                    continue;
+                }
+
+                let new_item_id =
+                    self.delta
+                        .add_deep_copy_of(delta_node, self.target, target_child_id, false)?;
+                self.delta.arena[new_item_id].new_in_config = true;
+                for desc_id in self.delta.all_children(new_item_id) {
+                    self.delta.arena[desc_id].new_in_config = true;
+                }
+                if !self.delta.arena[new_item_id].children.is_empty() {
+                    self.delta.arena[new_item_id]
+                        .comments_mut()
+                        .insert("new section".to_string());
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Replaces the children of `target_child_id` with those of `source_child_id`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TreeError`] if modifying the delta tree fails.
+    pub fn overwrite_with(
+        &mut self,
+        source_child_id: NodeId,
+        target_child_id: NodeId,
+        delta_node: NodeId,
+        negate: bool,
+    ) -> Result<(), TreeError> {
+        if !children_equal(self.source, source_child_id, self.target, target_child_id) {
+            let self_text = &self.source.arena[source_child_id].text;
+
+            if negate {
+                let new_neg_text = self.source.compute_negation(source_child_id);
+                let neg_id = if let Some(existing_id) =
+                    self.delta.arena[delta_node].children.get(self_text)
+                {
+                    self.delta.set_text(existing_id, &new_neg_text);
+                    existing_id
+                } else {
+                    self.delta
+                        .add_child(delta_node, &new_neg_text, false, false)?
+                };
+                self.delta.arena[neg_id]
+                    .comments_mut()
+                    .insert("dropping section".to_string());
+            } else if let Some(existing_id) = self.delta.arena[delta_node].children.get(self_text) {
+                self.delta.delete_child(existing_id);
+            }
+
+            let new_item_id =
+                self.delta
+                    .add_deep_copy_of(delta_node, self.target, target_child_id, false)?;
+            self.delta.arena[new_item_id]
+                .comments_mut()
+                .insert("re-create section".to_string());
+        }
+        Ok(())
+    }
 }
 
 /// Replaces the children of `target_child_id` with those of `source_child_id`.
@@ -166,31 +220,12 @@ pub fn overwrite_with(
     delta_node: NodeId,
     negate: bool,
 ) -> Result<(), TreeError> {
-    if !children_equal(source, source_child_id, target, target_child_id) {
-        let self_text = &source.arena[source_child_id].text;
-
-        if negate {
-            let new_neg_text = source.compute_negation(source_child_id);
-            let neg_id = if let Some(existing_id) = delta.arena[delta_node].children.get(self_text)
-            {
-                delta.set_text(existing_id, &new_neg_text);
-                existing_id
-            } else {
-                delta.add_child(delta_node, &new_neg_text, false, false)?
-            };
-            delta.arena[neg_id]
-                .comments_mut()
-                .insert("dropping section".to_string());
-        } else if let Some(existing_id) = delta.arena[delta_node].children.get(self_text) {
-            delta.delete_child(existing_id);
-        }
-
-        let new_item_id = delta.add_deep_copy_of(delta_node, target, target_child_id, false)?;
-        delta.arena[new_item_id]
-            .comments_mut()
-            .insert("re-create section".to_string());
-    }
-    Ok(())
+    RemediationContext::new(source, target, delta).overwrite_with(
+        source_child_id,
+        target_child_id,
+        delta_node,
+        negate,
+    )
 }
 
 /// Recursively compares whether the child hierarchies of two nodes are equivalent.
@@ -258,22 +293,15 @@ pub fn future_with_report(
     prune_empty_branches: bool,
 ) -> Result<(Tree, FutureReport), TreeError> {
     let mut future_config = Tree::new(source.driver.clone());
-    let future_root = future_config.root;
     let mut report = FutureReport::default();
-    future_node(
-        source,
-        source.root,
-        config,
-        config.root,
-        &mut future_config,
-        future_root,
-        &mut report,
-    )?;
-
-    if prune_empty_branches {
-        prune_emptied_branches(source, source.root, &mut future_config, future_root);
+    {
+        let mut ctx = FutureContext::new(source, config, &mut future_config, &mut report);
+        ctx.compute()?;
+        if prune_empty_branches {
+            let future_root = ctx.future_config.root;
+            ctx.prune_emptied_branches(source.root, future_root);
+        }
     }
-
     Ok((future_config, report))
 }
 
@@ -299,132 +327,196 @@ fn future_pre(
     (negated_or_recursed, config_children_ignore)
 }
 
-fn future_node(
-    source: &Tree,
-    source_node: NodeId,
-    config: &Tree,
-    config_node: NodeId,
-    future_config: &mut Tree,
-    future_node_id: NodeId,
-    report: &mut FutureReport,
-) -> Result<(), TreeError> {
-    let (mut negated_or_recursed, config_children_ignore) =
-        future_pre(source, source_node, config, config_node);
-
-    let source_children: Vec<NodeId> = source.arena[source_node].children.iter().collect();
-
-    for config_child_id in config.arena[config_node].children.iter() {
-        let config_text = &config.arena[config_child_id].text;
-
-        if config_children_ignore.contains(&**config_text) {
-            continue;
-        }
-
-        let is_negation = config_text.starts_with(&source.driver.negation_prefix);
-        let text_without_neg = source.driver.text_without_negation(config_text);
-
-        if config.use_sectional_overwrite(config_child_id)
-            || config.use_sectional_overwrite_without_negation(config_child_id)
-        {
-            future_config.add_deep_copy_of(future_node_id, config, config_child_id, false)?;
-        } else if is_negation
-            && source.arena[source_node]
-                .children
-                .contains(text_without_neg)
-        {
-            negated_or_recursed.insert(Arc::from(text_without_neg));
-        } else if let Some(self_child_id) =
-            config.idempotent_for(config_child_id, source, &source_children)
-        {
-            let added =
-                future_config.add_deep_copy_of(future_node_id, config, config_child_id, false)?;
-            if is_negation {
-                report.idempotency_replacements.push(added);
-            }
-            negated_or_recursed.insert(Arc::clone(&source.arena[self_child_id].text));
-        } else if is_negation
-            && source.arena[source_node].children.iter().any(|id| {
-                source.arena[id]
-                    .text
-                    .starts_with(&format!("{text_without_neg} "))
-            })
-        {
-            for id in source.arena[source_node].children.iter() {
-                if source.arena[id]
-                    .text
-                    .starts_with(&format!("{text_without_neg} "))
-                {
-                    negated_or_recursed.insert(Arc::clone(&source.arena[id].text));
-                }
-            }
-        } else if let Some(self_child_id) = source.arena[source_node].children.get(config_text) {
-            let future_child =
-                future_config.add_shallow_copy_of(future_node_id, source, self_child_id, false)?;
-            future_node(
-                source,
-                self_child_id,
-                config,
-                config_child_id,
-                future_config,
-                future_child,
-                report,
-            )?;
-            negated_or_recursed.insert(Arc::clone(config_text));
-        } else if is_negation {
-            let added = future_config.add_shallow_copy_of(
-                future_node_id,
-                config,
-                config_child_id,
-                false,
-            )?;
-            report.unresolved_negations.push(added);
-        } else if let Some(self_child_id) = source.arena[source_node]
-            .children
-            .get(&format!("{}{}", source.driver.negation_prefix, config_text))
-        {
-            negated_or_recursed.insert(Arc::clone(&source.arena[self_child_id].text));
-        } else {
-            future_config.add_deep_copy_of(future_node_id, config, config_child_id, false)?;
-        }
-    }
-
-    for self_child_id in source.arena[source_node].children.iter() {
-        let self_text = &source.arena[self_child_id].text;
-        if negated_or_recursed.contains(&**self_text) {
-            continue;
-        }
-        future_config.add_deep_copy_of(future_node_id, source, self_child_id, false)?;
-    }
-
-    Ok(())
+/// Context managing the projection of configuration changes onto a source tree and tracking negation resolution.
+#[derive(Debug)]
+pub struct FutureContext<'a> {
+    pub source: &'a Tree,
+    pub config: &'a Tree,
+    pub future_config: &'a mut Tree,
+    pub report: &'a mut FutureReport,
 }
 
-fn prune_emptied_branches(
-    source: &Tree,
-    source_node: NodeId,
-    future: &mut Tree,
-    future_node_id: NodeId,
-) {
-    let children: Vec<NodeId> = future.arena[future_node_id].children.iter().collect();
+impl<'a> FutureContext<'a> {
+    /// Creates a new future projection context.
+    pub const fn new(
+        source: &'a Tree,
+        config: &'a Tree,
+        future_config: &'a mut Tree,
+        report: &'a mut FutureReport,
+    ) -> Self {
+        Self {
+            source,
+            config,
+            future_config,
+            report,
+        }
+    }
 
-    for child_id in children {
-        let child_text = &future.arena[child_id].text;
-        if let Some(src_child_id) = source.arena[source_node].children.get(child_text) {
-            prune_emptied_branches(source, src_child_id, future, child_id);
-            if future.arena[child_id].children.is_empty()
-                && !source.arena[src_child_id].children.is_empty()
+    /// Projects the configuration changes from `config` onto `source`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TreeError`] if modifying the projected tree fails.
+    pub fn compute(&mut self) -> Result<(), TreeError> {
+        let future_root = self.future_config.root;
+        self.compute_node(self.source.root, self.config.root, future_root)
+    }
+
+    fn compute_node(
+        &mut self,
+        source_node: NodeId,
+        config_node: NodeId,
+        future_node_id: NodeId,
+    ) -> Result<(), TreeError> {
+        let (mut negated_or_recursed, config_children_ignore) =
+            future_pre(self.source, source_node, self.config, config_node);
+
+        let source_children: Vec<NodeId> = self.source.arena[source_node].children.iter().collect();
+
+        for config_child_id in self.config.arena[config_node].children.iter() {
+            let config_text = &self.config.arena[config_child_id].text;
+
+            if config_children_ignore.contains(&**config_text) {
+                continue;
+            }
+
+            let is_negation = config_text.starts_with(&self.source.driver.negation_prefix);
+            let text_without_neg = self.source.driver.text_without_negation(config_text);
+
+            if self.config.use_sectional_overwrite(config_child_id)
+                || self
+                    .config
+                    .use_sectional_overwrite_without_negation(config_child_id)
             {
-                future.delete_child(child_id);
+                self.future_config.add_deep_copy_of(
+                    future_node_id,
+                    self.config,
+                    config_child_id,
+                    false,
+                )?;
+            } else if is_negation
+                && self.source.arena[source_node]
+                    .children
+                    .contains(text_without_neg)
+            {
+                negated_or_recursed.insert(Arc::from(text_without_neg));
+            } else if let Some(self_child_id) =
+                self.config
+                    .idempotent_for(config_child_id, self.source, &source_children)
+            {
+                let added = self.future_config.add_deep_copy_of(
+                    future_node_id,
+                    self.config,
+                    config_child_id,
+                    false,
+                )?;
+                if is_negation {
+                    self.report.idempotency_replacements.push(added);
+                }
+                negated_or_recursed.insert(Arc::clone(&self.source.arena[self_child_id].text));
+            } else if is_negation
+                && Self::match_prefix_negations(
+                    self.source,
+                    source_node,
+                    &format!("{text_without_neg} "),
+                    &mut negated_or_recursed,
+                )
+            {
+                // Prefix negations inserted by helper
+            } else if let Some(self_child_id) =
+                self.source.arena[source_node].children.get(config_text)
+            {
+                let future_child = self.future_config.add_shallow_copy_of(
+                    future_node_id,
+                    self.source,
+                    self_child_id,
+                    false,
+                )?;
+                self.compute_node(self_child_id, config_child_id, future_child)?;
+                negated_or_recursed.insert(Arc::clone(config_text));
+            } else if is_negation {
+                let added = self.future_config.add_shallow_copy_of(
+                    future_node_id,
+                    self.config,
+                    config_child_id,
+                    false,
+                )?;
+                self.report.unresolved_negations.push(added);
+            } else if let Some(self_child_id) = self.source.arena[source_node].children.get(
+                &format!("{}{}", self.source.driver.negation_prefix, config_text),
+            ) {
+                negated_or_recursed.insert(Arc::clone(&self.source.arena[self_child_id].text));
+            } else {
+                self.future_config.add_deep_copy_of(
+                    future_node_id,
+                    self.config,
+                    config_child_id,
+                    false,
+                )?;
             }
         }
+
+        for self_child_id in self.source.arena[source_node].children.iter() {
+            let self_text = &self.source.arena[self_child_id].text;
+            if negated_or_recursed.contains(&**self_text) {
+                continue;
+            }
+            self.future_config.add_deep_copy_of(
+                future_node_id,
+                self.source,
+                self_child_id,
+                false,
+            )?;
+        }
+
+        Ok(())
+    }
+
+    /// Recursively prunes emptied branches where children in source were negated.
+    pub fn prune_emptied_branches(&mut self, source_node: NodeId, future_node_id: NodeId) {
+        let children: Vec<NodeId> = self.future_config.arena[future_node_id]
+            .children
+            .iter()
+            .collect();
+
+        for child_id in children {
+            let child_text = &self.future_config.arena[child_id].text;
+            if let Some(src_child_id) = self.source.arena[source_node].children.get(child_text) {
+                self.prune_emptied_branches(src_child_id, child_id);
+                if self.future_config.arena[child_id].children.is_empty()
+                    && !self.source.arena[src_child_id].children.is_empty()
+                {
+                    self.future_config.delete_child(child_id);
+                }
+            }
+        }
+    }
+
+    fn match_prefix_negations(
+        source: &Tree,
+        source_node: NodeId,
+        prefix: &str,
+        negated_or_recursed: &mut HashSet<Arc<str>>,
+    ) -> bool {
+        let mut matched = false;
+        for id in source.arena[source_node].children.iter() {
+            if source.arena[id].text.starts_with(prefix) {
+                negated_or_recursed.insert(Arc::clone(&source.arena[id].text));
+                matched = true;
+            }
+        }
+        matched
     }
 }
 
 /// Strips leading sequence number from ACL entry line text.
+#[must_use]
 pub fn strip_acl_sequence_number(text: &str) -> String {
-    let mut words: Vec<&str> = text.split_whitespace().collect();
-    if !words.is_empty() && words[0].chars().all(|c| c.is_ascii_digit()) {
-        words.remove(0);
+    let words: Vec<&str> = text.split_whitespace().collect();
+    if let Some((first, rest)) = words.split_first()
+        && first.chars().all(|c| c.is_ascii_digit())
+    {
+        return rest.join(" ");
     }
     words.join(" ")
 }
@@ -436,20 +528,12 @@ pub fn strip_acl_sequence_number(text: &str) -> String {
 /// Returns [`TreeError`] if the difference tree cannot be assembled.
 pub fn difference(source: &Tree, target: &Tree) -> Result<Tree, TreeError> {
     let mut delta = Tree::new(source.driver.clone());
-    let delta_root = delta.root;
     let mut trees = DiffTrees {
         source,
         target,
         delta: &mut delta,
     };
-    difference_node(
-        &mut trees,
-        source.root,
-        target.root,
-        delta_root,
-        None,
-        false,
-    )?;
+    trees.compute()?;
     Ok(delta)
 }
 
@@ -459,75 +543,73 @@ struct DiffTrees<'a> {
     delta: &'a mut Tree,
 }
 
-fn difference_node(
-    trees: &mut DiffTrees<'_>,
-    source_node: NodeId,
-    target_node: NodeId,
-    delta_node: NodeId,
-    target_acl_children: Option<&HashMap<String, NodeId>>,
-    in_acl: bool,
-) -> Result<(), TreeError> {
-    let acl_prefixes = ["ip access-list ", "ipv4 access-list ", "ipv6 access-list "];
-
-    for self_child_id in trees.source.arena[source_node].children.iter() {
-        let self_text = &trees.source.arena[self_child_id].text;
-
-        if self_text.starts_with(&trees.source.driver.negation_prefix)
-            || self_text.starts_with("default ")
-        {
-            continue;
-        }
-
-        let target_child = if in_acl {
-            let stripped = strip_acl_sequence_number(self_text);
-            target_acl_children.and_then(|map| map.get(&stripped).copied())
-        } else {
-            trees.target.arena[target_node].children.get(self_text)
-        };
-
-        if let Some(target_child_id) = target_child {
-            let delta_child = trees.delta.add_child(delta_node, self_text, false, false)?;
-
-            if acl_prefixes
-                .iter()
-                .any(|prefix| self_text.starts_with(prefix))
-            {
-                let mut acl_map = HashMap::default();
-                for c_id in trees.target.arena[target_child_id].children.iter() {
-                    let stripped = strip_acl_sequence_number(&trees.target.arena[c_id].text);
-                    acl_map.insert(stripped, c_id);
-                }
-
-                difference_node(
-                    trees,
-                    self_child_id,
-                    target_child_id,
-                    delta_child,
-                    Some(&acl_map),
-                    true,
-                )?;
-            } else {
-                difference_node(
-                    trees,
-                    self_child_id,
-                    target_child_id,
-                    delta_child,
-                    None,
-                    false,
-                )?;
-            }
-
-            if trees.delta.arena[delta_child].children.is_empty() {
-                trees.delta.delete_child(delta_child);
-            }
-        } else {
-            trees
-                .delta
-                .add_deep_copy_of(delta_node, trees.source, self_child_id, false)?;
-        }
+impl DiffTrees<'_> {
+    fn compute(&mut self) -> Result<(), TreeError> {
+        let delta_root = self.delta.root;
+        self.compute_node(self.source.root, self.target.root, delta_root, None, false)
     }
 
-    Ok(())
+    fn compute_node(
+        &mut self,
+        source_node: NodeId,
+        target_node: NodeId,
+        delta_node: NodeId,
+        target_acl_children: Option<&HashMap<String, NodeId>>,
+        in_acl: bool,
+    ) -> Result<(), TreeError> {
+        let acl_prefixes = ["ip access-list ", "ipv4 access-list ", "ipv6 access-list "];
+
+        for self_child_id in self.source.arena[source_node].children.iter() {
+            let self_text = &self.source.arena[self_child_id].text;
+
+            if self_text.starts_with(&self.source.driver.negation_prefix)
+                || self_text.starts_with("default ")
+            {
+                continue;
+            }
+
+            let target_child = if in_acl {
+                let stripped = strip_acl_sequence_number(self_text);
+                target_acl_children.and_then(|map| map.get(&stripped).copied())
+            } else {
+                self.target.arena[target_node].children.get(self_text)
+            };
+
+            if let Some(target_child_id) = target_child {
+                let delta_child = self.delta.add_child(delta_node, self_text, false, false)?;
+
+                if acl_prefixes
+                    .iter()
+                    .any(|prefix| self_text.starts_with(prefix))
+                {
+                    let mut acl_map = HashMap::default();
+                    for c_id in self.target.arena[target_child_id].children.iter() {
+                        let stripped = strip_acl_sequence_number(&self.target.arena[c_id].text);
+                        acl_map.insert(stripped, c_id);
+                    }
+
+                    self.compute_node(
+                        self_child_id,
+                        target_child_id,
+                        delta_child,
+                        Some(&acl_map),
+                        true,
+                    )?;
+                } else {
+                    self.compute_node(self_child_id, target_child_id, delta_child, None, false)?;
+                }
+
+                if self.delta.arena[delta_child].children.is_empty() {
+                    self.delta.delete_child(delta_child);
+                }
+            } else {
+                self.delta
+                    .add_deep_copy_of(delta_node, self.source, self_child_id, false)?;
+            }
+        }
+
+        Ok(())
+    }
 }
 
 /// Computes unified diff comparison lines between `source` and `target`.
@@ -554,7 +636,7 @@ fn unified_diff_node(
             }
         } else {
             lines.push(format!("{}- {}", source.indentation(self_child), self_text));
-            for desc_id in source.all_children_sorted(self_child) {
+            for desc_id in source.descendants_sorted(self_child) {
                 lines.push(format!(
                     "{}- {}",
                     source.indentation(desc_id),
@@ -573,7 +655,7 @@ fn unified_diff_node(
                 target.indentation(target_child),
                 target_text
             ));
-            for desc_id in target.all_children_sorted(target_child) {
+            for desc_id in target.descendants_sorted(target_child) {
                 lines.push(format!(
                     "{}+ {}",
                     target.indentation(desc_id),

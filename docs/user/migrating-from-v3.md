@@ -197,6 +197,13 @@ value. These four apply even to code that keeps the v3 spellings:
 These were never candidates for name-alias coverage. They are improvements to
 how v4 works, listed here so an upgrade does not surprise you:
 
+- **`len(config)` counts all recursive descendants** — `len(config)` returns the
+  total count of all descendant nodes in the tree, not just direct children. In
+  v3, `len(config)` was implemented as `len(tuple(self.all_children()))`, which
+  materialized a temporary tuple of every node in memory. In v4, `len(config)`
+  counts descendants directly without allocation: it is an $O(1)$ query on the
+  root configuration and zero-allocation on subtrees. If you need only the count
+  of direct/top-level children, use `len(config.children)`.
 - **`future()` negation resolution** — negations that match an existing line
   (exactly or by shorthand prefix) now remove it instead of surviving as a
   literal `no ...` child; see
@@ -232,6 +239,8 @@ know whether that page applies to you:
   `all_children_sorted_by_tags()` and `unused_objects()`. `all_children()` is
   still a generator. Iteration is unaffected; only `.send()`/`.close()` on the
   result breaks.
+- **`len(config)` is zero-allocation and O(1) on root**, counting descendants via
+  `node_count()` instead of materializing a full tuple of every node.
 - **Handles from different bulk traversals are no longer the same object.**
   `==`, `hash()`, set and dict membership, and mutation visibility are all
   unchanged; only `is` and `id()` differ.

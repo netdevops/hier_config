@@ -544,23 +544,35 @@ impl Tree {
         true
     }
 
+    /// Returns the number of descendant nodes under `node_id`.
+    pub fn node_count(&self, node_id: NodeId) -> usize {
+        if !self.arena.contains(node_id) {
+            0
+        } else if node_id == self.root {
+            self.arena.len().saturating_sub(1)
+        } else {
+            self.descendants(node_id).count()
+        }
+    }
+
+    /// Returns an iterator over all descendant `NodeId`s in pre-order insertion order.
+    pub fn descendants(&self, node_id: NodeId) -> Descendants<'_> {
+        Descendants::new(self, node_id)
+    }
+
+    /// Returns an iterator over all descendant `NodeId`s in pre-order, sorted by `order_weight` at each level.
+    pub fn descendants_sorted(&self, node_id: NodeId) -> DescendantsSorted<'_> {
+        DescendantsSorted::new(self, node_id)
+    }
+
     /// Returns all descendant `NodeId`s recursively in insertion order.
     pub fn all_children(&self, node_id: NodeId) -> Vec<NodeId> {
         let mut result = Vec::new();
         if self.arena.contains(node_id) {
             result.reserve(self.traversal_size_hint(node_id));
-            self.collect_all_children(node_id, &mut result);
+            result.extend(self.descendants(node_id));
         }
         result
-    }
-
-    fn collect_all_children(&self, node_id: NodeId, out: &mut Vec<NodeId>) {
-        if let Some(node) = self.arena.get(node_id) {
-            for child_id in node.children.iter() {
-                out.push(child_id);
-                self.collect_all_children(child_id, out);
-            }
-        }
     }
 
     /// Returns sorted children for a node based on `order_weight` (stable sort).
@@ -612,27 +624,9 @@ impl Tree {
         let mut result = Vec::new();
         if self.arena.contains(node_id) {
             result.reserve(self.traversal_size_hint(node_id));
-            self.collect_all_children_sorted(node_id, &mut result);
+            result.extend(self.descendants_sorted(node_id));
         }
         result
-    }
-
-    fn collect_all_children_sorted(&self, node_id: NodeId, out: &mut Vec<NodeId>) {
-        let Some(node) = self.arena.get(node_id) else {
-            return;
-        };
-        let children = node.children.as_slice();
-        if self.children_already_ordered(children) {
-            for &child_id in children {
-                out.push(child_id);
-                self.collect_all_children_sorted(child_id, out);
-            }
-        } else {
-            for child_id in self.sorted_children(node_id) {
-                out.push(child_id);
-                self.collect_all_children_sorted(child_id, out);
-            }
-        }
     }
 
     /// Computes the union of tags on all leaf nodes under `node_id`.
@@ -1426,6 +1420,110 @@ impl Tree {
     }
 }
 
+/// Pre-order depth-first iterator over descendant [`NodeId`]s in insertion order.
+#[derive(Debug)]
+pub struct Descendants<'a> {
+    tree: &'a Tree,
+    stack: Vec<std::slice::Iter<'a, NodeId>>,
+}
+
+impl<'a> Descendants<'a> {
+    pub(crate) fn new(tree: &'a Tree, root: NodeId) -> Self {
+        let mut stack = Vec::with_capacity(8);
+        if let Some(node) = tree.arena.get(root) {
+            let slice = node.children.as_slice();
+            if !slice.is_empty() {
+                stack.push(slice.iter());
+            }
+        }
+        Self { tree, stack }
+    }
+}
+
+impl Iterator for Descendants<'_> {
+    type Item = NodeId;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(top) = self.stack.last_mut() {
+            if let Some(&child_id) = top.next() {
+                if let Some(child_node) = self.tree.arena.get(child_id) {
+                    let child_slice = child_node.children.as_slice();
+                    if !child_slice.is_empty() {
+                        self.stack.push(child_slice.iter());
+                    }
+                }
+                return Some(child_id);
+            }
+            self.stack.pop();
+        }
+        None
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, Some(self.tree.arena.len()))
+    }
+}
+
+#[derive(Debug)]
+enum SortedFrame<'a> {
+    Slice(std::slice::Iter<'a, NodeId>),
+    Vec(std::vec::IntoIter<NodeId>),
+}
+
+/// Pre-order depth-first iterator over descendant [`NodeId`]s sorted by `order_weight` at each level.
+#[derive(Debug)]
+pub struct DescendantsSorted<'a> {
+    tree: &'a Tree,
+    stack: Vec<SortedFrame<'a>>,
+}
+
+impl<'a> DescendantsSorted<'a> {
+    pub(crate) fn new(tree: &'a Tree, root: NodeId) -> Self {
+        let mut stack = Vec::with_capacity(8);
+        if let Some(frame) = Self::frame_for_node(tree, root) {
+            stack.push(frame);
+        }
+        Self { tree, stack }
+    }
+
+    fn frame_for_node(tree: &'a Tree, node_id: NodeId) -> Option<SortedFrame<'a>> {
+        let node = tree.arena.get(node_id)?;
+        let children = node.children.as_slice();
+        if children.is_empty() {
+            None
+        } else if tree.children_already_ordered(children) {
+            Some(SortedFrame::Slice(children.iter()))
+        } else {
+            Some(SortedFrame::Vec(tree.sorted_children(node_id).into_iter()))
+        }
+    }
+}
+
+impl Iterator for DescendantsSorted<'_> {
+    type Item = NodeId;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(top) = self.stack.last_mut() {
+            let next_id = match top {
+                SortedFrame::Slice(it) => it.next().copied(),
+                SortedFrame::Vec(it) => it.next(),
+            };
+            if let Some(child_id) = next_id {
+                if let Some(child_frame) = Self::frame_for_node(self.tree, child_id) {
+                    self.stack.push(child_frame);
+                }
+                return Some(child_id);
+            }
+            self.stack.pop();
+        }
+        None
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (0, Some(self.tree.arena.len()))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1526,5 +1624,41 @@ mod tests {
 
         assert_eq!(restored.dump(), dump);
         assert_eq!(restored.dump_simple(false), tree.dump_simple(false));
+    }
+
+    #[test]
+    fn test_descendants_iterators_and_node_count() {
+        let mut tree = Tree::for_platform(Platform::CiscoIos);
+        assert_eq!(tree.node_count(tree.root), 0);
+        assert_eq!(tree.descendants(tree.root).count(), 0);
+        assert_eq!(tree.descendants_sorted(tree.root).count(), 0);
+
+        let iface = tree
+            .add_child(tree.root, "interface GigabitEthernet0/1", true, false)
+            .unwrap();
+        let ip = tree
+            .add_child(iface, "ip address 192.168.1.1 255.255.255.0", true, false)
+            .unwrap();
+        let desc = tree
+            .add_child(iface, "description Test Link", true, false)
+            .unwrap();
+        let vlan = tree.add_child(tree.root, "vlan 10", true, false).unwrap();
+
+        assert_eq!(tree.node_count(tree.root), 4);
+        assert_eq!(tree.node_count(iface), 2);
+        assert_eq!(tree.node_count(ip), 0);
+
+        let desc_ids: Vec<NodeId> = tree.descendants(tree.root).collect();
+        assert_eq!(desc_ids, tree.all_children(tree.root));
+        assert_eq!(desc_ids, vec![iface, ip, desc, vlan]);
+
+        let desc_sorted_ids: Vec<NodeId> = tree.descendants_sorted(tree.root).collect();
+        assert_eq!(desc_sorted_ids, tree.all_children_sorted(tree.root));
+
+        // Test non-trivial ordering
+        tree.arena[desc].order_weight = -10;
+        let desc_sorted_weighted: Vec<NodeId> = tree.descendants_sorted(tree.root).collect();
+        assert_eq!(desc_sorted_weighted, tree.all_children_sorted(tree.root));
+        assert_eq!(desc_sorted_weighted, vec![iface, desc, ip, vlan]);
     }
 }
