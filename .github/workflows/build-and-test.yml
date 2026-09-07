@@ -19,19 +19,19 @@ jobs:
         - "3.14"
     steps:
     - uses: actions/checkout@v6
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        enable-cache: true
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install poetry
-      uses: snok/install-poetry@v1
-      with:
-        version: 1.5.1
     - name: Run tests
       run: |
-        poetry install --no-interaction --no-root
-        poetry run python scripts/build.py lint
-        poetry run python scripts/build.py pytest --coverage
+        uv sync --frozen --no-install-project
+        uv run python scripts/build.py lint
+        uv run python scripts/build.py pytest --coverage
   docs:
     runs-on: ubuntu-latest
     steps:

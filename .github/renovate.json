@@ -16,18 +16,18 @@
   "packageRules": [
     {
       "description": "Don't bump the python constraint; project supports 3.10+ across all matrix versions",
-      "matchManagers": ["poetry"],
+      "matchManagers": ["pep621"],
       "matchPackageNames": ["python"],
       "enabled": false
     },
     {
-      "description": "Disable pip_requirements manager — docs/requirements.txt is a Read the Docs duplicate of Poetry dev-deps",
+      "description": "Disable pip_requirements manager — docs/requirements.txt is a Read the Docs duplicate of dev-deps",
       "matchManagers": ["pip_requirements"],
       "enabled": false
     },
     {
       "description": "For library runtime deps, only refresh the lockfile rather than raising the lower-bound constraint (keeps the library installable for users on older minor versions)",
-      "matchManagers": ["poetry"],
+      "matchManagers": ["pep621"],
       "matchDepTypes": ["dependencies"],
       "rangeStrategy": "update-lockfile"
     },

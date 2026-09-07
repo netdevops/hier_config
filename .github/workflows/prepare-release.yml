@@ -14,7 +14,9 @@ on:
         - major
         - minor
         - patch
-        - prerelease
+        - alpha
+        - beta
+        - rc
 
 permissions:
   contents: write
@@ -37,21 +39,19 @@ jobs:
             core.setFailed(`${context.actor} is not a repository admin`);
           }
     - uses: actions/checkout@v6
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v5
     - name: Set up Python
       uses: actions/setup-python@v6
       with:
         python-version: "3.12"
-    - name: Install poetry
-      uses: snok/install-poetry@v1
-      with:
-        version: 1.5.1
     - name: Bump version
       id: bump
       run: |
-        poetry version "${{ inputs.bump }}"
-        echo "version=$(poetry version -s)" >> "$GITHUB_OUTPUT"
+        uv version --bump "${{ inputs.bump }}"
+        echo "version=$(uv version --short)" >> "$GITHUB_OUTPUT"
     - name: Rotate changelog
-      if: inputs.bump != 'prerelease'
+      if: "!contains(fromJSON('[\"alpha\", \"beta\", \"rc\"]'), inputs.bump)"
       run: |
         python scripts/rotate_changelog.py "${{ steps.bump.outputs.version }}" > release-notes.md
     - name: Open release pull request
@@ -63,7 +63,7 @@ jobs:
         git config user.name "github-actions[bot]"
         git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
         git checkout -b "${branch}"
-        git add pyproject.toml CHANGELOG.md
+        git add pyproject.toml uv.lock CHANGELOG.md
         git commit -m "chore(release): prepare ${version}"
         git push origin "${branch}"
         gh pr create \
