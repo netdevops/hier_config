@@ -36,6 +36,19 @@ pub const fn rules_json_for_platform(platform: Platform) -> &'static str {
     }
 }
 
+/// Reports whether the named post-load callback is still enabled on `tree`.
+///
+/// Drivers expose these callbacks as removable list entries, so a caller that
+/// drops one from `post_load_callbacks` must also stop the core from applying
+/// it (#286).
+pub fn post_load_enabled(tree: &Tree, name: &str) -> bool {
+    tree.driver
+        .rules
+        .enabled_post_load
+        .as_ref()
+        .is_none_or(|enabled| enabled.iter().any(|entry| entry == name))
+}
+
 /// Dispatches post-load transformations for a given platform.
 pub fn run_post_load_callbacks(tree: &mut Tree) {
     match tree.driver.platform {
@@ -86,5 +99,30 @@ pub const fn default_sectional_exit(platform: Platform) -> &'static str {
     match platform {
         Platform::HuaweiVrp => huawei_vrp::sectional_exit(),
         _ => "exit",
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_post_load_enabled_defaults_to_every_callback() {
+        // Pure-Rust callers never populate `enabled_post_load`, so `None` must
+        // mean "run everything" rather than "run nothing".
+        let tree = Tree::for_platform(Platform::CiscoIos);
+        assert!(tree.driver.rules.enabled_post_load.is_none());
+        assert!(post_load_enabled(&tree, "remove_ipv4_acl_remarks"));
+    }
+
+    #[test]
+    fn test_post_load_enabled_honors_an_explicit_allow_list() {
+        // Python drivers publish the callbacks they still hold, so removing one
+        // there must stop the core running its own copy.
+        let mut tree = Tree::for_platform(Platform::CiscoIos);
+        tree.driver.rules.enabled_post_load = Some(vec!["add_acl_sequence_numbers".to_string()]);
+
+        assert!(post_load_enabled(&tree, "add_acl_sequence_numbers"));
+        assert!(!post_load_enabled(&tree, "remove_ipv4_acl_remarks"));
     }
 }

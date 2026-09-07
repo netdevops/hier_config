@@ -137,8 +137,10 @@ def hconfig_from_dump(
     Rebuilding the tree from the flat, depth-annotated dump lines happens in
     the Rust core so the parent lookup stays O(1) per line.
     """
-    config = _new_config(resolve_driver(platform_or_driver))
+    driver = resolve_driver(platform_or_driver)
+    config = _new_config(driver)
     config._load_from_dump_native(dump.lines)  # noqa: SLF001
+    _run_post_load_callbacks(config, driver)
     return config
 
 

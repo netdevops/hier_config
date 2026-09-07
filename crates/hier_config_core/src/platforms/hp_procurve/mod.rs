@@ -1,4 +1,5 @@
 use crate::platforms::functions::{MAX_RANGE_SPAN, MAX_RANGE_TOTAL};
+use crate::platforms::post_load_enabled;
 use crate::tree::Tree;
 use rustc_hash::FxHashSet as HashSet;
 use std::sync::Arc;
@@ -8,9 +9,15 @@ pub mod view;
 pub const RULES_JSON: &str = include_str!("rules.json");
 
 pub fn run_post_load(tree: &mut Tree) {
-    fixup_hp_procurve_aaa_port_access_fixup(tree);
-    fixup_hp_procurve_device_profile(tree);
-    fixup_hp_procurve_vlan(tree);
+    if post_load_enabled(tree, "fixup_hp_procurve_aaa_port_access") {
+        fixup_hp_procurve_aaa_port_access_fixup(tree);
+    }
+    if post_load_enabled(tree, "fixup_hp_procurve_device_profile") {
+        fixup_hp_procurve_device_profile(tree);
+    }
+    if post_load_enabled(tree, "fixup_hp_procurve_vlan") {
+        fixup_hp_procurve_vlan(tree);
+    }
 }
 
 /// Expands HP `ProCurve` interface ranges like "1/2-5,2/22-45" or "Trk1-Trk4".

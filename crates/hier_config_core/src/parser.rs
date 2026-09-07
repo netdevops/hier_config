@@ -638,7 +638,7 @@ mod tests {
     #[test]
     fn test_adjust_indent() {
         let prepared = vec![(
-            Arc::new(Regex::new("^policy-map").unwrap()),
+            crate::regex_cache::regex("^policy-map").unwrap(),
             "^ *class".to_string(),
         )];
 
@@ -648,14 +648,15 @@ mod tests {
         assert_eq!(ends, vec!["^ *class".to_string()]);
 
         // A non-matching line leaves both accumulators untouched.
-        let (indent, ends) = adjust_indent(&prepared, "hostname Router1", 0, Vec::new());
-        assert_eq!(indent, 0);
-        assert!(ends.is_empty());
+        let (plain_indent, plain_ends) =
+            adjust_indent(&prepared, "hostname Router1", 0, Vec::new());
+        assert_eq!(plain_indent, 0);
+        assert!(plain_ends.is_empty());
 
         // With no rules configured there is nothing to adjust.
-        let (indent, ends) = adjust_indent(&[], "policy-map test", 0, Vec::new());
-        assert_eq!(indent, 0);
-        assert!(ends.is_empty());
+        let (unruled_indent, unruled_ends) = adjust_indent(&[], "policy-map test", 0, Vec::new());
+        assert_eq!(unruled_indent, 0);
+        assert!(unruled_ends.is_empty());
     }
 
     #[test]

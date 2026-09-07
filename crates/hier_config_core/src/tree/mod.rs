@@ -195,10 +195,10 @@ impl Tree {
     }
 
     /// Checks if duplicate children are allowed under `parent_id`.
+    ///
+    /// A rule with empty `match_rules` matches the root's empty lineage, which
+    /// is how a driver opts the top level into duplicates (#215).
     pub fn is_duplicate_child_allowed(&self, parent_id: NodeId) -> bool {
-        if parent_id == self.root {
-            return false;
-        }
         self.driver
             .rules
             .parent_allows_duplicate_child
@@ -1429,6 +1429,34 @@ impl Tree {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_duplicate_children_allowed_at_root_by_empty_rule() {
+        // A rule with no match_rules describes root's (empty) lineage, so it
+        // must permit duplicates directly under root. See netdevops/hier_config#215.
+        let mut tree = Tree::for_platform(Platform::Generic);
+        tree.driver.rules.parent_allows_duplicate_child.push(
+            crate::models::ParentAllowsDuplicateChildRule {
+                match_rules: Vec::new(),
+            },
+        );
+
+        assert!(tree.is_duplicate_child_allowed(tree.root));
+        tree.add_child(tree.root, "vlan 10", true, false).unwrap();
+        tree.add_child(tree.root, "vlan 10", true, false).unwrap();
+        assert_eq!(tree.arena[tree.root].children.len(), 2);
+    }
+
+    #[test]
+    fn test_duplicate_children_rejected_at_root_without_a_rule() {
+        let mut tree = Tree::for_platform(Platform::Generic);
+        assert!(!tree.is_duplicate_child_allowed(tree.root));
+        tree.add_child(tree.root, "vlan 10", true, false).unwrap();
+        assert!(matches!(
+            tree.add_child(tree.root, "vlan 10", true, false),
+            Err(TreeError::DuplicateChild { .. })
+        ));
+    }
 
     #[test]
     fn test_tree_add_child_and_hierarchy() {
