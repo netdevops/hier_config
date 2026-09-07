@@ -1,23 +1,21 @@
-[tool.poetry]
+[project]
 name = "hier-config"
 version = "4.0.0b3"
 description = "A network configuration query and comparison library, used to build remediation configurations."
-packages = [
-    { include="hier_config", from="."},
-]
-authors = [
-    "Andrew Edwards <edwards.andrew@heb.com>",
-    "James Williams <james.williams@networktocode.com>",
-    "Jan Brooks <jan.brooks@rackspace.com>"
-]
+readme = "README.md"
 license = "MIT"
+authors = [
+    { name = "Andrew Edwards", email = "edwards.andrew@heb.com" },
+    { name = "James Williams", email = "james.williams@networktocode.com" },
+    { name = "Jan Brooks", email = "jan.brooks@rackspace.com" },
+]
+requires-python = ">=3.10.0,<4.0"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Developers",
     "Intended Audience :: Information Technology",
     "Intended Audience :: System Administrators",
     "Intended Audience :: Telecommunications Industry",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -27,34 +25,38 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: System :: Networking",
 ]
-[tool.poetry.dependencies]
-python = ">=3.10.0,<4.0"
-pydantic = "^2.9"
-
-[tool.poetry.group.dev.dependencies]
-flynt = "*"
-mkdocs = "*"
-mkdocs-include-markdown-plugin = "*"
-mkdocs-redirects = "*"
-mkdocstrings = {extras = ["python"], version = "*"}
-mypy = "*"
-pylint = "*"
-pylint-pydantic = "*"
-pyright = "*"
-pytest = "*"
-pytest-cov = "*"
-pytest-profiling = "*"
-pytest-runner = "*"
-pytest-xdist = "*"
-ruff = "*"
-typer = "*"
-types-pyyaml = "*"
-yamllint = "*"
-
+dependencies = [
+    "pydantic>=2.9,<3.0",
+]
 
 [build-system]
-requires = ["poetry-core>=2.3.2"]
-build-backend = "poetry.core.masonry.api"
+requires = ["uv_build>=0.11.11,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = "."
+
+[dependency-groups]
+dev = [
+    "flynt",
+    "mkdocs",
+    "mkdocs-include-markdown-plugin",
+    "mkdocs-redirects",
+    "mkdocstrings[python]",
+    "mypy",
+    "pylint",
+    "pylint-pydantic",
+    "pyright",
+    "pytest",
+    "pytest-cov",
+    "pytest-profiling",
+    "pytest-runner",
+    "pytest-xdist",
+    "ruff",
+    "typer",
+    "types-pyyaml",
+    "yamllint",
+]
 
 
 [tool.pyright]
