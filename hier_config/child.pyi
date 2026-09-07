@@ -25,8 +25,12 @@ class HConfigChild(HConfigBase):
     """
 
     def __init__(self, parent: HConfig | HConfigChild, text: str) -> None: ...
-    def __eq__(self, other: object) -> bool: ...
-    def __hash__(self) -> int: ...
+    def __eq__(self, other: object) -> bool:
+        """Return self==value."""
+
+    def __hash__(self) -> int:
+        """Return hash(self)."""
+
     def __lt__(self, other: HConfigChild) -> bool:
         """Return self<value."""
 

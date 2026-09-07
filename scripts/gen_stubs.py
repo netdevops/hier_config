@@ -452,6 +452,32 @@ def writable_members(cls_name: str) -> set[str]:
 
 
 # pylint: disable=too-many-branches,too-many-statements
+def attach_docstring(raw: list[str], doc: str) -> list[str]:
+    """Give a hand-written stub block the live extension's docstring.
+
+    A ``RAW_OVERRIDES`` entry supplies a signature the generator cannot infer,
+    but nothing about the prose. Where the member already carries a docstring
+    in Rust, splice it in so mkdocstrings renders a body rather than a bare
+    signature. A block that spells out its own docstring wins.
+    """
+    if not doc or any('"""' in line for line in raw):
+        return raw
+    out = list(raw)
+    out[-1] = out[-1].removesuffix("...").rstrip()
+    if not out[-1].endswith(":"):
+        out[-1] += ":"
+    body = doc.strip().split("\n")
+    indent = "        "
+    if len(body) == 1:
+        out.append(f'{indent}"""{body[0]}"""')
+    else:
+        out.append(f'{indent}"""{body[0]}')
+        out.extend(f"{indent}{line}".rstrip() for line in body[1:])
+        out.append(f'{indent}"""')
+    out.append(f"{indent}...")
+    return out
+
+
 def render(
     cls_name: str,
     name: str,
@@ -474,7 +500,7 @@ def render(
 
     raw = RAW_OVERRIDES.get(f"{cls_name}.{name}")
     if raw:
-        return [*raw, ""]
+        return [*attach_docstring(raw, inspect.getdoc(obj) or ""), ""]
 
     override = OVERRIDES.get(f"{cls_name}.{name}")
     if override and override[0].startswith("("):
