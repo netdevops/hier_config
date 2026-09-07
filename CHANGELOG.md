@@ -66,6 +66,15 @@ v4 design decisions, for the record:
   mutable cross-function parameter threading. Pure transactional tree constructors
   (`parse_tree`, `parse_tree_with_callbacks`, `parse_fast`, `parse_fast_with_callbacks`)
   build and return complete trees without requiring caller-allocated mutable instances.
+- Tree traversals in `hier_config_core` now provide zero-allocation, stack-based
+  pre-order depth-first iterators (`Tree::descendants` and `Tree::descendants_sorted`),
+  replacing recursive out-parameter vector accumulation (`collect_all_children`).
+  `Tree::node_count` provides $O(1)$ sizing on root nodes and zero-allocation
+  descendant counting on subtrees, which powers `HConfigBase.__len__()` without
+  allocating intermediate vectors or Python object handles.
+- Remediation and diffing engine internal state is now encapsulated in `RemediationContext`,
+  `FutureContext`, and `DiffTrees` in `hier_config_core::remediation`, eliminating
+  loose mutable parameters passed across recursive helpers.
 
 ### Fixed
 

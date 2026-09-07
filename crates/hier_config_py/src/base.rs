@@ -558,7 +558,7 @@ impl PyHConfigBase {
 
     fn __len__(&self) -> usize {
         let tree = self.tree.tree.read().unwrap();
-        tree.all_children(self.node_id).len()
+        tree.node_count(self.node_id)
     }
 
     const fn __bool__(&self) -> bool {

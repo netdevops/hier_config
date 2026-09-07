@@ -37,7 +37,7 @@ pub use parser::{
     parse_fast_with_callbacks, parse_tree, parse_tree_with_callbacks,
 };
 pub use text_match::TextMatch;
-pub use tree::{Children, Node, Tree, TreeError};
+pub use tree::{Children, Descendants, DescendantsSorted, Node, Tree, TreeError};
 pub use view::config::{ConfigOps, ConfigView};
 pub use view::interface::{InterfaceOps, InterfaceView};
 pub use view::models::{
