@@ -15,7 +15,7 @@ import pytest
 from hier_config import get_hconfig
 from hier_config.models import Platform
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 CASES_DIR = REPO_ROOT / "testdata" / "cases"
 
 

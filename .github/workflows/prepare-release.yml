@@ -45,9 +45,18 @@ jobs:
         python-version: "3.12"
     - name: Bump version
       id: bump
+      # The build is maturin-based, so the version lives on
+      # `[workspace.package]` in Cargo.toml rather than in pyproject.toml.
+      # Cargo requires SemVer (`4.0.0-beta.4`); maturin normalizes that to the
+      # PEP 440 form (`4.0.0b4`) when it names the wheel. The tag and changelog
+      # use the PEP 440 form so they match what lands on PyPI.
       run: |
-        uv version --bump "${{ inputs.bump }}" --no-sync
-        echo "version=$(uv version --short)" >> "$GITHUB_OUTPUT"
+        {
+          read -r cargo_version
+          read -r pep440_version
+        } < <(python scripts/bump_version.py "${{ inputs.bump }}")
+        echo "cargo_version=${cargo_version}" >> "$GITHUB_OUTPUT"
+        echo "version=${pep440_version}" >> "$GITHUB_OUTPUT"
     - name: Rotate changelog
       if: "!contains(fromJSON('[\"alpha\", \"beta\", \"rc\"]'), inputs.bump)"
       run: |
