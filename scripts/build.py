@@ -35,6 +35,7 @@ def lint(*, fix: bool = False) -> None:
             _yamllint_command(),
             _flynt_command(fix=fix),
             _check_displacement_markers_command(),
+            _check_stubs_command(),
         ),
     )
 
@@ -53,6 +54,7 @@ def lint_and_test(*, fix: bool = False) -> None:
             _yamllint_command(),
             _flynt_command(fix=fix),
             _check_displacement_markers_command(),
+            _check_stubs_command(),
         ),
     )
 
@@ -132,6 +134,16 @@ def check_displacement_markers() -> None:
 
 def _check_displacement_markers_command() -> str:
     return f"{sys.executable} scripts/check_displacement_markers.py"
+
+
+@app.command()
+def check_stubs() -> None:
+    """Fail when the generated .pyi stubs no longer match the compiled extension."""
+    _run(_check_stubs_command())
+
+
+def _check_stubs_command() -> str:
+    return f"{sys.executable} scripts/gen_stubs.py --check"
 
 
 @app.command()

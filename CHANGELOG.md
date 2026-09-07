@@ -28,6 +28,12 @@ v4 design decisions, for the record:
 
 ### Added
 
+- Stub-freshness gate. `python scripts/build.py check-stubs` (also wired into
+  `lint` and `lint-and-test`) runs `scripts/gen_stubs.py --check` and fails when
+  the committed `hier_config/{base,child,children,root}.pyi` stubs no longer
+  match the compiled extension. The generator already supported `--check`, but
+  nothing invoked it, so the type information mypy and pyright rely on could
+  drift from the native surface without any test noticing.
 - Rust core. Parsing, the tree, post-load fixups, and the remediation engine
   are implemented in Rust (`crates/`) and exposed through PyO3 as the
   `_hier_config_rust` extension. There is no pure-Python fallback, so
