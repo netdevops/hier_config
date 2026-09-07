@@ -58,9 +58,13 @@ impl SharedTree {
         let np_str = driver_bound
             .getattr("negation_prefix")?
             .extract::<String>()?;
+        let dp_str = driver_bound
+            .getattr("declaration_prefix")?
+            .extract::<String>()?;
         {
             let mut tree = self.tree.write().unwrap();
             tree.driver.negation_prefix = np_str;
+            tree.driver.declaration_prefix = dp_str;
         }
 
         let rules_obj = driver_bound.getattr("rules")?;

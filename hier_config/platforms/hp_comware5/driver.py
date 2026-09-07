@@ -11,3 +11,7 @@ class HConfigDriverHPComware5(HConfigDriverBase):
     """
 
     platform = Platform.HP_COMWARE5
+
+    @property
+    def negation_prefix(self) -> str:
+        return "undo "

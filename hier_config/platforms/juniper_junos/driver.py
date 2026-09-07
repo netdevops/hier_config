@@ -18,3 +18,11 @@ class HConfigDriverJuniperJUNOS(HConfigDriverBase):
     """
 
     platform = Platform.JUNIPER_JUNOS
+
+    @property
+    def negation_prefix(self) -> str:
+        return "delete "
+
+    @property
+    def declaration_prefix(self) -> str:
+        return "set "

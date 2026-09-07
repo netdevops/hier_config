@@ -53,6 +53,7 @@ impl PyHConfigBase {
         ))
     }
 
+    #[getter]
     pub fn depth(&self) -> usize {
         let tree = self.tree.tree.read().unwrap();
         tree.depth(self.node_id)
@@ -111,6 +112,22 @@ impl PyHConfigBase {
         let mut tree = self.tree.tree.write().unwrap();
         tree.tags_remove(self.node_id, &tag_refs);
         Ok(())
+    }
+
+    /// v4 name for `tags_add()`.
+    pub fn add_tags(&self, tag_or_tags: &Bound<'_, PyAny>) -> PyResult<()> {
+        self.tags_add(tag_or_tags)
+    }
+
+    /// v4 name for `tags_remove()`.
+    pub fn remove_tags(&self, tag_or_tags: &Bound<'_, PyAny>) -> PyResult<()> {
+        self.tags_remove(tag_or_tags)
+    }
+
+    /// v4 name for `cisco_style_text()`.
+    #[pyo3(signature = (style = None, tag = None))]
+    pub fn indented_text(&self, py: Python<'_>, style: Option<&str>, tag: Option<&str>) -> String {
+        self.cisco_style_text(py, style, tag)
     }
 
     #[pyo3(signature = (style = None, tag = None))]
@@ -504,6 +521,12 @@ impl PyHConfigBase {
         let lines = tree.lines(self.node_id, sectional_exiting);
         let tuple = PyTuple::new(py, lines)?;
         Ok(tuple.unbind())
+    }
+
+    /// v4 name for `dump_simple()`.
+    #[pyo3(signature = (*, sectional_exiting = false))]
+    pub fn to_lines(&self, py: Python<'_>, sectional_exiting: bool) -> PyResult<Py<PyTuple>> {
+        self.dump_simple(py, sectional_exiting)
     }
 
     pub fn unified_diff(&self, target: &Bound<'_, PyAny>) -> PyResult<Vec<String>> {

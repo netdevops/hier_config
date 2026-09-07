@@ -9,3 +9,7 @@ class HConfigDriverHuaweiVrp(HConfigDriverBase):
     """
 
     platform = Platform.HUAWEI_VRP
+
+    @property
+    def negation_prefix(self) -> str:
+        return "undo "

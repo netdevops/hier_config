@@ -592,6 +592,16 @@ impl PyHConfig {
         Ok(hconfig.into_any())
     }
 
+    /// v4 name for `config_to_get_to()`.
+    #[pyo3(signature = (target, delta = None))]
+    pub fn remediation(
+        slf: PyRef<'_, Self>,
+        target: &Bound<'_, PyAny>,
+        delta: Option<&Bound<'_, PyAny>>,
+    ) -> PyResult<PyObject> {
+        Self::config_to_get_to(slf, target, delta)
+    }
+
     #[pyo3(signature = (target, delta = None))]
     pub fn config_to_get_to(
         slf: PyRef<'_, Self>,
@@ -850,6 +860,123 @@ impl PyHConfig {
 
     #[pyo3(signature = (*, sectional_exiting = false))]
     pub fn dump_simple(
+        slf: PyRef<'_, Self>,
+        py: Python<'_>,
+        sectional_exiting: bool,
+    ) -> PyResult<Py<PyTuple>> {
+        let base = slf.as_ref();
+        base.dump_simple(py, sectional_exiting)
+    }
+
+    /// Create an HConfig from raw configuration text (or a Path to it).
+    #[classmethod]
+    #[pyo3(signature = (platform_or_driver, config_text = None))]
+    pub fn from_text(
+        _cls: &Bound<'_, PyType>,
+        py: Python<'_>,
+        platform_or_driver: PyObject,
+        config_text: Option<PyObject>,
+    ) -> PyResult<PyObject> {
+        let text = match config_text {
+            Some(obj) => obj,
+            None => "".into_pyobject(py)?.into_any().unbind(),
+        };
+        py.import("hier_config.constructors")?
+            .getattr("hconfig_from_text")?
+            .call1((platform_or_driver, text))
+            .map(Bound::unbind)
+    }
+
+    /// Create an HConfig from pre-split configuration lines (fast load).
+    #[classmethod]
+    pub fn from_lines(
+        _cls: &Bound<'_, PyType>,
+        py: Python<'_>,
+        platform_or_driver: PyObject,
+        lines: PyObject,
+    ) -> PyResult<PyObject> {
+        py.import("hier_config.constructors")?
+            .getattr("hconfig_from_lines")?
+            .call1((platform_or_driver, lines))
+            .map(Bound::unbind)
+    }
+
+    /// Reconstruct an HConfig from a serialized Dump.
+    #[classmethod]
+    pub fn from_dump(
+        _cls: &Bound<'_, PyType>,
+        py: Python<'_>,
+        platform_or_driver: PyObject,
+        dump: PyObject,
+    ) -> PyResult<PyObject> {
+        py.import("hier_config.constructors")?
+            .getattr("hconfig_from_dump")?
+            .call1((platform_or_driver, dump))
+            .map(Bound::unbind)
+    }
+
+    /// Create an HConfig from a JSON object or JSON text.
+    #[classmethod]
+    #[pyo3(signature = (platform_or_driver, data, *, list_keys = None))]
+    pub fn from_json(
+        _cls: &Bound<'_, PyType>,
+        py: Python<'_>,
+        platform_or_driver: PyObject,
+        data: PyObject,
+        list_keys: Option<PyObject>,
+    ) -> PyResult<PyObject> {
+        let kwargs = PyDict::new(py);
+        kwargs.set_item("list_keys", list_keys)?;
+        py.import("hier_config.formats")?
+            .getattr("hconfig_from_json")?
+            .call((platform_or_driver, data), Some(&kwargs))
+            .map(Bound::unbind)
+    }
+
+    /// Create an HConfig from an XML document.
+    #[classmethod]
+    #[pyo3(signature = (platform_or_driver, source, *, list_keys = None))]
+    pub fn from_xml(
+        _cls: &Bound<'_, PyType>,
+        py: Python<'_>,
+        platform_or_driver: PyObject,
+        source: PyObject,
+        list_keys: Option<PyObject>,
+    ) -> PyResult<PyObject> {
+        let kwargs = PyDict::new(py);
+        kwargs.set_item("list_keys", list_keys)?;
+        py.import("hier_config.formats")?
+            .getattr("hconfig_from_xml")?
+            .call((platform_or_driver, source), Some(&kwargs))
+            .map(Bound::unbind)
+    }
+
+    /// Render a tree built by `from_json` back to JSON text.
+    #[pyo3(signature = (*, indent = Some(2)))]
+    pub fn to_json(
+        slf: PyRef<'_, Self>,
+        py: Python<'_>,
+        indent: Option<u32>,
+    ) -> PyResult<PyObject> {
+        let kwargs = PyDict::new(py);
+        kwargs.set_item("indent", indent)?;
+        py.import("hier_config.formats")?
+            .getattr("hconfig_to_json")?
+            .call((slf.into_pyobject(py)?,), Some(&kwargs))
+            .map(Bound::unbind)
+    }
+
+    /// Render a tree built by `from_xml` back to XML text.
+    pub fn to_xml(slf: PyRef<'_, Self>, py: Python<'_>) -> PyResult<PyObject> {
+        py.import("hier_config.formats")?
+            .getattr("hconfig_to_xml")?
+            .call1((slf.into_pyobject(py)?,))
+            .map(Bound::unbind)
+    }
+
+    /// v4 name for `dump_simple()`.
+    #[pyo3(signature = (*, sectional_exiting = false))]
+    pub fn to_lines(
         slf: PyRef<'_, Self>,
         py: Python<'_>,
         sectional_exiting: bool,

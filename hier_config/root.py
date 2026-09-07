@@ -1,18 +1,12 @@
-from __future__ import annotations
+"""Re-export of the native `HConfig` root tree.
 
-from typing import TYPE_CHECKING
+The tree, and the v4 ingestion/serialization API (`from_text`, `from_lines`,
+`from_dump`, `from_json`, `from_xml`, `to_json`, `to_xml`), live in the Rust
+core. Defining them there rather than on a Python subclass means every tree the
+core hands back -- including those returned by `future()` and `remediation()` --
+carries the full API.
+"""
 
-from _hier_config_rust import HConfig as _RustHConfig
-
-if TYPE_CHECKING:
-    from hier_config.platforms.driver_base import HConfigDriverBase
-
-
-class HConfig(_RustHConfig):  # pylint: disable=too-few-public-methods
-    """HConfig root tree instance."""
-
-    def __init__(self, driver: HConfigDriverBase) -> None:  # pylint: disable=useless-parent-delegation
-        super().__init__(driver)
-
+from _hier_config_rust import HConfig
 
 __all__ = ("HConfig",)

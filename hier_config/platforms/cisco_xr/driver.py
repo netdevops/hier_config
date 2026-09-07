@@ -1,28 +1,15 @@
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
-
-from hier_config.child import HConfigChild
-from hier_config.models import (
-    IdempotentCommandsRule,
-    IndentAdjustRule,
-    MatchRule,
-    OrderingRule,
-    ParentAllowsDuplicateChildRule,
-    PerLineSubRule,
-    SectionalExitingRule,
-    SectionalOverwriteNoNegateRule,
-    SectionalOverwriteRule,
-)
+from hier_config.models import Platform
 from hier_config.platforms.cisco_xr.view import HConfigViewCiscoIOSXR
-from hier_config.platforms.driver_base import HConfigDriverBase, HConfigDriverRules
+from hier_config.platforms.driver_base import (
+    HConfigDriverBase,
+    HConfigDriverRules,
+    core_owned,
+    load_platform_rules,
+)
+from hier_config.root import HConfig
 
-if TYPE_CHECKING:
-    from collections.abc import Iterable
 
-    from hier_config.root import HConfig
-
-
+@core_owned
 def fixup_xr_comments(config: HConfig) -> None:
     """Move ``!`` comment lines into the next sibling's comments set."""
     for parent in (config, *config.all_children()):
@@ -40,316 +27,33 @@ def fixup_xr_comments(config: HConfig) -> None:
                 comment_buffer.clear()
 
 
-class HConfigDriverCiscoIOSXR(HConfigDriverBase):  # pylint: disable=too-many-instance-attributes
+class HConfigDriverCiscoIOSXR(HConfigDriverBase):
     """Driver for Cisco IOS XR.
 
-    Extends the base idempotency logic to handle XR-style ACL sequence numbers
-    (``ipv4 access-list`` / ``ipv6 access-list``).  Also configures XR-specific
-    sectional exiting (``end-policy``, ``end-set``, ``end-template``, ``root``),
-    sectional overwrite for templates, indent-adjust for inline templates, and
-    duplicate-child allowances inside ``route-policy`` blocks.
-    Platform enum: ``Platform.CISCO_XR``.
+    Configures XR-specific sectional exiting (end-policy, end-set,
+    end-template, root), sectional overwrite for templates, indent-adjust for
+    inline templates, and duplicate-child allowances inside route-policy
+    blocks. ACL sequence-number idempotency (ipv4/ipv6 access-list) compares
+    sibling nodes, so it is implemented natively in the Rust core rather than
+    as a rule.
+    Platform enum: Platform.CISCO_XR.
     """
 
+    platform = Platform.CISCO_XR
     view_class = HConfigViewCiscoIOSXR
 
-    def idempotent_for(
-        self,
-        config: HConfigChild,
-        other_children: Iterable[HConfigChild],
-    ) -> HConfigChild | None:
-        if isinstance(config.parent, HConfigChild):
-            acl = ("ipv4 access-list ", "ipv6 access-list ")
-            if config.parent.text.startswith(acl):
-                self_sn = config.text.split(" ", 1)[0]
-                for other_child in other_children:
-                    other_sn = other_child.text.split(" ", 1)[0]
-                    if self_sn == other_sn:
-                        return other_child
+    @classmethod
+    def _instantiate_rules(cls) -> HConfigDriverRules:
+        """Load the canonical rules and attach this platform's post-load callbacks.
 
-        return super().idempotent_for(config, other_children)
-
-    @staticmethod
-    def _instantiate_rules() -> HConfigDriverRules:
-        return HConfigDriverRules(
-            sectional_exiting=[
-                SectionalExitingRule(
-                    match_rules=(MatchRule(startswith="route-policy"),),
-                    exit_text="end-policy",
-                    exit_text_parent_level=True,
-                ),
-                SectionalExitingRule(
-                    match_rules=(MatchRule(startswith="prefix-set"),),
-                    exit_text="end-set",
-                    exit_text_parent_level=True,
-                ),
-                SectionalExitingRule(
-                    match_rules=(MatchRule(startswith="policy-map"),),
-                    exit_text="end-policy-map",
-                    exit_text_parent_level=True,
-                ),
-                SectionalExitingRule(
-                    match_rules=(MatchRule(startswith="class-map"),),
-                    exit_text="end-class-map",
-                    exit_text_parent_level=True,
-                ),
-                SectionalExitingRule(
-                    match_rules=(MatchRule(startswith="community-set"),),
-                    exit_text="end-set",
-                    exit_text_parent_level=True,
-                ),
-                SectionalExitingRule(
-                    match_rules=(MatchRule(startswith="extcommunity-set"),),
-                    exit_text="end-set",
-                    exit_text_parent_level=True,
-                ),
-                SectionalExitingRule(
-                    match_rules=(MatchRule(startswith="template"),),
-                    exit_text="end-template",
-                    exit_text_parent_level=True,
-                ),
-                SectionalExitingRule(
-                    match_rules=(MatchRule(startswith="group"),),
-                    exit_text="end-group",
-                    exit_text_parent_level=True,
-                ),
-                SectionalExitingRule(
-                    match_rules=(MatchRule(startswith="interface"),),
-                    exit_text="root",
-                ),
-                SectionalExitingRule(
-                    match_rules=(MatchRule(startswith="router bgp"),),
-                    exit_text="root",
-                ),
-            ],
-            sectional_overwrite=[
-                SectionalOverwriteRule(match_rules=(MatchRule(startswith="template"),)),
-            ],
-            sectional_overwrite_no_negate=[
-                SectionalOverwriteNoNegateRule(
-                    match_rules=(MatchRule(startswith="as-path-set"),)
-                ),
-                SectionalOverwriteNoNegateRule(
-                    match_rules=(MatchRule(startswith="prefix-set"),)
-                ),
-                SectionalOverwriteNoNegateRule(
-                    match_rules=(MatchRule(startswith="route-policy"),)
-                ),
-                SectionalOverwriteNoNegateRule(
-                    match_rules=(MatchRule(startswith="extcommunity-set"),),
-                ),
-                SectionalOverwriteNoNegateRule(
-                    match_rules=(MatchRule(startswith="community-set"),),
-                ),
-            ],
-            ordering=[
-                OrderingRule(
-                    match_rules=(MatchRule(startswith="vrf "),),
-                    weight=-200,
-                ),
-                OrderingRule(
-                    match_rules=(MatchRule(startswith="no vrf "),),
-                    weight=200,
-                ),
-            ],
-            indent_adjust=[
-                IndentAdjustRule(
-                    # Exclude the flow exporter-map leaf forms `template timeout`,
-                    # `template data timeout`, and `template options timeout` so they
-                    # are not mistaken for a `template ... end-template` block.
-                    start_expression="^\\s*template(?!\\s+(?:data\\s+|options\\s+)?timeout)",
-                    end_expression="^\\s*end-template",
-                ),
-            ],
-            parent_allows_duplicate_child=[
-                ParentAllowsDuplicateChildRule(
-                    match_rules=(MatchRule(startswith="route-policy"),)
-                ),
-                ParentAllowsDuplicateChildRule(
-                    match_rules=(
-                        MatchRule(startswith="route-policy"),
-                        MatchRule(startswith="if "),
-                    )
-                ),
-            ],
-            per_line_sub=[
-                PerLineSubRule(search="^Building configuration.*", replace=""),
-                PerLineSubRule(search="^Current configuration.*", replace=""),
-                PerLineSubRule(search="^ntp clock-period .*", replace=""),
-                PerLineSubRule(search=".*speed.*", replace=""),
-                PerLineSubRule(search=".*duplex.*", replace=""),
-                PerLineSubRule(search=".*negotiation auto.*", replace=""),
-                PerLineSubRule(search=".*parity none.*", replace=""),
-                PerLineSubRule(search="^end-policy$", replace=" end-policy"),
-                PerLineSubRule(search="^end-set$", replace=" end-set"),
-                PerLineSubRule(search="^end-group$", replace=" end-group"),
-                PerLineSubRule(search="^end$", replace=""),
-                PerLineSubRule(search="^\\s*#.*", replace=""),
-                PerLineSubRule(search="^\\s*!\\s*$", replace=""),
-            ],
-            post_load_callbacks=[fixup_xr_comments],
-            idempotent_commands=[
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith="router bgp"),
-                        MatchRule(startswith="vrf"),
-                        MatchRule(startswith="address-family"),
-                        MatchRule(startswith="additional-paths selection route-policy"),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith="router bgp"),
-                        MatchRule(startswith="bgp router-id"),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith="router bgp"),
-                        MatchRule(startswith="neighbor-group"),
-                        MatchRule(startswith="address-family"),
-                        MatchRule(startswith="soft-reconfiguration inbound"),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith="router bgp"),
-                        MatchRule(startswith="vrf"),
-                        MatchRule(startswith="neighbor"),
-                        MatchRule(startswith="address-family"),
-                        MatchRule(startswith="soft-reconfiguration inbound"),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith="router bgp"),
-                        MatchRule(startswith="vrf"),
-                        MatchRule(startswith="neighbor"),
-                        MatchRule(startswith="address-family"),
-                        MatchRule(startswith="maximum-prefix"),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith="router bgp"),
-                        MatchRule(startswith="vrf"),
-                        MatchRule(startswith="neighbor"),
-                        MatchRule(startswith="password"),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith="router bgp"),
-                        MatchRule(startswith="vrf"),
-                        MatchRule(startswith="neighbor"),
-                        MatchRule(startswith="description"),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith="router bgp"),
-                        MatchRule(startswith="neighbor"),
-                        MatchRule(startswith="description"),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith="router bgp"),
-                        MatchRule(startswith="neighbor"),
-                        MatchRule(startswith="password"),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith="router ospf"),
-                        MatchRule(startswith="area"),
-                        MatchRule(startswith="interface"),
-                        MatchRule(startswith="cost"),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith="router ospf"),
-                        MatchRule(startswith="router-id"),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith="router ospf"),
-                        MatchRule(startswith="area"),
-                        MatchRule(startswith="message-digest-key"),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith="router ospf"),
-                        MatchRule(startswith="max-metric router-lsa"),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(equals="l2vpn"),
-                        MatchRule(startswith="router-id"),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(re_search="logging \\d+.\\d+.\\d+.\\d+ vrf MGMT"),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(equals="line default"),
-                        MatchRule(startswith="access-class ingress"),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(equals="line default"),
-                        MatchRule(startswith="transport input"),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(MatchRule(startswith="hostname"),),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(MatchRule(startswith="logging source-interface"),),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith="interface"),
-                        MatchRule(startswith="ipv4 address"),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(MatchRule(startswith="snmp-server location"),),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(equals="line console"),
-                        MatchRule(startswith="exec-timeout"),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(equals="mpls ldp"),
-                        MatchRule(startswith="session protection duration"),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(equals="mpls ldp"),
-                        MatchRule(startswith="igp sync delay"),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith="interface"),
-                        MatchRule(startswith="mtu"),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(MatchRule(startswith="banner"),),
-                ),
+        The callbacks are declared here so custom drivers can discover and
+        reuse them (#286); the Rust core applies them during parsing, so
+        `hier_config.constructors` skips the redundant Python pass.
+        """
+        return load_platform_rules(
+            cls.platform,
+            post_load_callbacks=[
+            fixup_xr_comments,
             ],
         )
+
