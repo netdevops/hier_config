@@ -1,72 +1,52 @@
-from hier_config import HConfig
+from hier_config import HConfig, Platform, WorkflowRemediation, get_hconfig_fast_load
 from hier_config.child import HConfigChild
-from hier_config.models import Platform
-from hier_config.platforms.fortinet_fortios.driver import HConfigDriverFortinetFortiOS
 
 
-def test_swap_negation_direct() -> None:
-    """Test swap_negation method directly to cover set-to-unset conversion."""
-    driver = HConfigDriverFortinetFortiOS()
+def _remediation(running: str, intended: str) -> tuple[str, ...]:
+    workflow = WorkflowRemediation(
+        get_hconfig_fast_load(Platform.FORTINET_FORTIOS, running),
+        get_hconfig_fast_load(Platform.FORTINET_FORTIOS, intended),
+    )
+    return workflow.remediation_config.dump_simple()
+
+
+def test_negation_swaps_set_and_unset() -> None:
+    """FortiOS toggles between `set` and `unset` when negating."""
     config = HConfig.from_text(Platform.FORTINET_FORTIOS)
-    child = HConfigChild(config, "set description 'test value'")
-    result = driver.swap_negation(child)
-    assert result.text == "unset description"
 
-    child2 = HConfigChild(config, "unset description")
-    result2 = driver.swap_negation(child2)
-
-    assert result2.text == "set description"
+    assert HConfigChild(config, "unset description").negate().text == "set description"
 
 
-def test_swap_negation_drops_parameters_intentionally() -> None:
+def test_negation_drops_parameters_intentionally() -> None:
     """FortiOS negation resets an attribute to its default via `unset <attribute>`.
 
     The value is never part of the unset command, so parameters after the
     attribute name must be dropped (#225).
     """
-    driver = HConfigDriverFortinetFortiOS()
     config = HConfig.from_text(Platform.FORTINET_FORTIOS)
     child = HConfigChild(config, 'set description "Port 1"')
-    result = driver.swap_negation(child)
 
-    assert result.text == "unset description"
+    assert child.negate().text == "unset description"
 
 
-def test_swap_negation_bare_set_is_unchanged() -> None:
-    """A bare `set` command with no attribute has nothing to negate (#225)."""
-    driver = HConfigDriverFortinetFortiOS()
+def test_negation_of_bare_set_is_unchanged() -> None:
+    """A bare `set` command has no attribute to negate (#225)."""
     config = HConfig.from_text(Platform.FORTINET_FORTIOS)
-    child = HConfigChild(config, "set")
-    result = driver.swap_negation(child)
 
-    assert result.text == "set"
+    assert HConfigChild(config, "set").negate().text == "set"
 
 
-def test_idempotent_for_matches_same_attribute() -> None:
+def test_same_attribute_is_replaced_not_negated() -> None:
     """Two `set` commands for the same attribute are idempotent (#225)."""
-    driver = HConfigDriverFortinetFortiOS()
-    config = HConfig.from_text(Platform.FORTINET_FORTIOS)
-    child = HConfigChild(config, "set primary 192.0.2.1")
-    other = HConfigChild(config, "set primary 192.0.2.3")
-
-    assert driver.idempotent_for(child, [other]) is other
+    assert _remediation(
+        "config system dns\n    set primary 192.0.2.1\nend",
+        "config system dns\n    set primary 192.0.2.3\nend",
+    ) == ("config system dns", "  set primary 192.0.2.3")
 
 
-def test_idempotent_for_different_attribute_returns_none() -> None:
+def test_different_attribute_is_negated_then_set() -> None:
     """`set` commands for different attributes are not idempotent (#225)."""
-    driver = HConfigDriverFortinetFortiOS()
-    config = HConfig.from_text(Platform.FORTINET_FORTIOS)
-    child = HConfigChild(config, "set primary 192.0.2.1")
-    other = HConfigChild(config, "set secondary 192.0.2.3")
-
-    assert driver.idempotent_for(child, [other]) is None
-
-
-def test_idempotent_for_single_word_commands_do_not_crash() -> None:
-    """Single-word commands must not raise IndexError in idempotent_for (#225)."""
-    driver = HConfigDriverFortinetFortiOS()
-    config = HConfig.from_text(Platform.FORTINET_FORTIOS)
-    child = HConfigChild(config, "set")
-    other = HConfigChild(config, "set")
-
-    assert driver.idempotent_for(child, [other]) is None
+    assert _remediation(
+        "config system dns\n    set primary 192.0.2.1\nend",
+        "config system dns\n    set secondary 192.0.2.3\nend",
+    ) == ("config system dns", "  unset primary", "  set secondary 192.0.2.3")

@@ -1,6 +1,3 @@
-from collections.abc import Iterable
-
-from hier_config.child import HConfigChild
 from hier_config.models import Platform
 from hier_config.platforms.cisco_xr.view import HConfigViewCiscoIOSXR
 from hier_config.platforms.driver_base import (
@@ -59,20 +56,3 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):
                 fixup_xr_comments,
             ],
         )
-
-    @core_owned
-    def idempotent_for(
-        self,
-        config: HConfigChild,
-        other_children: Iterable[HConfigChild],
-    ) -> HConfigChild | None:
-        if isinstance(config.parent, HConfigChild):
-            acl = ("ipv4 access-list ", "ipv6 access-list ")
-            if config.parent.text.startswith(acl):
-                self_sn = config.text.split(" ", 1)[0]
-                for other_child in other_children:
-                    other_sn = other_child.text.split(" ", 1)[0]
-                    if self_sn == other_sn:
-                        return other_child
-
-        return super().idempotent_for(config, other_children)

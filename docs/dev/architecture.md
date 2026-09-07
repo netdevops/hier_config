@@ -105,9 +105,9 @@ The driver layer lives in `hier_config/platforms/`.
 Every platform driver subclasses `HConfigDriverBase` (`hier_config/platforms/driver_base.py`) and overrides:
 
 - `_instantiate_rules()` — returns an `HConfigDriverRules` Pydantic model populated with the platform's rule sets.
-- Optionally `negation_prefix`, `declaration_prefix`, `swap_negation`, `idempotent_for`, `negate_with`, `config_preprocessor`, and the `view_class` class attribute.
+- Optionally `negation_prefix`, `declaration_prefix`, `config_preprocessor`, and the `view_class` class attribute.
 
-Idempotency matching derives a structural *idempotency key* from each command's lineage and its matching rule (`_idempotency_key`), so commands that differ only in attribute values (e.g. two BGP neighbor descriptions) are not conflated.
+Negation, idempotency, and sectional exiting are resolved in the Rust core from the driver's rule data; the corresponding Python hooks do not exist and defining them raises `TypeError`. Idempotency matching derives a structural *idempotency key* from each command's lineage and its matching rule, so commands that differ only in attribute values (e.g. two BGP neighbor descriptions) are not conflated.
 
 ### `HConfigDriverRules`
 

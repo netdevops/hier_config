@@ -18,13 +18,26 @@ v4 design decisions, for the record:
 - Drivers remain declaratively-configured with sanctioned imperative
   extension points (#222): #220 removed the negation-related override needs.
   `config_preprocessor()` stays freely overridable. The Rust core now resolves
-  `idempotent_for()`, `negate_with()`, and `sectional_exit()` itself, so an
-  override of those three must be marked `@core_owned` to acknowledge that the
-  core, not the subclass, decides the behavior.
+  `idempotent_for()`, `negate_with()`, `sectional_exit()`, and
+  `swap_negation()` itself, so those four hooks no longer exist on
+  `HConfigDriverBase` and defining one raises `TypeError`.
 - Config trees stay mutable (#224): full immutability would break the
   callback/plugin mutation model for marginal benefit. The remediation
   algorithms are guaranteed (and now tested) not to mutate their input
   configs.
+
+### Removed
+
+- Dead driver algorithm. `HConfigDriverBase.idempotent_for()`,
+  `negate_with()`, `sectional_exit()`, and `swap_negation()` — plus the private
+  `_idempotency_key()` machinery and the `@core_owned` escape hatch for
+  overriding them — are gone. The Rust core resolved all four from rule data
+  and never called the Python implementations, so ~560 lines of unreachable
+  code shadowed the real behavior. Defining any of the four on a subclass now
+  raises `TypeError`. Rule data (`rules.negation`, `rules.negate_with`,
+  `rules.idempotent_commands`, `rules.sectional_exiting`) and the
+  `negation_prefix` / `declaration_prefix` properties are unchanged and remain
+  the supported way to shape these behaviors.
 
 ### Added
 
