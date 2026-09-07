@@ -1,0 +1,36 @@
+# Members whose declared return type cannot be confirmed against a live value.
+#
+# `python scripts/build.py check-stub-types` calls every property and safe
+# zero-argument method on a corpus of parsed fixtures and compares the result
+# against the type declared in the stub. A member lands here when every value
+# it produced was empty -- `None`, an empty container, or an empty string --
+# because an empty value cannot confirm the type of the elements it would
+# otherwise hold. It is *not* an escape hatch for a wrong annotation: a
+# contradicted type is always an error, whether or not the member is listed.
+#
+# Two things make this list a ratchet rather than a rug:
+#
+#   * an unobserved member that is *not* listed fails the check, so a newly
+#     added stub member cannot silently arrive with zero verification;
+#   * a listed member that *is* observed also fails the check, so an entry
+#     cannot outlive the gap it documents.
+#
+# Every entry below is a gap in the fixture corpus, not in the checker. Closing
+# one means adding a fixture that exercises the feature -- a link aggregation
+# group, a switch stack, a NAC-enabled access port -- and then deleting the
+# line. The metadata members (`tags`, `comments`, `facts`, `instances`) are
+# populated by tagging and diff workflows rather than by parsing, so they need
+# a probe that applies tag rules before they can be confirmed.
+ConfigViewInterface.bundle_id
+ConfigViewInterface.bundle_member_interfaces
+ConfigViewInterface.bundle_name
+ConfigViewInterface.nac_host_mode
+ConfigViewInterface.parent_name
+ConfigViewInterface.speed
+ConfigViewInterface.subinterface_number
+HConfigBase.tags
+HConfigChild.comments
+HConfigChild.facts
+HConfigChild.instances
+HConfigView.bundle_interface_views
+HConfigView.stack_members
