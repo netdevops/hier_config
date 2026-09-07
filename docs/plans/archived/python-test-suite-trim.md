@@ -2,23 +2,23 @@
 
 ## Status
 
-- **State:** 🚀 Ready for Implementation (Prerequisites satisfied by Phases 0–5)
+- **State:** ⏹️ Closed / Superseded by `upstream/next` migration & Python facade consolidation
 - **Owner:** Network Engineering & Core Automation Team
-- **Last updated:** 2026-09-06
+- **Last updated:** 2026-09-07
 - **Prerequisite:** all six phase plans of the Rust-native testing strategy complete (Phases 0–5)
 - **Related:**
   - `docs/dev/testing.md` (conventions and coverage thresholds)
   - `docs/dev/architecture.md` (layer ownership boundaries)
-- **Supersedes / Superseded by:** Supersedes Phase 6 of the Rust-native testing strategy
+- **Supersedes / Superseded by:** Supersedes Phase 6 of the Rust-native testing strategy; superseded by the `upstream/next` test reorganization and the v4 Python surface area collapse into Rust PyO3 facades.
 
 ## Progress
 
-- ⬜ **Phase 1 — Displacement Audit**: Query displacement markers, verify coverage report, validate zero un-migrated Layer 1/2 tests
-- ⬜ **Phase 2 — Mechanical Deletion of Driver Tests**: Delete all marked Python tests across `tests/test_driver_*.py`
-- ⬜ **Phase 3 — Corpus Runner Narrowing**: Narrow `tests/test_corpus.py` to a smoke subset (~1 case per platform)
-- ⬜ **Phase 4 — Dead Code Pruning**: Remove obsolete Python per-platform helper functions and fixups
-- ⬜ **Phase 5 — Coverage Re-anchoring**: Measure remaining Python coverage and raise floor back toward 95%
-- ⬜ **Phase 6 — Final Verification**: Run full dual-language test suites, linters, and update documentation
+- ✅ **Phase 1 — Displacement Audit**: Completed prior to rebase; remaining markers down to 5 in `tests/integration/`.
+- ✅ **Phase 2 — Elimination of Legacy Driver Tests**: Superseded by `upstream/next` restructuring, which retired `tests/test_driver_*.py` into `tests/integration/test_<platform>.py`.
+- ⏹️ **Phase 3 — Corpus Runner Narrowing**: Closed / deferred. The Python corpus runner (`tests/native/test_corpus.py`) runs in ~0.5s with PyO3 and provides continuous full-matrix verification against native testdata.
+- ✅ **Phase 4 — Dead Code Pruning**: Completed — Python view and format implementations were removed and replaced with PyO3 delegations to the Rust core.
+- ✅ **Phase 5 — Coverage Re-anchoring**: Enforced at 88% minimum (currently achieving ~91% coverage across 1,026 tests).
+- ✅ **Phase 6 — Final Verification**: Full dual-language test suites and strict linters (`ruff`, `mypy`, `pyright`, `pylint`, `yamllint`) passing cleanly.
 
 ---
 
