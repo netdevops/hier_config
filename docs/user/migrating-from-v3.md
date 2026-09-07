@@ -14,6 +14,11 @@ drivers, remediation) are unchanged.
     completed EOS/NX-OS/XR views. They are in
     [Behavior changes to review](#behavior-changes-to-review).
 
+v4 also replaces the engine underneath those concepts with a Rust core. That
+brings its own, separate set of behavior changes — driver hooks, packaging,
+handle identity, traversal return types. This page is the prerequisite; read
+[Rust core behavior changes](rust-core-changes.md) next.
+
 If you are new to hier_config, skip this page and start with
 [Getting Started](getting-started.md).
 
@@ -200,6 +205,33 @@ how v4 works, listed here so an upgrade does not surprise you:
   [`register_driver()`](../admin/custom-drivers.md), which also makes them
   work with every constructor and carries their config view via `view_class`.
 
+### Changes that come from the Rust core
+
+These are covered in full by
+[Rust core behavior changes](rust-core-changes.md); the summary is here so you
+know whether that page applies to you:
+
+- **hier_config ships as a compiled wheel.** Wheels cover CPython 3.10-3.14 on
+  Linux, macOS, and Windows; anything else builds from source and needs a Rust
+  toolchain.
+- **Three driver hooks are now resolved in the core.** Overriding
+  `idempotent_for()`, `negate_with()`, or `sectional_exit()` raises `TypeError`
+  unless the override is marked `@core_owned`, which acknowledges that the core
+  — not your subclass — decides the behavior. `config_preprocessor()` is
+  unaffected. **Audit every `HConfigDriverBase` subclass before upgrading.**
+- **`_instantiate_rules()` is no longer abstract.** A driver that does not
+  override it now constructs successfully and fails later with
+  `NotImplementedError` instead of failing at instantiation.
+- **`from_dump()` runs remediation-transform callbacks after the load
+  completes**, not incrementally, so a callback sees the finished tree.
+- **`all_children_sorted()` returns a tuple**, joining
+  `all_children_sorted_by_tags()` and `unused_objects()`. `all_children()` is
+  still a generator. Iteration is unaffected; only `.send()`/`.close()` on the
+  result breaks.
+- **Handles from different bulk traversals are no longer the same object.**
+  `==`, `hash()`, set and dict membership, and mutation visibility are all
+  unchanged; only `is` and `id()` differ.
+
 ## New in v4 (worth adopting)
 
 Not required for migration, but these are the headline additions:
@@ -225,6 +257,8 @@ Not required for migration, but these are the headline additions:
 
 ## Next steps
 
+- [Rust core behavior changes](rust-core-changes.md) — the engine-level
+  differences, including the driver-hook audit.
 - [v3 API Compatibility](v3-compatibility.md) — the full list of v3 names that
   keep working in v4, and the two limits.
 - [Getting Started](getting-started.md) — the v4 workflow end to end.
