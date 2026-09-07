@@ -36,6 +36,7 @@ def lint(*, fix: bool = False) -> None:
             _flynt_command(fix=fix),
             _check_displacement_markers_command(),
             _check_stubs_command(),
+            _stubtest_command(),
             _check_formats_corpus_command(),
         ),
     )
@@ -56,6 +57,7 @@ def lint_and_test(*, fix: bool = False) -> None:
             _flynt_command(fix=fix),
             _check_displacement_markers_command(),
             _check_stubs_command(),
+            _stubtest_command(),
             _check_formats_corpus_command(),
         ),
     )
@@ -146,6 +148,24 @@ def check_stubs() -> None:
 
 def _check_stubs_command() -> str:
     return f"{sys.executable} scripts/gen_stubs.py --check"
+
+
+@app.command()
+def stubtest() -> None:
+    """Fail when the type stubs disagree with the objects they describe."""
+    _run(_stubtest_command())
+
+
+def _stubtest_command() -> str:
+    # `gen_stubs.py --check` guards *names*; this guards *signatures*. Runtime
+    # introspection cannot see annotations, so return and parameter types
+    # remain the type checkers' responsibility.
+    return (
+        f"{sys.executable} -m mypy.stubtest"
+        " --mypy-config-file pyproject.toml"
+        " --allowlist stubs/stubtest-allowlist.txt"
+        " _hier_config_rust hier_config"
+    )
 
 
 @app.command()
