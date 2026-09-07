@@ -22,12 +22,51 @@ class HConfig(HConfigBase):
 
     def __init__(self, driver: HConfigDriverBase) -> None: ...
     def __deepcopy__(self, _memo: dict[int, Any]) -> HConfig: ...
-    def __eq__(self, other: object) -> bool: ...
-    def __hash__(self) -> int: ...
-    def _load_fast_native(self, lines: Iterable[str], run_post_load: bool) -> None: ...
-    def _load_file_native(self, path: str, run_post_load: bool) -> None: ...
-    def _load_from_dump_native(self, lines: Iterable[DumpLine]) -> None: ...
-    def _load_native(self, config_text: str, run_post_load: bool) -> None: ...
+    def __eq__(self, other: object) -> bool:
+        """Return self==value."""
+
+    def __hash__(self) -> int:
+        """Return hash(self)."""
+
+    def _load_fast_native(self, lines: Iterable[str], run_post_load: bool) -> None:
+        """Parses pre-formatted `lines` into this tree inside a single FFI call.
+
+        Mirrors [`Self::_load_native`] but applies only `per_line_sub` rules, matching
+        the semantics of `get_hconfig_fast_load`.
+
+        `lines` may be a single `str` — which is split on line boundaries in Rust,
+        avoiding any per-line marshalling — or any iterable of `str`.
+
+        # Errors
+
+        Returns an error if `lines` is not a `str` or an iterable of `str`, or if a
+        line cannot be inserted into the tree.
+        """
+
+    def _load_file_native(self, path: str, run_post_load: bool) -> None:
+        """Reads and parses an on-disk config file into this tree inside a single FFI call.
+
+        Reads the file directly via `std::fs::read_to_string` with the GIL released,
+        avoiding intermediate Python `str` allocations.
+        """
+
+    def _load_from_dump_native(self, lines: Iterable[DumpLine]) -> None:
+        """Reconstructs the tree structure from a [`Dump`] model inside a single FFI call.
+
+        Unpacks line attributes and delegates tree reconstruction to native Rust in O(N)
+        without per-node Python FFI round-trips.
+        """
+
+    def _load_native(self, config_text: str, run_post_load: bool) -> None:
+        """Parses a raw configuration string entirely in Rust.
+
+        Runs `full_text_sub`, the platform preprocessor, the line-by-line parse and
+        sectional-exit removal in a single FFI call with the GIL released, allocating
+        no Python objects. When `run_post_load` is true the natively-implemented
+        post-load callbacks for the platform are applied as well; callers pass false
+        when a custom driver supplies its own Python callbacks.
+        """
+
     def add_ancestor_copy_of(
         self, parent_to_add: HConfigChild
     ) -> HConfig | HConfigChild:
@@ -62,7 +101,9 @@ class HConfig(HConfigBase):
         cls,
         platform_or_driver: Platform | str | HConfigDriverBase,
         dump: Dump,
-    ) -> HConfig: ...
+    ) -> HConfig:
+        """Reconstruct an `HConfig` from a serialized `Dump`."""
+
     @classmethod
     def from_json(
         cls,
@@ -70,19 +111,25 @@ class HConfig(HConfigBase):
         data: str | dict[str, Any],
         *,
         list_keys: tuple[str, ...] | None = None,
-    ) -> HConfig: ...
+    ) -> HConfig:
+        """Create an `HConfig` from a JSON object or JSON text."""
+
     @classmethod
     def from_lines(
         cls,
         platform_or_driver: Platform | str | HConfigDriverBase,
         lines: Iterable[str],
-    ) -> HConfig: ...
+    ) -> HConfig:
+        """Create an `HConfig` from pre-split configuration lines (fast load)."""
+
     @classmethod
     def from_text(
         cls,
         platform_or_driver: Platform | str | HConfigDriverBase,
         config_text: str | PathLike[str] | None = None,
-    ) -> HConfig: ...
+    ) -> HConfig:
+        """Create an `HConfig` from raw configuration text (or a Path to it)."""
+
     @classmethod
     def from_xml(
         cls,
@@ -90,7 +137,9 @@ class HConfig(HConfigBase):
         source: str,
         *,
         list_keys: tuple[str, ...] | None = None,
-    ) -> HConfig: ...
+    ) -> HConfig:
+        """Create an `HConfig` from an XML document."""
+
     def future(self, config: HConfig, *, prune_empty_branches: bool = False) -> HConfig:
         """EXPERIMENTAL - predict the future config after config is applied to self.
 
