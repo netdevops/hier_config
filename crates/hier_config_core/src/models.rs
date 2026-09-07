@@ -280,6 +280,45 @@ pub struct NegationSubRule {
     pub replace: String,
 }
 
+/// How a matching command is negated.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NegationStrategy {
+    /// Replace the command with the fixed string in `use`.
+    Replace,
+    /// Rewrite the command to its `default` form.
+    Default,
+    /// Apply a regex substitution to the already-negated text.
+    RegexSub,
+}
+
+/// Unified negation rule.
+///
+/// Supersedes the three separate v3 rule types. The v3 spellings remain
+/// supported on the wire and are folded into this shape by
+/// [`DriverRules::resolved_negation`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct NegationRule {
+    pub strategy: NegationStrategy,
+    pub match_rules: Vec<MatchRule>,
+    #[serde(rename = "use", default)]
+    pub use_cmd: String,
+    #[serde(default)]
+    pub search: String,
+    #[serde(default)]
+    pub replace: String,
+}
+
+impl NegationRule {
+    /// Views this rule as a [`NegationDefaultWithRule`] for `use` expansion.
+    pub(crate) fn as_default_with(&self) -> NegationDefaultWithRule {
+        NegationDefaultWithRule {
+            match_rules: self.match_rules.clone(),
+            use_cmd: self.use_cmd.clone(),
+        }
+    }
+}
+
 /// A location in the config tree where object name references are searched.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ReferenceLocation {

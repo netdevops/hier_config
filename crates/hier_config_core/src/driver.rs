@@ -1,8 +1,9 @@
 use crate::models::{
     FullTextSubRule, IdempotentCommandsAvoidRule, IdempotentCommandsRule, IndentAdjustRule,
-    MatchRule, NegationDefaultWhenRule, NegationDefaultWithRule, NegationSubRule, OrderingRule,
-    ParentAllowsDuplicateChildRule, PerLineSubRule, Platform, SectionalExitingRule,
-    SectionalOverwriteNoNegateRule, SectionalOverwriteRule, StringPattern, UnusedObjectRule,
+    MatchRule, NegationDefaultWhenRule, NegationDefaultWithRule, NegationRule, NegationStrategy,
+    NegationSubRule, OrderingRule, ParentAllowsDuplicateChildRule, PerLineSubRule, Platform,
+    SectionalExitingRule, SectionalOverwriteNoNegateRule, SectionalOverwriteRule, StringPattern,
+    UnusedObjectRule,
 };
 use serde::{Deserialize, Serialize};
 use std::fmt::Write as _;
@@ -28,6 +29,13 @@ pub struct DriverRules {
     pub negation_default_when: Vec<NegationDefaultWhenRule>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub negate_with: Vec<NegationDefaultWithRule>,
+    /// Unified, order-sensitive negation rules.
+    ///
+    /// When non-empty this list drives negation and the three v3 lists are
+    /// folded in after it, mirroring `HConfigDriverRules.all_negation_rules()`
+    /// on the Python side.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub negation: Vec<NegationRule>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub ordering: Vec<OrderingRule>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -117,6 +125,7 @@ impl Default for DriverRules {
             indentation: default_indentation(),
             negation_default_when: Vec::new(),
             negate_with: Vec::new(),
+            negation: Vec::new(),
             ordering: Vec::new(),
             parent_allows_duplicate_child: Vec::new(),
             per_line_sub: Vec::new(),
@@ -126,6 +135,44 @@ impl Default for DriverRules {
             negation_sub: Vec::new(),
             unused_objects: Vec::new(),
         }
+    }
+}
+
+impl DriverRules {
+    /// Returns negation rules in evaluation order.
+    ///
+    /// Mirrors `HConfigDriverRules.all_negation_rules()`: when no v3-spelled
+    /// rules are present the unified list is used verbatim, otherwise the v3
+    /// lists are folded in after it. Returns `None` on the fast path where
+    /// there is no unified list at all, letting callers avoid the allocation
+    /// and walk the v3 vectors directly.
+    pub(crate) fn resolved_negation(&self) -> Option<Vec<NegationRule>> {
+        if self.negation.is_empty() {
+            return None;
+        }
+        let mut resolved = self.negation.clone();
+        resolved.extend(self.negation_default_when.iter().map(|rule| NegationRule {
+            strategy: NegationStrategy::Default,
+            match_rules: rule.match_rules.clone(),
+            use_cmd: String::new(),
+            search: String::new(),
+            replace: String::new(),
+        }));
+        resolved.extend(self.negate_with.iter().map(|rule| NegationRule {
+            strategy: NegationStrategy::Replace,
+            match_rules: rule.match_rules.clone(),
+            use_cmd: rule.use_cmd.clone(),
+            search: String::new(),
+            replace: String::new(),
+        }));
+        resolved.extend(self.negation_sub.iter().map(|rule| NegationRule {
+            strategy: NegationStrategy::RegexSub,
+            match_rules: rule.match_rules.clone(),
+            use_cmd: String::new(),
+            search: rule.search.clone(),
+            replace: rule.replace.clone(),
+        }));
+        Some(resolved)
     }
 }
 
@@ -264,6 +311,10 @@ impl Driver {
         text: &str,
         is_lineage_match: impl Fn(&[MatchRule]) -> bool,
     ) -> String {
+        if let Some(resolved) = self.rules.resolved_negation() {
+            return self.compute_negation_unified(text, &resolved, is_lineage_match);
+        }
+
         // 1. negate_with rule
         for rule in &self.rules.negate_with {
             if is_lineage_match(&rule.match_rules) {
@@ -291,6 +342,46 @@ impl Driver {
         }
 
         // 4. swap negation
+        self.swap_negation(text)
+    }
+
+    /// Resolves negation against the unified rule list.
+    ///
+    /// `Replace` wins over everything, matching the Python contract where
+    /// `negate_with()` is consulted before the remaining strategies; the rest
+    /// are then evaluated in declaration order rather than grouped by kind.
+    fn compute_negation_unified(
+        &self,
+        text: &str,
+        resolved: &[NegationRule],
+        is_lineage_match: impl Fn(&[MatchRule]) -> bool,
+    ) -> String {
+        for rule in resolved {
+            if rule.strategy == NegationStrategy::Replace && is_lineage_match(&rule.match_rules) {
+                return Self::expand_negate_with(text, &rule.as_default_with());
+            }
+        }
+
+        for rule in resolved {
+            if !is_lineage_match(&rule.match_rules) {
+                continue;
+            }
+            match rule.strategy {
+                NegationStrategy::Replace => {}
+                NegationStrategy::Default => {
+                    let stripped = self.text_without_negation(text);
+                    return format!("default {stripped}");
+                }
+                NegationStrategy::RegexSub => {
+                    let negated = format!("{}{}", self.negation_prefix, text);
+                    if let Some(re) = crate::regex_cache::regex(&rule.search) {
+                        let rust_replace = python_to_rust_replacement(&rule.replace);
+                        return re.replace(&negated, rust_replace.as_str()).to_string();
+                    }
+                }
+            }
+        }
+
         self.swap_negation(text)
     }
 
@@ -515,6 +606,70 @@ fn match_contains<'a>(value: &'a str, pattern: &'a StringPattern) -> Option<&'a 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn unified(strategy: NegationStrategy, equals: &str) -> NegationRule {
+        NegationRule {
+            strategy,
+            match_rules: vec![MatchRule::equals(equals)],
+            use_cmd: String::new(),
+            search: String::new(),
+            replace: String::new(),
+        }
+    }
+
+    #[test]
+    fn test_unified_negation_rules_are_evaluated_in_declaration_order() {
+        let mut driver = Driver::for_platform(Platform::Generic);
+        let mut regex_sub = unified(NegationStrategy::RegexSub, "ip access-list foo");
+        regex_sub.search = r"^no ip access-list (\S+)$".to_string();
+        regex_sub.replace = r"no ip access-list extended \1".to_string();
+        // REGEX_SUB is declared first, so it must win over the later DEFAULT
+        // rule even though the legacy engine grouped DEFAULT ahead of it.
+        driver.rules.negation = vec![
+            regex_sub,
+            unified(NegationStrategy::Default, "ip access-list foo"),
+        ];
+
+        let negated = driver.compute_negation("ip access-list foo", |rules| {
+            rules.iter().all(|r| r.equals.is_some())
+        });
+
+        assert_eq!(negated, "no ip access-list extended foo");
+    }
+
+    #[test]
+    fn test_replace_strategy_is_consulted_before_earlier_rules() {
+        let mut driver = Driver::for_platform(Platform::Generic);
+        let mut replace = unified(NegationStrategy::Replace, "shutdown");
+        replace.use_cmd = "no shutdown".to_string();
+        // REPLACE is declared last but must still win, mirroring the Python
+        // contract where `negate_with()` runs before the other strategies.
+        driver.rules.negation = vec![unified(NegationStrategy::Default, "shutdown"), replace];
+
+        let negated =
+            driver.compute_negation("shutdown", |rules| rules.iter().all(|r| r.equals.is_some()));
+
+        assert_eq!(negated, "no shutdown");
+    }
+
+    #[test]
+    fn test_v3_rules_are_folded_in_after_the_unified_list() {
+        let mut driver = Driver::for_platform(Platform::Generic);
+        driver.rules.negation = vec![unified(NegationStrategy::Default, "other")];
+        driver.rules.negation_default_when = vec![NegationDefaultWhenRule {
+            match_rules: vec![MatchRule::equals("shutdown")],
+        }];
+
+        let negated = driver.compute_negation("shutdown", |rules| {
+            rules.iter().any(|r| {
+                r.equals
+                    .as_ref()
+                    .is_some_and(|p| p.matches_equals("shutdown"))
+            })
+        });
+
+        assert_eq!(negated, "default shutdown");
+    }
 
     #[test]
     fn test_driver_negation() {
