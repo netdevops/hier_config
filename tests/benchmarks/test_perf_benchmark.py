@@ -15,7 +15,7 @@ import pytest
 
 from hier_config import get_hconfig
 from hier_config.models import Platform
-from tests.test_benchmarks import _generate_large_ios_config
+from tests.benchmarks.test_benchmarks import _generate_large_ios_config
 
 pytestmark = pytest.mark.benchmark
 
