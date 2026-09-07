@@ -1,7 +1,7 @@
 //! `PyO3` bindings for high-performance configuration remediation workflow.
 
 use std::collections::BTreeSet;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
 use hier_config_core::models::{Platform, TagRule};
 use hier_config_core::tree::Tree;
@@ -85,8 +85,8 @@ pub struct PyWorkflowRemediation {
     pub(crate) running_config: Py<PyHConfig>,
     pub(crate) generated_config: Py<PyHConfig>,
     pub(crate) plugins: Py<PyTuple>,
-    pub(crate) remediation_config: Option<Py<PyHConfig>>,
-    pub(crate) rollback_config: Option<Py<PyHConfig>>,
+    pub(crate) remediation_config: OnceLock<Py<PyHConfig>>,
+    pub(crate) rollback_config: OnceLock<Py<PyHConfig>>,
 }
 
 #[pymethods]
@@ -128,8 +128,8 @@ impl PyWorkflowRemediation {
             running_config: running,
             generated_config: generated,
             plugins,
-            remediation_config: None,
-            rollback_config: None,
+            remediation_config: OnceLock::new(),
+            rollback_config: OnceLock::new(),
         })
     }
 
@@ -191,7 +191,7 @@ impl PyWorkflowRemediation {
     /// Requires running and generated configs built by `HConfig.from_xml()`.
     #[pyo3(signature = (*, list_keys = None))]
     fn remediation_netconf_xml(
-        &mut self,
+        &self,
         py: Python<'_>,
         list_keys: Option<Vec<String>>,
     ) -> PyResult<String> {
@@ -208,7 +208,7 @@ impl PyWorkflowRemediation {
     /// Requires running and generated configs built by `HConfig.from_json()`.
     #[pyo3(signature = (*, list_keys = None))]
     fn remediation_json(
-        &mut self,
+        &self,
         py: Python<'_>,
         list_keys: Option<Vec<String>>,
     ) -> PyResult<PyObject> {
@@ -232,8 +232,8 @@ impl PyWorkflowRemediation {
     }
 
     #[getter]
-    pub fn remediation_config(&mut self, py: Python<'_>) -> PyResult<Py<PyHConfig>> {
-        if let Some(ref rem) = self.remediation_config {
+    pub fn remediation_config(&self, py: Python<'_>) -> PyResult<Py<PyHConfig>> {
+        if let Some(rem) = self.remediation_config.get() {
             return Ok(rem.clone_ref(py));
         }
 
@@ -275,13 +275,13 @@ impl PyWorkflowRemediation {
             plugin.call1((bound,))?;
         }
 
-        self.remediation_config = Some(hconfig.clone_ref(py));
-        Ok(hconfig)
+        let _ = self.remediation_config.set(hconfig.clone_ref(py));
+        Ok(self.remediation_config.get().unwrap().clone_ref(py))
     }
 
     #[getter]
-    pub fn rollback_config(&mut self, py: Python<'_>) -> PyResult<Py<PyHConfig>> {
-        if let Some(ref roll) = self.rollback_config {
+    pub fn rollback_config(&self, py: Python<'_>) -> PyResult<Py<PyHConfig>> {
+        if let Some(roll) = self.rollback_config.get() {
             return Ok(roll.clone_ref(py));
         }
 
@@ -309,12 +309,12 @@ impl PyWorkflowRemediation {
 
         let driver_obj = running_bound.getattr("driver")?.unbind();
         let hconfig = create_py_hconfig(py, delta_tree, platform, driver_obj)?;
-        self.rollback_config = Some(hconfig.clone_ref(py));
-        Ok(hconfig)
+        let _ = self.rollback_config.set(hconfig.clone_ref(py));
+        Ok(self.rollback_config.get().unwrap().clone_ref(py))
     }
 
     pub fn apply_remediation_tag_rules(
-        &mut self,
+        &self,
         py: Python<'_>,
         tag_rules: &Bound<'_, PyAny>,
     ) -> PyResult<()> {
@@ -332,7 +332,7 @@ impl PyWorkflowRemediation {
 
     #[pyo3(signature = (include_tags = None, exclude_tags = None))]
     pub fn remediation_text(
-        &mut self,
+        &self,
         py: Python<'_>,
         include_tags: Option<&Bound<'_, PyAny>>,
         exclude_tags: Option<&Bound<'_, PyAny>>,
@@ -354,7 +354,7 @@ impl PyWorkflowRemediation {
 
     #[pyo3(signature = (include_tags = None, exclude_tags = None))]
     pub fn remediation_config_filtered_text(
-        &mut self,
+        &self,
         py: Python<'_>,
         include_tags: Option<&Bound<'_, PyAny>>,
         exclude_tags: Option<&Bound<'_, PyAny>>,
@@ -364,7 +364,7 @@ impl PyWorkflowRemediation {
 
     #[pyo3(signature = (include_tags = None, exclude_tags = None))]
     pub fn rollback_text(
-        &mut self,
+        &self,
         py: Python<'_>,
         include_tags: Option<&Bound<'_, PyAny>>,
         exclude_tags: Option<&Bound<'_, PyAny>>,
@@ -386,7 +386,7 @@ impl PyWorkflowRemediation {
 
     #[pyo3(signature = (include_tags = None, exclude_tags = None))]
     pub fn rollback_config_filtered_text(
-        &mut self,
+        &self,
         py: Python<'_>,
         include_tags: Option<&Bound<'_, PyAny>>,
         exclude_tags: Option<&Bound<'_, PyAny>>,

@@ -32,8 +32,9 @@ pub use formats::{
 };
 pub use models::*;
 pub use parser::{
-    config_preprocessor, convert_to_set_commands, from_dump, load_fast, load_fast_with_callbacks,
-    load_from_str, load_from_str_with_callbacks,
+    ParserCursor, config_preprocessor, convert_to_set_commands, from_dump, load_fast,
+    load_fast_with_callbacks, load_from_str, load_from_str_with_callbacks, parse_fast,
+    parse_fast_with_callbacks, parse_tree, parse_tree_with_callbacks,
 };
 pub use text_match::TextMatch;
 pub use tree::{Children, Node, Tree, TreeError};

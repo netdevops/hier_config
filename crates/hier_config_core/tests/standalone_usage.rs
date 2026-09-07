@@ -37,7 +37,7 @@ fn every_platform_loads_and_remediates_without_python() {
     for platform in Platform::ALL {
         let running = Tree::for_platform(platform);
         let intended = Tree::for_platform(platform);
-        let mut workflow = WorkflowRemediation::new(running, intended)
+        let workflow = WorkflowRemediation::new(running, intended)
             .unwrap_or_else(|error| panic!("{platform:?} workflow: {error}"));
         let remediation = workflow
             .remediation_config()
@@ -62,7 +62,7 @@ fn cisco_ios_round_trips_from_text_to_remediation() {
     )
     .expect("intended config parses");
 
-    let mut workflow = WorkflowRemediation::new(running, intended).expect("workflow builds");
+    let workflow = WorkflowRemediation::new(running, intended).expect("workflow builds");
     let remediation = workflow.remediation_config().expect("remediation builds");
     let lines: Vec<String> = remediation.dump_simple(false);
 

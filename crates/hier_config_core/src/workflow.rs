@@ -4,6 +4,7 @@ use crate::models::{Platform, TagRule};
 use crate::remediation::config_to_get_to;
 use crate::tree::{Tree, TreeError};
 use std::borrow::Cow;
+use std::sync::OnceLock;
 
 /// Errors that can occur during workflow execution.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -45,8 +46,8 @@ impl From<TreeError> for WorkflowError {
 pub struct WorkflowRemediation<'a> {
     pub running_config: Cow<'a, Tree>,
     pub generated_config: Cow<'a, Tree>,
-    remediation: Option<Tree>,
-    rollback: Option<Tree>,
+    remediation: OnceLock<Tree>,
+    rollback: OnceLock<Tree>,
 }
 
 impl WorkflowRemediation<'static> {
@@ -63,7 +64,7 @@ impl WorkflowRemediation<'static> {
     ///
     /// let running = Tree::from_str(Platform::CiscoIos, "vlan 10").unwrap();
     /// let generated = Tree::from_str(Platform::CiscoIos, "vlan 20").unwrap();
-    /// let mut workflow = WorkflowRemediation::new(running, generated).unwrap();
+    /// let workflow = WorkflowRemediation::new(running, generated).unwrap();
     ///
     /// let rem = workflow.remediation_config().unwrap();
     /// assert!(!rem.all_children_sorted(rem.root).is_empty());
@@ -78,8 +79,8 @@ impl WorkflowRemediation<'static> {
         Ok(Self {
             running_config: Cow::Owned(running_config),
             generated_config: Cow::Owned(generated_config),
-            remediation: None,
-            rollback: None,
+            remediation: OnceLock::new(),
+            rollback: OnceLock::new(),
         })
     }
 
@@ -94,7 +95,7 @@ impl WorkflowRemediation<'static> {
     /// use hier_config_core::models::Platform;
     /// use hier_config_core::workflow::WorkflowRemediation;
     ///
-    /// let mut workflow = WorkflowRemediation::from_strings(
+    /// let workflow = WorkflowRemediation::from_strings(
     ///     Platform::CiscoIos,
     ///     "hostname router1\ninterface GigabitEthernet0/1\n  shutdown",
     ///     "hostname router1\ninterface GigabitEthernet0/1\n  no shutdown",
@@ -132,8 +133,8 @@ impl<'a> WorkflowRemediation<'a> {
         Ok(Self {
             running_config: Cow::Borrowed(running_config),
             generated_config: Cow::Borrowed(generated_config),
-            remediation: None,
-            rollback: None,
+            remediation: OnceLock::new(),
+            rollback: OnceLock::new(),
         })
     }
 
@@ -146,13 +147,14 @@ impl<'a> WorkflowRemediation<'a> {
     ///
     /// # Panics
     /// Panics if the internal remediation state is unexpectedly uninitialized after computation.
-    pub fn remediation_config(&mut self) -> Result<&Tree, WorkflowError> {
-        if self.remediation.is_none() {
-            let mut rem = config_to_get_to(&self.running_config, &self.generated_config)?;
-            rem.set_order_weight();
-            self.remediation = Some(rem);
+    pub fn remediation_config(&self) -> Result<&Tree, WorkflowError> {
+        if let Some(rem) = self.remediation.get() {
+            return Ok(rem);
         }
-        Ok(self.remediation.as_ref().expect("remediation initialized"))
+        let mut rem = config_to_get_to(&self.running_config, &self.generated_config)?;
+        rem.set_order_weight();
+        let _ = self.remediation.set(rem);
+        Ok(self.remediation.get().expect("remediation initialized"))
     }
 
     /// Returns a mutable reference to the remediation configuration, computing it lazily on first access.
@@ -163,12 +165,8 @@ impl<'a> WorkflowRemediation<'a> {
     /// # Panics
     /// Panics if the internal remediation state is unexpectedly uninitialized after computation.
     pub fn remediation_config_mut(&mut self) -> Result<&mut Tree, WorkflowError> {
-        if self.remediation.is_none() {
-            let mut rem = config_to_get_to(&self.running_config, &self.generated_config)?;
-            rem.set_order_weight();
-            self.remediation = Some(rem);
-        }
-        Ok(self.remediation.as_mut().expect("remediation initialized"))
+        self.remediation_config()?;
+        Ok(self.remediation.get_mut().expect("remediation initialized"))
     }
 
     /// Returns a reference to the rollback configuration, computing it lazily on first access.
@@ -180,13 +178,14 @@ impl<'a> WorkflowRemediation<'a> {
     ///
     /// # Panics
     /// Panics if the internal rollback state is unexpectedly uninitialized after computation.
-    pub fn rollback_config(&mut self) -> Result<&Tree, WorkflowError> {
-        if self.rollback.is_none() {
-            let mut roll = config_to_get_to(&self.generated_config, &self.running_config)?;
-            roll.set_order_weight();
-            self.rollback = Some(roll);
+    pub fn rollback_config(&self) -> Result<&Tree, WorkflowError> {
+        if let Some(roll) = self.rollback.get() {
+            return Ok(roll);
         }
-        Ok(self.rollback.as_ref().expect("rollback initialized"))
+        let mut roll = config_to_get_to(&self.generated_config, &self.running_config)?;
+        roll.set_order_weight();
+        let _ = self.rollback.set(roll);
+        Ok(self.rollback.get().expect("rollback initialized"))
     }
 
     /// Returns a mutable reference to the rollback configuration, computing it lazily on first access.
@@ -197,12 +196,8 @@ impl<'a> WorkflowRemediation<'a> {
     /// # Panics
     /// Panics if the internal rollback state is unexpectedly uninitialized after computation.
     pub fn rollback_config_mut(&mut self) -> Result<&mut Tree, WorkflowError> {
-        if self.rollback.is_none() {
-            let mut roll = config_to_get_to(&self.generated_config, &self.running_config)?;
-            roll.set_order_weight();
-            self.rollback = Some(roll);
-        }
-        Ok(self.rollback.as_mut().expect("rollback initialized"))
+        self.rollback_config()?;
+        Ok(self.rollback.get_mut().expect("rollback initialized"))
     }
 
     /// Applies tag rules to the remediation configuration.
@@ -225,7 +220,7 @@ impl<'a> WorkflowRemediation<'a> {
     /// # Errors
     /// Returns [`WorkflowError`] if computing the remediation configuration fails.
     pub fn remediation_text(
-        &mut self,
+        &self,
         include_tags: &[&str],
         exclude_tags: &[&str],
     ) -> Result<String, WorkflowError> {
@@ -238,7 +233,7 @@ impl<'a> WorkflowRemediation<'a> {
     /// # Errors
     /// Returns [`WorkflowError`] if computing the rollback configuration fails.
     pub fn rollback_text(
-        &mut self,
+        &self,
         include_tags: &[&str],
         exclude_tags: &[&str],
     ) -> Result<String, WorkflowError> {

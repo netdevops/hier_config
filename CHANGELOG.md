@@ -56,6 +56,16 @@ v4 design decisions, for the record:
 - `InvalidConfigError` is now defined in the extension module and re-exported
   from `hier_config.exceptions`. Importing it from `hier_config.exceptions`
   (the documented path) is unchanged.
+- `WorkflowRemediation` remediation and rollback trees are now lazily cached via
+  `std::sync::OnceLock` in both `hier_config_core` and `hier_config_py`, converting
+  query methods and properties to take `&self`. This allows lock-free immutable
+  access across threads in Rust and eliminates runtime PyO3 `BorrowMutError`
+  under concurrent property access from Python.
+- Parser state accumulators are now encapsulated into `ParserState`,
+  `ParserCursor`, and `IndentTracker` in `hier_config_core::parser`, eliminating
+  mutable cross-function parameter threading. Pure transactional tree constructors
+  (`parse_tree`, `parse_tree_with_callbacks`, `parse_fast`, `parse_fast_with_callbacks`)
+  build and return complete trees without requiring caller-allocated mutable instances.
 
 ### Fixed
 
