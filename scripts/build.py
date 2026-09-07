@@ -36,6 +36,7 @@ def lint(*, fix: bool = False) -> None:
             _flynt_command(fix=fix),
             _check_displacement_markers_command(),
             _check_stubs_command(),
+            _check_formats_corpus_command(),
         ),
     )
 
@@ -55,6 +56,7 @@ def lint_and_test(*, fix: bool = False) -> None:
             _flynt_command(fix=fix),
             _check_displacement_markers_command(),
             _check_stubs_command(),
+            _check_formats_corpus_command(),
         ),
     )
 
@@ -144,6 +146,16 @@ def check_stubs() -> None:
 
 def _check_stubs_command() -> str:
     return f"{sys.executable} scripts/gen_stubs.py --check"
+
+
+@app.command()
+def check_formats_corpus() -> None:
+    """Fail when testdata/formats/expected.json no longer matches Python's output."""
+    _run(_check_formats_corpus_command())
+
+
+def _check_formats_corpus_command() -> str:
+    return f"{sys.executable} scripts/gen_formats_corpus.py --check"
 
 
 @app.command()
