@@ -1,4 +1,5 @@
 use crate::platforms::functions::expand_range;
+use crate::platforms::post_load_enabled;
 use crate::tree::Tree;
 
 pub mod view;
@@ -6,10 +7,18 @@ pub mod view;
 pub const RULES_JSON: &str = include_str!("rules.json");
 
 pub fn run_post_load(tree: &mut Tree) {
-    rm_ipv6_acl_sequence_numbers(tree);
-    remove_ipv4_acl_remarks(tree);
-    add_acl_sequence_numbers(tree);
-    split_vlan_id_lists(tree);
+    if post_load_enabled(tree, "remove_ipv6_acl_sequence_numbers") {
+        rm_ipv6_acl_sequence_numbers(tree);
+    }
+    if post_load_enabled(tree, "remove_ipv4_acl_remarks") {
+        remove_ipv4_acl_remarks(tree);
+    }
+    if post_load_enabled(tree, "add_acl_sequence_numbers") {
+        add_acl_sequence_numbers(tree);
+    }
+    if post_load_enabled(tree, "split_vlan_id_lists") {
+        split_vlan_id_lists(tree);
+    }
 }
 
 pub fn rm_ipv6_acl_sequence_numbers(tree: &mut Tree) {

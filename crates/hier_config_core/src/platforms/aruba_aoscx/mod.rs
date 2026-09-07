@@ -1,4 +1,5 @@
 use crate::platforms::functions::expand_range;
+use crate::platforms::post_load_enabled;
 use crate::tree::Tree;
 use std::sync::Arc;
 
@@ -7,8 +8,12 @@ pub mod view;
 pub const RULES_JSON: &str = include_str!("rules.json");
 
 pub fn run_post_load(tree: &mut Tree) {
-    crate::platforms::cisco_ios::split_vlan_id_lists(tree);
-    split_interface_vlan_trunk_allowed(tree);
+    if post_load_enabled(tree, "split_vlan_id_lists") {
+        crate::platforms::cisco_ios::split_vlan_id_lists(tree);
+    }
+    if post_load_enabled(tree, "split_interface_vlan_trunk_allowed") {
+        split_interface_vlan_trunk_allowed(tree);
+    }
 }
 
 fn split_interface_vlan_trunk_allowed(tree: &mut Tree) {

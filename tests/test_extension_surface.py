@@ -84,6 +84,7 @@ def test_extension_surface_is_fully_enumerated() -> None:
         "idempotent_commands_avoid",
         "indent_adjust",
         "negate_with",
+        "negation",
         "negation_default_when",
         "negation_sub",
         "ordering",
@@ -94,13 +95,13 @@ def test_extension_surface_is_fully_enumerated() -> None:
         "sectional_overwrite_no_negate",
         "unused_objects",
     }
-    callback_fields = {"post_load_callbacks"}
+    callback_fields = {"post_load_callbacks", "remediation_transform_callbacks"}
     scalar_fields = {"indentation"}
 
     assert set(HConfigDriverRules.model_fields) == (
         injectable_rule_fields | callback_fields | scalar_fields
     )
-    assert len(injectable_rule_fields) == 14
+    assert len(injectable_rule_fields) == 15
 
     rules = load_platform_rules(Platform.GENERIC)
     for field in injectable_rule_fields | callback_fields:
@@ -220,11 +221,10 @@ def test_callbacks_registered_through_instantiate_rules_override() -> None:
 
 
 def test_callbacks_run_on_the_empty_config_for_get_hconfig_from_dump() -> None:
-    """``get_hconfig_from_dump`` runs callbacks before the dump lines load.
+    """``get_hconfig_from_dump`` runs callbacks over the reconstructed tree.
 
-    The constructor builds an empty ``HConfig`` (which triggers callbacks) and
-    then appends the dumped lines, so callbacks observe an empty tree. This is
-    asserted to pin the behavior rather than to endorse it.
+    Callbacks exist to normalize parsed configuration, so they must observe the
+    dumped lines rather than the empty tree the constructor starts from.
     """
     driver = _driver()
     observed: list[tuple[str, ...]] = []
@@ -246,7 +246,7 @@ def test_callbacks_run_on_the_empty_config_for_get_hconfig_from_dump() -> None:
     )
     config = get_hconfig_from_dump(driver, dump)
 
-    assert observed == [()]
+    assert observed == [("hostname sw1",)]
     assert config.dump_simple() == ("hostname sw1",)
 
 

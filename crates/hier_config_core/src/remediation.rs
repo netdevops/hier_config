@@ -248,6 +248,10 @@ pub struct FutureReport {
 }
 
 /// Like [`future`], but also reports how negations resolved.
+///
+/// # Errors
+///
+/// Returns [`TreeError`] if the projected tree cannot be built.
 pub fn future_with_report(
     source: &Tree,
     config: &Tree,

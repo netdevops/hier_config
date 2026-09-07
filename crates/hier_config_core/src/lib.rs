@@ -40,6 +40,9 @@ mod tests {
 
     #[test]
     fn test_core_version() {
-        assert_eq!(core_version(), "4.0.0");
+        // Tracks the crate version rather than a literal so pre-release bumps
+        // (e.g. "4.0.0-beta.4") don't require editing this assertion.
+        assert_eq!(core_version(), env!("CARGO_PKG_VERSION"));
+        assert!(core_version().starts_with("4."));
     }
 }

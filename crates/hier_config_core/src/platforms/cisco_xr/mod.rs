@@ -1,3 +1,4 @@
+use crate::platforms::post_load_enabled;
 use crate::tree::Tree;
 
 pub mod view;
@@ -5,7 +6,9 @@ pub mod view;
 pub const RULES_JSON: &str = include_str!("rules.json");
 
 pub fn run_post_load(tree: &mut Tree) {
-    fixup_xr_comments(tree);
+    if post_load_enabled(tree, "fixup_xr_comments") {
+        fixup_xr_comments(tree);
+    }
 }
 
 pub fn fixup_xr_comments(tree: &mut Tree) {

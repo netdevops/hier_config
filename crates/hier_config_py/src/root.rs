@@ -903,7 +903,7 @@ impl PyHConfig {
         base.dump_simple(py, sectional_exiting)
     }
 
-    /// Create an HConfig from raw configuration text (or a Path to it).
+    /// Create an `HConfig` from raw configuration text (or a Path to it).
     #[classmethod]
     #[pyo3(signature = (platform_or_driver, config_text = None))]
     pub fn from_text(
@@ -922,7 +922,7 @@ impl PyHConfig {
             .map(Bound::unbind)
     }
 
-    /// Create an HConfig from pre-split configuration lines (fast load).
+    /// Create an `HConfig` from pre-split configuration lines (fast load).
     #[classmethod]
     pub fn from_lines(
         _cls: &Bound<'_, PyType>,
@@ -936,7 +936,7 @@ impl PyHConfig {
             .map(Bound::unbind)
     }
 
-    /// Reconstruct an HConfig from a serialized Dump.
+    /// Reconstruct an `HConfig` from a serialized `Dump`.
     #[classmethod]
     pub fn from_dump(
         _cls: &Bound<'_, PyType>,
@@ -950,7 +950,7 @@ impl PyHConfig {
             .map(Bound::unbind)
     }
 
-    /// Create an HConfig from a JSON object or JSON text.
+    /// Create an `HConfig` from a JSON object or JSON text.
     #[classmethod]
     #[pyo3(signature = (platform_or_driver, data, *, list_keys = None))]
     pub fn from_json(
@@ -968,7 +968,7 @@ impl PyHConfig {
             .map(Bound::unbind)
     }
 
-    /// Create an HConfig from an XML document.
+    /// Create an `HConfig` from an XML document.
     #[classmethod]
     #[pyo3(signature = (platform_or_driver, source, *, list_keys = None))]
     pub fn from_xml(

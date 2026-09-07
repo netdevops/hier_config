@@ -52,6 +52,14 @@ pub struct DriverRules {
     pub negation_sub: Vec<NegationSubRule>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub unused_objects: Vec<UnusedObjectRule>,
+    /// Names of the post-load callbacks that are still enabled.
+    ///
+    /// `None` means "every callback the platform defines", which is what a
+    /// pure-Rust caller wants. The Python bindings set it from the driver's
+    /// `post_load_callbacks` so removing a callback there also disables its
+    /// core-owned implementation (#286).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enabled_post_load: Option<Vec<String>>,
 }
 
 const fn default_indentation() -> usize {
@@ -127,6 +135,7 @@ impl Default for DriverRules {
             negate_with: Vec::new(),
             negation: Vec::new(),
             ordering: Vec::new(),
+            enabled_post_load: None,
             parent_allows_duplicate_child: Vec::new(),
             per_line_sub: Vec::new(),
             sectional_exiting: Vec::new(),

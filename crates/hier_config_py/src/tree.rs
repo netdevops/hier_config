@@ -78,12 +78,16 @@ impl SharedTree {
             .getattr("model_dump_json")?
             .call((), Some(&kwargs))?
             .extract::<String>()?;
-        let driver_rules = serde_json::from_str::<hier_config_core::DriverRules>(&json_str)
+        let mut driver_rules = serde_json::from_str::<hier_config_core::DriverRules>(&json_str)
             .map_err(|e| {
                 pyo3::exceptions::PyValueError::new_err(format!(
                     "failed to sync driver rules from Python driver: {e}"
                 ))
             })?;
+        // `post_load_callbacks` is excluded from the JSON above because it holds
+        // Python callables, so carry the surviving names across separately: the
+        // core skips any callback the caller removed on the Python side (#286).
+        driver_rules.enabled_post_load = Some(callback_names(&rules_obj)?);
         {
             let mut tree = self.tree.write().unwrap();
             tree.driver.rules = driver_rules;
@@ -227,4 +231,19 @@ impl SharedTree {
         let mut data = self.node_data.write().unwrap();
         data.remove(&node_id);
     }
+}
+
+/// Collects the `__name__` of every callback still on `rules.post_load_callbacks`.
+///
+/// Callbacks without a `__name__` (partials, lambdas, callable objects) are
+/// necessarily Python-only, so they are skipped rather than treated as an
+/// error.
+fn callback_names(rules: &Bound<'_, PyAny>) -> PyResult<Vec<String>> {
+    let mut names = Vec::new();
+    for callback in rules.getattr("post_load_callbacks")?.try_iter()? {
+        if let Ok(name) = callback?.getattr("__name__")?.extract::<String>() {
+            names.push(name);
+        }
+    }
+    Ok(names)
 }
