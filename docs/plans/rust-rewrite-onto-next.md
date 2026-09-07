@@ -2,7 +2,7 @@
 
 ## Status
 
-- **Status:** Proposed
+- **Status:** Complete — Phases 1-6 executed on `rust-rewrite`
 - **Owner:** rust-rewrite maintainers
 - **Date:** 2026-09-07
 - **Related:** [`rust-native-workflow-remediation.md`](rust-native-workflow-remediation.md),
@@ -186,7 +186,7 @@ flowchart LR
 
 ## Phased Implementation Plan
 
-### Phase 1 — Establish the branch
+### Phase 1 — Establish the branch ✅
 
 **Scope:** Confirm `rust-rewrite` is fully committed. Create `rust-on-next` from
 `upstream/next`.
@@ -198,7 +198,7 @@ flowchart LR
 
 **Risks:** Losing uncommitted work. Mitigated by the clean-tree check.
 
-### Phase 2 — Land Category A wholesale
+### Phase 2 — Land Category A wholesale ✅
 
 **Scope:** Bring across every file with no counterpart on `next`: `crates/`,
 `stubs/`, `testdata/`, `Cargo.toml`, `Cargo.lock`, new build scripts, plan docs.
@@ -212,7 +212,7 @@ flowchart LR
 **Risks:** A file mis-classified as net-new silently clobbers `next` work.
 Mitigated by asserting the overlap set is disjoint before committing.
 
-### Phase 3 — Re-derive the 70 overlapping files
+### Phase 3 — Re-derive the 70 overlapping files ✅
 
 **Sub-phase 3a — Python shim layer.** `base.py`, `root.py`, `child.py`,
 `children.py`, `workflows.py`, `constructors.py`, `models.py`, `exceptions.py`.
@@ -234,10 +234,17 @@ post-load callbacks) against the Rust driver rules.
 >    unchanged, and #300 kept the three v3 fields as permanent compat fields
 >    resolved by `HConfigDriverRules.all_negation_rules()`. Every field name in
 >    the Rust `rules.json` files (`negate_with`, `negation_default_when`, …)
->    still validates against `next`'s model, so **no Rust rules data has to
->    change** and no Rust engine change is required: the core already evaluates
->    REPLACE → DEFAULT → REGEX_SUB, which is the order `all_negation_rules()`
->    reproduces.
+>    still validates against `next`'s model, so no Rust rules *data* has to
+>    change.
+>
+>    **This conclusion was wrong about the engine and was overturned during
+>    execution.** `SharedTree::sync_rules()` deserializes the Python driver's
+>    rules into `hier_config_core::DriverRules`, which has no
+>    `deny_unknown_fields`. A driver that populated `next`'s unified `negation`
+>    list would therefore have had it *silently discarded* — the worst possible
+>    failure mode. `NegationStrategy`/`NegationRule` were added to the core, and
+>    `compute_negation()` was split into a legacy fast path plus
+>    `compute_negation_unified()`.
 > 2. **Public post-load callbacks (#286).** Private callbacks were renamed
 >    public (`_remove_ipv4_acl_remarks` → `remove_ipv4_acl_remarks`). The
 >    rewrite runs the built-in post-load pipeline in Rust, so these functions
@@ -246,10 +253,16 @@ post-load callbacks) against the Rust driver rules.
 >    though the built-in pipeline still executes natively.
 > 3. **`view_class` driver attribute.** Each driver now declares its view class.
 >
-> **Residual divergence needing a decision:** `next`'s `driver_base` documents
+> **Residual divergence, since resolved:** `next`'s `driver_base` documents
 > `negate_with()` as an overridable imperative hook; the rewrite's
 > `__init_subclass__` *rejects* subclasses defining it (only rule data crosses
-> into Rust). This is a real API incompatibility, not a mechanical rename.
+> into Rust). Resolution: the guard stays, but an override carrying the new
+> `@core_owned` marker is allowed through. The marker is a declaration that the
+> core owns the behavior, not a switch that makes the core call the Python
+> body. The same marker gates post-load callbacks, backed in the core by
+> `DriverRules.enabled_post_load` (#286) so a callback the caller removed on the
+> Python side is skipped natively. Documented as breaking in
+> `docs/user/rust-core-changes.md`.
 >
 > **Known caveat:** for a hand-written v4 `negation` list that *interleaves*
 > DEFAULT and REGEX_SUB rules, `next` evaluates them in list order whereas the
@@ -275,7 +288,7 @@ build. Delete `poetry.lock`.
 **Risks:** Highest-judgement phase. Silent reversion of `next` behaviour is the
 main hazard; Phase 5 is the backstop.
 
-### Phase 4 — Wire the new `next` modules onto the native tree
+### Phase 4 — Wire the new `next` modules onto the native tree ✅
 
 **Scope:**
 - `formats.py`, `registry.py`, `plugins.py` — keep as pure Python. Confirmed
@@ -294,7 +307,7 @@ main hazard; Phase 5 is the backstop.
 and `lineage()` work — this constrains the native implementation to build the
 report during, not after, future computation.
 
-### Phase 5 — Run `next`'s suite against the Rust core
+### Phase 5 — Run `next`'s suite against the Rust core ✅
 
 **Scope:** Run `tests/unit/` and `tests/integration/`, including
 `test_v3_baseline.py`. Triage every failure into exactly one bucket:
@@ -312,7 +325,7 @@ report during, not after, future computation.
 **Risks:** The v3 baseline may expose systemic divergence, not point failures.
 If so, escalate before adding markers — markers must not paper over a design gap.
 
-### Phase 6 — Residual per-PR audit
+### Phase 6 — Residual per-PR audit ✅
 
 **Scope:** Walk the 37 `next` commits. For each, record: *mirrored in Rust* /
 *not applicable* / *consciously dropped, reason*. Focus on what tests cannot
@@ -323,6 +336,63 @@ catch — docs accuracy, benchmark deltas, public-name spelling.
 - `CHANGELOG.md` reconciled — including correcting our `(#216)` references,
   which collide with upstream #216 "Rename inconsistent public APIs".
 - `pytest -m benchmark tests/benchmarks/test_perf_regression.py` passes.
+
+**Final gate at completion.** `cargo fmt --check`, `cargo clippy --all-targets
+--all-features -- -D warnings`, and `cargo test --workspace` all clean;
+`python scripts/build.py lint-and-test` reports no issues; **1,050 Python tests
+pass, 25 deselected**; all six performance-gate operations are under their
+ceilings; `mkdocs build --strict` is warning-free.
+
+## Execution record
+
+Findings worth carrying forward, in the order they surfaced.
+
+**Phase 1 — the rename trap.** A naive `git diff --name-only` intersection
+reported 52 overlapping files. `next` performed **73 renames**, so the real
+figures are **70 conflicts / 446 Category A**. Always use
+`git diff --name-status -M --find-renames=40%`. The pre-migration history is
+preserved at tag `rust-rewrite-pre-next-migration`.
+
+**Phase 3 — the reconciliations that needed judgement.**
+
+| Fork | Resolution |
+|---|---|
+| Unified negation list | Implemented natively (see the corrected note above). |
+| Three engine-resolved hooks | Guard retained; `@core_owned` override allowed. |
+| `_instantiate_rules()` | `next`'s **staticmethod** shape kept across the base and all 13 drivers; only `@abstractmethod` dropped, so a missing override now fails later with `NotImplementedError`. |
+| View layer | `next`'s Python views adopted wholesale; the rewrite's unfinished **native view subsystem was retired** (4,405 lines deleted). `TreeView`/`InterfaceView` are referenced nowhere outside `view/` and `platforms/`, which made the swap safe. |
+| v3→v4 renames (#216, #300) | v4 names added **natively in Rust** as delegating wrappers, v3 names kept as permanent aliases. |
+| Ingestion/serialization | All seven classmethods live on the **native** class, because every Rust method that returns a tree builds a native `HConfig` — a method defined only on a Python subclass would vanish from the result. `root.py` stays a pure re-export shim. |
+| `next`'s Python config loader | Stays deleted (the core parses); `config_preprocessor` staticmethods restored on the three set-style drivers. |
+
+**Phase 3 — the lost-config lesson.** Grafting the maturin head onto `next`'s
+`pyproject.toml` dropped every `[tool.<checker>]` block. ruff went 0 → 155,
+mypy 0 → 909. **None of it was new debt**: ruff needed `per-file-ignores`, mypy
+needed `mypy_path`, pyright its whole section, pylint
+`extension-pkg-allow-list`. When a lint count explodes after a config graft,
+diff the tool sections before writing a line of code.
+
+**Phase 6 — the audit's two real findings.** Neither was a reverted `next`
+feature; both were rewrite defects the audit surfaced:
+
+1. **Missing stub docstrings.** mkdocstrings renders from the `.pyi`, not the
+   extension, so the five v4 ingestion constructors rendered as bare
+   signatures. `gen_stubs.py` now splices the live `__doc__` into a
+   `RAW_OVERRIDES` block.
+2. **A 2× iteration regression.** Whole-tree walks had been switched to the
+   *interning* materializer while chasing an unrelated identity bug. Bulk
+   traversal needs no handle identity; reverting to the batch materializer and
+   dropping the pointless generator wrapper from `all_children_sorted()` took a
+   7,400-node walk from 0.70 ms to 0.11 ms.
+
+**Phase 6 — verified faithfully carried over.** `prune_empty_branches` (#269,
+a keyword to `future()`, not a method), `future_with_report` (#294, on
+`HConfig` only), `remediation_json` (#287), `remediation_netconf_xml` (#232),
+`dot1q_mode_from_vlans` (#228), the `register_driver`/`resolve_driver` surface
+(#295), `load_driver_rules`/`load_tag_rules`, and the Fortinet
+`swap_negation`/`idempotent_for` hardening (#225, behavior probed directly, not
+merely test-passing). #185 is tests-only. #191 and #188 are Python
+micro-optimizations the core supersedes.
 
 ## Testing Strategy
 
