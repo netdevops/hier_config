@@ -668,6 +668,20 @@ impl PyHConfig {
         config: &Bound<'_, PyAny>,
         prune_empty_branches: bool,
     ) -> PyResult<PyObject> {
+        let (future_config, _) = Self::future_with_report(slf, config, prune_empty_branches)?;
+        Ok(future_config)
+    }
+
+    /// Like `future()`, but also reports how the change's negations resolved.
+    ///
+    /// Returns `(future_config, FutureReport)`. The report's nodes belong to
+    /// the returned tree, so callers can walk their surrounding context.
+    #[pyo3(signature = (config, *, prune_empty_branches = false))]
+    pub fn future_with_report(
+        slf: PyRef<'_, Self>,
+        config: &Bound<'_, PyAny>,
+        prune_empty_branches: bool,
+    ) -> PyResult<(PyObject, PyObject)> {
         let py = slf.py();
         let base = slf.as_ref();
         base.tree.sync_rules(py)?;
@@ -677,9 +691,12 @@ impl PyHConfig {
 
         let my_tree = base.tree.tree.read().unwrap();
         let cfg_tree = config_base.tree.tree.read().unwrap();
-        let fut_tree =
-            hier_config_core::remediation::future(&my_tree, &cfg_tree, prune_empty_branches)
-                .map_err(to_py_err)?;
+        let (fut_tree, report) = hier_config_core::remediation::future_with_report(
+            &my_tree,
+            &cfg_tree,
+            prune_empty_branches,
+        )
+        .map_err(to_py_err)?;
         drop(my_tree);
         drop(cfg_tree);
 
@@ -702,7 +719,26 @@ impl PyHConfig {
         let mut handle = shared_tree.root_handle.write().unwrap();
         *handle = Some(hconfig.clone_ref(py).into_any());
         drop(handle);
-        Ok(hconfig.into_any())
+
+        let unresolved = SharedTree::get_or_create_children_batch(
+            &shared_tree,
+            py,
+            &report.unresolved_negations,
+        )?;
+        let replacements = SharedTree::get_or_create_children_batch(
+            &shared_tree,
+            py,
+            &report.idempotency_replacements,
+        )?;
+        let py_report = py
+            .import("hier_config.tree_algorithms")?
+            .getattr("FutureReport")?
+            .call1((
+                PyTuple::new(py, unresolved)?,
+                PyTuple::new(py, replacements)?,
+            ))?;
+
+        Ok((hconfig.into_any(), py_report.unbind()))
     }
 
     pub fn deep_copy(slf: PyRef<'_, Self>) -> PyResult<PyObject> {

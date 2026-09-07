@@ -229,8 +229,33 @@ pub fn children_equal(tree_a: &Tree, a: NodeId, tree_b: &Tree, b: NodeId) -> boo
 ///
 /// Returns [`TreeError`] if the predicted tree cannot be assembled.
 pub fn future(source: &Tree, config: &Tree, prune_empty_branches: bool) -> Result<Tree, TreeError> {
+    let (future_config, _) = future_with_report(source, config, prune_empty_branches)?;
+    Ok(future_config)
+}
+
+/// How `future()` resolved the change's negations (#285).
+///
+/// The node ids reference the returned future config tree, so callers can
+/// resolve them back to nodes for surrounding context.
+#[derive(Debug, Default, Clone)]
+pub struct FutureReport {
+    /// Kept negation lines whose positive form matched nothing in the source
+    /// config -- the change did not apply cleanly.
+    pub unresolved_negations: Vec<NodeId>,
+    /// Negation lines that persisted by replacing an idempotency-tracked
+    /// counterpart (e.g. IOS `no logging console`).
+    pub idempotency_replacements: Vec<NodeId>,
+}
+
+/// Like [`future`], but also reports how negations resolved.
+pub fn future_with_report(
+    source: &Tree,
+    config: &Tree,
+    prune_empty_branches: bool,
+) -> Result<(Tree, FutureReport), TreeError> {
     let mut future_config = Tree::new(source.driver.clone());
     let future_root = future_config.root;
+    let mut report = FutureReport::default();
     future_node(
         source,
         source.root,
@@ -238,13 +263,14 @@ pub fn future(source: &Tree, config: &Tree, prune_empty_branches: bool) -> Resul
         config.root,
         &mut future_config,
         future_root,
+        &mut report,
     )?;
 
     if prune_empty_branches {
         prune_emptied_branches(source, source.root, &mut future_config, future_root);
     }
 
-    Ok(future_config)
+    Ok((future_config, report))
 }
 
 fn future_pre(
@@ -276,6 +302,7 @@ fn future_node(
     config_node: NodeId,
     future_config: &mut Tree,
     future_node_id: NodeId,
+    report: &mut FutureReport,
 ) -> Result<(), TreeError> {
     let (mut negated_or_recursed, config_children_ignore) =
         future_pre(source, source_node, config, config_node);
@@ -305,7 +332,11 @@ fn future_node(
         } else if let Some(self_child_id) =
             config.idempotent_for(config_child_id, source, &source_children)
         {
-            future_config.add_deep_copy_of(future_node_id, config, config_child_id, false)?;
+            let added =
+                future_config.add_deep_copy_of(future_node_id, config, config_child_id, false)?;
+            if is_negation {
+                report.idempotency_replacements.push(added);
+            }
             negated_or_recursed.insert(Arc::clone(&source.arena[self_child_id].text));
         } else if is_negation
             && source.arena[source_node].children.iter().any(|id| {
@@ -332,10 +363,17 @@ fn future_node(
                 config_child_id,
                 future_config,
                 future_child,
+                report,
             )?;
             negated_or_recursed.insert(Arc::clone(config_text));
         } else if is_negation {
-            future_config.add_shallow_copy_of(future_node_id, config, config_child_id, false)?;
+            let added = future_config.add_shallow_copy_of(
+                future_node_id,
+                config,
+                config_child_id,
+                false,
+            )?;
+            report.unresolved_negations.push(added);
         } else if let Some(self_child_id) = source.arena[source_node]
             .children
             .get(&format!("{}{}", source.driver.negation_prefix, config_text))

@@ -10,6 +10,9 @@ from hier_config.platforms.hp_procurve.functions import (
 )
 from hier_config.platforms.hp_procurve.view import HConfigViewHPProcurve
 from hier_config.root import HConfig
+from hier_config.child import HConfigChild
+from collections.abc import Iterable
+import re
 
 
 @core_owned
@@ -145,3 +148,103 @@ class HConfigDriverHPProcurve(HConfigDriverBase):
             ],
         )
 
+    @staticmethod
+    def _idempotent_for_helper(
+        expression: str,
+        end_index: int,
+        config: HConfigChild,
+        other_children: Iterable[HConfigChild],
+    ) -> HConfigChild | None:
+        if re.search(expression, config.text):
+            words = config.text.split()
+            startswith = " ".join(words[:end_index])
+            for other_child in other_children:
+                if other_child.text.startswith(startswith):
+                    return other_child
+        return None
+
+    @staticmethod
+    def _negation_negate_with_helper(
+        expression: str,
+        end_index: int,
+        prepend: str,
+        append: str,
+        config: HConfigChild,
+    ) -> str | None:
+        if re.search(expression, config.text):
+            words = config.text.split()
+            return " ".join([prepend, *words[:end_index], append]).strip()
+        return None
+
+    @core_owned
+    def idempotent_for(
+        self,
+        config: HConfigChild,
+        other_children: Iterable[HConfigChild],
+    ) -> HConfigChild | None:
+        if result := super().idempotent_for(config, other_children):
+            return result
+
+        if config.parent is config.root:
+            rules = (
+                (
+                    r"^aaa port-access authenticator \S+ (tx-period|supplicant-timeout) \d+$",
+                    5,
+                ),
+                (r"^aaa port-access \S+ auth-(priority|order) ", 4),
+                (r"^aaa port-access authenticator \S+ client-limit \d+$", 5),
+                (r"^aaa port-access mac-based \S+ (addr-limit|logoff-period) \d+$", 5),
+                (r"^aaa port-access \S+ critical-auth user-role ", 5),
+                (r"^radius-server host \S+ encrypted-key \S+$", 4),
+            )
+            for expression, stop_index in rules:
+                if result := self._idempotent_for_helper(
+                    expression,
+                    stop_index,
+                    config,
+                    other_children,
+                ):
+                    return result
+
+        return None
+
+    @core_owned
+    def negate_with(self, config: HConfigChild) -> str | None:
+        result = super().negate_with(config)
+        if isinstance(result, str):
+            return result
+
+        if config.parent is not config.root:
+            return None
+
+        rules = (
+            (
+                r"^aaa port-access authenticator \S+ (tx-period|supplicant-timeout) \d+$",
+                5,
+                "",
+                "30",
+            ),
+            (r"^aaa port-access authenticator \S+ client-limit \d+$", 5, "no", ""),
+            (r"^aaa port-access mac-based \S+ addr-limit \d+$", 5, "", "1"),
+            (r"^aaa port-access mac-based \S+ logoff-period \d+$", 5, "", "300"),
+            (r"^aaa port-access \S+ critical-auth user-role ", 5, "no", ""),
+            (r"^tacacs-server host \S+ ", 3, "no", ""),
+            (r"^radius-server host \S+ time-window \d+$", 4, "", "300"),
+            (
+                r"^radius-server host \S+ time-window plus-or-minus-time-window$",
+                4,
+                "",
+                "positive-time-window",
+            ),
+            (r"^radius-server host \S+ encrypted-key \S+$", 3, "no", ""),
+        )
+        for expression, end_index, prepend, append in rules:
+            if result := self._negation_negate_with_helper(
+                expression,
+                end_index,
+                prepend,
+                append,
+                config,
+            ):
+                return result
+        return None

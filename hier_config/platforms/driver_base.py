@@ -301,6 +301,11 @@ def runs_in_core(callback: Callable[[HConfig], None], platform: Platform | None)
     )
 
 
+def _is_core_owned(obj: object) -> bool:
+    """Report whether `obj` is marked as mirrored by the Rust core."""
+    return getattr(obj, _CORE_OWNED_ATTR, False) is True
+
+
 
 
 class HConfigDriverBase(ABC):
@@ -330,10 +335,14 @@ class HConfigDriverBase(ABC):
         `IdempotentCommandsRule`, a `NegationRule`, or a
         `SectionalExitingRule` instead -- all support `re_search` capture
         groups, and `NegationRule.use` supports backreferences.
+
+        A built-in driver whose behavior the core already reproduces natively
+        may keep its Python copy by marking it `@core_owned`, so that calling
+        the method directly still returns the right answer.
         """
         super().__init_subclass__(**kwargs)
         for hook in _REMOVED_HOOKS:
-            if hook in cls.__dict__:
+            if hook in cls.__dict__ and not _is_core_owned(cls.__dict__[hook]):
                 msg = (
                     f"{cls.__name__} defines {hook}(), which the v4 engine never "
                     f"calls: only rule data crosses into the Rust core. Express "

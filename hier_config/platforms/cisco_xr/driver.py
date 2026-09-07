@@ -7,6 +7,8 @@ from hier_config.platforms.driver_base import (
     load_platform_rules,
 )
 from hier_config.root import HConfig
+from hier_config.child import HConfigChild
+from collections.abc import Iterable
 
 
 @core_owned
@@ -57,3 +59,19 @@ class HConfigDriverCiscoIOSXR(HConfigDriverBase):
             ],
         )
 
+    @core_owned
+    def idempotent_for(
+        self,
+        config: HConfigChild,
+        other_children: Iterable[HConfigChild],
+    ) -> HConfigChild | None:
+        if isinstance(config.parent, HConfigChild):
+            acl = ("ipv4 access-list ", "ipv6 access-list ")
+            if config.parent.text.startswith(acl):
+                self_sn = config.text.split(" ", 1)[0]
+                for other_child in other_children:
+                    other_sn = other_child.text.split(" ", 1)[0]
+                    if self_sn == other_sn:
+                        return other_child
+
+        return super().idempotent_for(config, other_children)
