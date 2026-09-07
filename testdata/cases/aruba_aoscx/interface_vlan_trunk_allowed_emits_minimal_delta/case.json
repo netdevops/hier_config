@@ -1,0 +1,5 @@
+{
+  "platform": "ARUBA_AOSCX",
+  "description": "Small change to a large trunk list emits minimal delta on multi-chassis LAG",
+  "assert_rollback": true
+}

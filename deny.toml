@@ -1,0 +1,74 @@
+# cargo-deny configuration -- the single source of truth for Rust supply-chain
+# policy. Enforced by the `cargo-deny` job in .github/workflows/build-and-test.yml.
+#
+# This replaces a standalone `cargo audit` job: cargo-deny runs the same RustSec
+# advisory database plus license, ban and source policy, so keeping both would
+# mean maintaining two advisory ignore-lists that must be kept in sync by hand.
+
+[graph]
+# Check every target we publish wheels for, not just the host. Without this,
+# platform-specific dependencies (mimalloc's C shim, the windows-* crates) are
+# invisible to the audit on a Linux runner.
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "aarch64-unknown-linux-gnu",
+    "x86_64-pc-windows-msvc",
+    "x86_64-apple-darwin",
+    "aarch64-apple-darwin",
+]
+all-features = true
+
+[advisories]
+yanked = "deny"
+ignore = [
+    # Both are fixed only in pyo3 >=0.29, which is a breaking API migration
+    # (~128 compile errors against this tree) rather than a version bump.
+    # Neither is reachable from our code: we call none of
+    # `PyCFunction::new_closure`, `PyList`/`PyTuple` `nth`/`nth_back`.
+    # Listed individually, not blanket-suppressed, so any *new* advisory still
+    # fails. Remove both once the pyo3 0.29 migration lands.
+    "RUSTSEC-2026-0176",  # OOB read in PyList/PyTuple iterator nth/nth_back
+    "RUSTSEC-2026-0177",  # missing Sync bound on PyCFunction::new_closure
+]
+
+[licenses]
+# Policy: permissive licenses only. hier_config ships as a compiled binary wheel,
+# so a copyleft dependency would impose obligations we cannot meet. This encodes
+# the policy rather than a snapshot of today's tree -- a new dependency under
+# BSD/ISC/Zlib is as safe as MIT and should not need an allow-list edit, but
+# anything copyleft or unrecognised fails and needs a human decision.
+allow = [
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "MIT",
+    "Unicode-3.0",
+    "Unlicense",
+    "Zlib",
+]
+# A crate whose licence text does not match the SPDX expression closely enough
+# is a licensing question, not a formatting one. Fail rather than guess.
+confidence-threshold = 0.93
+# The list above is deliberately broader than today's tree, so entries that are
+# currently unused are expected and must not warn on every run.
+unused-allowed-license = "allow"
+
+[bans]
+# Duplicate versions are usually forced by transitive dependencies we do not
+# control (today: syn 2 and syn 3 coexist across the proc-macro tree). Warn so
+# the bloat stays visible without turning an upstream release into a red build.
+multiple-versions = "warn"
+# A `*` version requirement on a registry crate means an upstream release can
+# silently change our build. There are none today; keep it that way.
+wildcards = "deny"
+# `hier_config_core` is an unpublished intra-workspace path dependency, so it
+# carries no version requirement by design. Exempt path dependencies rather than
+# inventing a version that would then have to be bumped in two places.
+allow-wildcard-paths = true
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

@@ -1,0 +1,5 @@
+{
+  "platform": "HP_PROCURVE",
+  "description": "Test negate_with for AAA port-access commands",
+  "assert_rollback": true
+}

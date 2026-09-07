@@ -1,0 +1,5 @@
+{
+  "platform": "JUNIPER_JUNOS",
+  "description": "Flat Junos configuration set/delete remediation",
+  "assert_rollback": false
+}

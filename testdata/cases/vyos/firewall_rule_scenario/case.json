@@ -1,0 +1,5 @@
+{
+  "platform": "VYOS",
+  "description": "Firewall rule configuration on VyOS",
+  "assert_rollback": false
+}

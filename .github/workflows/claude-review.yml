@@ -44,10 +44,23 @@ jobs:
         enable-cache: true
         python-version: "3.12"
 
-    - name: Install dependencies
+    - name: Set up Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: 1.98.1
+    - uses: Swatinem/rust-cache@v2
+
+    # The skill's gates import `hier_config`, which has no pure-Python
+    # fallback, so the extension has to be built here.
+    - name: Install dependencies and build extension
       env:
         UV_LOCKED: "1"
-      run: uv sync
+      run: |
+        uv sync
+        uv run maturin develop --release --locked
+
+    - name: Install the docs dependencies
+      run: uv pip install -r docs/requirements.txt
 
     - name: Run the hier-config-review skill
       uses: anthropics/claude-code-action@v1
@@ -61,7 +74,8 @@ jobs:
           `${{ github.event.pull_request.base.ref }}`, so use
           `git diff ${{ github.event.pull_request.base.ref }}...HEAD` for the diff.
 
-          The Python environment is ready. Do not run `uv sync`.
+          The Python environment is ready, with the compiled extension already
+          built. Do not reinstall dependencies or run `uv sync` or `maturin develop`.
 
           Report only. Do not change, stage, or commit any file.
 

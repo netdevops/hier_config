@@ -1,0 +1,18 @@
+{
+  "platform": "huawei_vrp",
+  "negation_prefix": "undo ",
+  "rules": {
+    "indent_adjust": [
+      {
+        "start_expression": "^\\s*(rsa|dsa|ecc) peer-public-key ",
+        "end_expression": "^\\s*peer-public-key end"
+      }
+    ],
+    "per_line_sub": [
+      {
+        "search": "^\\s*[#!].*",
+        "replace": ""
+      }
+    ]
+  }
+}

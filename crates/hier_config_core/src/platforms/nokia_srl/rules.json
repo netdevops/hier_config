@@ -1,0 +1,6 @@
+{
+  "platform": "nokia_srl",
+  "negation_prefix": "delete ",
+  "declaration_prefix": "set ",
+  "rules": {}
+}

@@ -1,0 +1,5 @@
+{
+  "platform": "CISCO_XR",
+  "description": "Test IPv4 ACL sequence number idempotency",
+  "assert_rollback": true
+}

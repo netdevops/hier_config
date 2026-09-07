@@ -1,0 +1,5 @@
+{
+  "platform": "FORTINET_FORTIOS",
+  "description": "Verify idempotent_for rules prevent duplicate commands",
+  "assert_rollback": true
+}

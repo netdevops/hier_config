@@ -1,0 +1,256 @@
+{
+  "platform": "cisco_ios",
+  "negation_prefix": "no ",
+  "rules": {
+    "idempotent_commands": [
+      {
+        "match_rules": [
+          {
+            "startswith": "vlan"
+          },
+          {
+            "startswith": "name"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface "
+          },
+          {
+            "startswith": "description "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface "
+          },
+          {
+            "startswith": "ip address "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface "
+          },
+          {
+            "startswith": "switchport mode "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface "
+          },
+          {
+            "startswith": "authentication host-mode "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface "
+          },
+          {
+            "startswith": "authentication event server dead action authorize vlan "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "errdisable recovery interval "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "re_search": "^(no )?logging console.*"
+          }
+        ]
+      }
+    ],
+    "negate_with": [
+      {
+        "match_rules": [
+          {
+            "startswith": "logging console "
+          }
+        ],
+        "use": "logging console debugging"
+      }
+    ],
+    "ordering": [
+      {
+        "match_rules": [
+          {
+            "startswith": "interface"
+          },
+          {
+            "startswith": "switchport mode "
+          }
+        ],
+        "weight": -10
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "no vlan filter"
+          }
+        ],
+        "weight": 200
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface"
+          },
+          {
+            "startswith": "no shutdown"
+          }
+        ],
+        "weight": 200
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "aaa group server tacacs+ "
+          },
+          {
+            "startswith": "no server "
+          }
+        ],
+        "weight": 10
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "no tacacs-server "
+          }
+        ],
+        "weight": 10
+      }
+    ],
+    "parent_allows_duplicate_child": [
+      {
+        "match_rules": [
+          {
+            "startswith": "router"
+          },
+          {
+            "startswith": "address-family"
+          }
+        ]
+      }
+    ],
+    "per_line_sub": [
+      {
+        "search": "^Building configuration.*",
+        "replace": ""
+      },
+      {
+        "search": "^Current configuration.*",
+        "replace": ""
+      },
+      {
+        "search": "^! Last configuration change.*",
+        "replace": ""
+      },
+      {
+        "search": "^! NVRAM config last updated.*",
+        "replace": ""
+      },
+      {
+        "search": "^ntp clock-period .*",
+        "replace": ""
+      },
+      {
+        "search": "^version.*",
+        "replace": ""
+      },
+      {
+        "search": "^ logging event link-status$",
+        "replace": ""
+      },
+      {
+        "search": "^ logging event subif-link-status$",
+        "replace": ""
+      },
+      {
+        "search": "^\\s*ipv6 unreachables disable$",
+        "replace": ""
+      },
+      {
+        "search": "^end$",
+        "replace": ""
+      },
+      {
+        "search": "^\\s*[#!].*",
+        "replace": ""
+      },
+      {
+        "search": "^ no ip address",
+        "replace": ""
+      },
+      {
+        "search": "^ exit-peer-policy",
+        "replace": ""
+      },
+      {
+        "search": "^ exit-peer-session",
+        "replace": ""
+      },
+      {
+        "search": "^ exit-address-family",
+        "replace": ""
+      },
+      {
+        "search": "^crypto key generate rsa general-keys.*$",
+        "replace": ""
+      }
+    ],
+    "sectional_exiting": [
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp"
+          },
+          {
+            "startswith": "template peer-policy"
+          }
+        ],
+        "exit_text": "exit-peer-policy"
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp"
+          },
+          {
+            "startswith": "template peer-session"
+          }
+        ],
+        "exit_text": "exit-peer-session"
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp"
+          },
+          {
+            "startswith": "address-family"
+          }
+        ],
+        "exit_text": "exit-address-family"
+      }
+    ]
+  }
+}

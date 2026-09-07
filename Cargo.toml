@@ -1,0 +1,97 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/hier_config_core",
+    "crates/hier_config_py",
+]
+
+[workspace.package]
+version = "4.0.0"
+edition = "2024"
+rust-version = "1.98"
+license = "MIT"
+repository = "https://github.com/netdevops/hier_config"
+
+# Lint policy is defined here rather than only as `-D warnings` on the CI command
+# line so that `cargo build`, rust-analyzer, and local dev builds all agree with CI.
+# Group entries need `priority = -1` so the individual `allow`s below can override them.
+[workspace.lints.rust]
+unsafe_code = "deny"                      # `forbid` in core; py needs one audited FFI call
+unreachable_pub = "deny"
+unused_qualifications = "deny"
+missing_debug_implementations = "deny"
+missing_copy_implementations = "deny"
+trivial_casts = "deny"
+trivial_numeric_casts = "deny"
+unused_import_braces = "deny"
+unused_lifetimes = "deny"
+unused_macro_rules = "deny"
+single_use_lifetimes = "deny"
+explicit_outlives_requirements = "deny"
+non_ascii_idents = "deny"
+rust_2018_idioms = { level = "deny", priority = -1 }
+
+[workspace.lints.clippy]
+pedantic = { level = "deny", priority = -1 }
+# Nearly every accessor on `Tree`/`Node` is a side-effect-free getter already used in
+# expression position. Annotating ~70 of them catches no real bug and buries the
+# signal from the rest of `pedantic`.
+must_use_candidate = "allow"
+
+# Adopted strict lints from pedantic, nursery, and restriction
+undocumented_unsafe_blocks = "deny"
+clone_on_ref_ptr = "deny"
+missing_const_for_fn = "deny"
+use_self = "deny"
+branches_sharing_code = "deny"
+dbg_macro = "deny"
+todo = "deny"
+unimplemented = "deny"
+unnecessary_safety_comment = "deny"
+unnecessary_safety_doc = "deny"
+empty_structs_with_brackets = "deny"
+fn_to_numeric_cast_any = "deny"
+rc_buffer = "deny"
+rc_mutex = "deny"
+rest_pat_in_fully_bound_structs = "deny"
+lossy_float_literal = "deny"
+float_cmp_const = "deny"
+mem_forget = "deny"
+mutex_atomic = "deny"
+string_add = "deny"
+string_add_assign = "deny"
+string_lit_as_bytes = "deny"
+zero_sized_map_values = "deny"
+semicolon_if_nothing_returned = "deny"
+cognitive_complexity = "deny"
+match_same_arms = "deny"
+manual_assert = "deny"
+manual_string_new = "deny"
+checked_conversions = "deny"
+panic_in_result_fn = "deny"
+shadow_unrelated = "deny"
+redundant_else = "deny"
+
+[workspace.dependencies]
+hier_config_core = { path = "crates/hier_config_core" }
+regex = "1.11"
+fancy-regex = "0.14"
+rustc-hash = "2.1"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+pyo3 = { version = "0.24", features = ["extension-module", "abi3-py310"] }
+
+# The shipped artifact is a Python extension module, so build time is paid once
+# by CI while the cost of a slow `dump`/`parse` is paid on every call. Cargo's
+# stock release profile leaves both cross-crate inlining and unit merging on the
+# table; turning them on is the cheapest available speedup.
+#
+# `panic` is deliberately left at the default `unwind`: PyO3 converts a Rust
+# panic into a Python exception via `catch_unwind`, and `panic = "abort"` would
+# turn any such panic into a hard process abort that takes the interpreter with
+# it.
+[profile.release]
+lto = "fat"          # inline across hier_config_core -> hier_config_py and regex
+codegen-units = 1    # one unit per crate; maximises optimisation scope
+opt-level = 3
+strip = "debuginfo"  # keeps symbol names for profiles, drops the DWARF bulk

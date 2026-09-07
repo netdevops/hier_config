@@ -1,0 +1,5 @@
+{
+  "platform": "NOKIA_SRL",
+  "description": "Test system configuration changes",
+  "assert_rollback": false
+}

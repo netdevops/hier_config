@@ -1,0 +1,5 @@
+{
+  "platform": "ARUBA_AOSCX",
+  "description": "VXLAN section adds and removes VNIs surgically",
+  "assert_rollback": true
+}
