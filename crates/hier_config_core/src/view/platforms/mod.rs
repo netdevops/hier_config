@@ -1,6 +1,6 @@
 //! Per-platform view hooks.
 //!
-//! Each module supplies the [`ConfigOps`](crate::view::config::ConfigOps) and
+//! Each module supplies the [`ConfigOps`] and
 //! [`InterfaceOps`](crate::view::interface::InterfaceOps) implementations for
 //! one platform, mirroring the corresponding Python view classes.
 

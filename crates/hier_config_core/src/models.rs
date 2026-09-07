@@ -296,7 +296,7 @@ pub enum NegationStrategy {
 ///
 /// Supersedes the three separate v3 rule types. The v3 spellings remain
 /// supported on the wire and are folded into this shape by
-/// [`DriverRules::resolved_negation`].
+/// `DriverRules::resolved_negation`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NegationRule {
     pub strategy: NegationStrategy,

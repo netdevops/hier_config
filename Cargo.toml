@@ -84,7 +84,7 @@ serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = { version = "1.0", features = ["preserve_order"] }
 # Pull-parser XML. `hconfig_from_xml` needs a real parser; hand-rolling one is
 # not defensible when the input is untrusted device output.
-quick-xml = "0.37"
+quick-xml = "0.41"
 pyo3 = { version = "0.24", features = ["extension-module", "abi3-py310"] }
 
 # The shipped artifact is a Python extension module, so build time is paid once
