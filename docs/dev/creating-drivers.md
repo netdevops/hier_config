@@ -15,10 +15,7 @@ Every driver subclasses `HConfigDriverBase` (`hier_config/platforms/driver_base.
 - `negation_prefix` (property) — the string prepended to negate a command. Default `"no "`.
 - `declaration_prefix` (property) — the string prepended to positive commands on set-style platforms. Default `""`.
 - `config_preprocessor(config_text)` — static method transforming raw text before parsing (e.g. flattening JunOS curly-brace config into `set` commands).
-- `negate_with(config)` — return a fixed replacement negation string for a child. The default implementation reads REPLACE-strategy rules from `rules.negation`; override for imperative negation logic.
-- `swap_negation(child)` — toggle the negation of a child's text. The default adds/strips `negation_prefix`.
-- `idempotent_for(config, other_children)` — find the child that an idempotent command overwrites. The default derives a structural idempotency key from the lineage and match rules.
-- `view_class` (class attribute) — the `HConfigViewBase` subclass instantiated by `get_hconfig_view()`. `None` (default) means the platform has no config view.
+- `view_class` (class attribute) — the `HConfigView` subclass instantiated by `get_hconfig_view()`. `None` (default) means the platform has no config view.
 
 The simplest possible driver is the generic one:
 
@@ -170,98 +167,90 @@ print(workflow.remediation_config)
 
 Alternatively, skip registration and pass an instance directly: `HConfig.from_text(CustomHConfigDriver(), config_text)`.
 
-## Key methods in `HConfigDriverBase`
+## Behavior the core owns
 
-The rule-checking methods the tree calls during remediation:
+Negation, idempotency, and sectional exiting are resolved entirely inside the
+Rust core from the driver's *rule data* — there are no `negate_with()`,
+`swap_negation()`, `idempotent_for()`, or `sectional_exit()` methods to
+override, and defining one on a subclass raises `TypeError`. Shape these
+behaviors through `rules.negation`, `rules.negate_with`,
+`rules.idempotent_commands`, and `rules.sectional_exiting` instead.
 
-```python
-def idempotent_for(
-    self,
-    config: HConfigChild,
-    other_children: Iterable[HConfigChild],
-) -> HConfigChild | None:
-    """Return the child that `config` idempotently overwrites, if any."""
-
-def negate_with(self, config: HConfigChild) -> str | None:
-    """Return a fixed replacement negation string for `config`, if any."""
-
-def swap_negation(self, child: HConfigChild) -> HConfigChild:
-    """Toggle the negation of `child.text`."""
-
-def sectional_exit(self, config: HConfigChild) -> str | None:
-    """Return the exit token to render at the end of a section."""
-```
-
-Idempotency matching is structural: `idempotent_for` builds an *idempotency key* from the child's lineage and the rule's match criteria (prefix matched, regex capture groups, ...), so two commands are only considered interchangeable when their structural identities agree. Craft your `MatchRule`s to capture the identifying parts of a command (e.g. `re_search=r"^neighbor (\S+) description"`).
+Idempotency matching is structural: the core builds an *idempotency key* from the child's lineage and the rule's match criteria (prefix matched, regex capture groups, ...), so two commands are only considered interchangeable when their structural identities agree. Craft your `MatchRule`s to capture the identifying parts of a command (e.g. `re_search=r"^neighbor (\S+) description"`).
 
 ## Adding a config view
 
-To give the platform a typed [config view](../user/config-views.md), implement the two view classes and point the driver at them.
+Config views are implemented in Rust. Adding one to a platform means writing the
+native ops and re-exporting them from Python; there is no Python property code
+to write.
 
-**1. Interface view** — subclass the capability mixins the platform genuinely supports (each mixin already subclasses `ConfigViewInterfaceBase`, so listing the base explicitly is redundant — the in-tree views don't):
+**1. Native ops** — implement `InterfaceOps` and `ConfigOps` in
+`crates/hier_config_core/src/view/platforms/<name>.rs`. Every trait method has a
+default body, so override only what the platform does differently. Capabilities
+are declared by `bundle_prefix()`, `supports_vlan()`, `supports_nac()`, and
+`supports_physical()`.
+
+```rust
+pub struct CustomInterfaceOps;
+
+impl InterfaceOps for CustomInterfaceOps {
+    fn supports_vlan(&self) -> bool {
+        true
+    }
+
+    fn bundle_prefix(&self) -> Option<&'static str> {
+        Some("port-channel")
+    }
+}
+
+pub static INTERFACE_OPS: CustomInterfaceOps = CustomInterfaceOps;
+```
+
+Register the platform in `view_ops_for_platform`
+(`crates/hier_config_core/src/view/platforms/mod.rs`). That match is exhaustive
+on `Platform`, so a new enum variant will not compile until you either supply
+hooks or explicitly record the platform as view-less.
+
+**2. Python facade** — add `hier_config/platforms/<name>/view.py` following the
+in-tree template. The interface class is a marker whose `isinstance` behavior is
+driven by the native platform tag; the device class is a plain subclass that
+`get_hconfig_view()` instantiates:
 
 ```python
+from hier_config.models import Platform
 from hier_config.platforms.view_base import (
-    InterfaceBundleViewMixin,
-    InterfaceVlanViewMixin,
+    ConfigViewInterface,
+    HConfigView,
+    ViewMarkerMeta,
 )
 
 
 class ConfigViewInterfaceCustomNOS(
-    InterfaceBundleViewMixin,
-    InterfaceVlanViewMixin,
+    ConfigViewInterface,
+    metaclass=ViewMarkerMeta,
 ):
-    """Typed view over one `interface ...` block."""
+    """Marker for `isinstance` narrowing; behavior lives in Rust."""
 
-    # Implement the abstract properties, e.g.:
-    @property
-    def ipv4_interfaces(self):
-        for child in self.config.get_children(startswith="ip address "):
-            ...
+    view_platform = Platform.CUSTOM_NOS
 
-    @property
-    def vrf(self) -> str:
-        ...
 
-    # ...plus the abstract members required by each inherited mixin.
+class HConfigViewCustomNOS(HConfigView):
+    """Device-level view for CustomNOS."""
 ```
 
-Inheriting a mixin is a contract: `isinstance(view, InterfaceVlanViewMixin)` tells users the capability exists, so only inherit mixins whose properties the platform can actually populate.
-
-**2. Device view** — subclass `HConfigViewBase` and implement its abstract members (`hostname`, `interface_views`, `interfaces`, `ipv4_default_gw`; `dot1q_mode_from_vlans` is a concrete static helper you can call, not implement):
+**3. Wire it up** — point the driver at the device view:
 
 ```python
-from hier_config.platforms.view_base import HConfigViewBase
-
-
-class HConfigViewCustomNOS(HConfigViewBase):
-    @property
-    def interfaces(self):
-        return self.config.get_children(startswith="interface ")
-
-    @property
-    def interface_views(self):
-        for interface in self.interfaces:
-            yield ConfigViewInterfaceCustomNOS(interface)
-
-    @property
-    def hostname(self) -> str | None:
-        if child := self.config.get_child(startswith="hostname "):
-            return child.text.split()[1].lower()
-        return None
-
-    # ...remaining abstract members
-```
-
-**3. Declare it on the driver:**
-
-```python
-class CustomHConfigDriver(HConfigDriverBase):
+class HConfigDriverCustomNOS(HConfigDriverBase):
     view_class = HConfigViewCustomNOS
-    ...
 ```
 
-`get_hconfig_view(config)` now resolves the view automatically for the registered platform.
+Declaring a capability is a contract: `isinstance(view, InterfaceVlanViewMixin)`
+tells users the capability exists, so only enable `supports_vlan()` and friends
+when the platform can actually populate those properties.
+
+Platforms without native ops deliberately have no config view; `view_class`
+stays `None` and `get_hconfig_view()` raises.
 
 ## Contributing the driver upstream
 

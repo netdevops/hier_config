@@ -6,7 +6,7 @@
 
 <!-- The full standards live in AGENTS.md and https://hier-config.readthedocs.io/en/latest/dev/contributing/ -->
 
-- [ ] `poetry run ./scripts/build.py lint-and-test` passes locally (lint + 95% test coverage).
+- [ ] `python scripts/build.py lint-and-test` passes locally (lint + 88% test coverage).
 - [ ] Tests were written first (TDD) and cover the change, following the [testing conventions](https://hier-config.readthedocs.io/en/latest/dev/testing/).
 - [ ] `CHANGELOG.md` has an entry under `## [Unreleased]` referencing this issue/PR (`(#NNN)`).
 - [ ] Documentation is updated if public API or driver behavior changed (and `mkdocs build --strict` passes if docs were touched).

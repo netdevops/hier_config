@@ -2,8 +2,6 @@
 
 from ipaddress import IPv4Address, IPv4Interface
 
-import pytest
-
 from hier_config import HConfig, Platform, get_hconfig_view
 from hier_config.platforms.hp_procurve.view import ConfigViewInterfaceHPProcurve
 from hier_config.platforms.models import InterfaceDuplex, StackMember
@@ -47,8 +45,8 @@ def test_bundle_member_interfaces() -> None:
     assert "2/45" in members
 
 
-def test_bundle_member_interfaces_bundle_not_found_error() -> None:
-    """Test bundle_member_interfaces raises TypeError when bundle config missing (covers lines 33-36)."""
+def test_bundle_member_interfaces_without_trunk_config_is_empty() -> None:
+    """A Trk port with no matching `trunk` line simply has no members."""
     config = HConfig.from_text(Platform.HP_PROCURVE)
     config.add_child("interface Trk1")
 
@@ -56,14 +54,11 @@ def test_bundle_member_interfaces_bundle_not_found_error() -> None:
     interface_view = view.interface_view_by_name("Trk1")
     assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
 
-    with pytest.raises(
-        TypeError, match="Interface is a bundle but bundle config was not found"
-    ):
-        _ = list(interface_view.bundle_member_interfaces)
+    assert not tuple(interface_view.bundle_member_interfaces)
 
 
-def test_bundle_member_interfaces_value_error() -> None:
-    """Test bundle_member_interfaces raises ValueError for non-bundle (covers lines 38-40)."""
+def test_bundle_member_interfaces_on_non_bundle_is_empty() -> None:
+    """A physical port is not a bundle, so it reports no member interfaces."""
     config = HConfig.from_text(Platform.HP_PROCURVE)
     config.add_child("interface 1/1")
 
@@ -71,8 +66,7 @@ def test_bundle_member_interfaces_value_error() -> None:
     interface_view = view.interface_view_by_name("1/1")
     assert isinstance(interface_view, ConfigViewInterfaceHPProcurve)
 
-    with pytest.raises(ValueError, match="The bundle config line couldn't be found"):
-        _ = list(interface_view.bundle_member_interfaces)
+    assert not tuple(interface_view.bundle_member_interfaces)
 
 
 def test_bundle_name() -> None:

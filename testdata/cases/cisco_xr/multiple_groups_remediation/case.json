@@ -1,0 +1,6 @@
+{
+  "platform": "CISCO_XR",
+  "description": "Remediation between configs with multiple group blocks removes deleted group",
+  "tags": ["group"],
+  "assert_rollback": true
+}

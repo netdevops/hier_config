@@ -14,6 +14,11 @@ drivers, remediation) are unchanged.
     completed EOS/NX-OS/XR views. They are in
     [Behavior changes to review](#behavior-changes-to-review).
 
+v4 also replaces the engine underneath those concepts with a Rust core. That
+brings its own, separate set of behavior changes — driver hooks, packaging,
+handle identity, traversal return types. This page is the prerequisite; read
+[Rust core behavior changes](rust-core-changes.md) next.
+
 If you are new to hier_config, skip this page and start with
 [Getting Started](getting-started.md).
 
@@ -142,11 +147,11 @@ except HierConfigError as exc:
 
 ## Config views
 
-`ConfigViewInterfaceBase` no longer declares every property abstract with
-per-platform `NotImplementedError` stubs. Core properties (`name`,
-`description`, `enabled`, `ipv4_interfaces`, ...) are always available;
-optional capabilities live on mixins, and you check support with
-`isinstance()` instead of catching `NotImplementedError`:
+The view layer is implemented in Rust and exposed through PyO3;
+`hier_config.platforms.*.view` re-exports the native classes. Core properties
+(`name`, `description`, `enabled`, `ipv4_interfaces`, ...) are always
+available; optional capabilities are advertised by capability markers, and you
+check support with `isinstance()` instead of catching `NotImplementedError`:
 
 ```python
 # v3
@@ -162,7 +167,9 @@ if isinstance(interface_view, InterfaceVlanViewMixin):
     vlans = interface_view.tagged_vlans
 ```
 
-See [Config Views](config-views.md) for the mixin catalog.
+See [Config Views](config-views.md) for the capability catalog and
+[Rust core behavior changes](rust-core-changes.md) for the three properties
+that now return `None` instead of raising.
 
 ## Behavior changes to review
 
@@ -190,6 +197,13 @@ value. These four apply even to code that keeps the v3 spellings:
 These were never candidates for name-alias coverage. They are improvements to
 how v4 works, listed here so an upgrade does not surprise you:
 
+- **`len(config)` counts all recursive descendants** — `len(config)` returns the
+  total count of all descendant nodes in the tree, not just direct children. In
+  v3, `len(config)` was implemented as `len(tuple(self.all_children()))`, which
+  materialized a temporary tuple of every node in memory. In v4, `len(config)`
+  counts descendants directly without allocation: it is an $O(1)$ query on the
+  root configuration and zero-allocation on subtrees. If you need only the count
+  of direct/top-level children, use `len(config.children)`.
 - **`future()` negation resolution** — negations that match an existing line
   (exactly or by shorthand prefix) now remove it instead of surviving as a
   literal `no ...` child; see
@@ -199,6 +213,37 @@ how v4 works, listed here so an upgrade does not surprise you:
   constructor function; v4 registers them with
   [`register_driver()`](../admin/custom-drivers.md), which also makes them
   work with every constructor and carries their config view via `view_class`.
+
+### Changes that come from the Rust core
+
+These are covered in full by
+[Rust core behavior changes](rust-core-changes.md); the summary is here so you
+know whether that page applies to you:
+
+- **hier_config ships as a compiled wheel.** Wheels cover CPython 3.10-3.14 on
+  Linux, macOS, and Windows; anything else builds from source and needs a Rust
+  toolchain.
+- **Four driver hooks are now resolved in the core.** `idempotent_for()`,
+  `negate_with()`, `sectional_exit()`, and `swap_negation()` no longer exist on
+  `HConfigDriverBase`, and defining any of them on a subclass raises
+  `TypeError`. The core decides all four behaviors from the driver's rules and
+  its `declaration_prefix`/`negation_prefix`, so there is no opt-out.
+  `config_preprocessor()` is unaffected. **Audit every `HConfigDriverBase`
+  subclass before upgrading.**
+- **`_instantiate_rules()` is no longer abstract.** A driver that does not
+  override it now constructs successfully and fails later with
+  `NotImplementedError` instead of failing at instantiation.
+- **`from_dump()` runs remediation-transform callbacks after the load
+  completes**, not incrementally, so a callback sees the finished tree.
+- **`all_children_sorted()` returns a tuple**, joining
+  `all_children_sorted_by_tags()` and `unused_objects()`. `all_children()` is
+  still a generator. Iteration is unaffected; only `.send()`/`.close()` on the
+  result breaks.
+- **`len(config)` is zero-allocation and O(1) on root**, counting descendants via
+  `node_count()` instead of materializing a full tuple of every node.
+- **Handles from different bulk traversals are no longer the same object.**
+  `==`, `hash()`, set and dict membership, and mutation visibility are all
+  unchanged; only `is` and `id()` differ.
 
 ## New in v4 (worth adopting)
 
@@ -225,6 +270,8 @@ Not required for migration, but these are the headline additions:
 
 ## Next steps
 
+- [Rust core behavior changes](rust-core-changes.md) — the engine-level
+  differences, including the driver-hook audit.
 - [v3 API Compatibility](v3-compatibility.md) — the full list of v3 names that
   keep working in v4, and the two limits.
 - [Getting Started](getting-started.md) — the v4 workflow end to end.

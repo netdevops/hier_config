@@ -1,0 +1,5 @@
+{
+  "platform": "ARUBA_AOSCX",
+  "description": "Top-level collapsed VLAN lists negate only extra VLANs",
+  "assert_rollback": true
+}

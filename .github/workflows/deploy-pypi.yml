@@ -1,27 +1,138 @@
 name: deploy to pypi
 
-# "published" (not "created") so publishing a draft release made by the
-# prepare-release workflow also triggers deployment.
 on:
   release:
     types: [published]
 
+# Least privilege: this workflow only reads the repository. Wheels move between
+# jobs over the artifact API (runtime token) and publishing authenticates with
+# PYPI_API_TOKEN, so no write scope on GITHUB_TOKEN is needed.
+permissions:
+  contents: read
+
 jobs:
-  deploy:
+  linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [x86_64, aarch64]
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions/setup-python@v6
+      with:
+        python-version: "3.10"
+    - name: Build wheels
+      uses: PyO3/maturin-action@v1
+      with:
+        target: ${{ matrix.target }}
+        args: --release --locked --out dist --find-interpreter
+        sccache: 'true'
+        manylinux: auto
+    - name: Upload wheels
+      uses: actions/upload-artifact@v4
+      with:
+        name: wheels-linux-${{ matrix.target }}
+        path: dist
+
+  windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        target: [x64]
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions/setup-python@v6
+      with:
+        python-version: "3.10"
+    - name: Build wheels
+      uses: PyO3/maturin-action@v1
+      with:
+        target: ${{ matrix.target }}
+        args: --release --locked --out dist --find-interpreter
+        sccache: 'true'
+    - name: Upload wheels
+      uses: actions/upload-artifact@v4
+      with:
+        name: wheels-windows-${{ matrix.target }}
+        path: dist
+
+  macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        target: [x86_64, aarch64]
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions/setup-python@v6
+      with:
+        python-version: "3.10"
+    - name: Build wheels
+      uses: PyO3/maturin-action@v1
+      with:
+        target: ${{ matrix.target }}
+        args: --release --locked --out dist --find-interpreter
+        sccache: 'true'
+    - name: Upload wheels
+      uses: actions/upload-artifact@v4
+      with:
+        name: wheels-macos-${{ matrix.target }}
+        path: dist
+
+  sdist:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v6
-    - name: Set up Python
-      uses: actions/setup-python@v6
+    - name: Build sdist
+      uses: PyO3/maturin-action@v1
       with:
-        python-version: '3.10'
-    - name: Install poetry
-      uses: snok/install-poetry@v1
+        command: sdist
+        args: --out dist
+    - name: Upload sdist
+      uses: actions/upload-artifact@v4
       with:
-        version: 1.5.1
-    - name: Build and publish to PyPI
-      env:
-        TWINE_API_KEY: ${{ secrets.TWINE_API_KEY }}
+        name: wheels-sdist
+        path: dist
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [linux, windows, macos, sdist]
+    steps:
+    - uses: actions/download-artifact@v4
+      with:
+        pattern: wheels-*
+        merge-multiple: true
+        path: dist
+    - uses: actions/setup-python@v6
+      with:
+        python-version: "3.10"
+    - name: Smoke-test the built wheel
+      # Install and import the wheel before publishing so packaging-only defects
+      # (missing py.typed/.pyi package data, abi3 tag mismatch, wrong module-name,
+      # undeclared runtime dependencies) fail the release instead of shipping.
+      #
+      # Deliberately NOT `--no-index`: hier_config declares a real runtime dependency
+      # (pydantic), which cannot resolve from `dist/`. Index access is what makes the
+      # dependency check meaningful -- if Requires-Dist were empty, pip would install
+      # nothing but the wheel and the import below would fail, which is exactly the
+      # regression this guards.
       run: |
-        poetry config pypi-token.pypi $TWINE_API_KEY
-        poetry publish --build
+        python -m pip install --upgrade pip
+        pip install --find-links dist hier_config
+        python - <<'EOF'
+        import importlib.metadata as md
+        import hier_config
+
+        dist = md.distribution("hier-config")
+        assert dist.requires, "wheel declares no runtime dependencies (Requires-Dist is empty)"
+        print("version:", dist.version)
+        print("requires:", dist.requires)
+        print("loaded from:", hier_config.__file__)
+        print("driver:", hier_config.get_hconfig_driver)
+        EOF
+    - name: Publish to PyPI
+      uses: PyO3/maturin-action@v1
+      env:
+        MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+      with:
+        command: upload
+        args: --non-interactive --skip-existing dist/*

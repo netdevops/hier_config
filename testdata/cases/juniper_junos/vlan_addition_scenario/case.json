@@ -1,0 +1,5 @@
+{
+  "platform": "JUNIPER_JUNOS",
+  "description": "Adding a new VLAN to Juniper JUNOS configuration",
+  "assert_rollback": false
+}

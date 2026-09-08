@@ -1,0 +1,5 @@
+{
+  "platform": "CISCO_XR",
+  "description": "Test that template blocks parse correctly with the indent_adjust rule",
+  "assert_rollback": true
+}

@@ -1,0 +1,5 @@
+{
+  "platform": "HUAWEI_VRP",
+  "description": "Test merge_with_undo for Huawei VRP",
+  "assert_rollback": true
+}

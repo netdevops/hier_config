@@ -1,0 +1,5 @@
+{
+  "platform": "ARUBA_AOSCX",
+  "description": "Single-value interface commands replace without explicit negation",
+  "assert_rollback": true
+}

@@ -1,4 +1,13 @@
+from collections.abc import Callable
 from ipaddress import IPv4Interface
+
+_convert_to_set_commands_rust: Callable[[str], str] | None
+try:
+    from _hier_config_rust import (
+        convert_to_set_commands as _convert_to_set_commands_rust,
+    )
+except ImportError:
+    _convert_to_set_commands_rust = None
 
 
 def parse_ipv4_interface(words: list[str]) -> IPv4Interface | None:
@@ -64,6 +73,9 @@ def convert_to_set_commands(config_raw: str) -> str:
         config_raw (str): Configuration string
 
     """
+    if _convert_to_set_commands_rust is not None:
+        return _convert_to_set_commands_rust(config_raw)
+
     lines = config_raw.split("\n")
     path: list[str] = []
     set_commands: list[str] = []

@@ -62,6 +62,28 @@ Both `HConfig` and `HConfigChild` inherit from `HConfigBase`, which provides:
 - Traversal: `all_children`, `all_children_sorted`.
 - Diffing: `unified_diff`.
 
+### Type stubs (`hier_config/*.pyi`)
+
+`HConfig`, `HConfigChild`, `HConfigChildren`, and `HConfigBase` are compiled
+PyO3 classes, and neither mypy, pyright, nor griffe (mkdocstrings) can
+introspect a compiled extension. The shipped `.pyi` stubs are what gives those
+tools — and downstream users' own annotations — real types instead of `Any`.
+
+Those four stubs are **generated, not hand-written**. `scripts/gen_stubs.py`
+reflects over the live extension and re-attaches the v3.7.0 docstrings:
+
+```bash
+python scripts/gen_stubs.py           # regenerate after changing the PyO3 surface
+python scripts/build.py check-stubs   # fail if the committed stubs are stale
+```
+
+The check runs as part of `lint` and `lint-and-test`, so a PyO3 signature change
+that is not reflected in the stubs fails the gate rather than silently shipping
+wrong type information. Never edit these four files by hand.
+
+`hier_config/exceptions.pyi` and `hier_config/workflows.pyi` are outside the
+generator and are maintained by hand.
+
 ### Tree algorithms (`hier_config/tree_algorithms.py`)
 
 The comparison algorithms are extracted into a standalone module operating on nodes through their public tree API:
@@ -83,9 +105,9 @@ The driver layer lives in `hier_config/platforms/`.
 Every platform driver subclasses `HConfigDriverBase` (`hier_config/platforms/driver_base.py`) and overrides:
 
 - `_instantiate_rules()` — returns an `HConfigDriverRules` Pydantic model populated with the platform's rule sets.
-- Optionally `negation_prefix`, `declaration_prefix`, `swap_negation`, `idempotent_for`, `negate_with`, `config_preprocessor`, and the `view_class` class attribute.
+- Optionally `negation_prefix`, `declaration_prefix`, `config_preprocessor`, and the `view_class` class attribute.
 
-Idempotency matching derives a structural *idempotency key* from each command's lineage and its matching rule (`_idempotency_key`), so commands that differ only in attribute values (e.g. two BGP neighbor descriptions) are not conflated.
+Negation, idempotency, and sectional exiting are resolved in the Rust core from the driver's rule data; the corresponding Python hooks do not exist and defining them raises `TypeError`. Idempotency matching derives a structural *idempotency key* from each command's lineage and its matching rule, so commands that differ only in attribute values (e.g. two BGP neighbor descriptions) are not conflated.
 
 ### `HConfigDriverRules`
 
@@ -178,11 +200,11 @@ Internally it calls `running_config.remediation(generated_config)` (which delega
 
 ## View layer
 
-The view layer (`hier_config/platforms/view_base.py` and platform-specific `view.py` files) provides structured, typed access to configuration elements without modifying the underlying tree.
+The view layer provides structured, typed access to configuration elements without modifying the underlying tree. Since v4 it is **implemented entirely in Rust**; `hier_config/platforms/view_base.py` and the platform-specific `view.py` files are thin facades over the native classes.
 
-- `HConfigViewBase` — abstract device-level base; subclasses implement `hostname`, `interface_views`, `interfaces`, and `ipv4_default_gw` (`dot1q_mode_from_vlans` is a concrete static helper).
-- `ConfigViewInterfaceBase` — abstract per-interface base; exposes core properties like `name`, `description`, `enabled`, `ipv4_interfaces`, and `vrf`.
-- Optional capability mixins — `InterfaceBundleViewMixin` (`bundle_id`, `bundle_member_interfaces`, ...), `InterfaceVlanViewMixin` (`native_vlan`, `tagged_vlans`, `dot1q_mode`, ...), `InterfaceNACViewMixin` (`has_nac`, `nac_host_mode`, ...), and `InterfacePhysicalViewMixin` (`duplex`, `speed`, `poe`, `module_number`). Platform views inherit only the mixins they support; users check capability with `isinstance(view, InterfaceVlanViewMixin)`.
+- `HConfigView` (aliased `HConfigViewBase`) — device-level view exposing `hostname`, `interface_views`, `interfaces`, `ipv4_default_gw`, `vlans`, `stack_members`, and the `dot1q_mode_from_vlans` static helper.
+- `ConfigViewInterface` (aliased `ConfigViewInterfaceBase`) — per-interface view exposing core properties like `name`, `description`, `enabled`, `ipv4_interfaces`, and `vrf`.
+- Optional capability mixins — `InterfaceBundleViewMixin` (`bundle_id`, `bundle_member_interfaces`, ...), `InterfaceVlanViewMixin` (`native_vlan`, `tagged_vlans`, `dot1q_mode`, ...), `InterfaceNACViewMixin` (`has_nac`, `nac_host_mode`, ...), and `InterfacePhysicalViewMixin` (`duplex`, `speed`, `poe`, `module_number`). The mixins are now *marker* classes: the native view carries a `capabilities` frozenset, and `ViewMarkerMeta.__instancecheck__` answers `isinstance(view, InterfaceVlanViewMixin)` from that data. The user-facing capability protocol is unchanged.
 
 Views are resolved through the driver's `view_class` attribute:
 
@@ -193,6 +215,29 @@ view = get_hconfig_view(hconfig)
 for iface in view.interface_views:
     print(iface.description)
 ```
+
+### Native views
+
+`hier_config_core` carries an equivalent view layer in Rust (`crates/hier_config_core/src/view/`) so the crate is usable without a Python interpreter. It mirrors the Python design with traits instead of mixins:
+
+- `ConfigOps` / `InterfaceOps` — every method has a default body, so a platform implements only what its Python sibling overrides. Optional capabilities are gated by `supports_vlan()`, `supports_nac()`, `supports_physical()`, and `bundle_prefix()`.
+- `ConfigView<'a>` / `InterfaceView<'a>` — borrow a `Tree` and delegate each property to the platform's ops, falling back to the `default_*` implementation.
+- `view_ops_for_platform(Platform)` — returns `None` for the platforms that deliberately have no Python `view.py`. The match is exhaustive, so adding a `Platform` variant is a compile error until a decision is recorded.
+
+```rust
+use hier_config_core::{Platform, config_from_text, config_view};
+
+let tree = config_from_text(Platform::CiscoIos, config_text)?;
+if let Some(view) = config_view(&tree) {
+    for iface in view.interface_views() {
+        println!("{}", iface.description());
+    }
+}
+```
+
+Python and Rust can no longer drift, because there is only one implementation: `hier_config.platforms.*.view` re-exports the PyO3 bindings in `crates/hier_config_py/src/view.rs`. The anti-drift corpus that pinned the two together (`testdata/views/`) was removed with the Python implementation it existed to guard.
+
+A small number of properties raised in Python v3 rather than returning a value; the native view returns `None` or an empty tuple instead. See [Rust core behavior changes](../user/rust-core-changes.md).
 
 ---
 

@@ -4,65 +4,50 @@ from hier_config.models import Platform
 from hier_config.platforms.nokia_srl.driver import HConfigDriverNokiaSRL
 
 
-def test_swap_negation_delete_to_set() -> None:
-    """Test swapping from 'delete' to 'set' prefix."""
-    platform = Platform.NOKIA_SRL
-    driver = HConfigDriverNokiaSRL()
-    root = HConfig.from_text(platform)
-
+def test_negation_delete_to_set() -> None:
+    """Negating a `delete` command yields the matching `set` command."""
+    root = HConfig.from_text(Platform.NOKIA_SRL)
     child = HConfigChild(
         root, "delete interface ethernet-1/1 subinterface 0 ipv4 address 192.168.1.1/24"
     )
-    result = driver.swap_negation(child)
 
     assert (
-        result.text
+        child.negate().text
         == "set interface ethernet-1/1 subinterface 0 ipv4 address 192.168.1.1/24"
     )
-    assert result.text.startswith("set ")
 
 
-def test_swap_negation_set_to_delete() -> None:
-    """Test swapping from 'set' to 'delete' prefix."""
-    platform = Platform.NOKIA_SRL
-    driver = HConfigDriverNokiaSRL()
-    root = HConfig.from_text(platform)
-
+def test_negation_set_to_delete() -> None:
+    """Negating a `set` command yields the matching `delete` command."""
+    root = HConfig.from_text(Platform.NOKIA_SRL)
     child = HConfigChild(
         root, "set interface ethernet-1/1 subinterface 0 ipv4 address 192.168.1.1/24"
     )
-    result = driver.swap_negation(child)
 
     assert (
-        result.text
+        child.negate().text
         == "delete interface ethernet-1/1 subinterface 0 ipv4 address 192.168.1.1/24"
     )
-    assert result.text.startswith("delete ")
 
 
-def test_swap_negation_no_prefix() -> None:
-    """Test swap_negation when text has neither prefix."""
-    driver = HConfigDriverNokiaSRL()
+def test_negation_without_a_prefix_is_a_no_op() -> None:
+    """Text carrying neither prefix has nothing to swap."""
     root = HConfig.from_text(Platform.NOKIA_SRL)
-
     child = HConfigChild(
         root, "interface ethernet-1/1 subinterface 0 ipv4 address 192.168.1.1/24"
     )
-    original_text = child.text
 
-    result = driver.swap_negation(child)
-    assert result.text == original_text
+    assert (
+        child.negate().text
+        == "interface ethernet-1/1 subinterface 0 ipv4 address 192.168.1.1/24"
+    )
 
 
-def test_declaration_prefix() -> None:
-    """Test declaration_prefix property."""
+def test_prefixes() -> None:
+    """The driver advertises the prefixes the core negates with."""
     driver = HConfigDriverNokiaSRL()
+
     assert driver.declaration_prefix == "set "
-
-
-def test_negation_prefix() -> None:
-    """Test negation_prefix property."""
-    driver = HConfigDriverNokiaSRL()
     assert driver.negation_prefix == "delete "
 
 

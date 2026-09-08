@@ -34,6 +34,11 @@ def lint(*, fix: bool = False) -> None:
             _pylint_command(),
             _yamllint_command(),
             _flynt_command(fix=fix),
+            _check_displacement_markers_command(),
+            _check_stubs_command(),
+            _stubtest_command(),
+            _check_stub_types_command(),
+            _check_formats_corpus_command(),
         ),
     )
 
@@ -51,6 +56,11 @@ def lint_and_test(*, fix: bool = False) -> None:
             _pytest_command(),
             _yamllint_command(),
             _flynt_command(fix=fix),
+            _check_displacement_markers_command(),
+            _check_stubs_command(),
+            _stubtest_command(),
+            _check_stub_types_command(),
+            _check_formats_corpus_command(),
         ),
     )
 
@@ -108,10 +118,88 @@ def _pytest_command(
     if profile:
         command += " --profile --profile-svg"
     if coverage:
-        command += " --cov=hier_config --cov-fail-under=95 --cov-report=term-missing"
+        # Re-anchored from 95 to 88 by the v3.7 Rust migration. The tree, diff,
+        # remediation and post-load engines moved into crates/hier_config_core
+        # and are covered by `cargo test --workspace`; what remains measurable
+        # here is the Python API surface and the platform drivers. The shortfall
+        # is concentrated in the per-platform `_fixup_*` functions that the Rust
+        # post-load pipeline superseded but which were left in place -- removing
+        # that dead code is the way to raise this floor again, not relaxing it
+        # further.
+        command += " --cov=hier_config --cov-fail-under=88 --cov-report=term-missing"
     if threaded:
         command += " -n auto"
     return command
+
+
+@app.command()
+def check_displacement_markers() -> None:
+    """Validate @pytest.mark.displaced_by targets."""
+    _run(_check_displacement_markers_command())
+
+
+def _check_displacement_markers_command() -> str:
+    return f"{sys.executable} scripts/check_displacement_markers.py"
+
+
+@app.command()
+def check_stubs() -> None:
+    """Fail when the generated .pyi stubs no longer match the compiled extension."""
+    _run(_check_stubs_command())
+
+
+def _check_stubs_command() -> str:
+    return f"{sys.executable} scripts/gen_stubs.py --check"
+
+
+@app.command()
+def stubtest() -> None:
+    """Fail when the type stubs disagree with the objects they describe."""
+    _run(_stubtest_command())
+
+
+def _stubtest_command() -> str:
+    # `gen_stubs.py --check` guards *names*; this guards *signatures*, and
+    # `check_stub_types.py` guards *return types* by observing live objects.
+    # Runtime introspection cannot see annotations, and nothing observes an
+    # argument that was never passed, so parameter *types* remain the type
+    # checkers' responsibility alone.
+    return (
+        f"{sys.executable} -m mypy.stubtest"
+        " --mypy-config-file pyproject.toml"
+        " --allowlist stubs/stubtest-allowlist.txt"
+        " _hier_config_rust hier_config"
+    )
+
+
+@app.command()
+def check_stub_types() -> None:
+    """Fail when a declared return type contradicts what the extension returns."""
+    _run(_check_stub_types_command())
+
+
+def _check_stub_types_command() -> str:
+    # Return annotations are not recoverable from a compiled .so, so for an
+    # extension module the stub is the type checkers' only source of truth: a
+    # wrong return type is the premise they reason from, not an error they can
+    # find. This observes real objects instead, element types included.
+    return f"{sys.executable} scripts/check_stub_types.py --check"
+
+
+@app.command()
+def check_formats_corpus() -> None:
+    """Fail when testdata/formats/expected.json no longer matches Python's output."""
+    _run(_check_formats_corpus_command())
+
+
+def _check_formats_corpus_command() -> str:
+    return f"{sys.executable} scripts/gen_formats_corpus.py --check"
+
+
+@app.command()
+def rust_coverage(*, fail_under: int = 40) -> None:
+    """Run cargo-llvm-cov on hier_config_core with a line coverage floor."""
+    _run(f"cargo llvm-cov --package hier_config_core --fail-under-lines={fail_under}")
 
 
 @app.command()

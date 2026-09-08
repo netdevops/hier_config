@@ -1,0 +1,5 @@
+{
+  "platform": "ARUBA_AOSCX",
+  "description": "AOS-CX trunk allowed ranges expand and remediate surgically",
+  "assert_rollback": true
+}

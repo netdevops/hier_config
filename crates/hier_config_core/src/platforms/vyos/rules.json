@@ -1,0 +1,6 @@
+{
+  "platform": "vyos",
+  "negation_prefix": "delete ",
+  "declaration_prefix": "set ",
+  "rules": {}
+}

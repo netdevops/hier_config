@@ -469,3 +469,21 @@ def test_the_v3_surface_raises_no_deprecation_warning(tags_file_path: str) -> No
         _legacy_rules()
 
     assert not [w for w in caught if issubclass(w.category, DeprecationWarning)]
+
+
+def test_documented_keyword_names_are_accepted_by_the_native_methods() -> None:
+    """The stubs promise these keyword names, so the extension must accept them.
+
+    These are the parameter names published in the ``.pyi`` stubs. Passing them
+    by keyword has to work, otherwise a call that type checks fails at runtime.
+    """
+    config = get_hconfig(Platform.CISCO_IOS, RUNNING)
+
+    config.tags_add(tag="alpha")
+    config.tags_remove(tag="alpha")
+    config.add_tags(tag="beta")
+    config.remove_tags(tag="beta")
+
+    match_rules = (MatchRule(startswith="interface"),)
+    assert config.get_children_deep(match_rules=match_rules)
+    assert config.get_child_deep(match_rules=match_rules) is not None

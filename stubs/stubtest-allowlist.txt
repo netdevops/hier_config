@@ -1,0 +1,115 @@
+# stubtest allowlist for the `hier_config` package.
+#
+# `python scripts/build.py stubtest` runs mypy.stubtest against both
+# `_hier_config_rust` and `hier_config`, comparing the .pyi stubs against the
+# real runtime objects. The extension module is clean and has no allowlist.
+#
+# Every entry below was audited and falls into one of these categories:
+#
+#   * pydantic models - `__init__` is synthesised at runtime with a
+#     `self` parameter, while the stub uses pydantic's `__pydantic_self__`.
+#   * PyO3 enums (`Platform`, `NegationStrategy`, `InterfaceDot1qMode`,
+#     `InterfaceDuplex`, `NACHostMode`) - `__new__` takes `value`, and members
+#     are native objects rather than the stub's Python enum members.
+#   * PyO3 classes - construction happens in `tp_new`, so the runtime has
+#     `__new__` where the stub documents `__init__`; the non-`object` C layout
+#     also needs `@disjoint_base`, which cannot be expressed for these.
+#   * Sentinel defaults - the Rust signatures default to `None` and substitute
+#     the real default internally (`style=None` -> `"without_comments"`,
+#     `include_tags=None` -> `()`). The stubs document the *effective* default,
+#     which is what callers need, so the stub is deliberately more precise.
+#   * Stub-only `TypeAlias`es (`SetLikeOfStr`, `JsonValue`, `TextStyle`,
+#     `RemediationTransform`) - annotation-only, never materialised at runtime.
+#   * Dunder methods that PyO3 exposes as accepting positional-only arguments.
+#   * `__all__` - the stubs deliberately omit it; re-exports are explicit.
+#
+# Unused entries are an error, so this list stays honest: when a divergence is
+# fixed the entry must be deleted. Do not add an entry to silence a genuine
+# signature mismatch - fix the Rust binding or the stub instead.
+hier_config.base.HConfigBase
+hier_config.base.HConfigBase.__contains__
+hier_config.base.HConfigBase.all_children_sorted_by_tags
+hier_config.base.HConfigBase.cisco_style_text
+hier_config.base.HConfigBase.indented_text
+hier_config.base.SetLikeOfStr
+hier_config.base.__all__
+hier_config.child.HConfigChild
+hier_config.child.HConfigChild.__eq__
+hier_config.child.HConfigChild.__init__
+hier_config.child.HConfigChild.__lt__
+hier_config.child.HConfigChild.__new__
+hier_config.child.SetLikeOfStr
+hier_config.child.__all__
+hier_config.children.HConfigChildren
+hier_config.children.HConfigChildren.__contains__
+hier_config.children.HConfigChildren.__eq__
+hier_config.children.HConfigChildren.__getitem__
+hier_config.children.HConfigChildren.__setitem__
+hier_config.children.HConfigChildren.append
+hier_config.children.__all__
+hier_config.formats.JsonValue
+hier_config.models.BaseModel.__init__
+hier_config.models.ChangeDetail.__init__
+hier_config.models.Dump.__init__
+hier_config.models.DumpLine.__init__
+hier_config.models.FullTextSubRule.__init__
+hier_config.models.IdempotentCommandsAvoidRule.__init__
+hier_config.models.IdempotentCommandsRule.__init__
+hier_config.models.IndentAdjustRule.__init__
+hier_config.models.Instance.__init__
+hier_config.models.MatchRule.__init__
+hier_config.models.NegationDefaultWhenRule.__init__
+hier_config.models.NegationDefaultWithRule.__init__
+hier_config.models.NegationRule.__init__
+hier_config.models.NegationStrategy.__new__
+hier_config.models.NegationSubRule.__init__
+hier_config.models.OrderingRule.__init__
+hier_config.models.ParentAllowsDuplicateChildRule.__init__
+hier_config.models.PerLineSubRule.__init__
+hier_config.models.Platform.ARISTA_EOS
+hier_config.models.Platform.ARUBA_AOSCX
+hier_config.models.Platform.CISCO_IOS
+hier_config.models.Platform.CISCO_NXOS
+hier_config.models.Platform.CISCO_XR
+hier_config.models.Platform.FORTINET_FORTIOS
+hier_config.models.Platform.GENERIC
+hier_config.models.Platform.HP_COMWARE5
+hier_config.models.Platform.HP_PROCURVE
+hier_config.models.Platform.HUAWEI_VRP
+hier_config.models.Platform.JUNIPER_JUNOS
+hier_config.models.Platform.NOKIA_SRL
+hier_config.models.Platform.VYOS
+hier_config.models.Platform.__new__
+hier_config.models.ReferenceLocation.__init__
+hier_config.models.ReportSummary.__init__
+hier_config.models.SectionalExitingRule.__init__
+hier_config.models.SectionalOverwriteNoNegateRule.__init__
+hier_config.models.SectionalOverwriteRule.__init__
+hier_config.models.TagRule.__init__
+hier_config.models.TextStyle
+hier_config.models.UnusedObjectRule.__init__
+hier_config.platforms.driver_base.HConfigDriverRules.__init__
+hier_config.platforms.driver_base._cached_platform_rules
+hier_config.platforms.driver_base._load_platform_data
+hier_config.platforms.models.InterfaceDot1qMode.ACCESS
+hier_config.platforms.models.InterfaceDot1qMode.TAGGED
+hier_config.platforms.models.InterfaceDot1qMode.TAGGED_ALL
+hier_config.platforms.models.InterfaceDot1qMode.__new__
+hier_config.platforms.models.InterfaceDuplex.__new__
+hier_config.platforms.models.NACHostMode.__new__
+hier_config.platforms.models.StackMember.__init__
+hier_config.platforms.models.Vlan.__init__
+hier_config.root.HConfig
+hier_config.root.HConfig.__eq__
+hier_config.root.HConfig._load_file_native
+hier_config.root.HConfig._load_from_dump_native
+hier_config.root.HConfig._load_native
+hier_config.root.HConfig.to_json
+hier_config.root.HConfig.to_xml
+hier_config.root.__all__
+hier_config.workflows.RemediationTransform
+hier_config.workflows.WorkflowRemediation
+hier_config.workflows.WorkflowRemediation.remediation_config_filtered_text
+hier_config.workflows.WorkflowRemediation.remediation_text
+hier_config.workflows.WorkflowRemediation.rollback_config_filtered_text
+hier_config.workflows.WorkflowRemediation.rollback_text

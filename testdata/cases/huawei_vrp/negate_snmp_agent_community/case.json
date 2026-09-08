@@ -1,0 +1,5 @@
+{
+  "platform": "HUAWEI_VRP",
+  "description": "Test negate snmp-agent community for Huawei VRP",
+  "assert_rollback": true
+}

@@ -1,0 +1,5 @@
+{
+  "platform": "CISCO_XR",
+  "description": "Intended config with ! comment lines and running without produces no remediation",
+  "assert_rollback": true
+}

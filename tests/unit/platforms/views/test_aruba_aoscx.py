@@ -2,8 +2,6 @@
 
 from ipaddress import IPv4Address, IPv4Interface
 
-import pytest
-
 from hier_config import HConfig, Platform, get_hconfig_view
 from hier_config.platforms.aruba_aoscx.view import ConfigViewInterfaceArubaAOSCX
 from hier_config.platforms.models import InterfaceDot1qMode, InterfaceDuplex, Vlan
@@ -183,10 +181,9 @@ def test_duplex_speed_and_poe_defaults() -> None:
 
 
 def test_unsupported_nac_client_limits() -> None:
+    """AOS-CX does not express per-port client limits, so they read as None."""
     view = _view_from_config("interface 1/1/1\n")
 
     interface_view = _interface_view(view, "1/1/1")
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.nac_max_dot1x_clients
-    with pytest.raises(NotImplementedError):
-        _ = interface_view.nac_max_mab_clients
+    assert interface_view.nac_max_dot1x_clients is None
+    assert interface_view.nac_max_mab_clients is None

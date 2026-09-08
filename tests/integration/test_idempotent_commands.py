@@ -1,4 +1,5 @@
 from hier_config import HConfig
+from hier_config.constructors import get_hconfig_fast_generic_load
 from hier_config.models import (
     IdempotentCommandsRule,
     MatchRule,
@@ -130,3 +131,14 @@ def test_startswith_rules_do_not_cross_contaminate() -> None:
     # Old values should NOT be negated (they're idempotent)
     assert "no hardware access-list tcam region arp-ether 0" not in lines
     assert "no hardware profile tcam region racl 0" not in lines
+
+
+def test_future_with_generic_config_uses_source_driver_idempotent_rules() -> None:
+    """When target/change config is generic, future() uses source driver idempotent rules."""
+    running = HConfig.from_lines(
+        Platform.HP_PROCURVE,
+        ("aaa accounting update periodic 1",),
+    )
+    incoming = get_hconfig_fast_generic_load("aaa accounting update periodic 5")
+    future_config = running.future(incoming)
+    assert future_config.to_lines() == ("aaa accounting update periodic 5",)

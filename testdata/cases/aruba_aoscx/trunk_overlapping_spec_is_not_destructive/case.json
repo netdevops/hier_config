@@ -1,0 +1,5 @@
+{
+  "platform": "ARUBA_AOSCX",
+  "description": "Overlapping trunk allowed spec de-duplicates without destructive negation",
+  "assert_rollback": true
+}

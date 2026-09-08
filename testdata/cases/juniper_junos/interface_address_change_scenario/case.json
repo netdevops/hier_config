@@ -1,0 +1,5 @@
+{
+  "platform": "JUNIPER_JUNOS",
+  "description": "Changing an interface IP address on Juniper JUNOS",
+  "assert_rollback": false
+}

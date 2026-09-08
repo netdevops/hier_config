@@ -1,0 +1,395 @@
+{
+  "platform": "arista_eos",
+  "negation_prefix": "no ",
+  "rules": {
+    "idempotent_commands": [
+      {
+        "match_rules": [
+          {
+            "startswith": "hostname"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "logging source-interface"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface"
+          },
+          {
+            "startswith": "ip address"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "line vty"
+          },
+          {
+            "startswith": "transport input"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "line vty"
+          },
+          {
+            "startswith": "access-class"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "line vty"
+          },
+          {
+            "startswith": "ipv6 access-class"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface"
+          },
+          {
+            "re_search": "standby \\d+ (priority|authentication md5)"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp"
+          },
+          {
+            "startswith": "bgp router-id"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router ospf"
+          },
+          {
+            "startswith": "router-id"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router ospf"
+          },
+          {
+            "startswith": "max-lsa"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router ospf"
+          },
+          {
+            "startswith": "maximum-paths"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "ipv6 router ospf"
+          },
+          {
+            "startswith": "router-id"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router ospf"
+          },
+          {
+            "startswith": "log-adjacency-changes"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "ipv6 router ospf"
+          },
+          {
+            "startswith": "log-adjacency-changes"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp"
+          },
+          {
+            "re_search": "neighbor \\S+ description"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "snmp-server location"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "equals": "line con 0"
+          },
+          {
+            "startswith": "exec-timeout"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface"
+          },
+          {
+            "startswith": "ip ospf message-digest-key"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "logging buffered"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "tacacs-server key"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "logging facility"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "vlan internal allocation policy"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "username admin"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "snmp-server user"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "banner"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "ntp source"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "management"
+          },
+          {
+            "startswith": "idle-timeout"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "aaa authentication enable default group tacacs+"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "equals": "control-plane"
+          },
+          {
+            "equals": "ip access-group CPP in"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface"
+          },
+          {
+            "startswith": "mtu"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "snmp-server source-interface"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "ip tftp client source-interface"
+          }
+        ]
+      }
+    ],
+    "negation_default_when": [
+      {
+        "match_rules": [
+          {
+            "startswith": "interface"
+          },
+          {
+            "equals": "logging event link-status"
+          }
+        ]
+      }
+    ],
+    "per_line_sub": [
+      {
+        "search": "^Building configuration.*",
+        "replace": ""
+      },
+      {
+        "search": "^Current configuration.*",
+        "replace": ""
+      },
+      {
+        "search": "^! Last configuration change.*",
+        "replace": ""
+      },
+      {
+        "search": "^! NVRAM config last updated.*",
+        "replace": ""
+      },
+      {
+        "search": "^ntp clock-period .*",
+        "replace": ""
+      },
+      {
+        "search": "^version.*",
+        "replace": ""
+      },
+      {
+        "search": "^ logging event link-status$",
+        "replace": ""
+      },
+      {
+        "search": "^ logging event subif-link-status$",
+        "replace": ""
+      },
+      {
+        "search": "^\\s*ipv6 unreachables disable$",
+        "replace": ""
+      },
+      {
+        "search": "^end$",
+        "replace": ""
+      },
+      {
+        "search": "^\\s*[#!].*",
+        "replace": ""
+      },
+      {
+        "search": "^ no ip address",
+        "replace": ""
+      },
+      {
+        "search": "^ exit-peer-policy",
+        "replace": ""
+      },
+      {
+        "search": "^ exit-peer-session",
+        "replace": ""
+      },
+      {
+        "search": "^ exit-address-family",
+        "replace": ""
+      }
+    ],
+    "sectional_exiting": [
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp"
+          },
+          {
+            "startswith": "template peer-policy"
+          }
+        ],
+        "exit_text": "exit-peer-policy"
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp"
+          },
+          {
+            "startswith": "template peer-session"
+          }
+        ],
+        "exit_text": "exit-peer-session"
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp"
+          },
+          {
+            "startswith": "address-family"
+          }
+        ],
+        "exit_text": "exit-address-family"
+      }
+    ]
+  }
+}

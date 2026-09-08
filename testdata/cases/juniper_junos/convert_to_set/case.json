@@ -1,0 +1,5 @@
+{
+  "platform": "JUNIPER_JUNOS",
+  "description": "Hierarchical Junos config conversion to set commands and remediation",
+  "assert_rollback": false
+}

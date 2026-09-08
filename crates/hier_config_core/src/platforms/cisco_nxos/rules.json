@@ -1,0 +1,713 @@
+{
+  "platform": "cisco_nxos",
+  "negation_prefix": "no ",
+  "rules": {
+    "idempotent_commands": [
+      {
+        "match_rules": [
+          {
+            "startswith": "power redundancy-mode"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "cli alias name wr "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "aaa authentication login console"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "port-channel load-balance"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "hostname "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "ip tftp source-interface"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "ip telnet source-interface"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "ip tacacs source-interface"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "logging source-interface"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "hardware access-list tcam region ifacl"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "hardware access-list tcam region vacl"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "hardware access-list tcam region qos"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "hardware access-list tcam region racl"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "hardware access-list tcam region ipv6-racl"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "hardware access-list tcam region e-ipv6-racl"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "hardware access-list tcam region l3qos"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router ospf"
+          },
+          {
+            "startswith": "vrf"
+          },
+          {
+            "startswith": "maximum-paths"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router ospf"
+          },
+          {
+            "startswith": "vrf"
+          },
+          {
+            "startswith": "log-adjacency-changes"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router ospf"
+          },
+          {
+            "startswith": "maximum-paths"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router ospf"
+          },
+          {
+            "startswith": "log-adjacency-changes"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp"
+          },
+          {
+            "startswith": "vrf"
+          },
+          {
+            "startswith": "address-family"
+          },
+          {
+            "startswith": "maximum-paths"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp"
+          },
+          {
+            "startswith": "address-family"
+          },
+          {
+            "startswith": "maximum-paths"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp"
+          },
+          {
+            "startswith": "template"
+          },
+          {
+            "startswith": "address-family"
+          },
+          {
+            "startswith": "send-community"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface"
+          },
+          {
+            "re_search": "^hsrp \\d+"
+          },
+          {
+            "startswith": "ip"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface"
+          },
+          {
+            "re_search": "^hsrp \\d+"
+          },
+          {
+            "startswith": "priority"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface"
+          },
+          {
+            "re_search": "^hsrp \\d+"
+          },
+          {
+            "startswith": "authentication md5 key-string"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface"
+          },
+          {
+            "startswith": "ip address"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface"
+          },
+          {
+            "startswith": "duplex"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface"
+          },
+          {
+            "startswith": "speed"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface"
+          },
+          {
+            "startswith": "switchport mode"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface"
+          },
+          {
+            "startswith": "switchport access vlan"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface"
+          },
+          {
+            "startswith": "switchport trunk native vlan"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface"
+          },
+          {
+            "startswith": "switchport trunk allowed vlan"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface"
+          },
+          {
+            "startswith": "udld port"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface"
+          },
+          {
+            "startswith": "ip ospf cost"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface"
+          },
+          {
+            "startswith": "ipv6 link-local"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface"
+          },
+          {
+            "startswith": "ospfv3 cost"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface"
+          },
+          {
+            "startswith": "mtu"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "equals": "line console"
+          },
+          {
+            "startswith": "exec-timeout"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "line vty"
+          },
+          {
+            "startswith": "transport input"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "line vty"
+          },
+          {
+            "startswith": "ipv6 access-class"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "line vty"
+          },
+          {
+            "startswith": "access-class"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp"
+          },
+          {
+            "startswith": "bgp router-id"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp"
+          },
+          {
+            "re_search": "neighbor \\S+ description"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router ospf"
+          },
+          {
+            "startswith": "router-id"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router ospf"
+          },
+          {
+            "startswith": "log-adjacency-changes"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "ipv6 router ospf"
+          },
+          {
+            "startswith": "router-id"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "ipv6 router ospf"
+          },
+          {
+            "startswith": "log-adjacency-changes"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "mac address-table aging-time"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "snmp-server location"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "vpc domain"
+          },
+          {
+            "startswith": "role priority"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "banner"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "username admin password 5"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "equals": "policy-map type control-plane copp-system-policy"
+          },
+          {
+            "startswith": "class"
+          },
+          {
+            "startswith": "police"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp"
+          },
+          {
+            "startswith": "vrf"
+          },
+          {
+            "startswith": "neighbor"
+          },
+          {
+            "startswith": "address-family"
+          },
+          {
+            "startswith": "soft-reconfiguration inbound"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp"
+          },
+          {
+            "startswith": "vrf"
+          },
+          {
+            "startswith": "neighbor"
+          },
+          {
+            "startswith": "password"
+          }
+        ]
+      }
+    ],
+    "idempotent_commands_avoid": [
+      {
+        "match_rules": [
+          {
+            "startswith": "interface"
+          },
+          {
+            "re_search": "ip address.*secondary"
+          }
+        ]
+      }
+    ],
+    "negation_default_when": [
+      {
+        "match_rules": [
+          {
+            "startswith": "interface"
+          },
+          {
+            "startswith": "ip ospf bfd",
+            "re_search": "standby \\d+ authentication md5 key-string"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp"
+          },
+          {
+            "startswith": "neighbor"
+          },
+          {
+            "startswith": "address-family"
+          },
+          {
+            "equals": "send-community"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface"
+          },
+          {
+            "contains": "ip ospf passive-interface"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface"
+          },
+          {
+            "contains": "ospfv3 passive-interface"
+          }
+        ]
+      }
+    ],
+    "negate_with": [
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp"
+          },
+          {
+            "startswith": "address-family"
+          },
+          {
+            "startswith": "maximum-paths ibgp"
+          }
+        ],
+        "use": "default maximum-paths ibgp"
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp"
+          },
+          {
+            "startswith": "vrf"
+          },
+          {
+            "startswith": "address-family"
+          },
+          {
+            "startswith": "maximum-paths ibgp"
+          }
+        ],
+        "use": "default maximum-paths ibgp"
+      },
+      {
+        "match_rules": [
+          {
+            "equals": "line vty"
+          },
+          {
+            "startswith": "session-limit"
+          }
+        ],
+        "use": "session-limit 32"
+      },
+      {
+        "match_rules": [
+          {
+            "equals": "line console"
+          },
+          {
+            "startswith": "terminal length"
+          }
+        ],
+        "use": "terminal length 24"
+      },
+      {
+        "match_rules": [
+          {
+            "equals": "line console"
+          },
+          {
+            "startswith": "terminal width"
+          }
+        ],
+        "use": "terminal width 80"
+      }
+    ],
+    "per_line_sub": [
+      {
+        "search": "^Building configuration.*",
+        "replace": ""
+      },
+      {
+        "search": "^Current configuration.*",
+        "replace": ""
+      },
+      {
+        "search": "^ntp clock-period .*",
+        "replace": ""
+      },
+      {
+        "search": "^snmp-server location  ",
+        "replace": "snmp-server location "
+      },
+      {
+        "search": "^version.*",
+        "replace": ""
+      },
+      {
+        "search": "^boot (system|kickstart) .*",
+        "replace": ""
+      },
+      {
+        "search": "!.*",
+        "replace": ""
+      }
+    ]
+  }
+}

@@ -1,0 +1,543 @@
+{
+  "platform": "cisco_xr",
+  "negation_prefix": "no ",
+  "rules": {
+    "idempotent_commands": [
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp"
+          },
+          {
+            "startswith": "vrf"
+          },
+          {
+            "startswith": "address-family"
+          },
+          {
+            "startswith": "additional-paths selection route-policy"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp"
+          },
+          {
+            "startswith": "bgp router-id"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp"
+          },
+          {
+            "startswith": "neighbor-group"
+          },
+          {
+            "startswith": "address-family"
+          },
+          {
+            "startswith": "soft-reconfiguration inbound"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp"
+          },
+          {
+            "startswith": "vrf"
+          },
+          {
+            "startswith": "neighbor"
+          },
+          {
+            "startswith": "address-family"
+          },
+          {
+            "startswith": "soft-reconfiguration inbound"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp"
+          },
+          {
+            "startswith": "vrf"
+          },
+          {
+            "startswith": "neighbor"
+          },
+          {
+            "startswith": "address-family"
+          },
+          {
+            "startswith": "maximum-prefix"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp"
+          },
+          {
+            "startswith": "vrf"
+          },
+          {
+            "startswith": "neighbor"
+          },
+          {
+            "startswith": "password"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp"
+          },
+          {
+            "startswith": "vrf"
+          },
+          {
+            "startswith": "neighbor"
+          },
+          {
+            "startswith": "description"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp"
+          },
+          {
+            "startswith": "neighbor"
+          },
+          {
+            "startswith": "description"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp"
+          },
+          {
+            "startswith": "neighbor"
+          },
+          {
+            "startswith": "password"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router ospf"
+          },
+          {
+            "startswith": "area"
+          },
+          {
+            "startswith": "interface"
+          },
+          {
+            "startswith": "cost"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router ospf"
+          },
+          {
+            "startswith": "router-id"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router ospf"
+          },
+          {
+            "startswith": "area"
+          },
+          {
+            "startswith": "message-digest-key"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router ospf"
+          },
+          {
+            "startswith": "max-metric router-lsa"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "equals": "l2vpn"
+          },
+          {
+            "startswith": "router-id"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "re_search": "logging \\d+.\\d+.\\d+.\\d+ vrf MGMT"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "equals": "line default"
+          },
+          {
+            "startswith": "access-class ingress"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "equals": "line default"
+          },
+          {
+            "startswith": "transport input"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "hostname"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "logging source-interface"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface"
+          },
+          {
+            "startswith": "ipv4 address"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "snmp-server location"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "equals": "line console"
+          },
+          {
+            "startswith": "exec-timeout"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "equals": "mpls ldp"
+          },
+          {
+            "startswith": "session protection duration"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "equals": "mpls ldp"
+          },
+          {
+            "startswith": "igp sync delay"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface"
+          },
+          {
+            "startswith": "mtu"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "banner"
+          }
+        ]
+      }
+    ],
+    "indent_adjust": [
+      {
+        "start_expression": "^\\s*template(?!\\s+(?:data\\s+|options\\s+)?timeout)",
+        "end_expression": "^\\s*end-template"
+      }
+    ],
+    "ordering": [
+      {
+        "match_rules": [
+          {
+            "startswith": "vrf "
+          }
+        ],
+        "weight": -200
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "no vrf "
+          }
+        ],
+        "weight": 200
+      }
+    ],
+    "parent_allows_duplicate_child": [
+      {
+        "match_rules": [
+          {
+            "startswith": "route-policy"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "route-policy"
+          },
+          {
+            "startswith": "if "
+          }
+        ]
+      }
+    ],
+    "per_line_sub": [
+      {
+        "search": "^Building configuration.*",
+        "replace": ""
+      },
+      {
+        "search": "^Current configuration.*",
+        "replace": ""
+      },
+      {
+        "search": "^ntp clock-period .*",
+        "replace": ""
+      },
+      {
+        "search": ".*speed.*",
+        "replace": ""
+      },
+      {
+        "search": ".*duplex.*",
+        "replace": ""
+      },
+      {
+        "search": ".*negotiation auto.*",
+        "replace": ""
+      },
+      {
+        "search": ".*parity none.*",
+        "replace": ""
+      },
+      {
+        "search": "^end-policy$",
+        "replace": " end-policy"
+      },
+      {
+        "search": "^end-set$",
+        "replace": " end-set"
+      },
+      {
+        "search": "^end-group$",
+        "replace": " end-group"
+      },
+      {
+        "search": "^end$",
+        "replace": ""
+      },
+      {
+        "search": "^\\s*#.*",
+        "replace": ""
+      },
+      {
+        "search": "^\\s*!\\s*$",
+        "replace": ""
+      }
+    ],
+    "sectional_exiting": [
+      {
+        "match_rules": [
+          {
+            "startswith": "route-policy"
+          }
+        ],
+        "exit_text": "end-policy",
+        "exit_text_parent_level": true
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "prefix-set"
+          }
+        ],
+        "exit_text": "end-set",
+        "exit_text_parent_level": true
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "policy-map"
+          }
+        ],
+        "exit_text": "end-policy-map",
+        "exit_text_parent_level": true
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "class-map"
+          }
+        ],
+        "exit_text": "end-class-map",
+        "exit_text_parent_level": true
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "community-set"
+          }
+        ],
+        "exit_text": "end-set",
+        "exit_text_parent_level": true
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "extcommunity-set"
+          }
+        ],
+        "exit_text": "end-set",
+        "exit_text_parent_level": true
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "template"
+          }
+        ],
+        "exit_text": "end-template",
+        "exit_text_parent_level": true
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "group"
+          }
+        ],
+        "exit_text": "end-group",
+        "exit_text_parent_level": true
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface"
+          }
+        ],
+        "exit_text": "root"
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp"
+          }
+        ],
+        "exit_text": "root"
+      }
+    ],
+    "sectional_overwrite": [
+      {
+        "match_rules": [
+          {
+            "startswith": "template"
+          }
+        ]
+      }
+    ],
+    "sectional_overwrite_no_negate": [
+      {
+        "match_rules": [
+          {
+            "startswith": "as-path-set"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "prefix-set"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "route-policy"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "extcommunity-set"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "community-set"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,266 @@
+{
+  "platform": "hp_procurve",
+  "negation_prefix": "no ",
+  "rules": {
+    "idempotent_commands": [
+      {
+        "match_rules": [
+          {
+            "startswith": "aaa authentication port-access eap-radius"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "aaa accounting update periodic "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface "
+          },
+          {
+            "startswith": "untagged vlan "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface "
+          },
+          {
+            "startswith": "name "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "re_search": "^(aaa port-access authenticator \\S+ (?:tx-period|supplicant-timeout)) \\d+$"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "re_search": "^(aaa port-access \\S+ auth-(?:priority|order)) .*$"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "re_search": "^(aaa port-access authenticator \\S+ client-limit) \\d+$"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "re_search": "^(aaa port-access mac-based \\S+ (?:addr-limit|logoff-period)) \\d+$"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "re_search": "^(aaa port-access \\S+ critical-auth user-role) .*$"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "re_search": "^(radius-server host \\S+ encrypted-key) \\S+$"
+          }
+        ]
+      }
+    ],
+    "negate_with": [
+      {
+        "match_rules": [
+          {
+            "startswith": "interface "
+          },
+          {
+            "equals": "disable"
+          }
+        ],
+        "use": "enable"
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface "
+          },
+          {
+            "startswith": "name "
+          }
+        ],
+        "use": "no name"
+      },
+      {
+        "match_rules": [
+          {
+            "re_search": "^(aaa port-access authenticator \\S+ (?:tx-period|supplicant-timeout)) \\d+$"
+          }
+        ],
+        "use": "\\1 30"
+      },
+      {
+        "match_rules": [
+          {
+            "re_search": "^(aaa port-access authenticator \\S+ client-limit) \\d+$"
+          }
+        ],
+        "use": "no \\1"
+      },
+      {
+        "match_rules": [
+          {
+            "re_search": "^(aaa port-access mac-based \\S+ addr-limit) \\d+$"
+          }
+        ],
+        "use": "\\1 1"
+      },
+      {
+        "match_rules": [
+          {
+            "re_search": "^(aaa port-access mac-based \\S+ logoff-period) \\d+$"
+          }
+        ],
+        "use": "\\1 300"
+      },
+      {
+        "match_rules": [
+          {
+            "re_search": "^(aaa port-access \\S+ critical-auth user-role) .*$"
+          }
+        ],
+        "use": "no \\1"
+      },
+      {
+        "match_rules": [
+          {
+            "re_search": "^(tacacs-server host \\S+) .*$"
+          }
+        ],
+        "use": "no \\1"
+      },
+      {
+        "match_rules": [
+          {
+            "re_search": "^(radius-server host \\S+ time-window) \\d+$"
+          }
+        ],
+        "use": "\\1 300"
+      },
+      {
+        "match_rules": [
+          {
+            "re_search": "^(radius-server host \\S+ time-window) plus-or-minus-time-window$"
+          }
+        ],
+        "use": "\\1 positive-time-window"
+      },
+      {
+        "match_rules": [
+          {
+            "re_search": "^(radius-server host \\S+) encrypted-key \\S+$"
+          }
+        ],
+        "use": "no \\1"
+      }
+    ],
+    "ordering": [
+      {
+        "match_rules": [
+          {
+            "re_search": "^no aaa port-access \\S+ auth-priority"
+          }
+        ],
+        "weight": -10
+      },
+      {
+        "match_rules": [
+          {
+            "re_search": "^no aaa port-access authenticator \\S+$"
+          }
+        ],
+        "weight": -10
+      },
+      {
+        "match_rules": [
+          {
+            "re_search": "^aaa server-group radius \\S+ host "
+          }
+        ],
+        "weight": 10
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface "
+          },
+          {
+            "startswith": [
+              "no tagged vlan ",
+              "no untagged vlan "
+            ]
+          }
+        ],
+        "weight": 10
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "no tacacs-server "
+          }
+        ],
+        "weight": 10
+      },
+      {
+        "match_rules": [
+          {
+            "re_search": "^no radius-server host \\S+ dyn-authorization$"
+          }
+        ],
+        "weight": 15
+      },
+      {
+        "match_rules": [
+          {
+            "re_search": "^no aaa server-group radius \\S+ host "
+          }
+        ],
+        "weight": 20
+      },
+      {
+        "match_rules": [
+          {
+            "re_search": "^no radius-server host \\S+$"
+          }
+        ],
+        "weight": 30
+      }
+    ],
+    "per_line_sub": [
+      {
+        "search": "^\\s*[#!].*",
+        "replace": ""
+      },
+      {
+        "search": "^; .*",
+        "replace": ""
+      },
+      {
+        "search": "^Running configuration:*",
+        "replace": ""
+      }
+    ]
+  }
+}

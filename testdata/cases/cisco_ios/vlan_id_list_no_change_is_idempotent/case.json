@@ -1,0 +1,5 @@
+{
+  "platform": "CISCO_IOS",
+  "description": "Identical collapsed VLAN lists produce no remediation",
+  "assert_rollback": true
+}

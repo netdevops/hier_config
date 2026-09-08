@@ -16,15 +16,196 @@ v4 design decisions, for the record:
   `WorkflowRemediation` remains the recommended workflow API and already
   validates driver compatibility (`IncompatibleDriverError`).
 - Drivers remain declaratively-configured with sanctioned imperative
-  extension points (#222): #220 removed the negation-related override needs;
-  `idempotent_for()`, `negate_with()`, and `config_preprocessor()` stay
-  overridable for logic that rules cannot express.
+  extension points (#222): #220 removed the negation-related override needs.
+  `config_preprocessor()` stays freely overridable. The Rust core now resolves
+  `idempotent_for()`, `negate_with()`, `sectional_exit()`, and
+  `swap_negation()` itself, so those four hooks no longer exist on
+  `HConfigDriverBase` and defining one raises `TypeError`.
 - Config trees stay mutable (#224): full immutability would break the
   callback/plugin mutation model for marginal benefit. The remediation
   algorithms are guaranteed (and now tested) not to mutate their input
   configs.
 
+### Changed
+
+- The config view layer is now implemented entirely in Rust and exposed through
+  PyO3. `hier_config/platforms/view_base.py` and every platform `view.py` are
+  facades over the native `HConfigView` / `ConfigViewInterface` classes,
+  removing ~1,300 lines of duplicated Python and the `testdata/views/`
+  anti-drift corpus that existed only to pin the two implementations together.
+  `HConfigViewBase` and `ConfigViewInterfaceBase` remain as aliases, the
+  per-platform view classes keep their names, and the capability-marker
+  `isinstance()` protocol from #227 is preserved via `ViewMarkerMeta`, which
+  answers from the native `capabilities` data.
+- **Breaking:** three view properties that raised in v3 now return a value:
+  `nac_max_dot1x_clients` / `nac_max_mab_clients` return `None` instead of
+  raising `NotImplementedError` (Cisco IOS, Aruba AOS-CX); `module_number`
+  returns `None` instead of raising `AttributeError` (Arista EOS, Cisco NX-OS,
+  Cisco XR); and `bundle_member_interfaces` returns `()` instead of raising on a
+  non-trunk interface (HP ProCurve). Replace `try`/`except` with a falsy check.
+- Structured-format conversions are now implemented in Rust. `from_json()`,
+  `to_json()`, `from_xml()`, `to_xml()`, `hconfig_to_netconf_xml()`, and
+  `hconfig_to_gnmi_json()` moved from `hier_config/formats.py` into
+  `hier_config_core::formats`; the Python module is now a thin, documented
+  wrapper. This removes the last inverted dependency in which the Rust
+  `WorkflowRemediation` bindings imported `hier_config.formats` back through
+  the interpreter, so NETCONF/gNMI rendering is available to pure-Rust
+  consumers. Behavior is pinned by a 385-case parity corpus
+  (`testdata/formats/expected.json`) generated from the previous Python
+  implementation.
+- `InvalidConfigError` is now defined in the extension module and re-exported
+  from `hier_config.exceptions`. Importing it from `hier_config.exceptions`
+  (the documented path) is unchanged.
+- `WorkflowRemediation` remediation and rollback trees are now lazily cached via
+  `std::sync::OnceLock` in both `hier_config_core` and `hier_config_py`, converting
+  query methods and properties to take `&self`. This allows lock-free immutable
+  access across threads in Rust and eliminates runtime PyO3 `BorrowMutError`
+  under concurrent property access from Python.
+- Parser state accumulators are now encapsulated into `ParserState`,
+  `ParserCursor`, and `IndentTracker` in `hier_config_core::parser`, eliminating
+  mutable cross-function parameter threading. Pure transactional tree constructors
+  (`parse_tree`, `parse_tree_with_callbacks`, `parse_fast`, `parse_fast_with_callbacks`)
+  build and return complete trees without requiring caller-allocated mutable instances.
+- Tree traversals in `hier_config_core` now provide zero-allocation, stack-based
+  pre-order depth-first iterators (`Tree::descendants` and `Tree::descendants_sorted`),
+  replacing recursive out-parameter vector accumulation (`collect_all_children`).
+  `Tree::node_count` provides $O(1)$ sizing on root nodes and zero-allocation
+  descendant counting on subtrees, which powers `HConfigBase.__len__()` without
+  allocating intermediate vectors or Python object handles.
+- Remediation and diffing engine internal state is now encapsulated in `RemediationContext`,
+  `FutureContext`, and `DiffTrees` in `hier_config_core::remediation`, eliminating
+  loose mutable parameters passed across recursive helpers.
+- Vendor-specific platform logic (sectional exits, negation swapping, preprocessors,
+  and post-load callbacks) has been refactored behind a unified `PlatformOps` trait
+  and localized strictly within each platform's `platforms/<platform>/mod.rs` module.
+- Core tree and workflow domain logic (`Tree::merge`, `Tree::with_tags`, `Tree::add_ancestor_copy_of`,
+  `Tree::add_ancestor_copy_within`, `Tree::from_json`, `Tree::from_xml`,
+  `WorkflowRemediation::remediation_netconf_xml`, and `WorkflowRemediation::remediation_gnmi`)
+  is now natively implemented in `hier_config_core`, enabling full standalone use from Rust
+  without Python or PyO3 dependencies.
+
+### Fixed
+
+- `from_json()` / `from_xml()` no longer silently de-duplicate repeated list
+  entries. Duplicates raise `DuplicateChildError` as documented, and the error
+  type survives the Rust boundary instead of being flattened to
+  `InvalidConfigError`.
+- Keyword arguments documented in the type stubs are accepted again.
+  `tags_add()`, `tags_remove()`, `add_tags()` and `remove_tags()` took
+  `tag_or_tags` at runtime while the stubs promised `tag`, and
+  `get_child_deep()` / `get_children_deep()` took `rules` while the stubs
+  promised `match_rules`. Calling them by keyword as documented raised
+  `TypeError` despite type checking cleanly. The native signatures now match
+  the published names.
+- Two type stubs contradicted the objects they describe, found by the new
+  return-type check. `HConfigBase.all_children_sorted()` was declared
+  `Iterator[HConfigChild]` but returns an eager sequence, so the documented
+  `next(...)` raised `TypeError: 'tuple' object is not an iterator`; it is now
+  `Sequence[HConfigChild]`, matching its `all_children_sorted_by_tags`
+  sibling. `ConfigViewInterface.poe` was declared `bool` but is
+  `Option<bool>` in the core and returns `None` on EOS, NX-OS and XR; it is
+  now `bool | None`.
+- Idempotency checks in `future()` (`Tree::idempotent_for`, `Tree::base_idempotent_for`,
+  `Tree::is_idempotent_command`, and FortiOS declaration checks) now fall back to the
+  counterpart tree's driver rules when the delta/change tree is generic, preventing
+  `future()` from ignoring source platform idempotency rules and retaining duplicate
+  commands when applied against generically loaded configurations.
+- `_hier_config_rust.pyi` is now provided at repository root and guarded by
+  `scripts/gen_stubs.py --check` in sync with `stubs/_hier_config_rust.pyi`, enabling
+  maturin to bundle `_hier_config_rust/__init__.pyi` directly into published wheels for
+  consumer IDE and type checker resolution.
+
 ### Added
+
+- The lint gate now fails on type-stub and corpus drift.
+  `scripts/gen_stubs.py --check` additionally diffs the live
+  `_hier_config_rust` surface against `stubs/_hier_config_rust.pyi`, so a new
+  `#[pyfunction]` or `#[pyclass]` that is not declared in the stub — which
+  would silently degrade every caller to `Unknown` under pyright strict — is
+  caught in CI, as is a `#[getter]` or `#[pymethod]` added to an existing
+  `#[pyclass]` without a matching stub member. `scripts/gen_formats_corpus.py
+  --check` joins it to keep the formats parity corpus honest.
+- `mypy.stubtest` now runs in the lint gate (`python scripts/build.py
+  stubtest`), comparing every `.pyi` stub against the object it actually
+  describes. The name-level guards above cannot see *signatures*, so a stub
+  could promise a parameter the compiled extension rejects — code that type
+  checks but raises `TypeError`. Audited, documented exemptions for pydantic,
+  PyO3 enum and sentinel-default idioms live in
+  `stubs/stubtest-allowlist.txt`; unused entries fail, so the list cannot rot.
+  Return and parameter *type* annotations remain outside its reach — they are
+  not introspectable from a compiled extension.
+- `scripts/check_stub_types.py` now runs in the lint gate, closing the
+  return-type half of that gap. Because annotations cannot be read back from a
+  compiled extension, the stub is the type checkers' *premise* rather than
+  something they verify: rewriting `vlan_ids -> frozenset[int]` as
+  `dict[str, bytes]` changes the pyright strict error count by zero. The
+  script instead exercises each declared member against a corpus of real
+  configs and checks the observed value against its annotation, descending
+  into container element types. Generating the stub from Rust would not help
+  — 30% of exported methods return an opaque `PyObject`, so `vlans`,
+  `stack_members` and `ipv4_default_gw` share one Rust signature and three
+  Python types — and it found the two stub bugs above on its first run.
+  Parameter types remain unverifiable by construction and stay the type
+  checkers' responsibility. A member whose every observed value is empty is
+  reported as unobserved rather than failed — an empty container cannot
+  contradict an element type — so the set of unobserved members is pinned in
+  `stubs/unobserved-allowlist.txt`. An unlisted gap and a stale entry both
+  fail, which stops a newly added stub member from arriving with no
+  verification at all and stops an entry outliving the gap it documents.
+
+### Removed
+
+- Dead driver algorithm. `HConfigDriverBase.idempotent_for()`,
+  `negate_with()`, `sectional_exit()`, and `swap_negation()` — plus the private
+  `_idempotency_key()` machinery and the `@core_owned` escape hatch for
+  overriding them — are gone. The Rust core resolved all four from rule data
+  and never called the Python implementations, so ~560 lines of unreachable
+  code shadowed the real behavior. Defining any of the four on a subclass now
+  raises `TypeError`. Rule data (`rules.negation`, `rules.negate_with`,
+  `rules.idempotent_commands`, `rules.sectional_exiting`) and the
+  `negation_prefix` / `declaration_prefix` properties are unchanged and remain
+  the supported way to shape these behaviors.
+
+### Added
+
+- Stub-freshness gate. `python scripts/build.py check-stubs` (also wired into
+  `lint` and `lint-and-test`) runs `scripts/gen_stubs.py --check` and fails when
+  the committed `hier_config/{base,child,children,root}.pyi` stubs no longer
+  match the compiled extension. The generator already supported `--check`, but
+  nothing invoked it, so the type information mypy and pyright rely on could
+  drift from the native surface without any test noticing.
+- Rust core. Parsing, the tree, post-load fixups, and the remediation engine
+  are implemented in Rust (`crates/`) and exposed through PyO3 as the
+  `_hier_config_rust` extension. There is no pure-Python fallback, so
+  hier_config now ships as a compiled wheel rather than a pure-Python one.
+  Wheels are published for Linux (x86_64, aarch64), macOS, and Windows on
+  CPython 3.10-3.14; other targets build from source and need a Rust
+  toolchain. Behavior is covered by a shared JSON case corpus under
+  `testdata/cases/` that both the Rust and Python suites execute, so the two
+  implementations cannot silently diverge. See
+  [Rust core behavior changes](docs/user/rust-core-changes.md) for the full
+  list of differences and
+  [Performance & Benchmarks](docs/dev/benchmarks.md) for measurements.
+- Standalone Rust usage. `hier_config_core` is now usable as a plain Rust
+  crate with no Python interpreter involved: the built-in drivers already
+  embed their rules as JSON in Rust, and a native view layer
+  (`crates/hier_config_core/src/view/`) plus one-call constructors
+  (`config_from_text`, `config_view`) complete the surface. Views are ported
+  for the six platforms that have a Python `view.py`
+  (Arista EOS, Aruba AOS-CX, Cisco IOS, Cisco NX-OS, Cisco XR, HP ProCurve)
+  using traits with default method bodies, so a platform implements only what
+  its Python sibling overrides. **The Python view layer is unchanged.** The two
+  are pinned together by a shared corpus under `testdata/views/` that is
+  generated from Python and asserted from both sides, so neither can drift.
+  See [Native view divergences](docs/user/rust-core-changes.md) for the
+  handful of properties where Rust returns `None` instead of raising.
+- `core_owned` decorator on `hier_config.platforms.driver_base`. It marks a
+  driver member whose behavior the Rust core owns, in two places: a post-load
+  callback the core already runs (so the Python copy is skipped rather than
+  applied twice), and an override of one of the three engine-resolved hooks
+  above (so the guard lets the definition through). The marker is a
+  declaration, not a switch — it never causes the core to call the Python
+  implementation.
 
 - Permanent v3 API compatibility (#300). Every v3 name that v4 renamed or
   removed is restored as a thin delegation to its v4 counterpart, with no
@@ -182,6 +363,21 @@ v4 design decisions, for the record:
 
 ### Changed
 
+- Build and release moved from poetry to maturin. `pyproject.toml` uses PEP
+  621 metadata with a PEP 735 `dev` dependency group; `poetry.lock` is gone.
+  Contributors need a Rust toolchain and must run `maturin develop --release`
+  before the Python suite will see a change under `crates/`.
+- `all_children_sorted()` returns a tuple rather than a generator, matching
+  `all_children_sorted_by_tags()` and `HConfig.unused_objects()`. Sorting has to
+  see the whole tree before it can yield anything, so the generator bought no
+  laziness and cost a Python frame per node; a full walk is now about six times
+  faster. `all_children()` is still a generator. Iteration and comprehension are
+  unaffected; only code that called `.send()`/`.close()` on the result breaks.
+- `HConfig.from_dump()` runs a driver's remediation-transform callbacks after
+  the tree is fully built rather than incrementally during the load, so a
+  callback observes the complete config. Callbacks that relied on seeing a
+  partially-loaded tree will behave differently.
+
 - Restructured the documentation into User, Administrator, and Developer
   guides (`docs/user/`, `docs/admin/`, `docs/dev/`) with a rewritten landing
   page, new pages for loading configurations and remediation workflows, and
@@ -245,7 +441,14 @@ v4 design decisions, for the record:
 
 ### Removed
 
-Nothing. Every name previously listed here — `get_hconfig()`,
+- The Python config-text loader. `HConfig.from_text()` and `from_lines()` now
+  parse in the core; the Python parsing path they replaced is gone. This is
+  internal, but a subclass that overrode a loader helper no longer has an
+  effect.
+- The unfinished native view subsystem. Config views are Python-only, as they
+  were in v3 — see `hier_config/platforms/*/view.py`.
+
+Every name previously listed under this heading — `get_hconfig()`,
 `get_hconfig_fast_load()`, `get_hconfig_from_dump()`,
 `get_hconfig_fast_generic_load()`, `HConfigChild.use_default_for_negation()`,
 the three v3 negation rule models and their `HConfigDriverRules` fields,

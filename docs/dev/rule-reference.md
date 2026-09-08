@@ -26,7 +26,7 @@ A tuple of MatchRules describes a lineage: `(MatchRule(startswith="interface "),
 
 **Purpose**: define how commands are negated or reset to a default state.
 
-**`NegationRule`** — a single unified model with a `NegationStrategy` enum. REPLACE rules are consulted first (via `driver.negate_with()`); the remaining rules are then evaluated in list order and the first matching rule wins.
+**`NegationRule`** — a single unified model with a `NegationStrategy` enum. REPLACE rules are consulted first by the core; the remaining rules are then evaluated in list order and the first matching rule wins.
 
 - `match_rules`: the conditions under which the rule applies.
 - `strategy`:

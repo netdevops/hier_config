@@ -1,0 +1,5 @@
+{
+  "platform": "HUAWEI_VRP",
+  "description": "Test negate remark for Huawei VRP ACL",
+  "assert_rollback": true
+}

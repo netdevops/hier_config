@@ -1,0 +1,5 @@
+{
+  "platform": "VYOS",
+  "description": "Modifying interface description on VyOS",
+  "assert_rollback": false
+}
