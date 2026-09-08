@@ -2,7 +2,6 @@ import json
 from unittest.mock import patch
 
 from _hier_config_rust import get_platform_rules_json
-
 from hier_config.constructors import get_hconfig_driver
 from hier_config.models import Platform
 from hier_config.platforms.driver_base import (
