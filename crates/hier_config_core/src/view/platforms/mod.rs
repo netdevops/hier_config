@@ -20,25 +20,7 @@ use crate::view::config::ConfigOps;
 /// grow a view surface that no shared test corpus can verify.
 #[must_use]
 pub fn view_ops_for_platform(platform: Platform) -> Option<&'static dyn ConfigOps> {
-    match platform {
-        Platform::AristaEos => Some(&arista_eos::CONFIG_OPS),
-        Platform::ArubaAoscx => Some(&aruba_aoscx::CONFIG_OPS),
-        Platform::CiscoIos => Some(&cisco_ios::CONFIG_OPS),
-        Platform::CiscoNxos => Some(&cisco_nxos::CONFIG_OPS),
-        Platform::CiscoXr => Some(&cisco_xr::CONFIG_OPS),
-        Platform::HpProcurve => Some(&hp_procurve::CONFIG_OPS),
-        // Deliberately view-less: these platforms have no Python `view.py`, so
-        // there is no reference behavior for the shared corpus to pin. The
-        // match is exhaustive on purpose -- adding a `Platform` variant must be
-        // a compile error here, forcing an explicit decision.
-        Platform::FortinetFortios
-        | Platform::Generic
-        | Platform::HpComware5
-        | Platform::HuaweiVrp
-        | Platform::JuniperJunos
-        | Platform::NokiaSrl
-        | Platform::Vyos => None,
-    }
+    crate::platforms::platform_ops(platform).view_ops()
 }
 
 #[cfg(test)]

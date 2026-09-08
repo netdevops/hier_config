@@ -203,7 +203,7 @@ impl Default for Driver {
 impl Driver {
     /// Returns the embedded raw JSON string defining the platform rules for `platform`.
     #[must_use]
-    pub const fn rules_json_for_platform(platform: Platform) -> &'static str {
+    pub fn rules_json_for_platform(platform: Platform) -> &'static str {
         crate::platforms::rules_json_for_platform(platform)
     }
 

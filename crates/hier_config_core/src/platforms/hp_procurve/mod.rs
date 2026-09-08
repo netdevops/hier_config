@@ -1,10 +1,31 @@
+use crate::platforms::PlatformOps;
 use crate::platforms::functions::{MAX_RANGE_SPAN, MAX_RANGE_TOTAL};
 use crate::platforms::post_load_enabled;
 use crate::tree::Tree;
+use crate::view::config::ConfigOps;
 use rustc_hash::FxHashSet as HashSet;
 use std::sync::Arc;
 
 pub const RULES_JSON: &str = include_str!("rules.json");
+
+#[derive(Debug, Clone, Copy)]
+pub struct HpProcurve;
+
+impl PlatformOps for HpProcurve {
+    fn rules_json(&self) -> &'static str {
+        RULES_JSON
+    }
+
+    fn run_post_load(&self, tree: &mut Tree) {
+        run_post_load(tree);
+    }
+
+    fn view_ops(&self) -> Option<&'static dyn ConfigOps> {
+        Some(&crate::view::platforms::hp_procurve::CONFIG_OPS)
+    }
+}
+
+pub static OPS: HpProcurve = HpProcurve;
 
 pub fn run_post_load(tree: &mut Tree) {
     if post_load_enabled(tree, "fixup_hp_procurve_aaa_port_access") {

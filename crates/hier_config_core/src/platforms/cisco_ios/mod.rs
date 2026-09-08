@@ -1,8 +1,29 @@
+use crate::platforms::PlatformOps;
 use crate::platforms::functions::expand_range;
 use crate::platforms::post_load_enabled;
 use crate::tree::Tree;
+use crate::view::config::ConfigOps;
 
 pub const RULES_JSON: &str = include_str!("rules.json");
+
+#[derive(Debug, Clone, Copy)]
+pub struct CiscoIos;
+
+impl PlatformOps for CiscoIos {
+    fn rules_json(&self) -> &'static str {
+        RULES_JSON
+    }
+
+    fn run_post_load(&self, tree: &mut Tree) {
+        run_post_load(tree);
+    }
+
+    fn view_ops(&self) -> Option<&'static dyn ConfigOps> {
+        Some(&crate::view::platforms::cisco_ios::CONFIG_OPS)
+    }
+}
+
+pub static OPS: CiscoIos = CiscoIos;
 
 pub fn run_post_load(tree: &mut Tree) {
     if post_load_enabled(tree, "remove_ipv6_acl_sequence_numbers") {

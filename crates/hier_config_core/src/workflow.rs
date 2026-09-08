@@ -14,6 +14,8 @@ pub enum WorkflowError {
         running: Platform,
         generated: Platform,
     },
+    /// A structured format error occurred during serialization or parsing.
+    Format(crate::formats::FormatError),
     /// An underlying tree operation error.
     Tree(TreeError),
 }
@@ -27,6 +29,7 @@ impl std::fmt::Display for WorkflowError {
                     "The running and generated configs must use the same driver."
                 )
             }
+            Self::Format(err) => write!(f, "{err}"),
             Self::Tree(err) => write!(f, "{err}"),
         }
     }
@@ -37,6 +40,12 @@ impl std::error::Error for WorkflowError {}
 impl From<TreeError> for WorkflowError {
     fn from(err: TreeError) -> Self {
         Self::Tree(err)
+    }
+}
+
+impl From<crate::formats::FormatError> for WorkflowError {
+    fn from(err: crate::formats::FormatError) -> Self {
+        Self::Format(err)
     }
 }
 
@@ -267,5 +276,35 @@ impl<'a> WorkflowRemediation<'a> {
             roll.set_order_weight();
             Ok(roll)
         }
+    }
+
+    /// Renders the remediation as a NETCONF `<edit-config>` XML payload.
+    ///
+    /// Requires running and generated configs built with XML format.
+    ///
+    /// # Errors
+    /// Returns [`WorkflowError`] if remediation computation fails or the format is invalid.
+    pub fn remediation_netconf_xml(
+        &self,
+        list_keys: Option<&[String]>,
+    ) -> Result<String, WorkflowError> {
+        let remediation = self.remediation_config()?;
+        crate::formats::to_netconf_xml(remediation, Some(&self.running_config), list_keys)
+            .map_err(WorkflowError::Format)
+    }
+
+    /// Renders the remediation as a gNMI-style set payload.
+    ///
+    /// Requires running and generated configs built with JSON format.
+    ///
+    /// # Errors
+    /// Returns [`WorkflowError`] if remediation computation fails or the format is invalid.
+    pub fn remediation_gnmi(
+        &self,
+        list_keys: Option<&[String]>,
+    ) -> Result<crate::formats::GnmiRemediation, WorkflowError> {
+        let remediation = self.remediation_config()?;
+        crate::formats::to_gnmi_json(remediation, Some(&self.running_config), list_keys)
+            .map_err(WorkflowError::Format)
     }
 }

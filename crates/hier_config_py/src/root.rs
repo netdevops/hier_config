@@ -327,12 +327,14 @@ impl PyHConfig {
 
         if other.extract::<PyRef<'_, Self>>().is_ok() {
             merge_single(other)?;
-        } else {
-            for item in other.try_iter()? {
-                let conf = item?;
-                merge_single(&conf)?;
+        } else if let Ok(iter) = other.try_iter() {
+            for item in iter {
+                merge_single(&item?)?;
             }
+        } else {
+            merge_single(other)?;
         }
+
         Ok(slf_obj)
     }
 
@@ -561,13 +563,23 @@ impl PyHConfig {
         let py = slf.py();
         let parent_child = parent_to_add.extract::<PyRef<'_, crate::child::PyHConfigChild>>()?;
         let parent_base = parent_child.as_ref();
-        let lineage = parent_base.lineage(py)?;
-        let mut current: PyObject = slf.into_py_any(py)?;
-        for ancestor in lineage {
-            let base: PyRef<'_, PyHConfigBase> = current.extract(py)?;
-            current = base.add_shallow_copy_of(py, ancestor.bind(py), false)?;
-        }
-        Ok(current)
+        let base = slf.as_ref();
+
+        let new_node_id = if Arc::ptr_eq(&base.tree, &parent_base.tree) {
+            let mut my_tree = base.tree.tree.write().unwrap();
+            my_tree
+                .add_ancestor_copy_within(base.node_id, parent_base.node_id)
+                .map_err(to_py_err)?
+        } else {
+            let mut my_tree = base.tree.tree.write().unwrap();
+            let src_tree = parent_base.tree.tree.read().unwrap();
+            my_tree
+                .add_ancestor_copy_of(base.node_id, &src_tree, parent_base.node_id)
+                .map_err(to_py_err)?
+        };
+
+        let child = SharedTree::get_or_create_child(&base.tree, py, new_node_id, None)?;
+        Ok(child.into_any())
     }
 
     pub fn difference(slf: PyRef<'_, Self>, target: &Bound<'_, PyAny>) -> PyResult<PyObject> {
@@ -771,33 +783,21 @@ impl PyHConfig {
 
     pub fn with_tags(slf: PyRef<'_, Self>, tags: &Bound<'_, PyAny>) -> PyResult<PyObject> {
         let py = slf.py();
-        let frozenset_fn = py.import("builtins")?.getattr("frozenset")?;
-        let tags_set = frozenset_fn.call1((tags,))?;
+        let mut tag_set = BTreeSet::new();
+        for t in tags.try_iter()? {
+            tag_set.insert(t?.extract::<String>()?);
+        }
 
         let driver = slf.driver_obj.clone_ref(py);
         let platform = Self::parse_platform(py, &driver);
-        let tree = Tree::for_platform(platform);
-        let root_id = tree.root;
-        let shared_tree = Arc::new(SharedTree::new(tree, platform));
-        shared_tree.set_driver(driver.clone_ref(py));
-        shared_tree.sync_rules(py)?;
-
-        let new_conf = Py::new(
-            py,
-            (
-                Self { driver_obj: driver },
-                PyHConfigBase {
-                    tree: Arc::clone(&shared_tree),
-                    node_id: root_id,
-                },
-            ),
-        )?;
-        let mut handle = shared_tree.root_handle.write().unwrap();
-        *handle = Some(new_conf.clone_ref(py).into_any());
-        drop(handle);
 
         let slf_base = slf.as_ref();
-        slf_base.with_tags_internal(py, &tags_set, new_conf.bind(py).as_any())?;
+        let new_tree = {
+            let tree = slf_base.tree.tree.read().unwrap();
+            tree.with_tags(&tag_set).map_err(to_py_err)?
+        };
+
+        let new_conf = create_py_hconfig(py, new_tree, platform, driver)?;
         Ok(new_conf.into_any())
     }
 
@@ -839,49 +839,14 @@ impl PyHConfig {
 
     pub fn unused_objects(slf: PyRef<'_, Self>) -> PyResult<PyObject> {
         let py = slf.py();
-        let re_mod = py.import("re")?;
-        let re_search = re_mod.getattr("search")?;
-
-        let driver = slf.driver_obj.bind(py);
-        let rules = driver.getattr("rules")?;
-        let unused_rules = rules.getattr("unused_objects")?;
-
-        let slf_obj = slf.into_py_any(py)?;
-        let slf_bound = slf_obj.bind(py);
-
-        let mut unused_list = Vec::new();
-        let mut seen_names = std::collections::HashSet::new();
-
-        for rule in unused_rules.try_iter()? {
-            let rule = rule?;
-            let match_rules = rule.getattr("match_rules")?;
-            let name_re = rule.getattr("name_re")?;
-            let reference_locations = rule.getattr("reference_locations")?;
-
-            let definitions = slf_bound.call_method("get_children_deep", (match_rules,), None)?;
-            for def_child in definitions.try_iter()? {
-                let def_child = def_child?;
-                let text = def_child.getattr("text")?;
-                let m = re_search.call1((&name_re, text))?;
-                if m.is_none() {
-                    continue;
-                }
-                let name: String = m.call_method1("group", ("name",))?.extract()?;
-                if seen_names.contains(&name) {
-                    continue;
-                }
-                seen_names.insert(name.clone());
-
-                let is_referenced: bool = slf_bound
-                    .call_method1("_is_object_referenced", (name, &reference_locations))?
-                    .extract()?;
-                if !is_referenced {
-                    unused_list.push(def_child.unbind());
-                }
-            }
-        }
-
-        crate::base::items_sequence(py, unused_list)
+        let base = slf.as_ref();
+        base.tree.sync_rules(py)?;
+        let unused_ids = {
+            let tree = base.tree.tree.read().unwrap();
+            tree.unused_objects()
+        };
+        let items = SharedTree::get_or_create_children_batch(&base.tree, py, &unused_ids)?;
+        crate::base::items_sequence(py, items)
     }
 
     pub fn set_order_weight(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {

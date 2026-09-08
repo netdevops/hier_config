@@ -114,6 +114,30 @@ impl Tree {
         )
     }
 
+    /// Ingests a JSON document into a config tree for `platform`.
+    ///
+    /// # Errors
+    /// Returns [`crate::formats::FormatError`] if `data` is not valid JSON or cannot be mapped.
+    pub fn from_json(
+        platform: Platform,
+        data: &str,
+        list_keys: Option<&[String]>,
+    ) -> Result<Self, crate::formats::FormatError> {
+        crate::formats::from_json(Driver::for_platform(platform), data, list_keys)
+    }
+
+    /// Ingests an XML document into a config tree for `platform`.
+    ///
+    /// # Errors
+    /// Returns [`crate::formats::FormatError`] if `source` is not well-formed XML or cannot be mapped.
+    pub fn from_xml(
+        platform: Platform,
+        source: &str,
+        list_keys: Option<&[String]>,
+    ) -> Result<Self, crate::formats::FormatError> {
+        crate::formats::from_xml(Driver::for_platform(platform), source, list_keys)
+    }
+
     /// Applies a custom callback to mutate this tree.
     pub fn apply_callback<F: FnOnce(&mut Self)>(&mut self, callback: F) {
         callback(self);
@@ -414,6 +438,58 @@ impl Tree {
         Ok(new_child)
     }
 
+    /// Copies all ancestors in `source_tree` along the lineage down to `source_id`
+    /// into this tree under `parent_id`, reusing existing matching children where present.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TreeError`] if any ancestor cannot be added or copied.
+    pub fn add_ancestor_copy_of(
+        &mut self,
+        parent_id: NodeId,
+        source_tree: &Self,
+        source_id: NodeId,
+    ) -> Result<NodeId, TreeError> {
+        let lineage = source_tree.lineage(source_id);
+        let mut curr = parent_id;
+        for ancestor in lineage {
+            curr = self.add_shallow_copy_of(curr, source_tree, ancestor, false)?;
+        }
+        Ok(curr)
+    }
+
+    /// Copies all ancestors in this tree along the lineage down to `source_id`
+    /// under `parent_id`, reusing existing matching children where present.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TreeError`] if any ancestor cannot be added or copied.
+    pub fn add_ancestor_copy_within(
+        &mut self,
+        parent_id: NodeId,
+        source_id: NodeId,
+    ) -> Result<NodeId, TreeError> {
+        let lineage = self.lineage(source_id);
+        let mut curr = parent_id;
+        for ancestor in lineage {
+            curr = self.add_shallow_copy_within(curr, ancestor, false)?;
+        }
+        Ok(curr)
+    }
+
+    /// Merges all top-level children from `other` into this tree with `merged: true`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TreeError`] if copying any node fails.
+    pub fn merge(&mut self, other: &Self) -> Result<(), TreeError> {
+        let child_ids: Vec<NodeId> = other.arena[other.root].children.iter().collect();
+        for child_id in child_ids {
+            self.add_deep_copy_of(self.root, other, child_id, true)?;
+        }
+        Ok(())
+    }
+
     /// Moves a child from its current parent to `new_parent_id`.
     ///
     /// # Errors
@@ -694,6 +770,39 @@ impl Tree {
         }
     }
 
+    /// Returns a new `Tree` containing only nodes matching the given tags.
+    ///
+    /// For each child of a node, if `tags` is a subset of the child's aggregated tags,
+    /// that child is shallow-copied into the new tree and recursion continues.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TreeError`] if copying any node fails.
+    pub fn with_tags(&self, tags: &BTreeSet<String>) -> Result<Self, TreeError> {
+        let mut new_tree = Self::for_platform(self.driver.platform);
+        let new_root = new_tree.root;
+        self.with_tags_recursive(self.root, &mut new_tree, new_root, tags)?;
+        Ok(new_tree)
+    }
+
+    fn with_tags_recursive(
+        &self,
+        src_parent: NodeId,
+        dst_tree: &mut Self,
+        dst_parent: NodeId,
+        tags: &BTreeSet<String>,
+    ) -> Result<(), TreeError> {
+        let child_ids: Vec<NodeId> = self.arena[src_parent].children.iter().collect();
+        for cid in child_ids {
+            let child_tags = self.tags(cid);
+            if tags.is_subset(&child_tags) {
+                let new_child = dst_tree.add_shallow_copy_of(dst_parent, self, cid, false)?;
+                self.with_tags_recursive(cid, dst_tree, new_child, tags)?;
+            }
+        }
+        Ok(())
+    }
+
     /// Tests whether a node should be included according to include/exclude tags.
     pub fn line_inclusion_test(
         &self,
@@ -901,7 +1010,8 @@ impl Tree {
         unused
     }
 
-    fn is_object_referenced(
+    /// Checks whether an object name is referenced anywhere matching the given reference locations.
+    pub fn is_object_referenced(
         &self,
         name: &str,
         locations: &[crate::models::ReferenceLocation],
@@ -934,7 +1044,12 @@ impl Tree {
         other_tree: &Self,
         other_children: &[NodeId],
     ) -> bool {
-        for rule in &self.driver.rules.idempotent_commands_avoid {
+        let avoid_rules = if self.driver.rules.idempotent_commands_avoid.is_empty() {
+            &other_tree.driver.rules.idempotent_commands_avoid
+        } else {
+            &self.driver.rules.idempotent_commands_avoid
+        };
+        for rule in avoid_rules {
             if self.is_lineage_match(node_id, &rule.match_rules) {
                 return false;
             }
@@ -951,8 +1066,12 @@ impl Tree {
         other_children: &[NodeId],
     ) -> Option<NodeId> {
         let text = &self.arena[node_id].text;
-        let decl = &self.driver.declaration_prefix;
-        if text.starts_with(decl) {
+        let decl = if self.driver.declaration_prefix.is_empty() {
+            &other_tree.driver.declaration_prefix
+        } else {
+            &self.driver.declaration_prefix
+        };
+        if !decl.is_empty() && text.starts_with(decl) {
             let parts: Vec<&str> = text.split_whitespace().collect();
             if parts.len() > 1 {
                 for &other_id in other_children {
@@ -1004,7 +1123,12 @@ impl Tree {
         other_tree: &Self,
         other_children: &[NodeId],
     ) -> Option<NodeId> {
-        match self.driver.platform {
+        let platform = if self.driver.platform == Platform::Generic {
+            other_tree.driver.platform
+        } else {
+            self.driver.platform
+        };
+        match platform {
             Platform::FortinetFortios => {
                 if let Some(found) =
                     self.fortios_idempotent_for(node_id, other_tree, other_children)
@@ -1033,14 +1157,20 @@ impl Tree {
     ) -> Option<NodeId> {
         let self_path = self.path(node_id);
         let self_path_refs: Vec<&str> = self_path.iter().map(String::as_str).collect();
-        for rule in &self.driver.rules.idempotent_commands {
+        let (rules, driver) = if self.driver.rules.idempotent_commands.is_empty() {
+            (
+                &other_tree.driver.rules.idempotent_commands,
+                &other_tree.driver,
+            )
+        } else {
+            (&self.driver.rules.idempotent_commands, &self.driver)
+        };
+        for rule in rules {
             if !self.is_lineage_match(node_id, &rule.match_rules) {
                 continue;
             }
 
-            let self_key = self
-                .driver
-                .idempotency_key(&self_path_refs, &rule.match_rules);
+            let self_key = driver.idempotency_key(&self_path_refs, &rule.match_rules);
 
             for &other_id in other_children {
                 if !other_tree.is_lineage_match(other_id, &rule.match_rules) {
@@ -1048,9 +1178,7 @@ impl Tree {
                 }
                 let other_path = other_tree.path(other_id);
                 let other_path_refs: Vec<&str> = other_path.iter().map(String::as_str).collect();
-                let other_key = other_tree
-                    .driver
-                    .idempotency_key(&other_path_refs, &rule.match_rules);
+                let other_key = driver.idempotency_key(&other_path_refs, &rule.match_rules);
 
                 if !self_key.is_empty() && self_key == other_key {
                     return Some(other_id);
@@ -1660,5 +1788,83 @@ mod tests {
         let desc_sorted_weighted: Vec<NodeId> = tree.descendants_sorted(tree.root).collect();
         assert_eq!(desc_sorted_weighted, tree.all_children_sorted(tree.root));
         assert_eq!(desc_sorted_weighted, vec![iface, desc, ip, vlan]);
+    }
+
+    #[test]
+    fn test_tree_merge() {
+        let mut tree1 = Tree::for_platform(Platform::CiscoIos);
+        tree1
+            .add_children_deep(tree1.root, &["interface GigabitEthernet0/1", "shutdown"])
+            .unwrap();
+
+        let mut tree2 = Tree::for_platform(Platform::CiscoIos);
+        tree2
+            .add_children_deep(
+                tree2.root,
+                &["interface GigabitEthernet0/1", "description uplink"],
+            )
+            .unwrap();
+        tree2
+            .add_children_deep(tree2.root, &["vlan 10", "name USERS"])
+            .unwrap();
+
+        tree1.merge(&tree2).unwrap();
+
+        let dumped = tree1.dump_simple(false);
+        assert_eq!(
+            dumped,
+            vec![
+                "interface GigabitEthernet0/1",
+                "  shutdown",
+                "  description uplink",
+                "vlan 10",
+                "  name USERS",
+            ]
+        );
+    }
+
+    #[test]
+    fn test_tree_with_tags() {
+        let mut tree = Tree::for_platform(Platform::CiscoIos);
+        let iface = tree
+            .add_child(tree.root, "interface GigabitEthernet0/1", true, false)
+            .unwrap();
+        tree.arena[iface].tags_mut().insert("prod".to_string());
+        let desc = tree
+            .add_child(iface, "description link", true, false)
+            .unwrap();
+        tree.arena[desc].tags_mut().insert("prod".to_string());
+        let shut = tree.add_child(iface, "shutdown", true, false).unwrap();
+        tree.arena[shut].tags_mut().insert("maint".to_string());
+
+        let mut tags = BTreeSet::new();
+        tags.insert("prod".to_string());
+
+        let filtered = tree.with_tags(&tags).unwrap();
+        let dumped = filtered.dump_simple(false);
+        assert_eq!(
+            dumped,
+            vec!["interface GigabitEthernet0/1", "  description link"]
+        );
+    }
+
+    #[test]
+    fn test_tree_add_ancestor_copy_of() {
+        let mut src = Tree::for_platform(Platform::CiscoIos);
+        let ip = src
+            .add_children_deep(
+                src.root,
+                &["interface Vlan2", "ip address 192.168.1.1 255.255.255.0"],
+            )
+            .unwrap();
+
+        let mut dst = Tree::for_platform(Platform::CiscoIos);
+        let copied = dst.add_ancestor_copy_of(dst.root, &src, ip).unwrap();
+
+        assert_eq!(dst.depth(copied), 2);
+        assert_eq!(
+            dst.dump_simple(false),
+            vec!["interface Vlan2", "  ip address 192.168.1.1 255.255.255.0"]
+        );
     }
 }

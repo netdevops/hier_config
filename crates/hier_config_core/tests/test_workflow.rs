@@ -17,7 +17,7 @@ fn test_workflow_driver_mismatch() {
             assert_eq!(r_plat, Platform::CiscoIos);
             assert_eq!(g_plat, Platform::JuniperJunos);
         }
-        other @ WorkflowError::Tree(_) => panic!("expected DriverMismatch, got {other:?}"),
+        other => panic!("expected DriverMismatch, got {other:?}"),
     }
 }
 
@@ -159,4 +159,41 @@ fn test_workflow_immutable_concurrent_queries() {
         assert!(roll_text.contains("vlan 10"));
         assert!(rem_len > 0);
     });
+}
+
+#[test]
+fn test_idempotent_hp_procurve_future() {
+    let running = Tree::from_str(Platform::HpProcurve, "aaa accounting update periodic 1").unwrap();
+    let incoming = Tree::from_str(Platform::Generic, "aaa accounting update periodic 5").unwrap();
+    let (future, _) =
+        hier_config_core::remediation::future_with_report(&running, &incoming, false).unwrap();
+    let lines: Vec<String> = future.lines(future.root, false);
+    assert_eq!(lines, vec!["aaa accounting update periodic 5"]);
+}
+
+#[test]
+fn test_workflow_remediation_netconf_xml() {
+    let running_xml = "<config><interface><name>GigabitEthernet0/1</name><description>old</description></interface></config>";
+    let generated_xml = "<config><interface><name>GigabitEthernet0/1</name><description>new</description></interface></config>";
+
+    let running = Tree::from_xml(Platform::Generic, running_xml, None).unwrap();
+    let generated = Tree::from_xml(Platform::Generic, generated_xml, None).unwrap();
+
+    let workflow = WorkflowRemediation::new(running, generated).unwrap();
+    let xml = workflow.remediation_netconf_xml(None).unwrap();
+    assert!(xml.contains("<description>new</description>"));
+}
+
+#[test]
+fn test_workflow_remediation_gnmi() {
+    let running_json = r#"{"interfaces": {"interface": [{"name": "eth0", "description": "old"}]}}"#;
+    let generated_json =
+        r#"{"interfaces": {"interface": [{"name": "eth0", "description": "new"}]}}"#;
+
+    let running = Tree::from_json(Platform::Generic, running_json, None).unwrap();
+    let generated = Tree::from_json(Platform::Generic, generated_json, None).unwrap();
+
+    let workflow = WorkflowRemediation::new(running, generated).unwrap();
+    let gnmi = workflow.remediation_gnmi(None).unwrap();
+    assert!(!gnmi.update.is_empty());
 }
