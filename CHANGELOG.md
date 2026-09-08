@@ -75,6 +75,14 @@ v4 design decisions, for the record:
 - Remediation and diffing engine internal state is now encapsulated in `RemediationContext`,
   `FutureContext`, and `DiffTrees` in `hier_config_core::remediation`, eliminating
   loose mutable parameters passed across recursive helpers.
+- Vendor-specific platform logic (sectional exits, negation swapping, preprocessors,
+  and post-load callbacks) has been refactored behind a unified `PlatformOps` trait
+  and localized strictly within each platform's `platforms/<platform>/mod.rs` module.
+- Core tree and workflow domain logic (`Tree::merge`, `Tree::with_tags`, `Tree::add_ancestor_copy_of`,
+  `Tree::add_ancestor_copy_within`, `Tree::from_json`, `Tree::from_xml`,
+  `WorkflowRemediation::remediation_netconf_xml`, and `WorkflowRemediation::remediation_gnmi`)
+  is now natively implemented in `hier_config_core`, enabling full standalone use from Rust
+  without Python or PyO3 dependencies.
 
 ### Fixed
 
@@ -97,6 +105,15 @@ v4 design decisions, for the record:
   sibling. `ConfigViewInterface.poe` was declared `bool` but is
   `Option<bool>` in the core and returns `None` on EOS, NX-OS and XR; it is
   now `bool | None`.
+- Idempotency checks in `future()` (`Tree::idempotent_for`, `Tree::base_idempotent_for`,
+  `Tree::is_idempotent_command`, and FortiOS declaration checks) now fall back to the
+  counterpart tree's driver rules when the delta/change tree is generic, preventing
+  `future()` from ignoring source platform idempotency rules and retaining duplicate
+  commands when applied against generically loaded configurations.
+- `_hier_config_rust.pyi` is now provided at repository root and guarded by
+  `scripts/gen_stubs.py --check` in sync with `stubs/_hier_config_rust.pyi`, enabling
+  maturin to bundle `_hier_config_rust/__init__.pyi` directly into published wheels for
+  consumer IDE and type checker resolution.
 
 ### Added
 

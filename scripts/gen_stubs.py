@@ -45,6 +45,9 @@ STUB_DIR = pathlib.Path(__file__).resolve().parent.parent / "hier_config"
 NATIVE_STUB = (
     pathlib.Path(__file__).resolve().parent.parent / "stubs" / "_hier_config_rust.pyi"
 )
+ROOT_NATIVE_STUB = (
+    pathlib.Path(__file__).resolve().parent.parent / "_hier_config_rust.pyi"
+)
 
 # runtime class -> (stub module, base class in stub)
 CLASSES = {
@@ -741,6 +744,24 @@ def verify_extension_surface(native: types.ModuleType) -> int:
     return 1
 
 
+def verify_root_stub() -> int:
+    """Ensure root `_hier_config_rust.pyi` matches `stubs/_hier_config_rust.pyi` for wheel packaging."""
+    if not ROOT_NATIVE_STUB.exists():
+        print(
+            "Missing root _hier_config_rust.pyi needed for wheel stub packaging.",
+            file=sys.stderr,
+        )
+        return 1
+    if ROOT_NATIVE_STUB.read_text() != NATIVE_STUB.read_text():
+        print(
+            "Root _hier_config_rust.pyi is out of sync with stubs/_hier_config_rust.pyi.\n"
+            "Regenerate with:  python scripts/gen_stubs.py",
+            file=sys.stderr,
+        )
+        return 1
+    return 0
+
+
 def main() -> int:
     import _hier_config_rust as _native
 
@@ -802,9 +823,15 @@ def main() -> int:
             verify(targets, originals)
             or verify_extension_surface(_native)
             or verify_stub_class_members(_native)
+            or verify_root_stub()
         )
     ruff_fix(targets)
-    return verify_extension_surface(_native) or verify_stub_class_members(_native)
+    ROOT_NATIVE_STUB.write_text(NATIVE_STUB.read_text())
+    return (
+        verify_extension_surface(_native)
+        or verify_stub_class_members(_native)
+        or verify_root_stub()
+    )
 
 
 if __name__ == "__main__":

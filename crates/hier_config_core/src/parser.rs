@@ -120,12 +120,7 @@ pub fn convert_to_set_commands(config_raw: &str) -> String {
 /// Only the set-command platforms rewrite the text; everything else borrows it, so a
 /// large configuration is not copied just to be handed straight back.
 pub fn config_preprocessor(platform: Platform, config_text: &str) -> Cow<'_, str> {
-    match platform {
-        Platform::JuniperJunos | Platform::Vyos | Platform::NokiaSrl => {
-            Cow::Owned(convert_to_set_commands(config_text))
-        }
-        _ => Cow::Borrowed(config_text),
-    }
+    crate::platforms::platform_ops(platform).config_preprocessor(config_text)
 }
 
 /// Tests if a line terminates a banner.

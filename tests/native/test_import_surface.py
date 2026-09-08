@@ -136,3 +136,16 @@ def test_type_stubs_ship_alongside_the_shims() -> None:
     package = Path(hier_config.__file__).parent
     for module in ("base", "child", "children", "root", "exceptions"):
         assert (package / f"{module}.pyi").is_file(), module
+
+
+def test_native_extension_stub_packaged_for_maturin() -> None:
+    """The root `_hier_config_rust.pyi` exists and matches `stubs/` for maturin wheel packaging."""
+    repo_root = Path(__file__).resolve().parents[2]
+    root_stub = repo_root / "_hier_config_rust.pyi"
+    native_stub = repo_root / "stubs" / "_hier_config_rust.pyi"
+    assert root_stub.is_file(), (
+        "_hier_config_rust.pyi must exist at repo root for maturin wheel packaging"
+    )
+    assert root_stub.read_text() == native_stub.read_text(), (
+        "_hier_config_rust.pyi at repo root must match stubs/_hier_config_rust.pyi"
+    )

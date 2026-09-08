@@ -435,6 +435,12 @@ impl Platform {
             Self::Vyos => "vyos",
         }
     }
+
+    /// Returns the static vendor operations table for this platform.
+    #[must_use]
+    pub fn ops(self) -> &'static dyn crate::platforms::PlatformOps {
+        crate::platforms::platform_ops(self)
+    }
 }
 
 const _: () = Platform::assert_all_is_exhaustive(Platform::Generic);

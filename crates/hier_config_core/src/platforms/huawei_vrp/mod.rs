@@ -1,4 +1,29 @@
+use crate::platforms::PlatformOps;
 pub const RULES_JSON: &str = include_str!("rules.json");
+
+#[derive(Debug, Clone, Copy)]
+pub struct HuaweiVrp;
+
+impl PlatformOps for HuaweiVrp {
+    fn rules_json(&self) -> &'static str {
+        RULES_JSON
+    }
+
+    fn try_swap_negation(
+        &self,
+        negation_prefix: &str,
+        _declaration_prefix: &str,
+        text: &str,
+    ) -> Result<String, String> {
+        try_swap_negation(negation_prefix, text)
+    }
+
+    fn default_sectional_exit(&self) -> &'static str {
+        sectional_exit()
+    }
+}
+
+pub static OPS: HuaweiVrp = HuaweiVrp;
 
 #[must_use]
 pub const fn sectional_exit() -> &'static str {

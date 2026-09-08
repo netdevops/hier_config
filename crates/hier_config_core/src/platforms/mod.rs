@@ -13,27 +13,78 @@ pub mod juniper_junos;
 pub mod nokia_srl;
 pub mod vyos;
 
+use std::borrow::Cow;
+
 use crate::models::Platform;
 use crate::tree::Tree;
+use crate::view::config::ConfigOps;
+
+/// Operations and customizations specific to a network operating system platform.
+pub trait PlatformOps: Send + Sync {
+    /// Returns the embedded raw JSON string defining the platform rules.
+    fn rules_json(&self) -> &'static str;
+
+    /// Dispatches post-load transformations for this platform.
+    fn run_post_load(&self, _tree: &mut Tree) {}
+
+    /// Swaps the negation prefix of a command string according to platform syntax rules.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error message if the command does not start with an expected prefix.
+    fn try_swap_negation(
+        &self,
+        negation_prefix: &str,
+        _declaration_prefix: &str,
+        text: &str,
+    ) -> Result<String, String> {
+        if let Some(stripped) = text.strip_prefix(negation_prefix) {
+            Ok(stripped.to_string())
+        } else {
+            Ok(format!("{negation_prefix}{text}"))
+        }
+    }
+
+    /// Returns the default sectional exit command for this platform.
+    fn default_sectional_exit(&self) -> &'static str {
+        "exit"
+    }
+
+    /// Applies platform-specific preprocessor transformations to configuration text.
+    fn config_preprocessor<'a>(&self, text: &'a str) -> Cow<'a, str> {
+        Cow::Borrowed(text)
+    }
+
+    /// Returns native view hooks if available for this platform.
+    fn view_ops(&self) -> Option<&'static dyn ConfigOps> {
+        None
+    }
+}
+
+/// Returns the static [`PlatformOps`] implementation for `platform`.
+#[must_use]
+pub fn platform_ops(platform: Platform) -> &'static dyn PlatformOps {
+    match platform {
+        Platform::AristaEos => &arista_eos::OPS,
+        Platform::ArubaAoscx => &aruba_aoscx::OPS,
+        Platform::CiscoIos => &cisco_ios::OPS,
+        Platform::CiscoNxos => &cisco_nxos::OPS,
+        Platform::CiscoXr => &cisco_xr::OPS,
+        Platform::FortinetFortios => &fortinet_fortios::OPS,
+        Platform::Generic => &generic::OPS,
+        Platform::HpComware5 => &hp_comware5::OPS,
+        Platform::HpProcurve => &hp_procurve::OPS,
+        Platform::HuaweiVrp => &huawei_vrp::OPS,
+        Platform::JuniperJunos => &juniper_junos::OPS,
+        Platform::NokiaSrl => &nokia_srl::OPS,
+        Platform::Vyos => &vyos::OPS,
+    }
+}
 
 /// Returns the embedded raw JSON string defining the platform rules for `platform`.
 #[must_use]
-pub const fn rules_json_for_platform(platform: Platform) -> &'static str {
-    match platform {
-        Platform::AristaEos => arista_eos::RULES_JSON,
-        Platform::ArubaAoscx => aruba_aoscx::RULES_JSON,
-        Platform::CiscoIos => cisco_ios::RULES_JSON,
-        Platform::CiscoNxos => cisco_nxos::RULES_JSON,
-        Platform::CiscoXr => cisco_xr::RULES_JSON,
-        Platform::FortinetFortios => fortinet_fortios::RULES_JSON,
-        Platform::Generic => generic::RULES_JSON,
-        Platform::HpComware5 => hp_comware5::RULES_JSON,
-        Platform::HpProcurve => hp_procurve::RULES_JSON,
-        Platform::HuaweiVrp => huawei_vrp::RULES_JSON,
-        Platform::JuniperJunos => juniper_junos::RULES_JSON,
-        Platform::NokiaSrl => nokia_srl::RULES_JSON,
-        Platform::Vyos => vyos::RULES_JSON,
-    }
+pub fn rules_json_for_platform(platform: Platform) -> &'static str {
+    platform_ops(platform).rules_json()
 }
 
 /// Reports whether the named post-load callback is still enabled on `tree`.
@@ -51,13 +102,7 @@ pub fn post_load_enabled(tree: &Tree, name: &str) -> bool {
 
 /// Dispatches post-load transformations for a given platform.
 pub fn run_post_load_callbacks(tree: &mut Tree) {
-    match tree.driver.platform {
-        Platform::CiscoIos => cisco_ios::run_post_load(tree),
-        Platform::CiscoXr => cisco_xr::run_post_load(tree),
-        Platform::HpProcurve => hp_procurve::run_post_load(tree),
-        Platform::ArubaAoscx => aruba_aoscx::run_post_load(tree),
-        _ => {}
-    }
+    platform_ops(tree.driver.platform).run_post_load(tree);
 }
 
 /// Swaps the negation prefix of a command string for a platform according to its driver syntax rules.
@@ -71,35 +116,13 @@ pub fn try_swap_negation(
     declaration_prefix: &str,
     text: &str,
 ) -> Result<String, String> {
-    match platform {
-        Platform::FortinetFortios => {
-            fortinet_fortios::try_swap_negation(negation_prefix, declaration_prefix, text)
-        }
-        Platform::JuniperJunos => {
-            juniper_junos::try_swap_negation(negation_prefix, declaration_prefix, text)
-        }
-        Platform::Vyos => vyos::try_swap_negation(negation_prefix, declaration_prefix, text),
-        Platform::NokiaSrl => {
-            nokia_srl::try_swap_negation(negation_prefix, declaration_prefix, text)
-        }
-        Platform::HuaweiVrp => huawei_vrp::try_swap_negation(negation_prefix, text),
-        _ => {
-            if let Some(stripped) = text.strip_prefix(negation_prefix) {
-                Ok(stripped.to_string())
-            } else {
-                Ok(format!("{negation_prefix}{text}"))
-            }
-        }
-    }
+    platform_ops(platform).try_swap_negation(negation_prefix, declaration_prefix, text)
 }
 
 /// Returns the default sectional exit command for a platform.
 #[must_use]
-pub const fn default_sectional_exit(platform: Platform) -> &'static str {
-    match platform {
-        Platform::HuaweiVrp => huawei_vrp::sectional_exit(),
-        _ => "exit",
-    }
+pub fn default_sectional_exit(platform: Platform) -> &'static str {
+    platform_ops(platform).default_sectional_exit()
 }
 
 #[cfg(test)]

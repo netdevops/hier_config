@@ -36,6 +36,7 @@ pub use parser::{
     load_fast_with_callbacks, load_from_str, load_from_str_with_callbacks, parse_fast,
     parse_fast_with_callbacks, parse_tree, parse_tree_with_callbacks,
 };
+pub use platforms::{PlatformOps, platform_ops};
 pub use text_match::TextMatch;
 pub use tree::{Children, Descendants, DescendantsSorted, Node, Tree, TreeError};
 pub use view::config::{ConfigOps, ConfigView};
