@@ -43,6 +43,7 @@ The following drivers are included in Hier Config:
 | Aruba AOS-CX | `Platform.ARUBA_AOSCX` | Experimental |
 | Juniper JunOS | `Platform.JUNIPER_JUNOS` | Experimental |
 | Nokia SRL | `Platform.NOKIA_SRL` | Experimental |
+| Ruckus/Brocade FastIron (ICX) | `Platform.RUCKUS_FASTIRON` | Experimental |
 | VyOS | `Platform.VYOS` | Experimental |
 | Generic | `Platform.GENERIC` | Base for custom drivers |
 
@@ -366,3 +367,114 @@ driver = get_hconfig_driver(Platform.FORTINET_FORTIOS)
 ---
 
 To learn how these drivers are built, how to customize them, or how to create your own, see [Customizing and Creating Drivers](custom-drivers.md).
+
+### Ruckus/Brocade FastIron (ICX) Driver
+
+> **Experimental:** developed against FastIron **08.0.30** on ICX 6450 (`S`
+> switch image) and ICX 6650 (`R` router image). FastIron 08.0.95 and the
+> 09.x/10.x releases moved several command families closer to Cisco IOS syntax
+> and are not covered by this driver.
+
+Platform enum: `Platform.RUCKUS_FASTIRON`
+
+```python
+from hier_config import Platform, get_hconfig
+
+running = get_hconfig(Platform.RUCKUS_FASTIRON, running_text)
+intended = get_hconfig(Platform.RUCKUS_FASTIRON, intended_text)
+remediation = running.config_to_get_to(intended)
+```
+
+Platform-specific behaviour:
+
+- **VLAN membership is expanded per port at load time.** FastIron renders
+  membership as one collapsed line under the VLAN
+  (`tagged ethe 1/1/1 to 1/1/48 ethe 1/2/4`). Diffing that as a single string
+  means changing one port rewrites the whole line, momentarily removing every
+  other port from the VLAN. The driver rewrites it to one
+  `tagged ethe 1/1/1` per port, which the CLI accepts verbatim. Unlike the HP
+  ProCurve driver, membership stays under the VLAN rather than moving to the
+  interface, because FastIron has no interface-level VLAN membership command.
+- **`stack` configuration is removed at load time** and never remediated.
+  Stack membership is established once at build time and re-issuing it against
+  a live stack can renumber or reload members.
+- **VLAN headers are normalised at load time.** FastIron renders the name
+  inline (`vlan 101 name USERS by port`) and renames by re-issuing that whole
+  command, so the header is both the section selector and the rename command.
+  The driver reduces the header to `vlan 101` and carries the name as a child,
+  which keeps the section identity stable across a rename and makes the rename
+  itself a single remediation line. The child is a global command, so it
+  applies correctly from inside the VLAN context where it is emitted.
+
+    Marking the header idempotent instead would look equivalent but breaks
+    `future()`: an idempotent match makes it keep only the delta's children and
+    drop the unchanged ones, which corrupts rollback generation.
+- **A LAG section is negated down to its name** (`no lag "CORE_UPLINK"`), and a
+  LAG cannot be renamed in place -- a name change is a delete and re-create.
+- **IPv4 ACLs are rebuilt when their body changes**, because entries have no
+  sequence numbers on this release and can only be appended, so an entry that
+  belongs in the middle cannot be inserted in place.
+
+    The rebuild is emitted as `no ip access-list ...` followed by the full new
+    body. An interface binding (`ip access-group ...`) survives the gap and
+    re-arms automatically once the ACL is re-created with the same name, and
+    traffic is **not** dropped in between -- the interface fails open. Treat an
+    ACL rebuild as traffic-affecting from a security standpoint and schedule it
+    accordingly, e.g. by tagging it for manual review:
+
+    ```python
+    TagRule(
+        match_rules=(MatchRule(startswith=("ip access-list ", "no ip access-list ")),),
+        apply_tags=frozenset({"manual"}),
+    )
+    ```
+
+    Note that any change to an ACL body triggers the rebuild, including an
+    append that would have been safe on its own. If the push is interrupted
+    between the negation and the re-created body, the ACL stays deleted -- the
+    open window is short but it is not self-healing.
+- **`no interface ethernet ...` is a reset, not a deletion.** FastIron accepts
+  it, clears the interface block (`port-name`, `port security`, `trust`,
+  `dual-mode`, ...) and the port then disappears from `show running-config`,
+  because FastIron omits interfaces that are entirely at their defaults. VLAN
+  membership is *not* affected -- it lives in the `vlan` blocks -- so a port
+  that was dual-mode in VLAN 101 stays in VLAN 101 as a plain tagged member.
+  The driver emits the reset normally but orders it ahead of everything else so
+  it cannot clobber interface settings applied earlier in the same push.
+- **An interface absent from the running config is at its defaults**, not
+  missing. Intended configs that spell out every port will diff against a
+  running config that lists only the non-default ones; this is expected and the
+  resulting remediation is correct.
+- **LAG sections need human review.** A deployed LAG refuses to give up its
+  primary port or to change it, so a membership change is a stateful sequence
+  (`no deploy` -> `primary-port` -> `no ports` -> `enable ethe` -> `deploy`)
+  that hier_config cannot synthesise: `deploy` is identical on both sides, so
+  it never appears in the delta for the driver to order around. Removing a
+  member also disables that port automatically, and the disabled state is not
+  visible in `show running-config`, so a follow-up `enable ethe ...` can never
+  be derived from a diff either. The driver orders an un-deploy/re-deploy pair
+  correctly when one is present, but LAG changes should be tagged for manual
+  handling:
+
+    ```python
+    TagRule(
+        match_rules=(MatchRule(startswith=("lag ", "no lag ")),),
+        apply_tags=frozenset({"manual"}),
+    )
+    ```
+
+    Member lists are expanded per port at load time, the same way VLAN
+    membership is: FastIron accumulates repeated `ports ethernet ...` commands
+    and renders them collapsed, so expanding normalises both sides and a single
+    member change stays a single line. Adding a member to a deployed LAG is
+    accepted; removing one is accepted only for a non-primary member, and it
+    disables the removed port.
+
+    LAG member descriptions (`port-name ... ethernet ...`) are keyed on the
+    member port and are safe to apply on a deployed LAG.
+- **Ordering rules** reflect device-enforced dependencies: a port leaves its old
+  untagged VLAN before joining a new one; `mac filter-group` and
+  `ip access-group` bindings are removed from interfaces before the filter or
+  ACL itself is deleted (`mac filter` refuses the removal while bound, whereas
+  `ip access-list` deletes silently and leaves a dangling `ip access-group`); `no vlan` is issued last because it also drops every
+  membership in that VLAN.

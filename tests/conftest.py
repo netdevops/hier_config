@@ -19,6 +19,26 @@ def running_config() -> str:
 
 
 @pytest.fixture(scope="module")
+def running_config_fastiron() -> str:
+    return _fixture_file_read("running_config_fastiron.conf")
+
+
+@pytest.fixture(scope="module")
+def generated_config_fastiron() -> str:
+    return _fixture_file_read("generated_config_fastiron.conf")
+
+
+@pytest.fixture(scope="module")
+def running_config_fastiron_l3() -> str:
+    return _fixture_file_read("running_config_fastiron_l3.conf")
+
+
+@pytest.fixture(scope="module")
+def generated_config_fastiron_l3() -> str:
+    return _fixture_file_read("generated_config_fastiron_l3.conf")
+
+
+@pytest.fixture(scope="module")
 def remediation_config_with_safe_tags() -> str:
     return _fixture_file_read("remediation_config_with_safe_tags.conf")
 
