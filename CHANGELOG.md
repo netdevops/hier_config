@@ -30,6 +30,10 @@ v4 design decisions, for the record:
 
 ### Added
 
+- Native behavioral coverage for platform/interface views, tree mutations,
+  remediation, workflow caching and structured-format edge cases; enforce
+  a 90% Rust-core line coverage floor in CI after the rewrite. (#302)
+
 - Lint gates for generated/native stub freshness, `mypy.stubtest`, observed
   return types, and formats-corpus drift. Audited allowlists cover native
   signatures and unobserved return values; stale exemptions fail checks. (#302)
@@ -361,6 +365,25 @@ the three v3 negation rule models and their `HConfigDriverRules` fields,
 `### Added` entry above.
 
 ### Fixed
+
+- Preserve optional regex capture positions in idempotency keys and ignore
+  nonsemantic child bookkeeping when deciding whether a sectional overwrite is
+  needed, matching the original Python remediation behavior. (#302)
+- Preserve arena handle generations when clearing trees, count only reachable
+  descendants, restore indexed child-replacement semantics, and reject invalid
+  move/copy/replacement handles before mutating the tree. Tag filtering retains
+  custom drivers; unused-object discovery scopes names per rule and reports
+  missing named regex captures instead of silently hiding objects. (#302)
+- Restore native view parity for separator whitespace in interface descriptions,
+  VLAN names and SNMP locations, and prevent VLAN zero from implying access mode
+  or entering the inferred VLAN inventory. (#302)
+- Restore Python structured-format parity after the Rust rewrite: empty
+  `list_keys` uses the default identity keys, malformed XML outside the document
+  element is rejected, and XML/NETCONF rendering preserves element and attribute
+  namespaces instead of emitting invalid Clark-notation tags. (#302)
+- Normalize Python 3.14's interpreter-provided containment docstring during stub
+  generation so the freshness gate does not require version-dependent stub
+  changes. (#302)
 
 - Native substitutions preserve Python replacement escapes and capture
   references; negation `REGEX_SUB` replaces all matches. Regex caches are

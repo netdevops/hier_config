@@ -101,7 +101,9 @@ fn idempotency_key_multiple_predicates_choose_longest_or_fall_back() {
 fn idempotency_key_capture_groups_greedy_suffixes_and_negation() {
     let driver = Driver::default();
     for (text, regex, expected) in [
-        ("logging console", r"logging ()?(console)", "re|console"),
+        // upstream/next@0866dc2 driver_base.py:_normalize_regex_key preserves
+        // empty capture positions when joining the normalized groups.
+        ("logging console", r"logging ()?(console)", "re||console"),
         ("logging console", r"logging (none)?()", "re|logging"),
         (
             "logging console emergency",

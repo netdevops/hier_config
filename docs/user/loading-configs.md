@@ -103,6 +103,13 @@ print(config.to_xml())
 
 XML elements become nodes; attributes and text content become specially-encoded leaves. Treat the trees as opaque between `from_xml()` and `to_xml()` — the internal line encoding may change.
 
+Element and attribute namespaces retain their expanded names. Rendering emits
+namespace declarations and normalized prefixes, as Python's `ElementTree` does;
+original prefix spellings are not preserved. Malformed XML, including character
+data outside the document element and unbound namespace prefixes, is rejected.
+Mixed-content tail text (text following a child element) is not retained by the
+tree mapping; this limitation also existed in the Python implementation.
+
 ### The `list_keys` concept
 
 Lists of objects (JSON) and repeated sibling elements (XML) need a member that identifies each entry — OpenConfig-style keyed lists. By default, hier_config looks for a member named `name` or `id`. If your data uses different key names, pass them via `list_keys`:
@@ -116,6 +123,10 @@ config = HConfig.from_json(
 ```
 
 Entries without any of the named keys raise `InvalidConfigError`.
+
+Passing an empty `list_keys` sequence uses the same `("name", "id")` defaults as
+omitting it, including when rendering NETCONF or gNMI remediation. Namespaced XML
+identity elements require expanded key names, such as `("{urn:interfaces}name",)`.
 
 Both mappings are invertible via `to_json()` / `to_xml()`, with a few caveats (documented in `hier_config.formats`): a single-item scalar list renders back as a bare scalar, and empty lists are dropped.
 

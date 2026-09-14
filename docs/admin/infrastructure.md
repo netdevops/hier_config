@@ -11,7 +11,7 @@ This page is for project maintainers and describes the repository's automation.
   Rust documentation with a pinned lint toolchain.
 - **rust-tests**: runs locked Cargo tests using `LINT_TOOLCHAIN` on Linux
   x86_64/native ARM64 (`ubuntu-24.04-arm`), macOS and Windows.
-  **rust-coverage** measures core line coverage with a separate 47% floor.
+  **rust-coverage** measures core line coverage with a separate 90% floor.
   **cargo-deny** checks advisories, licenses and dependency sources.
 - **python-lint**: builds the release extension, then invokes the canonical
   `scripts/build.py lint` (Python linters/type checkers plus stub freshness,

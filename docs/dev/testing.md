@@ -36,14 +36,14 @@ Coverage must stay at or above **95%** (`--cov-fail-under=95`, enforced by `scri
 The implementation is split between `crates/hier_config_core` (algorithms,
 parsing, formats, views) and `crates/hier_config_py` (Python bindings).
 Python coverage does not measure either crate. The separate Rust-core line
-coverage gate currently has a **47% floor**, not the Python gate's 95%.
+coverage gate has a **90% floor**, not the Python gate's 95%.
 Do not lower either gate when moving behavior across the boundary.
 
 ```bash
 cargo fmt --check
 cargo clippy --locked --all-targets --all-features -- -D warnings
 cargo test --locked --workspace --all-features
-cargo llvm-cov --locked --package hier_config_core --fail-under-lines 47
+cargo llvm-cov --locked --package hier_config_core --fail-under-lines 90
 uv run --no-sync pytest tests/native/ tests/parity/ -v
 ```
 
@@ -112,6 +112,49 @@ not semantic outputs. Default invocation refuses to overwrite references.
 `--capture-reference` requires the exact fingerprinted pure-Python archive on
 `PYTHONPATH`; it must not capture the implementation under test as its own
 oracle. The script cannot regenerate the native snapshots.
+
+### Preserved upstream limitations
+
+The native regression audit also records behavior inherited from the pure-Python
+reference at `0866dc2316443909edea2d629117b44a3a9ed472`, rather than silently
+changing it:
+
+- XML mixed-content tail text is not represented by the config-tree mapping
+  (`hier_config/formats.py`); see [Loading configs](../user/loading-configs.md).
+- The HP ProCurve interface view passes the complete `speed-duplex` command
+  to helpers that expect only its value, so configured speed is not reported
+  (`hier_config/platforms/hp_procurve/view.py`). Native view tests retain this
+  behavior pending a separate compatibility decision.
+- Python child moves can leave stale parent references and allow cyclic
+  attachment (`hier_config/child.py`). These inherited mutation semantics were
+  not redesigned by the coverage audit; callers should avoid cyclic moves.
+- Idempotency capture keys normalize both absent and empty groups to empty
+  strings and join captures with `|` (`hier_config/platforms/driver_base.py`).
+  This can conflate capture tuples containing that delimiter. The audit restores
+  capture positions lost by Rust but preserves the upstream encoding.
+- Junos, VyOS and SRL future/rollback prediction can retain both a deletion and
+  the original `set` command. Python `child.py` strips only the negation prefix;
+  `tree_algorithms.py` then cannot match the remaining text to the original
+  `set` command. For example, changing `set system host-name old-router` to
+  `set system host-name new-router` can project the delete, new and old commands.
+  SRL has the same behavior with `system name host-name`.
+- With `sectional_overwrite_no_negate`, projecting a replacement section can
+  raise `DuplicateChild` because Python `tree_algorithms.py` copies both the
+  replacement and the original section. The regression suite characterizes
+  this separately from the metadata-equality fix.
+
+### Deferred native parity gap
+
+Junos `try_swap_negation()` rejects commands without a set/delete/activate/
+deactivate prefix, as the original Python driver does. Native
+`try_compute_negation()` retains a permissive fallback for the same text.
+This is a native divergence, not an upstream Python bug.
+
+Making the latter strict also breaks the frozen Junos NETCONF/gNMI cases:
+their structured trees contain unflattened data nodes rather than CLI commands.
+The audit therefore characterizes and preserves this fallback without rewriting
+`testdata/formats/native-v1.json`. Resolving the gap requires distinguishing
+structured-data negation from set-style command validation.
 
 ## Conventions
 

@@ -236,7 +236,7 @@ impl Tree {
     ///
     /// # Errors
     ///
-    /// Returns [`TreeError::NodeNotFound`] if `parent_id` is not in the arena, or
+    /// Returns [`TreeError::InvalidParent`] if `parent_id` is not in the arena, or
     /// [`TreeError::DuplicateChild`] if a child with the same text already exists and
     /// the platform driver does not allow duplicates under this parent.
     pub fn add_child(
@@ -326,7 +326,8 @@ impl Tree {
     ///
     /// # Errors
     ///
-    /// Returns [`TreeError::NodeNotFound`] if either node id is missing from its tree,
+    /// Returns [`TreeError::NodeNotFound`] if the source is missing, [`TreeError::InvalidParent`]
+    /// if the destination parent is missing,
     /// or [`TreeError::DuplicateChild`] if the copy would duplicate an existing child.
     pub fn add_shallow_copy_of(
         &mut self,
@@ -335,7 +336,10 @@ impl Tree {
         source_id: NodeId,
         merged: bool,
     ) -> Result<NodeId, TreeError> {
-        let src_node = &source_tree.arena[source_id];
+        let src_node = source_tree
+            .arena
+            .get(source_id)
+            .ok_or(TreeError::NodeNotFound(source_id))?;
         let new_id = self.add_child(parent_id, &src_node.text, true, merged)?;
 
         let (order_weight, comments, is_leaf, tags, instances) = {
@@ -386,7 +390,10 @@ impl Tree {
         merged: bool,
     ) -> Result<NodeId, TreeError> {
         let (text, order_weight, comments, is_leaf) = {
-            let src_node = &self.arena[source_id];
+            let src_node = self
+                .arena
+                .get(source_id)
+                .ok_or(TreeError::NodeNotFound(source_id))?;
             (
                 Arc::<str>::clone(&src_node.text),
                 src_node.order_weight,
@@ -441,7 +448,8 @@ impl Tree {
     }
 
     /// Copies all ancestors in `source_tree` along the lineage down to `source_id`
-    /// into this tree under `parent_id`, reusing existing matching children where present.
+    /// into this tree under `parent_id`. Existing matching children follow the driver's
+    /// duplicate policy, just like non-merged shallow copies.
     ///
     /// # Errors
     ///
@@ -461,7 +469,7 @@ impl Tree {
     }
 
     /// Copies all ancestors in this tree along the lineage down to `source_id`
-    /// under `parent_id`, reusing existing matching children where present.
+    /// under `parent_id`, following the driver's duplicate policy.
     ///
     /// # Errors
     ///
@@ -502,9 +510,17 @@ impl Tree {
         if child_id == self.root {
             return Err(TreeError::NodeNotFound(child_id));
         }
-        let old_parent = self.arena[child_id]
+        let old_parent = self
+            .arena
+            .get(child_id)
+            .ok_or(TreeError::NodeNotFound(child_id))?
             .parent
             .ok_or(TreeError::NodeNotFound(child_id))?;
+        for id in [old_parent, new_parent_id] {
+            if !self.arena.contains(id) {
+                return Err(TreeError::NodeNotFound(id));
+            }
+        }
 
         let text = Arc::<str>::clone(&self.arena[child_id].text);
         let mut old_children = std::mem::take(&mut self.arena[old_parent].children);
@@ -564,7 +580,8 @@ impl Tree {
     ///
     /// # Errors
     ///
-    /// Returns [`TreeError::NodeNotFound`] if `parent_id` or `new_child_id` is missing,
+    /// Returns [`TreeError::InvalidParent`] if `parent_id` is missing, or
+    /// [`TreeError::NodeNotFound`] if `new_child_id` is missing,
     /// or if `index` is out of range for the parent's children.
     pub fn set_child_at(
         &mut self,
@@ -575,13 +592,8 @@ impl Tree {
         if !self.arena.contains(parent_id) {
             return Err(TreeError::InvalidParent(parent_id));
         }
-        let old_pos = self.arena[parent_id].children.index_of(new_child_id);
-        if let Some(pos) = old_pos
-            && pos != index
-        {
-            let mut children = std::mem::take(&mut self.arena[parent_id].children);
-            children.delete_by_id(new_child_id, &self.arena);
-            self.arena[parent_id].children = children;
+        if !self.arena.contains(new_child_id) {
+            return Err(TreeError::NodeNotFound(new_child_id));
         }
         let mut children = std::mem::take(&mut self.arena[parent_id].children);
         let old_id = children.set_index(index, new_child_id, &self.arena);
@@ -624,13 +636,7 @@ impl Tree {
 
     /// Returns the number of descendant nodes under `node_id`.
     pub fn node_count(&self, node_id: NodeId) -> usize {
-        if !self.arena.contains(node_id) {
-            0
-        } else if node_id == self.root {
-            self.arena.len().saturating_sub(1)
-        } else {
-            self.descendants(node_id).count()
-        }
+        self.descendants(node_id).count()
     }
 
     /// Returns an iterator over all descendant `NodeId`s in pre-order insertion order.
@@ -781,7 +787,7 @@ impl Tree {
     ///
     /// Returns [`TreeError`] if copying any node fails.
     pub fn with_tags(&self, tags: &BTreeSet<String>) -> Result<Self, TreeError> {
-        let mut new_tree = Self::for_platform(self.driver.platform);
+        let mut new_tree = Self::new(self.driver.clone());
         let new_root = new_tree.root;
         self.with_tags_recursive(self.root, &mut new_tree, new_root, tags)?;
         Ok(new_tree)
@@ -999,9 +1005,8 @@ impl Tree {
     /// Returns invalid object-name or reference-pattern errors.
     pub fn try_unused_objects(&self) -> Result<Vec<NodeId>, TreeError> {
         let mut unused = Vec::new();
-        let mut seen_names = std::collections::HashSet::new();
-
         for rule in &self.driver.rules.unused_objects {
+            let mut seen_names = std::collections::HashSet::new();
             let re =
                 crate::regex_cache::rule_regex(&rule.name_re).map_err(TreeError::InvalidRegex)?;
             for definition_id in self.get_children_deep(self.root, &rule.match_rules) {
@@ -1010,6 +1015,12 @@ impl Tree {
                     continue;
                 };
                 let Some(name) = caps.name("name").map(|m| m.as_str()) else {
+                    if !re.capture_names().any(|name| name == Some("name")) {
+                        return Err(TreeError::InvalidRegex(format!(
+                            "object-name regex {:?} has no named capture 'name'",
+                            rule.name_re
+                        )));
+                    }
                     continue;
                 };
                 if !seen_names.insert(name.to_string()) {

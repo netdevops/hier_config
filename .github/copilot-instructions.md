@@ -28,7 +28,7 @@ uv run --no-sync ./scripts/build.py lint-and-test # both in one command
 cargo fmt --check
 cargo clippy --locked --all-targets --all-features -- -D warnings
 cargo test --locked --workspace --all-features
-cargo llvm-cov --locked --package hier_config_core --fail-under-lines 47
+cargo llvm-cov --locked --package hier_config_core --fail-under-lines 90
 ```
 
 CI also runs the test step across Python 3.10–3.14 (code must stay 3.10-compatible) and builds docs with `mkdocs build --strict` on every push/PR.
@@ -53,7 +53,7 @@ old capability-mixin `issubclass()` relationships do not.
 - **Driver/rule changes need round-trip assertions**: build running + intended configs, assert the exact remediation output (`to_lines()`), and verify the rollback restores the original (no `unified_diff`).
 - **Native coverage**: use Rust tests plus `tests/native/` boundary tests,
   `tests/parity/` upstream comparisons and shared `testdata/cases/` round-trips.
-  Python coverage has a 95% floor; the separate Rust-core gate has a 47% floor.
+  Python coverage has a 95% floor; the separate Rust-core gate has a 90% floor.
   Never lower either gate. Displaced Python assertions
   require equivalent identified native tests. Keep generated/shipped stubs in sync.
 - **Fields on `HConfigDriverRules`** (`hier_config/platforms/driver_base.py`) use named module-level default factory functions, not lambdas.

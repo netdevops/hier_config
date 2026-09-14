@@ -63,9 +63,10 @@ impl From<crate::TreeError> for FormatError {
     }
 }
 
-/// Resolves caller-supplied list keys, falling back to [`DEFAULT_LIST_KEYS`].
+/// Resolves caller-supplied list keys, falling back to [`DEFAULT_LIST_KEYS`]
+/// when omitted or empty, matching the Python API.
 pub(crate) fn resolve_list_keys(list_keys: Option<&[String]>) -> Vec<String> {
-    list_keys.map_or_else(
+    list_keys.filter(|keys| !keys.is_empty()).map_or_else(
         || DEFAULT_LIST_KEYS.iter().map(|&k| (*k).to_owned()).collect(),
         <[String]>::to_vec,
     )

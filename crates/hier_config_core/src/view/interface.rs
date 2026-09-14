@@ -326,7 +326,7 @@ impl<'a> InterfaceView<'a> {
     pub fn default_description(&self) -> String {
         self.child_text(&MatchRule::startswith("description "))
             .and_then(|text| text.split_once(char::is_whitespace))
-            .map_or_else(String::new, |(_, rest)| rest.to_owned())
+            .map_or_else(String::new, |(_, rest)| rest.trim_start().to_owned())
     }
 
     /// Whether the interface is administratively enabled.
@@ -515,7 +515,7 @@ impl<'a> InterfaceView<'a> {
         if !self.tagged_vlans().is_empty() {
             return Some(InterfaceDot1qMode::Tagged);
         }
-        if self.native_vlan().is_some() && !self.is_svi() {
+        if self.native_vlan().is_some_and(|vlan| vlan != 0) && !self.is_svi() {
             return Some(InterfaceDot1qMode::Access);
         }
         None

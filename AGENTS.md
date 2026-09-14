@@ -62,7 +62,7 @@ uv run --no-sync pytest -m v3_differential -v
 cargo fmt --check
 cargo clippy --locked --all-targets --all-features -- -D warnings
 cargo test --locked --workspace --all-features
-cargo llvm-cov --locked --package hier_config_core --fail-under-lines 47
+cargo llvm-cov --locked --package hier_config_core --fail-under-lines 90
 ```
 
 CI facts that matter for changes:
@@ -106,7 +106,7 @@ These are enforced by CI and by reviewers; violations block merges:
    `tests/parity/`, and shared Rust/Python round-trips in `testdata/cases/`.
    Moving a test to Rust requires identified equivalent assertions, not just a
    skip marker. Python coverage has a 95% floor; the separate Rust-core gate
-   currently has a 47% floor. Never lower either gate.
+   currently has a 90% floor. Never lower either gate.
 6. **Rules containers**: fields on `HConfigDriverRules` use named module-level default factory functions, not lambdas.
 7. **v3 compatibility**: the v3 names restored in `hier_config/constructors.py`,
    `utils.py`, `models.py`, `root.py`, and `child.py` are a permanent supported

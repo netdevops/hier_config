@@ -77,7 +77,7 @@ Coverage must stay at or above **95%**.
 Also run `cargo fmt --check`,
 `cargo clippy --locked --all-targets --all-features -- -D warnings`,
 `cargo test --locked --workspace --all-features`, and
-`cargo llvm-cov --locked --package hier_config_core --fail-under-lines 47`.
+`cargo llvm-cov --locked --package hier_config_core --fail-under-lines 90`.
 See [Testing](testing.md) for native, parity, and shared-corpus coverage.
 
 ## Code quality expectations

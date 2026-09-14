@@ -235,6 +235,7 @@ impl<'a> ConfigView<'a> {
                 text.splitn(3, char::is_whitespace)
                     .nth(2)
                     .unwrap_or("")
+                    .trim_start()
                     .replace('"', "")
             })
     }
@@ -299,7 +300,7 @@ impl<'a> ConfigView<'a> {
                 .get_child(id, &MatchRule::startswith(self.ops.vlan_name_prefix()))
                 .and_then(|child| self.tree.get(child))
                 .and_then(|node| node.text.split_once(char::is_whitespace))
-                .map(|(_, rest)| rest.replace('"', ""))
+                .map(|(_, rest)| rest.trim_start().replace('"', ""))
                 .filter(|name| !name.is_empty());
 
             let Some(range) = text.split_whitespace().nth(1) else {
@@ -329,6 +330,7 @@ impl<'a> ConfigView<'a> {
                 }
             }
             if let Some(native_vlan) = view.native_vlan()
+                && native_vlan != 0
                 && seen.insert(native_vlan)
             {
                 vlans.push(Vlan {

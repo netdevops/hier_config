@@ -530,6 +530,9 @@ def render(
         return out + [""]
 
     doc = inspect.getdoc(obj) or ""
+    # CPython 3.14 changed this slot-wrapper docstring, not the native API.
+    if name == "__contains__" and doc == "Return bool(key in self).":
+        doc = "Return key in self."
     if not doc and isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
         doc = ast.get_docstring(node, clean=True) or ""
 

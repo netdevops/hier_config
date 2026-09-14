@@ -6,7 +6,8 @@
 //! by the previous Python implementation.
 
 use quick_xml::events::Event;
-use quick_xml::name::ResolveResult;
+use quick_xml::name::{NamespaceResolver, ResolveResult};
+use std::borrow::Cow;
 use std::sync::Arc;
 
 use super::value::{dumps, leaf_value, text_value};
@@ -259,17 +260,72 @@ fn indent_children(element: &mut Element, level: usize) {
 
 /// Serializes an element the way `ElementTree.tostring` does.
 pub(crate) fn render(element: &Element) -> String {
+    let mut namespaces = Vec::new();
+    collect_namespaces(element, &mut namespaces);
+    namespaces.sort_by(|(_, left), (_, right)| left.cmp(right));
     let mut out = String::new();
-    write_element(&mut out, element);
+    write_element(&mut out, element, &namespaces, true);
     out
 }
 
-fn write_element(out: &mut String, element: &Element) {
+fn collect_namespaces(element: &Element, namespaces: &mut Vec<(String, String)>) {
+    for name in std::iter::once(&element.tag).chain(element.attributes.iter().map(|(name, _)| name))
+    {
+        if let Some((uri, _)) = expanded_name(name)
+            && !namespaces.iter().any(|(existing, _)| existing == uri)
+        {
+            let prefix = match uri {
+                "http://www.w3.org/XML/1998/namespace" => "xml".to_owned(),
+                "http://www.w3.org/1999/xhtml" => "html".to_owned(),
+                "http://www.w3.org/1999/02/22-rdf-syntax-ns#" => "rdf".to_owned(),
+                "http://schemas.xmlsoap.org/wsdl/" => "wsdl".to_owned(),
+                "http://www.w3.org/2001/XMLSchema" => "xs".to_owned(),
+                "http://www.w3.org/2001/XMLSchema-instance" => "xsi".to_owned(),
+                "http://purl.org/dc/elements/1.1/" => "dc".to_owned(),
+                _ => format!("ns{}", namespaces.len()),
+            };
+            namespaces.push((uri.to_owned(), prefix));
+        }
+    }
+    for child in &element.children {
+        collect_namespaces(child, namespaces);
+    }
+}
+
+fn expanded_name(name: &str) -> Option<(&str, &str)> {
+    name.strip_prefix('{')?.rsplit_once('}')
+}
+
+fn qualified_name<'a>(name: &'a str, namespaces: &[(String, String)]) -> Cow<'a, str> {
+    if let Some((uri, local)) = expanded_name(name) {
+        let (_, prefix) = namespaces
+            .iter()
+            .find(|(namespace, _)| namespace == uri)
+            .expect("namespace collected before rendering");
+        Cow::Owned(format!("{prefix}:{local}"))
+    } else {
+        Cow::Borrowed(name)
+    }
+}
+
+fn write_element(out: &mut String, element: &Element, namespaces: &[(String, String)], root: bool) {
+    let tag = qualified_name(&element.tag, namespaces);
     out.push('<');
-    out.push_str(&element.tag);
+    out.push_str(&tag);
+    if root {
+        for (uri, prefix) in namespaces {
+            if prefix != "xml" {
+                out.push_str(" xmlns:");
+                out.push_str(prefix);
+                out.push_str("=\"");
+                escape_attribute(out, uri);
+                out.push('"');
+            }
+        }
+    }
     for (name, value) in &element.attributes {
         out.push(' ');
-        out.push_str(name);
+        out.push_str(&qualified_name(name, namespaces));
         out.push_str("=\"");
         escape_attribute(out, value);
         out.push('"');
@@ -282,10 +338,10 @@ fn write_element(out: &mut String, element: &Element) {
             escape_text(out, text);
         }
         for child in &element.children {
-            write_element(out, child);
+            write_element(out, child, namespaces, false);
         }
         out.push_str("</");
-        out.push_str(&element.tag);
+        out.push_str(&tag);
         out.push('>');
     }
     if let Some(tail) = &element.tail {
@@ -326,13 +382,20 @@ fn parse(source: &str) -> Result<Element, FormatError> {
     let mut root: Option<Element> = None;
 
     loop {
-        let (namespace, event) = reader.read_resolved_event().map_err(|error| {
+        let event = reader.read_event().map_err(|error| {
             FormatError::Invalid(format!("The config is not valid XML: {error}"))
         })?;
         match event {
-            Event::Start(start) => stack.push(open(&namespace, &start)?),
+            Event::Start(start) => {
+                if stack.is_empty() && root.is_some() {
+                    return Err(FormatError::Invalid(
+                        "The config is not valid XML: junk after document element".to_owned(),
+                    ));
+                }
+                stack.push(open(&start, reader.resolver())?);
+            }
             Event::Empty(start) => {
-                let element = open(&namespace, &start)?;
+                let element = open(&start, reader.resolver())?;
                 close(&mut stack, &mut root, element)?;
             }
             Event::End(_) => {
@@ -341,10 +404,21 @@ fn parse(source: &str) -> Result<Element, FormatError> {
                 })?;
                 close(&mut stack, &mut root, element)?;
             }
-            Event::Text(text) if !stack.is_empty() => {
+            Event::Text(text) => {
                 let raw = text.xml10_content().map_err(|error| {
                     FormatError::Invalid(format!("The config is not valid XML: {error}"))
                 })?;
+                if stack.is_empty() {
+                    if raw
+                        .chars()
+                        .any(|ch| !matches!(ch, ' ' | '\t' | '\r' | '\n'))
+                    {
+                        return Err(FormatError::Invalid(
+                            "The config is not valid XML: text outside document element".to_owned(),
+                        ));
+                    }
+                    continue;
+                }
                 let decoded = quick_xml::escape::unescape(&raw)
                     .map_err(|error| {
                         FormatError::Invalid(format!("The config is not valid XML: {error}"))
@@ -380,7 +454,20 @@ fn parse(source: &str) -> Result<Element, FormatError> {
                     .to_owned();
                 append_characters(&mut stack, &decoded);
             }
-            Event::Eof => break,
+            Event::GeneralRef(_) | Event::CData(_) => {
+                return Err(FormatError::Invalid(
+                    "The config is not valid XML: character data outside document element"
+                        .to_owned(),
+                ));
+            }
+            Event::Eof => {
+                if !stack.is_empty() {
+                    return Err(FormatError::Invalid(
+                        "The config is not valid XML: unclosed element".to_owned(),
+                    ));
+                }
+                break;
+            }
             _ => {}
         }
     }
@@ -391,13 +478,14 @@ fn parse(source: &str) -> Result<Element, FormatError> {
 }
 
 fn open(
-    namespace: &ResolveResult<'_>,
     start: &quick_xml::events::BytesStart<'_>,
+    resolver: &NamespaceResolver,
 ) -> Result<Element, FormatError> {
     let local = std::str::from_utf8(start.local_name().into_inner())
         .map_err(|error| FormatError::Invalid(format!("The config is not valid XML: {error}")))?
         .to_owned();
-    let mut element = Element::new(qualify(namespace, &local)?);
+    let (namespace, _) = resolver.resolve_element(start.name());
+    let mut element = Element::new(qualify(&namespace, &local)?);
     for attribute in start.attributes() {
         let attribute = attribute.map_err(|error| {
             FormatError::Invalid(format!("The config is not valid XML: {error}"))
@@ -410,11 +498,26 @@ fn open(
         if key == "xmlns" || key.starts_with("xmlns:") {
             continue;
         }
+        let (attribute_namespace, attribute_local) = resolver.resolve_attribute(attribute.key);
+        let attribute_local =
+            std::str::from_utf8(attribute_local.into_inner()).map_err(|error| {
+                FormatError::Invalid(format!("The config is not valid XML: {error}"))
+            })?;
+        let name = qualify(&attribute_namespace, attribute_local)?;
+        if element
+            .attributes
+            .iter()
+            .any(|(existing, _)| *existing == name)
+        {
+            return Err(FormatError::Invalid(
+                "The config is not valid XML: duplicate attribute".to_owned(),
+            ));
+        }
         let value = attribute
             .normalized_value(quick_xml::XmlVersion::Implicit1_0)
             .map_err(|error| FormatError::Invalid(format!("The config is not valid XML: {error}")))?
             .into_owned();
-        element.set(key.to_owned(), value);
+        element.set(name, value);
     }
     Ok(element)
 }
@@ -428,7 +531,10 @@ fn qualify(namespace: &ResolveResult<'_>, local: &str) -> Result<String, FormatE
             })?;
             Ok(format!("{{{uri}}}{local}"))
         }
-        _ => Ok(local.to_owned()),
+        ResolveResult::Unbound => Ok(local.to_owned()),
+        ResolveResult::Unknown(_) => Err(FormatError::Invalid(
+            "The config is not valid XML: unbound namespace prefix".to_owned(),
+        )),
     }
 }
 

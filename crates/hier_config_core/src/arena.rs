@@ -171,10 +171,17 @@ impl<T> Arena<T> {
         }
     }
 
-    /// Clears all entries from the arena.
+    /// Clears all entries while retaining slot generations so old handles stay invalid.
     pub fn clear(&mut self) {
-        self.slots.clear();
-        self.free_head = None;
+        for (index, slot) in self.slots.iter_mut().enumerate() {
+            if let Slot::Occupied { generation, .. } = slot {
+                *slot = Slot::Vacant {
+                    generation: *generation,
+                    next_free: self.free_head,
+                };
+                self.free_head = Some(slot_index(index));
+            }
+        }
         self.len = 0;
     }
 

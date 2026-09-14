@@ -83,7 +83,7 @@ impl InterfaceOps for HpProcurveInterfaceOps {
     fn description(&self, view: &InterfaceView<'_>) -> String {
         view.child_text(&MatchRule::startswith("name "))
             .and_then(|text| text.split_once(char::is_whitespace))
-            .map_or_else(String::new, |(_, rest)| rest.replace('"', ""))
+            .map_or_else(String::new, |(_, rest)| rest.trim_start().replace('"', ""))
     }
 
     fn enabled(&self, view: &InterfaceView<'_>) -> bool {
@@ -323,3 +323,45 @@ impl ConfigOps for HpProcurveConfigOps {
 
 /// The shared whole-config hooks for HP `ProCurve`.
 pub static CONFIG_OPS: HpProcurveConfigOps = HpProcurveConfigOps;
+
+#[cfg(test)]
+mod tests {
+    use super::{duplex_from_speed_duplex, speed_from_speed_duplex};
+    use crate::view::models::InterfaceDuplex;
+
+    #[test]
+    fn speed_duplex_value_helpers_parse_fixed_and_auto_negotiated_speeds() {
+        // The Python helpers accept values independently of their callers.
+        // Keep this coverage separate from the upstream full-command caller bug.
+        for (value, expected) in [
+            ("10-half", Some(vec![10])),
+            ("100-full", Some(vec![100])),
+            ("1000-full", Some(vec![1000])),
+            ("auto-10-100-1000", Some(vec![10, 100, 1000])),
+            ("auto", None),
+            ("full", None),
+            ("auto-10-bad", None),
+            ("10bad-full", None),
+            ("speed-duplex 100-full", None),
+        ] {
+            assert_eq!(speed_from_speed_duplex(value), expected, "{value}");
+        }
+    }
+
+    #[test]
+    fn duplex_helper_distinguishes_auto_fixed_and_unrecognized_values() {
+        for (value, expected) in [
+            ("auto", Some(InterfaceDuplex::Auto)),
+            ("auto-10-100", Some(InterfaceDuplex::Auto)),
+            ("100-full", Some(InterfaceDuplex::Full)),
+            ("10-half", Some(InterfaceDuplex::Half)),
+            ("full", Some(InterfaceDuplex::Full)),
+            ("half", Some(InterfaceDuplex::Half)),
+            ("unknown", None),
+            ("", None),
+            ("speed-duplex auto", None),
+        ] {
+            assert_eq!(duplex_from_speed_duplex(value), expected, "{value}");
+        }
+    }
+}

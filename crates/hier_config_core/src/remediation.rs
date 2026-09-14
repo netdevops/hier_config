@@ -251,12 +251,7 @@ pub fn children_equal(tree_a: &Tree, a: NodeId, tree_b: &Tree, b: NodeId) -> boo
         let node_a = &tree_a.arena[child_a];
         let node_b = &tree_b.arena[child_b];
 
-        if node_a.text != node_b.text
-            || node_a.order_weight != node_b.order_weight
-            || node_a.tags() != node_b.tags()
-            || node_a.comments() != node_b.comments()
-            || node_a.new_in_config != node_b.new_in_config
-        {
+        if node_a.text != node_b.text || node_a.tags() != node_b.tags() {
             return false;
         }
 

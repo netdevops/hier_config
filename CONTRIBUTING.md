@@ -104,7 +104,7 @@ code. Run the native gates as well:
 cargo fmt --check
 cargo clippy --locked --all-targets --all-features -- -D warnings
 cargo test --locked --workspace --all-features
-cargo llvm-cov --locked --package hier_config_core --fail-under-lines 47
+cargo llvm-cov --locked --package hier_config_core --fail-under-lines 90
 ```
 
 Use `tests/native/` for Python/native-boundary contracts, `tests/parity/` for

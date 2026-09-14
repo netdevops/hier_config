@@ -608,11 +608,9 @@ impl Driver {
             let groups: Vec<&str> = caps
                 .iter()
                 .skip(1)
-                .flatten()
-                .map(|m| m.as_str().trim())
-                .filter(|s| !s.is_empty())
+                .map(|m| m.map_or("", |m| m.as_str().trim()))
                 .collect();
-            if !groups.is_empty() {
+            if groups.iter().any(|group| !group.is_empty()) {
                 return Ok(Some(groups.join("|")));
             }
         }

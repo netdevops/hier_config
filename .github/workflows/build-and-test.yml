@@ -123,7 +123,7 @@ jobs:
     - name: Install cargo-llvm-cov
       uses: taiki-e/install-action@cargo-llvm-cov
     - name: Measure Rust core coverage and enforce floor
-      run: cargo llvm-cov --locked --package hier_config_core --fail-under-lines 47
+      run: cargo llvm-cov --locked --package hier_config_core --fail-under-lines 90
 
   cargo-deny:
     # Supply-chain policy: RustSec advisories, licence allow-list, banned and

@@ -1,8 +1,44 @@
+import ast
 from pathlib import Path
+from textwrap import dedent
+from types import SimpleNamespace
 
 import pytest
 
 from scripts import gen_stubs
+
+
+@pytest.mark.parametrize("class_name", ("HConfigBase", "HConfigChildren"))
+@pytest.mark.parametrize(
+    ("runtime_doc", "expected_doc"),
+    (
+        ("Return key in self.", "Return key in self."),
+        ("Return bool(key in self).", "Return key in self."),
+        (
+            "Return whether the config contains a line.",
+            "Return whether the config contains a line.",
+        ),
+    ),
+)
+def test_contains_stub_docs_are_stable_across_python_versions(
+    class_name: str, runtime_doc: str, expected_doc: str
+) -> None:
+    definitions: dict[str, ast.AST] = {
+        f"{class_name}.__contains__": ast.parse(
+            "def __contains__(self, item: str) -> bool: ..."
+        ).body[0]
+    }
+    rendered = gen_stubs.render(
+        class_name,
+        "__contains__",
+        SimpleNamespace(__doc__=runtime_doc),
+        definitions,
+    )
+    member = ast.parse(dedent("\n".join(rendered))).body[0]
+    assert isinstance(member, ast.FunctionDef)
+    assert ast.get_docstring(member) == expected_doc
+    assert isinstance(member.returns, ast.Name)
+    assert member.returns.id == "bool"
 
 
 def test_child_deepcopy_has_typed_generated_signature() -> None:
