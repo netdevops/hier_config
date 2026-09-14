@@ -1,3 +1,5 @@
+import pytest
+
 from hier_config import (
     HConfig,
     Platform,
@@ -5,6 +7,7 @@ from hier_config import (
     get_hconfig,
     get_hconfig_fast_load,
 )
+from hier_config.platforms.ruckus_fastiron.functions import fastiron_expand_ports
 
 
 def _load(lines: tuple[str, ...]) -> HConfig:
@@ -453,3 +456,62 @@ def test_round_trip_against_real_l3_configs(
     rollback = running_after.config_to_get_to(running_config)
     running_after_rollback = running_after.future(rollback)
     assert not tuple(running_config.unified_diff(running_after_rollback))
+
+
+@pytest.mark.parametrize(
+    "words",
+    (
+        pytest.param(("ethe", "1/1/1", "to", "1/2/3"), id="range-spans-two-slots"),
+        pytest.param(("ethe", "1/1", "to", "1/1/3"), id="ends-shaped-differently"),
+        pytest.param(("ethe", "1/1/1/1", "to", "1/1/1/3"), id="too-many-fields"),
+        pytest.param(("ethe", "1/1/8", "to", "1/1/2"), id="range-runs-backwards"),
+        pytest.param(("1/1/1",), id="no-port-keyword"),
+        pytest.param(("ethe", "1/1/1", "ethe"), id="keyword-with-nothing-after"),
+        pytest.param(("ethe", "1/1/1", "to"), id="nothing-after-to"),
+        pytest.param((), id="empty"),
+    ),
+)
+def test_malformed_port_specifications_are_rejected(words: tuple[str, ...]) -> None:
+    """Every failure mode must raise rather than silently drop ports.
+
+    Callers treat the exception as "leave this line alone", so a specification
+    that cannot be enumerated exactly has to fail loudly here.
+    """
+    with pytest.raises(ValueError, match=r".+"):
+        fastiron_expand_ports(words)
+
+
+@pytest.mark.parametrize(
+    "words",
+    (
+        ("ethe", "1/1/1"),
+        ("ethernet", "1/1/1"),
+        ("ethe", "1/1/1", "to", "1/1/3"),
+        ("ethe", "1/1/1", "to", "1/1/1"),
+        ("ethe", "1/1/1", "ethe", "1/1/1"),
+    ),
+)
+def test_well_formed_port_specifications_are_expanded(words: tuple[str, ...]) -> None:
+    assert fastiron_expand_ports(words)[0] == "1/1/1"
+
+
+def test_two_field_port_ids_are_supported() -> None:
+    """Non-stacked units address ports as `slot/port` rather than `unit/slot/port`."""
+    assert fastiron_expand_ports(("ethe", "1/1", "to", "1/3")) == ("1/1", "1/2", "1/3")
+
+
+def test_unparsable_lag_member_line_is_left_alone() -> None:
+    """A LAG member list that cannot be enumerated keeps its original line.
+
+    Rewriting a member list we do not fully understand risks dropping members
+    from a live aggregation, so the driver leaves it for a human.
+    """
+    config = get_hconfig(
+        Platform.RUCKUS_FASTIRON,
+        'lag "TEST" static id 100\n ports ethernet 1/1/11 to 2/1/12\n deploy\n',
+    )
+    assert config.dump_simple() == (
+        'lag "TEST" static id 100',
+        " ports ethernet 1/1/11 to 2/1/12",
+        " deploy",
+    )
