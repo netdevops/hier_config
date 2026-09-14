@@ -7,6 +7,16 @@ import pytest
 
 from scripts import gen_stubs
 
+BASELINE_SOURCE = dedent(
+    '''
+    class HConfigChild:
+        """A child node in a configuration tree."""
+
+        def __init__(self, parent: "HConfigChild", text: str) -> None:
+            """Create a child of ``parent``."""
+    '''
+)
+
 
 @pytest.mark.parametrize("class_name", ("HConfigBase", "HConfigChildren"))
 @pytest.mark.parametrize(
@@ -59,7 +69,13 @@ def test_check_never_rewrites_stubs(
         gen_stubs, "CLASSES", {"HConfigChild": ("child", "HConfigBase")}
     )
     monkeypatch.setattr(gen_stubs, "parse_check_flag", lambda: True)
-    monkeypatch.setattr(gen_stubs, "original_defs", dict)
+
+    # Unit tests must never shell out to git: CI clones to depth 1, which omits
+    # the v3.7.0 baseline commit the generator reads its prose from.
+    def fake_baseline_source(_module: str) -> str:
+        return BASELINE_SOURCE
+
+    monkeypatch.setattr(gen_stubs, "baseline_source", fake_baseline_source)
 
     def preserve_text(_path: Path, text: str) -> str:
         return text
@@ -72,3 +88,22 @@ def test_check_never_rewrites_stubs(
     monkeypatch.setattr(Path, "write_text", reject_write)
     assert gen_stubs.main() == 1
     assert target.read_text(encoding="utf-8") == "# committed content\n"
+
+
+def test_baseline_source_reports_missing_history(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def missing_commit(*_args: object, **_kwargs: object) -> SimpleNamespace:
+        return SimpleNamespace(
+            returncode=128, stdout="", stderr="fatal: invalid object name"
+        )
+
+    monkeypatch.setattr("subprocess.run", missing_commit)
+    # ``functools.cache`` never memoises exceptions, so clearing beforehand is
+    # enough to keep a real lookup from an earlier test out of the way.
+    gen_stubs.baseline_source.cache_clear()
+    with pytest.raises(gen_stubs.BaselineUnavailableError) as excinfo:
+        gen_stubs.baseline_source("child")
+    message = str(excinfo.value)
+    assert "fetch-depth: 0" in message
+    assert "fatal: invalid object name" in message

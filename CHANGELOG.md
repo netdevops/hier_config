@@ -366,6 +366,11 @@ the three v3 negation rule models and their `HConfigDriverRules` fields,
 
 ### Fixed
 
+- Stop the stub-generation unit tests from requiring git history. All baseline
+  lookups in `scripts/gen_stubs.py` now route through a single cached
+  `baseline_source()` helper that raises an actionable `BaselineUnavailableError`
+  when the v3 baseline commit is unreachable, so `pytest tests/` passes in the
+  shallow clones used by the `python-tests` CI jobs. (#302)
 - Preserve optional regex capture positions in idempotency keys and ignore
   nonsemantic child bookkeeping when deciding whether a sectional overwrite is
   needed, matching the original Python remediation behavior. (#302)

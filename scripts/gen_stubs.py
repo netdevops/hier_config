@@ -30,6 +30,7 @@ from __future__ import annotations
 import argparse
 import ast
 import copy
+import functools
 import inspect
 import pathlib
 import subprocess
@@ -41,13 +42,10 @@ if TYPE_CHECKING:
 
 BASELINE = "98a9a49"
 MODULES = ("base", "child", "children", "root")
-STUB_DIR = pathlib.Path(__file__).resolve().parent.parent / "hier_config"
-NATIVE_STUB = (
-    pathlib.Path(__file__).resolve().parent.parent / "stubs" / "_hier_config_rust.pyi"
-)
-ROOT_NATIVE_STUB = (
-    pathlib.Path(__file__).resolve().parent.parent / "_hier_config_rust.pyi"
-)
+REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent
+STUB_DIR = REPO_ROOT / "hier_config"
+NATIVE_STUB = REPO_ROOT / "stubs" / "_hier_config_rust.pyi"
+ROOT_NATIVE_STUB = REPO_ROOT / "_hier_config_rust.pyi"
 
 # runtime class -> (stub module, base class in stub)
 CLASSES = {
@@ -330,16 +328,43 @@ FORCE_EMIT = {
 }
 
 
+class BaselineUnavailableError(RuntimeError):
+    """Raised when the v3.7.0 baseline commit is absent from the clone.
+
+    ``actions/checkout`` clones to depth 1 by default, which omits the baseline
+    commit this generator reads its prose and annotations from. Failing with an
+    actionable message beats a bare ``CalledProcessError`` from ``git show``.
+    """
+
+    def __init__(self, module: str, detail: str) -> None:
+        super().__init__(
+            f"Cannot read hier_config/{module}.py at the v3.7.0 baseline "
+            f"({BASELINE}). Run this from a clone with that history -- "
+            "`git fetch --unshallow`, or `actions/checkout` with "
+            f"`fetch-depth: 0`.\n  git: {detail}"
+        )
+
+
+@functools.cache
+def baseline_source(module: str) -> str:
+    """Return ``hier_config/<module>.py`` as committed at the v3.7.0 baseline."""
+    result = subprocess.run(
+        ["git", "show", f"{BASELINE}:hier_config/{module}.py"],
+        capture_output=True,
+        text=True,
+        check=False,
+        cwd=REPO_ROOT,
+    )
+    if result.returncode != 0:
+        raise BaselineUnavailableError(module, result.stderr.strip())
+    return result.stdout
+
+
 def original_defs() -> dict[str, ast.AST]:
     """Map ``ClassName.member`` -> AST node from the v3.7.0 sources."""
     out: dict[str, ast.AST] = {}
     for module in MODULES:
-        src = subprocess.run(
-            ["git", "show", f"{BASELINE}:hier_config/{module}.py"],
-            capture_output=True,
-            text=True,
-            check=True,
-        ).stdout
+        src = baseline_source(module)
         for node in ast.parse(src).body:
             if not isinstance(node, ast.ClassDef):
                 continue
@@ -359,12 +384,7 @@ def baseline_class_doc(cls_name: str, module: str) -> str:
     PyO3 classes carry their own docstrings, but where one is missing the
     v3.7.0 Python source remains the reference text.
     """
-    src = subprocess.run(
-        ["git", "show", f"{BASELINE}:hier_config/{module}.py"],
-        capture_output=True,
-        text=True,
-        check=True,
-    ).stdout
+    src = baseline_source(module)
     node = next(
         (
             n
