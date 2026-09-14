@@ -10,7 +10,10 @@ All three drivers share the same model:
 
 - **[Declaration prefix](../glossary.md#declaration-prefix)** `set ` — prepended to each positive command.
 - **[Negation prefix](../glossary.md#negation-prefix)** `delete ` — replaces the Cisco-style `no `.
-- **A config preprocessor** — each driver's `config_preprocessor` converts the platform's hierarchical native rendering into flat `set` commands before parsing:
+- **Native platform preprocessing** — the Rust core converts hierarchical
+  native rendering into flat `set` commands before parsing. Stock driver
+  `config_preprocessor()` methods remain callable helpers, but custom
+  overrides are rejected:
     - JunOS: curly-brace configuration (`show configuration` output) is flattened.
     - VyOS: curly-brace configuration is flattened.
     - Nokia SRL: hierarchical `info` output is flattened.
@@ -191,4 +194,4 @@ for line in workflow.remediation_config.all_children_sorted():
 ## Next steps
 
 - [Supported Platforms](../admin/platforms.md) — details and quirks for every built-in platform.
-- [Creating a Platform Driver](../dev/creating-drivers.md) — how `config_preprocessor` and prefixes are implemented, if you need to support another set-style OS.
+- [Creating a Platform Driver](../dev/creating-drivers.md) — native platform selection, explicit custom preprocessing, and prefixes for another set-style OS.

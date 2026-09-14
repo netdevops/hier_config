@@ -1,5 +1,4 @@
-use hier_config_core::models::Platform;
-use hier_config_core::tree::Tree;
+use hier_config_core::{Driver, NegationRule, models::Platform, parse_fast, parse_tree};
 use serde::Deserialize;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -9,6 +8,17 @@ struct CaseManifest {
     platform: String,
     #[serde(default)]
     assert_rollback: Option<bool>,
+    #[serde(default)]
+    loader: Option<CorpusLoader>,
+    #[serde(default)]
+    negation: Vec<NegationRule>,
+}
+
+#[derive(Debug, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+enum CorpusLoader {
+    Lines,
+    Text,
 }
 
 struct CorpusCase {
@@ -104,9 +114,21 @@ fn run_case(case: &CorpusCase) -> Result<(), String> {
         )
     })?;
 
-    let running = Tree::from_str(platform, &case.running)
+    let mut driver = Driver::for_platform(platform);
+    driver
+        .rules
+        .negation
+        .splice(0..0, case.manifest.negation.iter().cloned());
+    let parse = |text: &str| {
+        if case.manifest.loader == Some(CorpusLoader::Lines) {
+            parse_fast(driver.clone(), &text.lines().collect::<Vec<_>>(), true)
+        } else {
+            parse_tree(driver.clone(), text)
+        }
+    };
+    let running = parse(&case.running)
         .map_err(|e| format!("[{}] Failed to parse running.conf: {e}", case.name))?;
-    let intended = Tree::from_str(platform, &case.intended)
+    let intended = parse(&case.intended)
         .map_err(|e| format!("[{}] Failed to parse intended.conf: {e}", case.name))?;
 
     let remediation = running
@@ -145,6 +167,33 @@ fn run_case(case: &CorpusCase) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+#[test]
+fn case_negation_overrides_are_applied_with_both_loaders() {
+    for loader in ["text", "lines"] {
+        let manifest = serde_json::from_value(serde_json::json!({
+            "platform": "CISCO_NXOS",
+            "loader": loader,
+            "negation": [{
+                "match_rules": [
+                    {"equals": "line console"},
+                    {"startswith": "terminal length"}
+                ],
+                "strategy": "replace",
+                "use": "terminal length 48"
+            }]
+        }))
+        .unwrap();
+        let case = CorpusCase {
+            name: format!("explicit-negation-{loader}"),
+            manifest,
+            running: "line console\n  terminal length 10".into(),
+            intended: "line console".into(),
+            expected_remediation: vec!["line console".into(), "  terminal length 48".into()],
+        };
+        run_case(&case).unwrap();
+    }
 }
 
 #[test]

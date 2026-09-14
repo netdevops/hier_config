@@ -18,21 +18,35 @@ git diff HEAD --stat            # fall back: uncommitted work
 git diff --staged --stat        # fall back: staged only
 ```
 
-List every changed file and classify it: library code (`hier_config/`), tests (`tests/`), docs (`docs/`, `mkdocs.yml`), CI/config, or `CHANGELOG.md`. Read the full diff for each classified file before judging it.
+List every changed file and classify it: native core (`crates/hier_config_core/`),
+PyO3 boundary (`crates/hier_config_py/`), Python facades/models (`hier_config/`),
+stubs, tests/shared corpus (`tests/`, `testdata/`), docs, CI/config, or changelog.
+Read the full diff for each classified file before judging it.
 
 ## Step 2: Run the Gates
 
 Run these and report exact failures (tool, file, line, message):
 
 ```bash
-uv run ./scripts/build.py lint
-uv run ./scripts/build.py pytest --coverage
+uv sync --locked --extra yaml
+uv run --no-sync maturin develop --release --locked
+uv run --no-sync ./scripts/build.py lint
+uv run --no-sync ./scripts/build.py pytest --coverage
+cargo fmt --check
+cargo clippy --locked --all-targets --all-features -- -D warnings
+cargo test --locked --workspace --all-features
+cargo llvm-cov --locked --package hier_config_core --fail-under-lines 47
 ```
 
+Source builds require Python 3.10+, a linker, and Rust meeting `Cargo.toml`'s
+MSRV (currently 1.98). Rebuild after Rust edits. Python coverage has a 95% floor;
+the separate Rust-core gate currently has a 47% floor. Never lower either gate.
+The Rust rewrite ships in v4 in this repository; do not propose v5 or a separate
+repository as an implicit migration requirement.
 Also run the docs build — CI runs it unconditionally on every push/PR, not just when docs change:
 
 ```bash
-uv run mkdocs build --strict
+uv run --no-sync mkdocs build --strict
 ```
 
 Remember CI's test matrix covers Python 3.10–3.14: flag syntax or stdlib usage newer than 3.10 even if local checks pass.
@@ -55,10 +69,24 @@ Read the referenced doc before judging that category — the docs are the standa
 - Driver changes are tested in `tests/integration/test_<platform>.py` (unit-level driver tests in `tests/unit/platforms/`); view changes in `tests/unit/platforms/views/`.
 - Driver/rule behavior changes include the round-trip idiom: remediation asserted via `to_lines()` tuple, rollback verified via no `unified_diff`.
 - New fixtures live in the sibling `fixtures/` directory with module-scoped accessors in the relevant `conftest.py`.
+- Native behavior has Rust tests and `tests/native/` boundary tests where needed.
+  Shared cases live in `testdata/cases/`; `tests/parity/` pins upstream protocols.
+  A displaced Python test identifies equivalent native/corpus assertions, not
+  merely a skip target. Review intentional divergences explicitly.
 
 ### Driver & Rule Changes — read `docs/dev/creating-drivers.md` and `docs/dev/rule-reference.md`
 
-- New rule types: frozen model in `models.py` → named default factory + field on `HConfigDriverRules` → consumed in `child.py`/`root.py` → populated in drivers → documented in `docs/dev/rule-reference.md`.
+- New rule types: frozen Python model → named factory/container field → Rust
+  decoding and evaluation → native platform rules → documentation.
+- Tree/view algorithms belong in the Rust core; Python files are facades.
+  PyO3 API changes update shipped stubs and migration docs. `platform`
+  selects native custom-driver operations; missing selectors fall back to Generic.
+- Five driver override hooks are rejected: `idempotent_for`, `negate_with`,
+  `sectional_exit`, `swap_negation`, and custom `config_preprocessor`.
+  Stock marked preprocessors remain callable; custom text transformations
+  run explicitly before constructors. Do not promise arbitrary hook dispatch.
+- Built-in device-view subclasses remain customizable; Generic native views,
+  direct interface-view construction and mixin `issubclass` recipes do not.
 - New platforms: `Platform` enum member, `_BUILTIN_DRIVERS` wiring in `hier_config/registry.py` **keyed on `Platform.X.name`** (a `Platform`-member key is silently unreachable — `_normalize()` canonicalizes to uppercase name strings), `view_class` on the driver if it has a config view, per-platform test file, and a driver section + table row in `docs/admin/platforms.md`.
 
 ### Changelog

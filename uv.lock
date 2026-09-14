@@ -339,6 +339,10 @@ name = "hier-config"
 source = { editable = "." }
 dependencies = [
     { name = "pydantic" },
+]
+
+[package.optional-dependencies]
+yaml = [
     { name = "pyyaml" },
 ]
 
@@ -358,6 +362,7 @@ dev = [
     { name = "pytest-cov" },
     { name = "pytest-profiling" },
     { name = "pytest-xdist" },
+    { name = "pyyaml" },
     { name = "ruff" },
     { name = "typer" },
     { name = "types-pyyaml" },
@@ -367,8 +372,9 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "pydantic", specifier = ">=2.9,<3" },
-    { name = "pyyaml", specifier = ">=6,<7" },
+    { name = "pyyaml", marker = "extra == 'yaml'", specifier = ">=6,<7" },
 ]
+provides-extras = ["yaml"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -386,6 +392,7 @@ dev = [
     { name = "pytest-cov" },
     { name = "pytest-profiling" },
     { name = "pytest-xdist" },
+    { name = "pyyaml", specifier = ">=6,<7" },
     { name = "ruff" },
     { name = "typer" },
     { name = "types-pyyaml" },

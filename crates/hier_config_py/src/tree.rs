@@ -1,11 +1,41 @@
 //! Shared tree state and handle interning cache.
 
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock, RwLockReadGuard, RwLockWriteGuard};
 
 use hier_config_core::{NodeId, Platform, Tree};
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList, PySet, PyWeakrefMethods, PyWeakrefReference};
+
+/// Lock poisoning is an error, not permission to continue with damaged state.
+pub(crate) trait PyRwLockExt<T> {
+    fn read_py(&self) -> PyResult<RwLockReadGuard<'_, T>>;
+    fn write_py(&self) -> PyResult<RwLockWriteGuard<'_, T>>;
+}
+
+impl<T> PyRwLockExt<T> for RwLock<T> {
+    fn read_py(&self) -> PyResult<RwLockReadGuard<'_, T>> {
+        self.read().map_err(|_| {
+            pyo3::exceptions::PyRuntimeError::new_err("configuration lock is poisoned")
+        })
+    }
+
+    fn write_py(&self) -> PyResult<RwLockWriteGuard<'_, T>> {
+        self.write().map_err(|_| {
+            pyo3::exceptions::PyRuntimeError::new_err("configuration lock is poisoned")
+        })
+    }
+}
+
+pub(crate) fn ensure_live(tree: &Tree, node_id: NodeId) -> PyResult<()> {
+    if tree.arena.contains(node_id) {
+        Ok(())
+    } else {
+        Err(pyo3::exceptions::PyValueError::new_err(
+            "configuration node has been deleted",
+        ))
+    }
+}
 
 /// Per-node Python-visible mutable state.
 ///
@@ -30,6 +60,18 @@ pub struct SharedTree {
 }
 
 impl SharedTree {
+    pub(crate) fn read_node(&self, node_id: NodeId) -> PyResult<RwLockReadGuard<'_, Tree>> {
+        let tree = self.tree.read_py()?;
+        ensure_live(&tree, node_id)?;
+        Ok(tree)
+    }
+
+    pub(crate) fn write_node(&self, node_id: NodeId) -> PyResult<RwLockWriteGuard<'_, Tree>> {
+        let tree = self.tree.write_py()?;
+        ensure_live(&tree, node_id)?;
+        Ok(tree)
+    }
+
     pub fn new(tree: Tree, platform: Platform) -> Self {
         Self {
             tree: RwLock::new(tree),
@@ -41,13 +83,14 @@ impl SharedTree {
         }
     }
 
-    pub fn set_driver(&self, driver: PyObject) {
-        *self.driver_obj.write().unwrap() = Some(driver);
+    pub fn set_driver(&self, driver: PyObject) -> PyResult<()> {
+        *self.driver_obj.write_py()? = Some(driver);
+        Ok(())
     }
 
     pub fn sync_rules(&self, py: Python<'_>) -> PyResult<()> {
         let driver_opt = {
-            let guard = self.driver_obj.read().unwrap();
+            let guard = self.driver_obj.read_py()?;
             guard.as_ref().map(|d| d.clone_ref(py))
         };
         let Some(driver) = driver_opt else {
@@ -61,12 +104,6 @@ impl SharedTree {
         let dp_str = driver_bound
             .getattr("declaration_prefix")?
             .extract::<String>()?;
-        {
-            let mut tree = self.tree.write().unwrap();
-            tree.driver.negation_prefix = np_str;
-            tree.driver.declaration_prefix = dp_str;
-        }
-
         let rules_obj = driver_bound.getattr("rules")?;
         let kwargs = PyDict::new(py);
         let exclude_set = PySet::new(
@@ -84,12 +121,17 @@ impl SharedTree {
                     "failed to sync driver rules from Python driver: {e}"
                 ))
             })?;
+        driver_rules
+            .validate_regexes()
+            .map_err(pyo3::exceptions::PyValueError::new_err)?;
         // `post_load_callbacks` is excluded from the JSON above because it holds
         // Python callables, so carry the surviving names across separately: the
         // core skips any callback the caller removed on the Python side (#286).
         driver_rules.enabled_post_load = Some(callback_names(&rules_obj)?);
         {
-            let mut tree = self.tree.write().unwrap();
+            let mut tree = self.tree.write_py()?;
+            tree.driver.negation_prefix = np_str;
+            tree.driver.declaration_prefix = dp_str;
             tree.driver.rules = driver_rules;
         }
         Ok(())
@@ -102,11 +144,12 @@ impl SharedTree {
         node_id: NodeId,
         parent_handle: Option<PyObject>,
     ) -> PyResult<Py<crate::child::PyHConfigChild>> {
+        drop(self_arc.read_node(node_id)?);
         // 1. Check intern cache. `upgrade` is a C-level dereference; going through
         //    Python's `weakref.ref.__call__` here would cost a full interpreter
         //    call on a path that runs once per node per traversal.
         {
-            let cache = self_arc.intern_cache.read().unwrap();
+            let cache = self_arc.intern_cache.read_py()?;
             if let Some(weak) = cache.get(&node_id)
                 && let Some(alive) = weak.bind(py).upgrade()
                 && let Ok(child) = alive.extract::<Py<crate::child::PyHConfigChild>>()
@@ -130,7 +173,7 @@ impl SharedTree {
         // 3. Store weakref in cache
         let weak_ref = PyWeakrefReference::new(child.bind(py))?;
         {
-            let mut cache = self_arc.intern_cache.write().unwrap();
+            let mut cache = self_arc.intern_cache.write_py()?;
             cache.insert(node_id, weak_ref.unbind());
         }
 
@@ -169,6 +212,7 @@ impl SharedTree {
         py: Python<'_>,
         node_id: NodeId,
     ) -> PyResult<Py<crate::child::PyHConfigChild>> {
+        drop(self_arc.read_node(node_id)?);
         Py::new(
             py,
             (
@@ -183,13 +227,14 @@ impl SharedTree {
         )
     }
 
-    pub fn get_node_facts(&self, py: Python<'_>, node_id: NodeId) -> Py<PyDict> {
-        let mut data_map = self.node_data.write().unwrap();
+    pub fn get_node_facts(&self, py: Python<'_>, node_id: NodeId) -> PyResult<Py<PyDict>> {
+        let _tree = self.read_node(node_id)?;
+        let mut data_map = self.node_data.write_py()?;
         let entry = data_map.entry(node_id).or_default();
-        entry
+        Ok(entry
             .facts
             .get_or_insert_with(|| PyDict::new(py).unbind())
-            .clone_ref(py)
+            .clone_ref(py))
     }
 
     pub fn get_node_comments(&self, py: Python<'_>, node_id: NodeId) -> PyResult<Py<PySet>> {
@@ -198,13 +243,13 @@ impl SharedTree {
         // set from the node the first time it is materialized. Afterwards Python
         // owns it and `cisco_style_text` syncs any additions back.
         let seed: Vec<String> = {
-            let tree = self.tree.read().unwrap();
+            let tree = self.read_node(node_id)?;
             tree.arena
                 .get(node_id)
                 .map(|node| node.comments().iter().cloned().collect())
                 .unwrap_or_default()
         };
-        let mut data_map = self.node_data.write().unwrap();
+        let mut data_map = self.node_data.write_py()?;
         let entry = data_map.entry(node_id).or_default();
         if entry.comments.is_none() {
             entry.comments = Some(PySet::new(py, seed.iter())?.unbind());
@@ -216,20 +261,22 @@ impl SharedTree {
             .clone_ref(py))
     }
 
-    pub fn get_node_instances(&self, py: Python<'_>, node_id: NodeId) -> Py<PyList> {
-        let mut data_map = self.node_data.write().unwrap();
+    pub fn get_node_instances(&self, py: Python<'_>, node_id: NodeId) -> PyResult<Py<PyList>> {
+        let _tree = self.read_node(node_id)?;
+        let mut data_map = self.node_data.write_py()?;
         let entry = data_map.entry(node_id).or_default();
-        entry
+        Ok(entry
             .instances
             .get_or_insert_with(|| PyList::empty(py).unbind())
-            .clone_ref(py)
+            .clone_ref(py))
     }
 
-    pub fn clear_node_cache(&self, node_id: NodeId) {
-        let mut cache = self.intern_cache.write().unwrap();
+    pub fn clear_node_cache(&self, node_id: NodeId) -> PyResult<()> {
+        let mut cache = self.intern_cache.write_py()?;
         cache.remove(&node_id);
-        let mut data = self.node_data.write().unwrap();
+        let mut data = self.node_data.write_py()?;
         data.remove(&node_id);
+        Ok(())
     }
 }
 

@@ -1,6 +1,7 @@
 use crate::arena::NodeId;
 use crate::driver::Driver;
 use crate::models::{Dump, Platform};
+use crate::regex_cache::{MatchRegex, python_replacement, rule_regex};
 use crate::tree::{Tree, TreeError};
 use regex::Regex;
 use rustc_hash::FxHashSet as HashSet;
@@ -19,15 +20,18 @@ struct PreparedSubs {
 }
 
 impl PreparedSubs {
-    fn new(rules: &[crate::models::PerLineSubRule]) -> Self {
+    fn new(rules: &[crate::models::PerLineSubRule]) -> Result<Self, TreeError> {
         let rules: Vec<(Arc<Regex>, String)> = rules
             .iter()
-            .filter_map(|rule| {
-                crate::regex_cache::regex(&rule.search).map(|re| (re, rule.replace.clone()))
+            .map(|rule| {
+                let re = rule_regex(&rule.search)?;
+                let replacement = python_replacement(&re, &rule.replace)?;
+                Ok((re, replacement))
             })
-            .collect();
+            .collect::<Result<_, String>>()
+            .map_err(TreeError::InvalidRegex)?;
         let prefilter = crate::regex_cache::regex_set(rules.iter().map(|(re, _)| re.as_str()));
-        Self { prefilter, rules }
+        Ok(Self { prefilter, rules })
     }
 
     /// Applies every rule in order, allocating only when a rule actually matches.
@@ -197,19 +201,19 @@ impl ParserCursor {
 }
 
 fn adjust_indent(
-    prepared: &[(Arc<Regex>, String)],
+    prepared: &[(MatchRegex, MatchRegex)],
     line: &str,
     mut indent_adjust: i32,
-    mut end_indent_adjust: Vec<String>,
-) -> (i32, Vec<String>) {
+    mut end_indent_adjust: Vec<MatchRegex>,
+) -> Result<(i32, Vec<MatchRegex>), TreeError> {
     for (re, end_expression) in prepared {
-        if re.is_match(line) {
+        if re.is_match(line).map_err(TreeError::InvalidRegex)? {
             indent_adjust += 1;
             end_indent_adjust.push(end_expression.clone());
-            return (indent_adjust, end_indent_adjust);
+            return Ok((indent_adjust, end_indent_adjust));
         }
     }
-    (indent_adjust, end_indent_adjust)
+    Ok((indent_adjust, end_indent_adjust))
 }
 
 /// Loads configuration lines into a `Tree`, then applies the post-load stages.
@@ -302,15 +306,19 @@ fn normalize_whitespace<'a>(raw_line: &'a str, buffer: &'a mut String) -> &'a st
     }
 }
 
-fn apply_full_text_subs<'a>(driver: &Driver, mut config_text: Cow<'a, str>) -> Cow<'a, str> {
+fn apply_full_text_subs<'a>(
+    driver: &Driver,
+    mut config_text: Cow<'a, str>,
+) -> Result<Cow<'a, str>, TreeError> {
     for rule in &driver.rules.full_text_sub {
-        if let Some(re) = crate::regex_cache::regex(&rule.search)
-            && let Cow::Owned(replaced) = re.replace_all(&config_text, rule.replace.as_str())
-        {
+        let re = rule_regex(&rule.search).map_err(TreeError::InvalidRegex)?;
+        let replacement =
+            python_replacement(&re, &rule.replace).map_err(TreeError::InvalidRegex)?;
+        if let Cow::Owned(replaced) = re.replace_all(&config_text, replacement.as_str()) {
             config_text = Cow::Owned(replaced);
         }
     }
-    config_text
+    Ok(config_text)
 }
 
 struct BannerState {
@@ -357,7 +365,7 @@ impl BannerState {
 /// Tracks dynamic indentation adjustments triggered by platform indent rules.
 struct IndentTracker {
     adjust: i32,
-    end_expressions: Vec<String>,
+    end_expressions: Vec<MatchRegex>,
 }
 
 impl IndentTracker {
@@ -368,25 +376,29 @@ impl IndentTracker {
         }
     }
 
-    fn update(&mut self, indent_rules: &[(Arc<Regex>, String)], line_content: &str) {
+    fn update(
+        &mut self,
+        indent_rules: &[(MatchRegex, MatchRegex)],
+        line_content: &str,
+    ) -> Result<(), TreeError> {
         if !indent_rules.is_empty() {
             let (adj, ends) = adjust_indent(
                 indent_rules,
                 line_content,
                 self.adjust,
                 std::mem::take(&mut self.end_expressions),
-            );
+            )?;
             self.adjust = adj;
             self.end_expressions = ends;
         }
 
-        if !self.end_expressions.is_empty()
-            && let Some(re) = crate::regex_cache::regex(&self.end_expressions[0])
-            && re.is_match(line_content)
+        if let Some(re) = self.end_expressions.first()
+            && re.is_match(line_content).map_err(TreeError::InvalidRegex)?
         {
             self.adjust -= 1;
             self.end_expressions.remove(0);
         }
+        Ok(())
     }
 }
 
@@ -440,21 +452,28 @@ impl ParserState {
 /// Returns [`TreeError`] if a parsed line cannot be inserted, most commonly
 /// [`TreeError::DuplicateChild`].
 pub fn parse_into_tree(tree: &mut Tree, config_raw: &str) -> Result<(), TreeError> {
-    let config_text = apply_full_text_subs(&tree.driver, Cow::Borrowed(config_raw));
+    tree.driver
+        .rules
+        .validate_regexes()
+        .map_err(TreeError::InvalidRegex)?;
+    let config_text = apply_full_text_subs(&tree.driver, Cow::Borrowed(config_raw))?;
     let config_text = config_preprocessor(tree.driver.platform, &config_text);
 
     // Resolve every regex used inside the line loop up front.
-    let per_line_subs = PreparedSubs::new(&tree.driver.rules.per_line_sub);
-    let indent_rules: Vec<(Arc<Regex>, String)> = tree
+    let per_line_subs = PreparedSubs::new(&tree.driver.rules.per_line_sub)?;
+    let indent_rules: Vec<(MatchRegex, MatchRegex)> = tree
         .driver
         .rules
         .indent_adjust
         .iter()
-        .filter_map(|expression| {
-            crate::regex_cache::regex(&expression.start_expression)
-                .map(|re| (re, expression.end_expression.clone()))
+        .map(|expression| {
+            Ok((
+                MatchRegex::cached(&expression.start_expression)?,
+                MatchRegex::cached(&expression.end_expression)?,
+            ))
         })
-        .collect();
+        .collect::<Result<_, String>>()
+        .map_err(TreeError::InvalidRegex)?;
 
     let mut state = ParserState::new(tree.root);
 
@@ -486,7 +505,7 @@ pub fn parse_into_tree(tree: &mut Tree, config_raw: &str) -> Result<(), TreeErro
 
         state.cursor.record_line(tree, this_indent, line_content)?;
 
-        state.indent.update(&indent_rules, line_content);
+        state.indent.update(&indent_rules, line_content)?;
     }
 
     if state.banner.in_banner {
@@ -515,9 +534,13 @@ pub fn parse_into_tree(tree: &mut Tree, config_raw: &str) -> Result<(), TreeErro
 ///
 /// Returns [`TreeError`] if a line cannot be inserted into the tree.
 pub fn load_fast(tree: &mut Tree, lines: &[&str], run_post_load: bool) -> Result<(), TreeError> {
+    tree.driver
+        .rules
+        .validate_regexes()
+        .map_err(TreeError::InvalidRegex)?;
     let mut cursor = ParserCursor::new(tree.root);
 
-    let per_line_subs = PreparedSubs::new(&tree.driver.rules.per_line_sub);
+    let per_line_subs = PreparedSubs::new(&tree.driver.rules.per_line_sub)?;
     // Reused across lines so the slow path allocates at most once for the whole parse.
     let mut normalized = String::with_capacity(256);
 
@@ -731,23 +754,25 @@ mod tests {
     #[test]
     fn test_adjust_indent() {
         let prepared = vec![(
-            crate::regex_cache::regex("^policy-map").unwrap(),
-            "^ *class".to_string(),
+            MatchRegex::cached("^policy-map").unwrap(),
+            MatchRegex::cached("^ *class").unwrap(),
         )];
 
         // A matching line opens a new virtual indent level.
-        let (indent, ends) = adjust_indent(&prepared, "policy-map test", 0, Vec::new());
+        let (indent, ends) = adjust_indent(&prepared, "policy-map test", 0, Vec::new()).unwrap();
         assert_eq!(indent, 1);
-        assert_eq!(ends, vec!["^ *class".to_string()]);
+        assert_eq!(ends.len(), 1);
+        assert!(ends[0].is_match("class foo").unwrap());
 
         // A non-matching line leaves both accumulators untouched.
         let (plain_indent, plain_ends) =
-            adjust_indent(&prepared, "hostname Router1", 0, Vec::new());
+            adjust_indent(&prepared, "hostname Router1", 0, Vec::new()).unwrap();
         assert_eq!(plain_indent, 0);
         assert!(plain_ends.is_empty());
 
         // With no rules configured there is nothing to adjust.
-        let (unruled_indent, unruled_ends) = adjust_indent(&[], "policy-map test", 0, Vec::new());
+        let (unruled_indent, unruled_ends) =
+            adjust_indent(&[], "policy-map test", 0, Vec::new()).unwrap();
         assert_eq!(unruled_indent, 0);
         assert!(unruled_ends.is_empty());
     }

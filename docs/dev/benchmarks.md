@@ -312,14 +312,16 @@ The PyO3 handle interning cache initially used `cache.get()` followed by
 the standard library `Entry` API eliminated the redundant hash lookup for every
 child handle created.
 
-### Pass 5: Non-Interning Bulk Traversals & Eager Tuples
-In 4.0, bulk tree traversals (`all_children()`, `all_children_sorted()`,
-`unused_objects()`) were migrated from lazy Python generators to eager native
-tuples (`tuple[HConfigChild, ...]`).
+### Pass 5: Non-Interning Bulk Traversals
+During the rewrite's optimization experiments, bulk tree traversals were
+measured using eager native tuples rather than lazy Python generators.
 Furthermore, handles created during bulk traversals bypass the persistent
 interning cache, eliminating weakref tracking overhead and allowing CPython to
 reclaim handle memory immediately after use. This reduced iteration time by
-another **61%**.
+another **61%** in that experiment. These are historical measurements, not
+a blanket API return-type promise; consult the
+[migration reference](../user/rust-core-changes.md#traversal-return-types)
+and current stubs for the supported iterator/collection contracts.
 
 ---
 
@@ -333,10 +335,9 @@ CI (`tests/benchmarks/test_perf_regression.py`).
 
 ### The Problem with Millisecond Thresholds
 
-Absolute wall-clock timers cannot gate CI: shared virtualized GitHub Actions
-runners vary in CPU speed by over 300% from run to run. A millisecond ceiling
-calibrated for a developer workstation will either fail constantly on slow CI
-nodes or be so loose that it catches no real regressions.
+Absolute wall-clock thresholds are sensitive to load and hardware differences
+on shared CI runners. A workstation-only threshold is not evidence of a useful
+budget on a different runner.
 
 ### The Calibration Unit Solution
 
@@ -349,21 +350,24 @@ Instead of measuring milliseconds, the regression test measures operations in
 
    $$\text{1 Unit} = \text{Time to execute standardized Python calibration workload}$$
 
-   *(On an Apple M2 Max, 1 unit $\approx$ 3.0 ms; on a standard GitHub Actions runner,
-   1 unit $\approx$ 8.5 ms).*
+   The duration is measured for each run rather than assumed from a reference
+   workstation.
 
 2. Each hier_config operation is timed and divided by the calibration unit:
 
    $$\text{Cost in Units} = \frac{\text{Operation Elapsed Time (ms)}}{\text{Calibration Unit (ms)}}$$
 
-If a CI runner is running twice as slow, both the calibration workload and the
-hier_config operation slow down proportionally. The cost in calibration units
-remains constant across different machines.
+This ratio can reduce common load effects, but native code and Python bytecode
+do not necessarily scale proportionally across CPUs, operating systems or
+architectures. A passing local Apple Silicon run does not establish that the
+Linux CI budget is calibrated. Verify results on the actual runner before
+claiming cross-platform calibration.
 
 ### Enforced CI Ceilings
 
-The CI regression suite asserts strict upper bounds (`MAX_COST_UNITS`) against
-a 400-interface configuration:
+The CI regression suite asserts upper bounds (`MAX_COST_UNITS`) against
+a 400-interface configuration. The following recorded local measurements
+explain the original budgets; current code and CI logs are authoritative:
 
 | Operation | Observed 4.0 Cost | CI Ceiling (`MAX_COST_UNITS`) | Safety Margin |
 |---|---:|---:|---|
@@ -374,9 +378,9 @@ a 400-interface configuration:
 | **`parse`** | **0.184 units** (0.55 ms) | 0.270 units | 1.5x |
 | **`dump`** | **0.266 units** (0.80 ms) | 0.370 units | 1.4x |
 
-Any PR that accidentally doubles an operation's cost (for instance, by disabling
-regex caching or re-introducing temporary Python allocations) trips the gate and
-fails CI before merging.
+The gate detects costs exceeding those budgets. It does not guarantee that
+every regression will be detected or attribute a failure to code rather than
+runner effects.
 
 ---
 

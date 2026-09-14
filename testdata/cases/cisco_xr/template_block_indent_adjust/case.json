@@ -1,5 +1,7 @@
 {
   "platform": "CISCO_XR",
   "description": "Test that template blocks parse correctly with the indent_adjust rule",
-  "assert_rollback": true
+  "assert_rollback": true,
+  "loader": "lines",
+  "source": "upstream/next@0866dc2:tests/integration/test_cisco_xr.py::test_template_block_indent_adjust"
 }

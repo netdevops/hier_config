@@ -96,7 +96,7 @@ pub(crate) fn formats_from_json(
     data: &str,
     list_keys: Option<Vec<String>>,
 ) -> PyResult<Py<PyHConfig>> {
-    let platform = PyHConfig::parse_platform(py, &driver_obj);
+    let platform = PyHConfig::parse_platform(py, &driver_obj)?;
     let keys = keys_arg(list_keys);
     let tree = formats::from_json(Driver::for_platform(platform), data, keys.as_deref());
     publish(py, tree, platform, driver_obj)
@@ -121,7 +121,7 @@ pub(crate) fn formats_from_xml(
     source: &str,
     list_keys: Option<Vec<String>>,
 ) -> PyResult<Py<PyHConfig>> {
-    let platform = PyHConfig::parse_platform(py, &driver_obj);
+    let platform = PyHConfig::parse_platform(py, &driver_obj)?;
     let keys = keys_arg(list_keys);
     let tree = formats::from_xml(Driver::for_platform(platform), source, keys.as_deref());
     publish(py, tree, platform, driver_obj)

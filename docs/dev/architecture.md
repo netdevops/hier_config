@@ -16,7 +16,11 @@ hier_config is built around a three-layer model:
 
 ## Core tree model
 
-The tree layer lives in `hier_config/base.py`, `hier_config/root.py`, `hier_config/child.py`, and `hier_config/children.py`.
+The tree lives in `crates/hier_config_core/src/`. Nodes are addressed by IDs in
+an arena, with child ordering and text lookup maintained by the native tree.
+`crates/hier_config_py/src/` exposes Python handles over that shared state.
+`hier_config/base.py`, `root.py`, `child.py`, and `children.py` preserve import
+paths as thin re-export facades; they do not implement a second tree.
 
 ### `HConfig` (root node)
 
@@ -46,12 +50,11 @@ Notable methods: `is_lineage_match()` (evaluate a tuple of `MatchRule`s against 
 
 ### `HConfigChildren` (ordered collection)
 
-`HConfigChildren` maintains two data structures in parallel:
-
-- `_data: list[HConfigChild]` — preserves insertion order.
-- `_mapping: dict[str, HConfigChild]` — maps `child.text` → first child for O(1) look-up.
-
-When duplicate text is allowed (via `ParentAllowsDuplicateChildRule`), the list holds all copies while the mapping points to only the first.
+`HConfigChildren` is a native-backed view of a parent's direct children.
+The Rust tree preserves insertion order and indexes text for lookup. When
+duplicate text is allowed (`ParentAllowsDuplicateChildRule`), iteration includes
+every copy while lookup returns the first. Obtain a collection from
+`config.children` or `child.children`; it has no public standalone constructor.
 
 ### `HConfigBase` (abstract base)
 
@@ -59,7 +62,7 @@ Both `HConfig` and `HConfigChild` inherit from `HConfigBase`, which provides:
 
 - Child manipulation: `add_child`, `add_children`, `add_deep_copy_of`, `add_shallow_copy_of`.
 - Searching: `get_child`, `get_children`, `get_child_deep`, `get_children_deep`.
-- Traversal: `all_children`, `all_children_sorted`.
+- Traversal: `descendants`, `all_children_sorted`.
 - Diffing: `unified_diff`.
 
 ### Type stubs (`hier_config/*.pyi`)
@@ -84,15 +87,18 @@ wrong type information. Never edit these four files by hand.
 `hier_config/exceptions.pyi` and `hier_config/workflows.pyi` are outside the
 generator and are maintained by hand.
 
-### Tree algorithms (`hier_config/tree_algorithms.py`)
+### Tree algorithms
 
-The comparison algorithms are extracted into a standalone module operating on nodes through their public tree API:
+Remediation, difference, future prediction, pruning, and tag filtering execute
+in `crates/hier_config_core/src/`. The remediation left pass removes source
+commands missing from the target; the right pass adds target commands, honoring
+sectional overwrite, idempotency, and negation rules. Context structs carry each
+operation's state. Python callers use `HConfig.remediation()`, `difference()`,
+`future()`, `future_with_report()`, and `with_tags()` rather than the removed
+standalone `compute_*` functions.
 
-- `compute_remediation(source, target, delta)` — the remediation algorithm: a *left pass* (`_remediation_left`) negates children of `source` absent from `target`, then a *right pass* (`_remediation_right`) adds children of `target` absent from (or different in) `source`, applying sectional-overwrite and idempotency rules.
-- `compute_difference(source, target, delta)` — config in `source` that is not in `target` (with ACL sequence-number awareness).
-- `compute_future(source, config, future_config)` — recursively merges `config` on top of `source`, honoring sectional overwrites, idempotency, and negation resolution (see [Predicting Future Configs](../user/future-config.md)).
-- `prune_emptied_branches(source, future_node)` — removes sections a change emptied out, for `future(..., prune_empty_branches=True)`.
-- `compute_with_tags(source, tags, delta)` — tag-filtered deep copy.
+`hier_config/tree_algorithms.py` retains the Python `FutureReport` data carrier.
+See [Predicting Future Configs](../user/future-config.md) for prediction limits.
 
 ---
 
@@ -105,7 +111,16 @@ The driver layer lives in `hier_config/platforms/`.
 Every platform driver subclasses `HConfigDriverBase` (`hier_config/platforms/driver_base.py`) and overrides:
 
 - `_instantiate_rules()` — returns an `HConfigDriverRules` Pydantic model populated with the platform's rule sets.
-- Optionally `negation_prefix`, `declaration_prefix`, `config_preprocessor`, and the `view_class` class attribute.
+- Optionally `negation_prefix`, `declaration_prefix`, and the `view_class` class attribute.
+
+The driver's `platform: ClassVar[Platform]` selects native platform operations.
+Subclassing a built-in inherits this selector; a custom driver without one uses
+Generic native operations. A registry name or loaded rule set does not itself
+select a vendor's imperative behavior. Pure-Python custom rules, prefixes,
+and callbacks remain boundary extension points. Custom `config_preprocessor()`
+overrides are rejected at class creation; preprocess text explicitly before
+calling `HConfig.from_text()`. Built-in preprocessing executes in Rust, while
+the stock `core_owned` Python methods remain callable helpers.
 
 Negation, idempotency, and sectional exiting are resolved in the Rust core from the driver's rule data; the corresponding Python hooks do not exist and defining them raises `TypeError`. Idempotency matching derives a structural *idempotency key* from each command's lineage and its matching rule, so commands that differ only in attribute values (e.g. two BGP neighbor descriptions) are not conflated.
 
@@ -167,7 +182,13 @@ See [Supported Platforms](../admin/platforms.md) for behavior details and [Creat
 
 ## Structured formats (`hier_config/formats.py`)
 
-The formats module maps JSON (e.g. OpenConfig) and XML (e.g. NETCONF payloads) onto the same `HConfig` tree used by the rest of the library, so structured configs can be diffed and predicted like CLI text:
+The Python formats module delegates to `hier_config_core::formats`, which maps
+JSON and XML onto the same tree as CLI text. The core owns ingestion, rendering,
+and structured remediation; standalone Rust callers need no Python interpreter.
+
+Format tests combine an independent IOS/EOS/error reference with historical
+native Junos regression snapshots. The latter are not upstream equivalence
+evidence; see [reference provenance](testing.md#structured-format-reference-provenance).
 
 - `hconfig_from_json` / `hconfig_to_json` — invertible JSON mapping (keyed lists identified via `list_keys`).
 - `hconfig_from_xml` / `hconfig_to_xml` — invertible XML mapping (attributes and text content become specially-encoded leaves).
@@ -190,7 +211,12 @@ remediation = workflow.remediation_config   # what to apply
 rollback    = workflow.rollback_config      # how to revert
 ```
 
-Internally it calls `running_config.remediation(generated_config)` (which delegates to `compute_remediation`), then `set_order_weight()`, then runs the transform pipeline: the driver's `rules.remediation_transform_callbacks` first, followed by the user-supplied `plugins`. It validates at construction that both configs use the same driver class (`IncompatibleDriverError`).
+The native workflow computes and caches remediation/rollback trees. The Python
+binding applies ordering and the transform pipeline: driver
+`rules.remediation_transform_callbacks` first, then user `plugins`. Construction
+validates matching driver classes (`IncompatibleDriverError`).
+`running_config` and `generated_config` are read-only properties; create a new
+workflow to replace either input. The trees themselves remain mutable.
 
 ### Plugins (`hier_config/plugins.py`)
 
@@ -218,9 +244,10 @@ for iface in view.interface_views:
 
 ### Native views
 
-`hier_config_core` carries an equivalent view layer in Rust (`crates/hier_config_core/src/view/`) so the crate is usable without a Python interpreter. It mirrors the Python design with traits instead of mixins:
+`crates/hier_config_core/src/view/` is the single view implementation, usable
+from Rust without an interpreter and exposed to Python through PyO3:
 
-- `ConfigOps` / `InterfaceOps` — every method has a default body, so a platform implements only what its Python sibling overrides. Optional capabilities are gated by `supports_vlan()`, `supports_nac()`, `supports_physical()`, and `bundle_prefix()`.
+- `ConfigOps` / `InterfaceOps` — common defaults with platform overrides. Optional capabilities are gated by `supports_vlan()`, `supports_nac()`, `supports_physical()`, and `bundle_prefix()`.
 - `ConfigView<'a>` / `InterfaceView<'a>` — borrow a `Tree` and delegate each property to the platform's ops, falling back to the `default_*` implementation.
 - `view_ops_for_platform(Platform)` — returns `None` for the platforms that deliberately have no Python `view.py`. The match is exhaustive, so adding a `Platform` variant is a compile error until a decision is recorded.
 
@@ -235,7 +262,10 @@ if let Some(view) = config_view(&tree) {
 }
 ```
 
-Python and Rust can no longer drift, because there is only one implementation: `hier_config.platforms.*.view` re-exports the PyO3 bindings in `crates/hier_config_py/src/view.rs`. The anti-drift corpus that pinned the two together (`testdata/views/`) was removed with the Python implementation it existed to guard.
+`hier_config.platforms.*.view` exposes the bindings in
+`crates/hier_config_py/src/view.rs`. The old `testdata/views/` dual-implementation
+corpus was removed, but native view tests and Python boundary tests remain
+necessary: shared algorithms do not guarantee correct bindings or return types.
 
 A small number of properties raised in Python v3 rather than returning a value; the native view returns `None` or an empty tuple instead. See [Rust core behavior changes](../user/rust-core-changes.md).
 
@@ -278,7 +308,7 @@ config text (or JSON / XML document)
 full_text_sub / per_line_sub      (driver preprocessing)
     │
     ▼
-config_preprocessor()             (optional platform transform, e.g. JunOS → set commands)
+native platform preprocessing     (e.g. JunOS → set commands; no custom Python hook)
     │
     ▼
 HConfig tree                      (HConfigBase / HConfigChild nodes)
@@ -286,7 +316,7 @@ HConfig tree                      (HConfigBase / HConfigChild nodes)
     │
     ├──► HConfig.future()         → predicted post-change HConfig
     │
-    ├──► HConfig.remediation()    (tree_algorithms.compute_remediation)
+    ├──► HConfig.remediation()    (native remediation engine)
     │         │
     │         ▼
     │     delta HConfig           (remediation commands)

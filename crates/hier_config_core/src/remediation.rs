@@ -25,6 +25,16 @@ pub fn config_to_get_to_into(
     target: &Tree,
     delta: &mut Tree,
 ) -> Result<(), TreeError> {
+    source
+        .driver
+        .rules
+        .validate_regexes()
+        .map_err(TreeError::InvalidRegex)?;
+    target
+        .driver
+        .rules
+        .validate_regexes()
+        .map_err(TreeError::InvalidRegex)?;
     RemediationContext::new(source, target, delta).compute()
 }
 
@@ -89,7 +99,7 @@ impl<'a> RemediationContext<'a> {
                 continue;
             }
 
-            let negated_text = self.source.compute_negation(self_child_id);
+            let negated_text = self.source.try_compute_negation(self_child_id)?;
             let negated_id = self
                 .delta
                 .add_child(delta_node, &negated_text, false, false)?;
@@ -177,7 +187,7 @@ impl<'a> RemediationContext<'a> {
             let self_text = &self.source.arena[source_child_id].text;
 
             if negate {
-                let new_neg_text = self.source.compute_negation(source_child_id);
+                let new_neg_text = self.source.try_compute_negation(source_child_id)?;
                 let neg_id = if let Some(existing_id) =
                     self.delta.arena[delta_node].children.get(self_text)
                 {
@@ -292,6 +302,16 @@ pub fn future_with_report(
     config: &Tree,
     prune_empty_branches: bool,
 ) -> Result<(Tree, FutureReport), TreeError> {
+    source
+        .driver
+        .rules
+        .validate_regexes()
+        .map_err(TreeError::InvalidRegex)?;
+    config
+        .driver
+        .rules
+        .validate_regexes()
+        .map_err(TreeError::InvalidRegex)?;
     let mut future_config = Tree::new(source.driver.clone());
     let mut report = FutureReport::default();
     {

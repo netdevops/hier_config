@@ -4,6 +4,12 @@ This page covers installing hier_config from PyPI or from source. It applies to 
 
 > hier_config requires Python 3.10 or later.
 
+Version 4 ships the Rust rewrite in **this repository and this Python package**.
+There is no pure-Python fallback. Published `abi3` wheels support CPython 3.10+
+on Linux glibc/musl (x86_64, aarch64), macOS (x86_64, aarch64), and Windows
+(x64). Windows ARM64 wheels require CPython 3.11+.
+Installing a compatible wheel does not require Rust.
+
 ## Install from PyPI
 
 ```bash
@@ -26,9 +32,47 @@ pip install hier-config==<version>
 
 ## Install from source
 
-1. [Install uv](https://docs.astral.sh/uv/getting-started/installation/)
-2. Clone the repository: `git clone git@github.com:netdevops/hier_config.git`
-3. Install the project: `cd hier_config && uv sync`
+An sdist install (`pip install --no-binary hier-config hier-config`), a checkout,
+or a platform without a compatible wheel requires Python 3.10+, a C/C++ linker,
+and a Rust toolchain meeting `workspace.package.rust-version` in `Cargo.toml`
+(currently **Rust 1.98**). Install Rust with [rustup](https://rustup.rs/).
+The build backend is [maturin](https://www.maturin.rs/), not Poetry.
+
+For a development checkout:
+
+```bash
+git clone git@github.com:netdevops/hier_config.git
+cd hier_config
+git checkout next
+uv sync --locked --extra yaml
+uv run --no-sync maturin develop --release --locked
+```
+
+Install [uv](https://docs.astral.sh/uv/getting-started/installation/) first.
+Rebuild the extension after editing Rust; Python imports the compiled artifact,
+not the Rust source.
+
+After a manual native rebuild, use `uv run --no-sync` for tests and other
+commands. Automatic synchronization can reinstall an older cached project
+wheel over the extension just built by maturin. If you run `uv sync` again,
+rebuild the extension afterward. For example:
+
+```bash
+uv run --no-sync pytest tests/native/
+```
+
+## Optional YAML support
+
+`pydantic` is the only required Python runtime dependency. File-based YAML
+loaders in `hier_config.utils` require the optional `yaml` extra:
+
+```bash
+pip install --pre 'hier-config[yaml]'
+```
+
+Without the extra, importing the library, loading text configs, and passing
+rule dictionaries still work. Calling a YAML loader raises an `ImportError`
+with installation instructions. See [Loading Rules from Files](../admin/rules-from-files.md).
 
 ## Next steps
 

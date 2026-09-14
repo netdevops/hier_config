@@ -9,6 +9,11 @@ There are two approaches:
 
 For the full catalog of rule types and their fields, see the [Driver Rule Reference](../dev/rule-reference.md).
 
+Custom regex rules need a [compatibility audit](../user/rust-core-changes.md#regex-compatibility-boundary):
+Python-style replacement templates are supported, but capture-producing
+patterns are restricted to Rust `regex` syntax. Unsupported patterns raise
+errors rather than silently omitting the transformation.
+
 ## Example 1: Subclassing the driver to extend rules
 
 Create a new class that subclasses the base Cisco IOS driver and overrides its `_instantiate_rules()` method:

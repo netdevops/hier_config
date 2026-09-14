@@ -4,6 +4,12 @@ This page catalogs every rule model that can appear in a driver's `HConfigDriver
 
 All rule models are frozen Pydantic models defined in `hier_config/models.py`. Most take a `match_rules: tuple[MatchRule, ...]` describing the full lineage path a configuration line must match — one `MatchRule` per level of hierarchy.
 
+Regex pattern support is context-dependent: capture-producing rules use the
+Rust `regex` subset, while matching-only rules can use a bounded richer
+fallback. Python replacement syntax does not imply arbitrary Python pattern
+support. See the [regex migration boundary](../user/rust-core-changes.md#regex-compatibility-boundary)
+for supported contexts and explicit errors.
+
 ---
 
 ## Match rules
@@ -32,7 +38,7 @@ A tuple of MatchRules describes a lineage: `(MatchRule(startswith="interface "),
 - `strategy`:
     - `NegationStrategy.REPLACE` — replace the negation with the fixed string in `use`.
     - `NegationStrategy.DEFAULT` — rewrite the command to its `default <command>` form.
-    - `NegationStrategy.REGEX_SUB` — apply `re.sub(search, replace, ...)` to the *already-negated* text (negation prefix included); `replace` supports back-references such as `\1`.
+    - `NegationStrategy.REGEX_SUB` — replace every regex match in the *already-negated* text (negation prefix included), using Python-style replacement templates such as `\1`; the search pattern is restricted to the native regex subset described above.
 - `use`: the replacement negation command (required for REPLACE).
 - `search` / `replace`: the regex substitution (`search` required for REGEX_SUB).
 

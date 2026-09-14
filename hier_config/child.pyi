@@ -25,6 +25,7 @@ class HConfigChild(HConfigBase):
     """
 
     def __init__(self, parent: HConfig | HConfigChild, text: str) -> None: ...
+    def __deepcopy__(self, memo: dict[int, object]) -> HConfigChild: ...
     def __eq__(self, other: object) -> bool:
         """Return self==value."""
 

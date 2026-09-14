@@ -1,5 +1,25 @@
 {
   "platform": "CISCO_NXOS",
   "description": "Verify negation_negate_with resets terminal settings on line console to platform defaults",
-  "assert_rollback": true
+  "assert_rollback": true,
+  "loader": "lines",
+  "source": "upstream/next@0866dc2:tests/integration/test_cisco_nxos.py::test_line_console_terminal_settings_negation_negate_with",
+  "negation": [
+    {
+      "match_rules": [
+        {"equals": "line console"},
+        {"startswith": "terminal length"}
+      ],
+      "strategy": "replace",
+      "use": "terminal length 24"
+    },
+    {
+      "match_rules": [
+        {"equals": "line console"},
+        {"startswith": "terminal width"}
+      ],
+      "strategy": "replace",
+      "use": "terminal width 80"
+    }
+  ]
 }

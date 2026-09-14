@@ -10,7 +10,7 @@ use pyo3::types::{PyList, PySlice};
 
 use crate::base::PyHConfigBase;
 use crate::child::PyHConfigChild;
-use crate::tree::SharedTree;
+use crate::tree::{SharedTree, ensure_live};
 
 #[pyclass(module = "_hier_config_rust", name = "HConfigChildren")]
 #[derive(Debug)]
@@ -25,6 +25,21 @@ pub struct PyHConfigChildrenIter {
     pub tree: Arc<SharedTree>,
     pub child_ids: Vec<NodeId>,
     pub index: usize,
+}
+
+impl PyHConfigChildren {
+    fn read_tree(&self) -> PyResult<std::sync::RwLockReadGuard<'_, hier_config_core::Tree>> {
+        self.tree.read_node(self.parent_id)
+    }
+
+    fn write_tree(&self) -> PyResult<std::sync::RwLockWriteGuard<'_, hier_config_core::Tree>> {
+        self.tree.write_node(self.parent_id)
+    }
+
+    fn ensure_live(&self) -> PyResult<()> {
+        drop(self.read_tree()?);
+        Ok(())
+    }
 }
 
 #[pymethods]
@@ -47,22 +62,24 @@ impl PyHConfigChildrenIter {
 
 #[pymethods]
 impl PyHConfigChildren {
-    fn __len__(&self) -> usize {
-        let tree = self.tree.tree.read().unwrap();
-        tree.arena
+    fn __len__(&self) -> PyResult<usize> {
+        let tree = self.read_tree()?;
+        Ok(tree
+            .arena
             .get(self.parent_id)
-            .map_or(0, |n| n.children.len())
+            .map_or(0, |n| n.children.len()))
     }
 
-    fn __contains__(&self, text: &str) -> bool {
-        let tree = self.tree.tree.read().unwrap();
-        tree.arena
+    fn __contains__(&self, text: &str) -> PyResult<bool> {
+        let tree = self.read_tree()?;
+        Ok(tree
+            .arena
             .get(self.parent_id)
-            .is_some_and(|n| n.children.contains(text))
+            .is_some_and(|n| n.children.contains(text)))
     }
 
     fn __getitem__(&self, py: Python<'_>, item: &Bound<'_, PyAny>) -> PyResult<PyObject> {
-        let tree = self.tree.tree.read().unwrap();
+        let tree = self.read_tree()?;
         let Some(parent_node) = tree.arena.get(self.parent_id) else {
             if item.extract::<isize>().is_ok() || item.downcast::<PySlice>().is_ok() {
                 return Err(PyIndexError::new_err("list index out of range"));
@@ -74,7 +91,8 @@ impl PyHConfigChildren {
                 "indices must be integers, slices, or strings",
             ));
         };
-        let children = &parent_node.children;
+        let children = parent_node.children.clone();
+        drop(tree);
 
         if let Ok(idx) = item.extract::<isize>() {
             let len = isize::try_from(children.len())
@@ -138,7 +156,7 @@ impl PyHConfigChildren {
         };
 
         let len = {
-            let tree = self.tree.tree.read().unwrap();
+            let tree = self.read_tree()?;
             let parent_node = tree
                 .arena
                 .get(self.parent_id)
@@ -156,12 +174,13 @@ impl PyHConfigChildren {
         };
 
         if Arc::ptr_eq(&self.tree, &other_tree) {
-            let mut tree = self.tree.tree.write().unwrap();
+            let mut tree = self.write_tree()?;
+            ensure_live(&tree, new_child_id)?;
             tree.set_child_at(self.parent_id, actual_idx, new_child_id)
                 .map_err(crate::errors::to_py_err)?;
         } else {
-            let mut my_tree = self.tree.tree.write().unwrap();
-            let src_tree = other_tree.tree.read().unwrap();
+            let mut my_tree = self.write_tree()?;
+            let src_tree = other_tree.read_node(new_child_id)?;
             let copied_id = my_tree
                 .add_deep_copy_of(self.parent_id, &src_tree, new_child_id, false)
                 .map_err(crate::errors::to_py_err)?;
@@ -175,10 +194,11 @@ impl PyHConfigChildren {
 
     #[pyo3(signature = (key, default = None))]
     pub fn get(&self, py: Python<'_>, key: &str, default: Option<PyObject>) -> PyResult<PyObject> {
-        let tree = self.tree.tree.read().unwrap();
+        let tree = self.read_tree()?;
         if let Some(parent_node) = tree.arena.get(self.parent_id)
             && let Some(child_id) = parent_node.children.get(key)
         {
+            drop(tree);
             let child = SharedTree::get_or_create_child(&self.tree, py, child_id, None)?;
             return Ok(child.into_any());
         }
@@ -186,6 +206,13 @@ impl PyHConfigChildren {
     }
 
     pub fn index(&self, child: &Bound<'_, PyAny>) -> PyResult<usize> {
+        self.ensure_live()?;
+        if let Ok(base) = child.extract::<PyRef<'_, PyHConfigBase>>() {
+            base.ensure_live()?;
+            if !Arc::ptr_eq(&self.tree, &base.tree) {
+                return Err(PyValueError::new_err("item not found in children"));
+            }
+        }
         let child_node_id = if let Ok(c) = child.extract::<PyRef<'_, PyHConfigChild>>() {
             c.as_ref().node_id
         } else if let Ok(b) = child.extract::<PyRef<'_, PyHConfigBase>>() {
@@ -193,7 +220,7 @@ impl PyHConfigChildren {
         } else {
             return Err(PyValueError::new_err("item not found in children"));
         };
-        let tree = self.tree.tree.read().unwrap();
+        let tree = self.read_tree()?;
         let Some(parent_node) = tree.arena.get(self.parent_id) else {
             return Err(PyValueError::new_err("item not found in children"));
         };
@@ -215,13 +242,14 @@ impl PyHConfigChildren {
             };
 
         let new_child_id = if Arc::ptr_eq(&self.tree, &other_tree) {
-            let mut tree = self.tree.tree.write().unwrap();
+            let mut tree = self.write_tree()?;
+            ensure_live(&tree, child_node_id)?;
             tree.move_child(child_node_id, self.parent_id)
                 .map_err(crate::errors::to_py_err)?;
             child_node_id
         } else {
-            let mut my_tree = self.tree.tree.write().unwrap();
-            let src_tree = other_tree.tree.read().unwrap();
+            let mut my_tree = self.write_tree()?;
+            let src_tree = other_tree.read_node(child_node_id)?;
             my_tree
                 .add_deep_copy_of(self.parent_id, &src_tree, child_node_id, false)
                 .map_err(crate::errors::to_py_err)?
@@ -231,62 +259,72 @@ impl PyHConfigChildren {
         Ok(res.into_any())
     }
 
-    pub fn clear(&self) {
+    pub fn clear(&self) -> PyResult<()> {
         let to_remove: Vec<NodeId> = {
-            let tree = self.tree.tree.read().unwrap();
+            let tree = self.read_tree()?;
             tree.arena
                 .get(self.parent_id)
                 .map_or_else(Vec::new, |n| n.children.iter().collect())
         };
         {
-            let mut tree = self.tree.tree.write().unwrap();
+            let mut tree = self.write_tree()?;
             for id in &to_remove {
                 tree.delete_child(*id);
             }
         }
         for id in to_remove {
-            self.tree.clear_node_cache(id);
+            self.tree.clear_node_cache(id)?;
         }
+        Ok(())
     }
 
     pub fn delete(&self, child_or_text: &Bound<'_, PyAny>) -> PyResult<()> {
+        self.ensure_live()?;
+        if let Ok(base) = child_or_text.extract::<PyRef<'_, PyHConfigBase>>() {
+            base.ensure_live()?;
+            if !Arc::ptr_eq(&self.tree, &base.tree) {
+                return Err(PyValueError::new_err(
+                    "child belongs to another configuration",
+                ));
+            }
+        }
         if let Ok(text) = child_or_text.extract::<String>() {
             let child_id = {
-                let tree = self.tree.tree.read().unwrap();
+                let tree = self.read_tree()?;
                 tree.arena
                     .get(self.parent_id)
                     .and_then(|n| n.children.get(&text))
             };
             if let Some(id) = child_id {
-                let mut tree = self.tree.tree.write().unwrap();
+                let mut tree = self.write_tree()?;
                 tree.delete_child(id);
-                self.tree.clear_node_cache(id);
+                self.tree.clear_node_cache(id)?;
             }
         } else if let Ok(child_base) = child_or_text.extract::<PyRef<'_, PyHConfigChild>>() {
             let child_node_id = child_base.as_ref().node_id;
             let is_child = {
-                let tree = self.tree.tree.read().unwrap();
+                let tree = self.read_tree()?;
                 tree.arena
                     .get(self.parent_id)
                     .is_some_and(|n| n.children.index_of(child_node_id).is_some())
             };
             if is_child {
-                let mut tree = self.tree.tree.write().unwrap();
+                let mut tree = self.write_tree()?;
                 tree.delete_child(child_node_id);
-                self.tree.clear_node_cache(child_node_id);
+                self.tree.clear_node_cache(child_node_id)?;
             }
         } else if let Ok(child_base) = child_or_text.extract::<PyRef<'_, PyHConfigBase>>() {
             let child_node_id = child_base.node_id;
             let is_child = {
-                let tree = self.tree.tree.read().unwrap();
+                let tree = self.read_tree()?;
                 tree.arena
                     .get(self.parent_id)
                     .is_some_and(|n| n.children.index_of(child_node_id).is_some())
             };
             if is_child {
-                let mut tree = self.tree.tree.write().unwrap();
+                let mut tree = self.write_tree()?;
                 tree.delete_child(child_node_id);
-                self.tree.clear_node_cache(child_node_id);
+                self.tree.clear_node_cache(child_node_id)?;
             }
         } else {
             return Err(PyTypeError::new_err(
@@ -297,34 +335,37 @@ impl PyHConfigChildren {
     }
 
     pub fn extend(&self, py: Python<'_>, children: &Bound<'_, PyAny>) -> PyResult<()> {
+        self.ensure_live()?;
         for child in children.try_iter()? {
             self.append(py, &child?)?;
         }
         Ok(())
     }
 
-    pub fn rebuild_mapping(&self) {
-        let mut tree = self.tree.tree.write().unwrap();
+    pub fn rebuild_mapping(&self) -> PyResult<()> {
+        let mut tree = self.write_tree()?;
         tree.rebuild_children_mapping(self.parent_id);
+        Ok(())
     }
 
-    fn __iter__(&self) -> PyHConfigChildrenIter {
-        let tree = self.tree.tree.read().unwrap();
+    fn __iter__(&self) -> PyResult<PyHConfigChildrenIter> {
+        let tree = self.read_tree()?;
         let child_ids = tree
             .arena
             .get(self.parent_id)
             .map_or_else(Vec::new, |n| n.children.as_slice().to_vec());
-        PyHConfigChildrenIter {
+        Ok(PyHConfigChildrenIter {
             tree: Arc::clone(&self.tree),
             child_ids,
             index: 0,
-        }
+        })
     }
 
     fn __eq__(&self, py: Python<'_>, other: &Bound<'_, PyAny>) -> PyResult<PyObject> {
+        self.ensure_live()?;
         if let Ok(other_children) = other.extract::<PyRef<'_, Self>>() {
-            let my_tree = self.tree.tree.read().unwrap();
-            let other_tree = other_children.tree.tree.read().unwrap();
+            let my_tree = self.read_tree()?;
+            let other_tree = other_children.read_tree()?;
             let my_items = my_tree
                 .arena
                 .get(self.parent_id)
@@ -352,6 +393,7 @@ impl PyHConfigChildren {
     }
 
     fn __ne__(&self, py: Python<'_>, other: &Bound<'_, PyAny>) -> PyResult<PyObject> {
+        self.ensure_live()?;
         if let Ok(_other_children) = other.extract::<PyRef<'_, Self>>() {
             let eq_obj = self.__eq__(py, other)?;
             let eq: bool = eq_obj.extract(py)?;
@@ -360,12 +402,12 @@ impl PyHConfigChildren {
         Ok(py.NotImplemented())
     }
 
-    fn __hash__(&self) -> isize {
+    fn __hash__(&self) -> PyResult<isize> {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
 
         let mut hasher = DefaultHasher::new();
-        let tree = self.tree.tree.read().unwrap();
+        let tree = self.read_tree()?;
         if let Some(parent_node) = tree.arena.get(self.parent_id) {
             for &c in parent_node.children.as_slice() {
                 if let Some(c_node) = tree.arena.get(c) {
@@ -378,15 +420,15 @@ impl PyHConfigChildren {
         let bytes = hasher.finish().to_ne_bytes();
         let mut isize_bytes = [0u8; size_of::<isize>()];
         isize_bytes.copy_from_slice(&bytes[..size_of::<isize>()]);
-        isize::from_ne_bytes(isize_bytes)
+        Ok(isize::from_ne_bytes(isize_bytes))
     }
 
-    fn __repr__(&self) -> String {
-        let tree = self.tree.tree.read().unwrap();
+    fn __repr__(&self) -> PyResult<String> {
+        let tree = self.read_tree()?;
         let len = tree
             .arena
             .get(self.parent_id)
             .map_or(0, |n| n.children.len());
-        format!("<HConfigChildren len={len}>")
+        Ok(format!("<HConfigChildren len={len}>"))
     }
 }

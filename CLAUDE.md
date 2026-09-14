@@ -10,14 +10,19 @@ Before opening or finalizing a PR, run the `hier-config-review` skill (`/hier-co
 
 ## Benchmarks
 
+Build the release extension first (`uv run --no-sync maturin develop --release --locked`),
+and rebuild after Rust edits. Python imports the installed native binary.
+Follow `AGENTS.md` for uv setup, Rust/MSRV prerequisites, and the separate coverage
+gates; a Python-only test run does not verify the Rust implementation.
+
 Performance benchmarks are in `tests/benchmarks/test_benchmarks.py` and are **deselected by default** (`addopts = "-m 'not benchmark'"` in `pyproject.toml`). They generate ~10,000-line configs and measure parsing, remediation, and iteration performance.
 
 ```bash
 # Run all benchmarks with timing output
-uv run pytest -m benchmark -v -s
+uv run --no-sync pytest -m benchmark -v -s
 
 # Run a specific benchmark
-uv run pytest -m benchmark -k test_parse_large_ios_config -v -s
+uv run --no-sync pytest -m benchmark -k test_parse_large_ios_config -v -s
 ```
 
 Use `-s` to see printed timing results. Each benchmark reports the best time over 3 iterations and asserts an upper bound (parsing `< 5s`; remediation `< 5s` small diff / `< 10s` large; iteration `< 2s`–`< 5s`). If a benchmark fails its time threshold, investigate the relevant code path for performance regressions.

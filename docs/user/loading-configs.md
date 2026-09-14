@@ -38,7 +38,11 @@ config = HConfig.from_text(Platform.CISCO_IOS, config_text)
 config = HConfig.from_text(Platform.CISCO_IOS, Path("running_config.conf"))
 ```
 
-`from_text()` runs the full driver pipeline: full-text and per-line substitutions, the platform's `config_preprocessor` (e.g. JunOS curly-brace flattening), tree construction, and post-load callbacks.
+`from_text()` runs the full driver pipeline: full-text and per-line substitutions,
+native platform preprocessing (e.g. JunOS curly-brace flattening), tree
+construction, and post-load callbacks. Custom `config_preprocessor()` driver
+overrides are rejected; [preprocess custom text explicitly](rust-core-changes.md#text-preprocessing-and-callbacks)
+before calling the constructor.
 
 ## From pre-split lines: `from_lines()`
 

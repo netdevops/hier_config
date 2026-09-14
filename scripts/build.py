@@ -118,15 +118,7 @@ def _pytest_command(
     if profile:
         command += " --profile --profile-svg"
     if coverage:
-        # Re-anchored from 95 to 88 by the v3.7 Rust migration. The tree, diff,
-        # remediation and post-load engines moved into crates/hier_config_core
-        # and are covered by `cargo test --workspace`; what remains measurable
-        # here is the Python API surface and the platform drivers. The shortfall
-        # is concentrated in the per-platform `_fixup_*` functions that the Rust
-        # post-load pipeline superseded but which were left in place -- removing
-        # that dead code is the way to raise this floor again, not relaxing it
-        # further.
-        command += " --cov=hier_config --cov-fail-under=88 --cov-report=term-missing"
+        command += " --cov=hier_config --cov-fail-under=95 --cov-report=term-missing"
     if threaded:
         command += " -n auto"
     return command
@@ -188,7 +180,7 @@ def _check_stub_types_command() -> str:
 
 @app.command()
 def check_formats_corpus() -> None:
-    """Fail when testdata/formats/expected.json no longer matches Python's output."""
+    """Compare formats with frozen reference and native regression snapshots."""
     _run(_check_formats_corpus_command())
 
 
@@ -197,9 +189,11 @@ def _check_formats_corpus_command() -> str:
 
 
 @app.command()
-def rust_coverage(*, fail_under: int = 40) -> None:
+def rust_coverage(*, fail_under: int = 47) -> None:
     """Run cargo-llvm-cov on hier_config_core with a line coverage floor."""
-    _run(f"cargo llvm-cov --package hier_config_core --fail-under-lines={fail_under}")
+    _run(
+        f"cargo llvm-cov --locked --package hier_config_core --fail-under-lines={fail_under}"
+    )
 
 
 @app.command()

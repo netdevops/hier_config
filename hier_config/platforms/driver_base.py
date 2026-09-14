@@ -1,11 +1,10 @@
 from abc import ABC
 from collections.abc import Callable
 from functools import cache
-from json import loads
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, TypeVar, cast
+from typing import TYPE_CHECKING, ClassVar, TypeVar, cast
 
-from pydantic import Field, PositiveInt
+from pydantic import Field, PositiveInt, TypeAdapter
 
 from hier_config.models import (
     BaseModel,
@@ -197,7 +196,7 @@ class HConfigDriverRules(BaseModel):  # pylint: disable=too-many-instance-attrib
 
 
 @cache
-def _load_platform_data(platform_name: str) -> dict[str, Any]:
+def _load_platform_data(platform_name: str) -> dict[str, object]:
     """Read a platform's canonical rule definitions.
 
     The JSON embedded in the Rust core is the single source of truth for the
@@ -220,7 +219,7 @@ def _load_platform_data(platform_name: str) -> dict[str, Any]:
             / platform_name
         )
         raw_json = (platform_dir / "rules.json").read_text(encoding="utf-8")
-    return cast("dict[str, Any]", loads(raw_json))
+    return TypeAdapter(dict[str, object]).validate_json(raw_json)
 
 
 @cache
@@ -251,7 +250,7 @@ def load_platform_rules(
     # Every rule model is frozen, so copying the lists is enough to isolate
     # callers from one another; a deep copy would clone immutable rule objects
     # for no benefit and dominates driver construction time.
-    update: dict[str, Any] = {
+    update: dict[str, object] = {
         field: list(cast("list[object]", value))
         for field, value in cached.__dict__.items()
         if isinstance(value, list)
@@ -288,13 +287,15 @@ _CoreOwnedT = TypeVar("_CoreOwnedT", bound=Callable[..., object])
 
 
 def core_owned(callback: _CoreOwnedT) -> _CoreOwnedT:
-    """Mark a post-load callback as one the Rust core already implements.
+    """Mark a stock callback or preprocessor implemented by the Rust core.
 
     The marker suppresses the redundant Python pass for the platforms in
     `CORE_POST_LOAD_PLATFORMS`. A custom driver on any other platform that
     reuses one of these callbacks still gets it executed normally.
+    Stock preprocessor methods remain callable helpers, not override hooks.
     """
     setattr(callback, _CORE_OWNED_ATTR, True)
+    setattr(getattr(callback, "__func__", callback), _CORE_OWNED_ATTR, True)
     return callback
 
 
@@ -313,8 +314,8 @@ class HConfigDriverBase(ABC):
     """
 
     #: View class instantiated by ``get_hconfig_view()``. ``None`` means the
-    #: platform has no config view. Set this on a driver subclass to register
-    #: a view for a custom platform or to override a built-in view.
+    #: platform has no config view. A built-in driver's subclass can override
+    #: its view; Generic has no native view implementation to extend.
     view_class: ClassVar[type["HConfigViewBase"] | None] = None
 
     #: Platform whose canonical rules `_instantiate_rules()` loads by default.
@@ -336,8 +337,19 @@ class HConfigDriverBase(ABC):
         groups, and `NegationRule.use` supports backreferences. Negation
         prefixes come from `declaration_prefix` and `negation_prefix`, which
         the core reads from the driver's rule data.
+        Custom `config_preprocessor` overrides are also rejected; apply text
+        transformations explicitly before calling the constructor.
         """
         super().__init_subclass__(**kwargs)
+        if "config_preprocessor" in cls.__dict__ and not getattr(
+            cls.config_preprocessor, _CORE_OWNED_ATTR, False
+        ):
+            message = (
+                f"{cls.__name__} defines config_preprocessor(), which the v4 "
+                "engine never calls. Apply the preprocessing function to your "
+                "text before HConfig.from_text() instead."
+            )
+            raise TypeError(message)
         for hook in _REMOVED_HOOKS:
             if hook in cls.__dict__:
                 msg = (
@@ -368,12 +380,10 @@ class HConfigDriverBase(ABC):
 
     @staticmethod
     def config_preprocessor(config_text: str) -> str:
-        """Transform raw config text before parsing.
+        """Return unchanged text; built-in drivers expose native preprocessors.
 
-        The default is a no-op. Override to convert a platform's native
-        rendering into parseable lines (e.g. flattening JunOS curly-brace
-        config into `set` commands). Runs inside `HConfig.from_text()` after
-        full-text substitutions and before tree construction.
+        The engine selects preprocessing by platform in Rust. Custom overrides
+        are rejected: apply custom transformations before ``HConfig.from_text``.
         """
         return config_text
 

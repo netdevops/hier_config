@@ -509,7 +509,7 @@ print(f"Device count: {reporter.device_count}")
 
 # Check if remediation configs are empty
 for i, remediation in enumerate(remediations):
-    change_count = len(tuple(remediation.all_children()))
+    change_count = len(remediation)
     print(f"Remediation {i}: {change_count} changes")
 ```
 

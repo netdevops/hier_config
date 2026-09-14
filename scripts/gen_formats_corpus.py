@@ -1,25 +1,37 @@
-"""Capture structured-format behavior as a corpus the Rust port is held to.
+"""Compare structured formats with frozen, explicitly attributed expectations.
 
-The JSON/XML/NETCONF/gNMI mapping was ported from Python to Rust. This script
-records what the reference implementation produces -- including its error
-messages -- so `crates/hier_config_core/tests/formats_corpus.rs` can assert the
-port matches. Regenerate only when Python behavior is *intended* to change;
-never edit the corpus to make Rust pass.
+``expected.json`` contains IOS/EOS results independently captured from the
+pinned pure-Python upstream/next revision below. Parser-specific diagnostics
+are normalized during comparison; exception classes and stable prefixes are
+not. ``native-v1.json`` separately preserves Junos regression expectations:
+the reference cannot remediate those unflattened JSON/XML trees because its
+Junos driver requires set/delete commands, so they are not parity evidence.
+
+``--check`` runs the current implementation against both frozen snapshots;
+it does not generate an independent oracle. Only ``--capture-reference`` can
+write the reference snapshot, and it refuses anything except the fingerprinted
+pure-Python source. Put a ``git archive`` of REFERENCE_COMMIT on PYTHONPATH
+before invoking it. Native snapshots must be reviewed separately, never
+regenerated automatically to silence a mismatch.
 
 Usage::
 
-    python scripts/gen_formats_corpus.py            # rewrite the corpus
-    python scripts/gen_formats_corpus.py --check    # fail if it drifted
+    python scripts/gen_formats_corpus.py --check
+    PYTHONPATH=/path/to/reference python scripts/gen_formats_corpus.py --capture-reference
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, cast
 
+from pydantic import TypeAdapter
+
+import hier_config
 from hier_config.exceptions import HierConfigError
 from hier_config.formats import (
     hconfig_from_json,
@@ -41,6 +53,27 @@ CORPUS = (
 )
 
 PLATFORMS = (Platform.CISCO_IOS, Platform.ARISTA_EOS, Platform.JUNIPER_JUNOS)
+REFERENCE_PLATFORMS = (Platform.CISCO_IOS, Platform.ARISTA_EOS)
+REFERENCE_COMMIT = "0866dc2316443909edea2d629117b44a3a9ed472"
+REFERENCE_SOURCE_SHA256 = (
+    "2b6bd6cd001b423390bd89c481c23d05798b2205f3879ba549ae03d753191dc1"
+)
+REFERENCE_PROVENANCE: dict[str, object] = {
+    "schema_version": 1,
+    "implementation": "pure-python",
+    "reference_commit": REFERENCE_COMMIT,
+    "source_sha256": REFERENCE_SOURCE_SHA256,
+    "platforms": ["CISCO_IOS", "ARISTA_EOS"],
+}
+NATIVE_CORPUS = CORPUS.with_name("native-v1.json")
+NATIVE_PROVENANCE: dict[str, object] = {
+    "schema_version": 1,
+    "implementation": "native",
+    "snapshot_commit": "fa49af6fffd1a529807c0e14aeb5e6ff9dc83a6c",
+    "platforms": ["JUNIPER_JUNOS"],
+    "reason": "The pure-Python driver cannot remediate unflattened format trees",
+}
+DERIVED_SECTIONS = ("json", "xml", "netconf", "gnmi")
 KEY_SETS: tuple[tuple[str, ...] | None, ...] = (
     None,
     ("name", "id"),
@@ -207,9 +240,11 @@ def _xml_case(
     }
 
 
-def build() -> dict[str, dict[str, Any]]:
-    """Runs every case against the reference implementation."""
-    corpus: dict[str, dict[str, Any]] = {
+def build(
+    platforms: tuple[Platform, ...] = PLATFORMS,
+) -> dict[str, dict[str, object]]:
+    """Run cases against whichever implementation this interpreter imports."""
+    corpus: dict[str, dict[str, object]] = {
         # The Rust corpus test reads its inputs back out of here, so the two
         # implementations can never drift onto different source configs.
         "sources": {
@@ -234,7 +269,7 @@ def build() -> dict[str, dict[str, Any]]:
         (XML_CASES, _xml_case, "xml", "netconf"),
     ):
         for name, (source, target_source) in cases.items():
-            for platform in PLATFORMS:
+            for platform in platforms:
                 for keys in KEY_SETS:
                     key = _case_key(name, platform, keys)
                     parsed, derived = builder(platform, keys, source, target_source)
@@ -248,10 +283,63 @@ def build() -> dict[str, dict[str, Any]]:
     return corpus
 
 
-def render(corpus: dict[str, dict[str, Any]]) -> str:
+def render(corpus: dict[str, dict[str, object]]) -> str:
     """Serializes the corpus deterministically."""
     rendered = json.dumps(corpus, indent=1, sort_keys=True, ensure_ascii=False)
     return f"{rendered}\n"
+
+
+def normalize_outcomes(value: object) -> object:
+    """Ignore parser diagnostics only within errors of the expected class."""
+    if isinstance(value, list):
+        return [normalize_outcomes(item) for item in cast("list[object]", value)]
+    if not isinstance(value, dict):
+        return value
+    result = {
+        key: normalize_outcomes(item)
+        for key, item in cast("dict[str, object]", value).items()
+    }
+    error = result.get("err")
+    if isinstance(error, str):
+        for format_name in ("JSON", "XML"):
+            prefix = f"InvalidConfigError: The config is not valid {format_name}:"
+            if error.startswith(prefix):
+                result["err"] = prefix
+    return result
+
+
+def reference_source_matches() -> bool:
+    """Verify all Python sources, not just the format converter or version label."""
+    root = Path(hier_config.__file__).parent
+    digest = hashlib.sha256()
+    for path in sorted(root.rglob("*.py")):
+        digest.update(path.relative_to(root).as_posix().encode() + b"\0")
+        digest.update(path.read_bytes() + b"\0")
+    return (
+        hier_config.HConfig.__module__ == "hier_config.root"
+        and digest.hexdigest() == REFERENCE_SOURCE_SHA256
+    )
+
+
+def check_snapshot(
+    path: Path,
+    actual: dict[str, dict[str, object]],
+    provenance: dict[str, object],
+) -> bool:
+    """Compare without rewriting a snapshot or trusting its provenance blindly."""
+    expected = TypeAdapter(dict[str, dict[str, object]]).validate_json(
+        path.read_text(encoding="utf-8"), strict=True
+    )
+    if expected.pop("_provenance", None) != provenance:
+        sys.stderr.write(f"{path}: missing or unexpected frozen provenance\n")
+        return False
+    if normalize_outcomes(expected) != normalize_outcomes(actual):
+        sys.stderr.write(
+            f"{path}: implementation differs from frozen expectations; "
+            "investigate the behavior, do not regenerate from the failing backend\n"
+        )
+        return False
+    return True
 
 
 def main() -> int:
@@ -259,21 +347,39 @@ def main() -> int:
     parser.add_argument(
         "--check",
         action="store_true",
-        help="exit non-zero if the corpus on disk is stale",
+        help="compare the current implementation with frozen expectations",
+    )
+    parser.add_argument(
+        "--capture-reference",
+        action="store_true",
+        help="capture only the pinned, fingerprinted pure-Python reference",
     )
     args = parser.parse_args()
 
-    rendered = render(build())
     if args.check:
-        if not CORPUS.exists() or CORPUS.read_text(encoding="utf-8") != rendered:
-            sys.stderr.write(
-                f"{CORPUS} is stale; rerun scripts/gen_formats_corpus.py\n"
-            )
-            return 1
-        return 0
+        parity_matches = check_snapshot(
+            CORPUS, build(REFERENCE_PLATFORMS), REFERENCE_PROVENANCE
+        )
+        native = build((Platform.JUNIPER_JUNOS,))
+        native_matches = check_snapshot(
+            NATIVE_CORPUS,
+            {section: native[section] for section in DERIVED_SECTIONS},
+            NATIVE_PROVENANCE,
+        )
+        return 0 if parity_matches and native_matches else 1
 
+    if not args.capture_reference or not reference_source_matches():
+        sys.stderr.write(
+            "Snapshots are frozen. --capture-reference requires pure-Python "
+            f"sources from {REFERENCE_COMMIT} on PYTHONPATH; "
+            "the current native implementation cannot overwrite parity evidence.\n"
+        )
+        return 1
+
+    reference = build(REFERENCE_PLATFORMS)
+    reference["_provenance"] = REFERENCE_PROVENANCE
     CORPUS.parent.mkdir(parents=True, exist_ok=True)
-    CORPUS.write_text(rendered, encoding="utf-8")
+    CORPUS.write_text(render(reference), encoding="utf-8")
     return 0
 
 

@@ -128,7 +128,7 @@ configuration because their identities differ within the `neighbor` hierarchy.
 >>>
 >>> print("Future Config")
 Future Config
->>> for line in running_config.future(remediation_config).all_children():
+>>> for line in running_config.future(remediation_config).descendants():
 ...     print(line.indented_text())
 ...
 vlan 3

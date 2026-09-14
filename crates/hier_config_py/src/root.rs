@@ -11,7 +11,7 @@ use pyo3::types::{PyDict, PyFrozenSet, PyList, PySet, PyString, PyTuple, PyType}
 
 use crate::base::PyHConfigBase;
 use crate::errors::to_py_err;
-use crate::tree::SharedTree;
+use crate::tree::{NodePyData, PyRwLockExt, SharedTree};
 
 fn get_dump_field<'py>(
     item: &Bound<'py, PyAny>,
@@ -75,41 +75,23 @@ pub struct PyHConfig {
 }
 
 impl PyHConfig {
-    pub fn parse_platform(py: Python<'_>, driver: &PyObject) -> Platform {
-        if let Ok(plat_val) = driver.getattr(py, "platform") {
-            if let Ok(val) = plat_val.getattr(py, "value")
-                && let Ok(s) = val.extract::<String>(py)
-                && let Ok(p) = s.parse::<Platform>()
-            {
-                return p;
-            }
-            if let Ok(s) = plat_val.extract::<String>(py)
-                && let Ok(p) = s.parse::<Platform>()
-            {
-                return p;
-            }
+    pub fn parse_platform(py: Python<'_>, driver: &PyObject) -> PyResult<Platform> {
+        let selector = driver.getattr(py, "platform")?;
+        if selector.is_none(py) {
+            return Ok(Platform::Generic);
         }
-        if let Ok(cls) = driver.getattr(py, "__class__")
-            && let Ok(name) = cls.getattr(py, "__name__")
-            && let Ok(s) = name.extract::<String>(py)
-        {
-            match s.as_str() {
-                "HConfigDriverAristaEOS" => return Platform::AristaEos,
-                "HConfigDriverArubaAOSCX" => return Platform::ArubaAoscx,
-                "HConfigDriverCiscoIOS" => return Platform::CiscoIos,
-                "HConfigDriverCiscoNXOS" => return Platform::CiscoNxos,
-                "HConfigDriverCiscoIOSXR" => return Platform::CiscoXr,
-                "HConfigDriverFortinetFortiOS" => return Platform::FortinetFortios,
-                "HConfigDriverHPComware5" => return Platform::HpComware5,
-                "HConfigDriverHPProcurve" => return Platform::HpProcurve,
-                "HConfigDriverHuaweiVrp" => return Platform::HuaweiVrp,
-                "HConfigDriverJuniperJUNOS" => return Platform::JuniperJunos,
-                "HConfigDriverNokiaSRL" => return Platform::NokiaSrl,
-                "HConfigDriverVYOS" => return Platform::Vyos,
-                _ => {}
-            }
-        }
-        Platform::Generic
+        // Platform is a str enum, so both enum members and explicit string
+        // selectors follow the same parsing path.
+        let value = selector.extract::<String>(py).map_err(|_| {
+            pyo3::exceptions::PyValueError::new_err(
+                "driver.platform must be a Platform, a platform string, or None",
+            )
+        })?;
+        value.parse::<Platform>().map_err(|_| {
+            pyo3::exceptions::PyValueError::new_err(format!(
+                "unsupported driver.platform: {value:?}"
+            ))
+        })
     }
 
     pub fn get_default_driver(py: Python<'_>, platform: Platform) -> PyResult<PyObject> {
@@ -209,7 +191,7 @@ pub(crate) fn create_py_hconfig(
 ) -> PyResult<Py<PyHConfig>> {
     let root_id = tree.root;
     let shared_tree = Arc::new(SharedTree::new(tree, platform));
-    shared_tree.set_driver(driver_obj.clone_ref(py));
+    shared_tree.set_driver(driver_obj.clone_ref(py))?;
     shared_tree.sync_rules(py)?;
     let hconfig = Py::new(
         py,
@@ -221,7 +203,7 @@ pub(crate) fn create_py_hconfig(
             },
         ),
     )?;
-    let mut handle = shared_tree.root_handle.write().unwrap();
+    let mut handle = shared_tree.root_handle.write_py()?;
     *handle = Some(hconfig.clone_ref(py).into_any());
     drop(handle);
     Ok(hconfig)
@@ -232,11 +214,11 @@ impl PyHConfig {
     #[new]
     #[pyo3(signature = (driver))]
     fn new(py: Python<'_>, driver: PyObject) -> PyResult<(Self, PyHConfigBase)> {
-        let platform = Self::parse_platform(py, &driver);
+        let platform = Self::parse_platform(py, &driver)?;
         let tree = Tree::for_platform(platform);
         let root_id = tree.root;
         let shared_tree = Arc::new(SharedTree::new(tree, platform));
-        shared_tree.set_driver(driver.clone_ref(py));
+        shared_tree.set_driver(driver.clone_ref(py))?;
         shared_tree.sync_rules(py)?;
 
         Ok((
@@ -252,7 +234,7 @@ impl PyHConfig {
     fn __init__(slf: &Bound<'_, Self>, driver: &Bound<'_, PyAny>) -> PyResult<()> {
         let _ = driver;
         let base_ref = slf.extract::<PyRef<'_, PyHConfigBase>>()?;
-        *base_ref.tree.root_handle.write().unwrap() = Some(slf.clone().unbind().into_any());
+        *base_ref.tree.root_handle.write_py()? = Some(slf.clone().unbind().into_any());
         Ok(())
     }
 
@@ -267,13 +249,13 @@ impl PyHConfig {
         let py = slf.py();
         let tree = Arc::clone(&slf.as_ref().tree);
         {
-            let handle = tree.root_handle.read().unwrap();
+            let handle = tree.root_handle.read_py()?;
             if let Some(ref h) = *handle {
                 return Ok(h.clone_ref(py));
             }
         }
         let obj = slf.into_py_any(py)?;
-        let mut handle = tree.root_handle.write().unwrap();
+        let mut handle = tree.root_handle.write_py()?;
         *handle = Some(obj.clone_ref(py));
         Ok(obj)
     }
@@ -302,7 +284,7 @@ impl PyHConfig {
         let py = slf.py();
         let base = slf.as_ref();
         let child_id = {
-            let mut tree = base.tree.tree.write().unwrap();
+            let mut tree = base.write_tree()?;
             tree.create_child_unattached(base.node_id, text)
         };
         let child = SharedTree::get_or_create_child(&base.tree, py, child_id, None)?;
@@ -357,17 +339,15 @@ impl PyHConfig {
         // Copy the text out of Python memory so the GIL can be released for the parse.
         let owned = config_raw.to_owned();
 
-        let result = py.allow_threads(move || {
-            let mut tree = shared.tree.write().unwrap();
-            hier_config_core::parser::parse_into_tree(&mut tree, &owned)?;
+        py.allow_threads(move || {
+            let mut tree = shared.tree.write_py()?;
+            hier_config_core::parser::parse_into_tree(&mut tree, &owned).map_err(to_py_err)?;
             hier_config_core::post_load::delete_sectional_exit_recursive(&mut tree);
             if run_post_load {
                 hier_config_core::post_load::run_post_load_callbacks(&mut tree);
             }
-            Ok::<(), hier_config_core::TreeError>(())
-        });
-
-        result.map_err(to_py_err)
+            Ok::<(), PyErr>(())
+        })
     }
 
     /// Parses pre-formatted `lines` into this tree inside a single FFI call.
@@ -428,16 +408,15 @@ impl PyHConfig {
             (buf, Some(spans))
         };
 
-        let result = py.allow_threads(move || {
+        py.allow_threads(move || {
             let borrowed: Vec<&str> = match &spans {
                 Some(spans) => spans.iter().map(|&(s, e)| &buf[s..e]).collect(),
                 None => buf.lines().collect(),
             };
-            let mut tree = shared.tree.write().unwrap();
+            let mut tree = shared.tree.write_py()?;
             hier_config_core::parser::load_fast(&mut tree, &borrowed, run_post_load)
-        });
-
-        result.map_err(to_py_err)
+                .map_err(to_py_err)
+        })
     }
 
     /// Reads and parses an on-disk config file into this tree inside a single FFI call.
@@ -457,7 +436,7 @@ impl PyHConfig {
 
         py.allow_threads(move || {
             let content = std::fs::read_to_string(&path_buf)?;
-            let mut tree = shared.tree.write().unwrap();
+            let mut tree = shared.tree.write_py()?;
             hier_config_core::parser::parse_into_tree(&mut tree, &content).map_err(to_py_err)?;
             hier_config_core::post_load::delete_sectional_exit_recursive(&mut tree);
             if run_post_load {
@@ -532,10 +511,10 @@ impl PyHConfig {
         }
 
         py.allow_threads(move || {
-            let mut tree = shared.tree.write().unwrap();
+            let mut tree = shared.tree.write_py()?;
             tree.load_from_dump(&Dump { lines: dump_lines })
+                .map_err(to_py_err)
         })
-        .map_err(to_py_err)
     }
 
     pub fn add_children_deep(slf: PyRef<'_, Self>, lines: &Bound<'_, PyAny>) -> PyResult<PyObject> {
@@ -566,13 +545,14 @@ impl PyHConfig {
         let base = slf.as_ref();
 
         let new_node_id = if Arc::ptr_eq(&base.tree, &parent_base.tree) {
-            let mut my_tree = base.tree.tree.write().unwrap();
+            let mut my_tree = base.write_tree()?;
+            crate::tree::ensure_live(&my_tree, parent_base.node_id)?;
             my_tree
                 .add_ancestor_copy_within(base.node_id, parent_base.node_id)
                 .map_err(to_py_err)?
         } else {
-            let mut my_tree = base.tree.tree.write().unwrap();
-            let src_tree = parent_base.tree.tree.read().unwrap();
+            let mut my_tree = base.write_tree()?;
+            let src_tree = parent_base.read_tree()?;
             my_tree
                 .add_ancestor_copy_of(base.node_id, &src_tree, parent_base.node_id)
                 .map_err(to_py_err)?
@@ -588,8 +568,8 @@ impl PyHConfig {
         let target_hconfig = target.extract::<PyRef<'_, Self>>()?;
         let target_base = target_hconfig.as_ref();
 
-        let my_tree = base.tree.tree.read().unwrap();
-        let other_tree = target_base.tree.tree.read().unwrap();
+        let my_tree = base.read_tree()?;
+        let other_tree = target_base.read_tree()?;
         let delta_tree =
             hier_config_core::remediation::difference(&my_tree, &other_tree).map_err(to_py_err)?;
         drop(my_tree);
@@ -631,7 +611,7 @@ impl PyHConfig {
             let delta_hconfig = d.extract::<PyRef<'_, Self>>()?;
             let delta_base = delta_hconfig.as_ref();
             delta_base.tree.sync_rules(py)?;
-            let mut delta_tree = delta_base.tree.tree.write().unwrap();
+            let mut delta_tree = delta_base.write_tree()?;
 
             // When a source aliases the delta tree, read-locking the same `RwLock` on
             // this thread while the write lock is held would deadlock. In that case
@@ -640,8 +620,10 @@ impl PyHConfig {
             let delta_is_target = Arc::ptr_eq(&delta_base.tree, &target_base.tree);
             let my_clone: Option<Tree> = delta_is_base.then(|| delta_tree.clone());
             let target_clone: Option<Tree> = delta_is_target.then(|| delta_tree.clone());
-            let my_guard = (!delta_is_base).then(|| base.tree.tree.read().unwrap());
-            let target_guard = (!delta_is_target).then(|| target_base.tree.tree.read().unwrap());
+            let my_guard = (!delta_is_base).then(|| base.read_tree()).transpose()?;
+            let target_guard = (!delta_is_target)
+                .then(|| target_base.read_tree())
+                .transpose()?;
             let my_tree: &Tree = my_clone
                 .as_ref()
                 .unwrap_or_else(|| my_guard.as_deref().unwrap());
@@ -657,8 +639,8 @@ impl PyHConfig {
             .map_err(to_py_err)?;
             Ok(d.clone().unbind())
         } else {
-            let my_tree = base.tree.tree.read().unwrap();
-            let other_tree = target_base.tree.tree.read().unwrap();
+            let my_tree = base.read_tree()?;
+            let other_tree = target_base.read_tree()?;
             let delta_tree = hier_config_core::remediation::config_to_get_to(&my_tree, &other_tree)
                 .map_err(to_py_err)?;
             drop(my_tree);
@@ -701,8 +683,8 @@ impl PyHConfig {
         let config_base = config_hconfig.as_ref();
         config_base.tree.sync_rules(py)?;
 
-        let my_tree = base.tree.tree.read().unwrap();
-        let cfg_tree = config_base.tree.tree.read().unwrap();
+        let my_tree = base.read_tree()?;
+        let cfg_tree = config_base.read_tree()?;
         let (fut_tree, report) = hier_config_core::remediation::future_with_report(
             &my_tree,
             &cfg_tree,
@@ -714,7 +696,7 @@ impl PyHConfig {
 
         let fut_root = fut_tree.root;
         let shared_tree = Arc::new(SharedTree::new(fut_tree, base.tree.platform));
-        shared_tree.set_driver(slf.driver_obj.clone_ref(py));
+        shared_tree.set_driver(slf.driver_obj.clone_ref(py))?;
         shared_tree.sync_rules(py)?;
         let hconfig = Py::new(
             py,
@@ -728,7 +710,7 @@ impl PyHConfig {
                 },
             ),
         )?;
-        let mut handle = shared_tree.root_handle.write().unwrap();
+        let mut handle = shared_tree.root_handle.write_py()?;
         *handle = Some(hconfig.clone_ref(py).into_any());
         drop(handle);
 
@@ -756,12 +738,12 @@ impl PyHConfig {
         let py = slf.py();
         let base = slf.as_ref();
         let cloned_tree = {
-            let tree = base.tree.tree.read().unwrap();
+            let tree = base.read_tree()?;
             tree.clone()
         };
         let cloned_root = cloned_tree.root;
         let shared_tree = Arc::new(SharedTree::new(cloned_tree, base.tree.platform));
-        shared_tree.set_driver(slf.driver_obj.clone_ref(py));
+        shared_tree.set_driver(slf.driver_obj.clone_ref(py))?;
         shared_tree.sync_rules(py)?;
         let hconfig = Py::new(
             py,
@@ -775,7 +757,7 @@ impl PyHConfig {
                 },
             ),
         )?;
-        let mut handle = shared_tree.root_handle.write().unwrap();
+        let mut handle = shared_tree.root_handle.write_py()?;
         *handle = Some(hconfig.clone_ref(py).into_any());
         drop(handle);
         Ok(hconfig.into_any())
@@ -789,11 +771,11 @@ impl PyHConfig {
         }
 
         let driver = slf.driver_obj.clone_ref(py);
-        let platform = Self::parse_platform(py, &driver);
+        let platform = Self::parse_platform(py, &driver)?;
 
         let slf_base = slf.as_ref();
         let new_tree = {
-            let tree = slf_base.tree.tree.read().unwrap();
+            let tree = slf_base.read_tree()?;
             tree.with_tags(&tag_set).map_err(to_py_err)?
         };
 
@@ -842,20 +824,20 @@ impl PyHConfig {
         let base = slf.as_ref();
         base.tree.sync_rules(py)?;
         let unused_ids = {
-            let tree = base.tree.tree.read().unwrap();
-            tree.unused_objects()
+            let tree = base.read_tree()?;
+            tree.try_unused_objects().map_err(to_py_err)?
         };
         let items = SharedTree::get_or_create_children_batch(&base.tree, py, &unused_ids)?;
         crate::base::items_sequence(py, items)
     }
 
-    pub fn set_order_weight(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+    pub fn set_order_weight(slf: PyRef<'_, Self>) -> PyResult<PyRef<'_, Self>> {
         let base = slf.as_ref();
         {
-            let mut tree = base.tree.tree.write().unwrap();
+            let mut tree = base.write_tree()?;
             tree.set_order_weight();
         }
-        slf
+        Ok(slf)
     }
 
     #[pyo3(signature = (*, sectional_exiting = false))]
@@ -996,8 +978,8 @@ impl PyHConfig {
         // `HConfigChild` handles would allocate one Python object per line and
         // then pay five attribute round-trips on each of them.
         let ordered: Vec<DumpRow> = {
-            let tree = base.tree.tree.read().unwrap();
-            let node_data = base.tree.node_data.read().unwrap();
+            let tree = base.read_tree()?;
+            let node_data = base.tree.node_data.read_py()?;
             // Every node under the root becomes one row, so the arena's own length is
             // an upper bound on the row count. Calling `all_children` purely to size
             // this would walk the whole tree an extra time and allocate a `Vec` to
@@ -1117,38 +1099,36 @@ impl PyHConfig {
         Ok(dump_obj.unbind())
     }
 
-    pub fn __deepcopy__(slf: PyRef<'_, Self>, _memo: &Bound<'_, PyAny>) -> PyResult<Py<Self>> {
+    pub fn __deepcopy__(slf: PyRef<'_, Self>, memo: &Bound<'_, PyDict>) -> PyResult<Py<Self>> {
         let py = slf.py();
         let base = slf.as_ref();
         let cloned_tree = {
-            let tree = base.tree.tree.read().unwrap();
+            let tree = base.read_tree()?;
             tree.clone()
         };
         let root_id = cloned_tree.root;
         let platform = base.tree.platform;
         let new_shared_tree = Arc::new(SharedTree::new(cloned_tree, platform));
 
-        {
-            let data = base.tree.node_data.read().unwrap();
-            let mut new_data = new_shared_tree.node_data.write().unwrap();
-            let copy_mod = py.import("copy")?;
-            let deepcopy_fn = copy_mod.getattr("deepcopy")?;
-            for (&nid, nd) in data.iter() {
-                let mut copied = crate::tree::NodePyData::default();
-                if let Some(facts) = &nd.facts {
-                    copied.facts = Some(deepcopy_fn.call1((facts,))?.extract()?);
-                }
-                if let Some(comments) = &nd.comments {
-                    copied.comments = Some(deepcopy_fn.call1((comments,))?.extract()?);
-                }
-                if let Some(instances) = &nd.instances {
-                    copied.instances = Some(deepcopy_fn.call1((instances,))?.extract()?);
-                }
-                new_data.insert(nid, copied);
-            }
-        }
-
+        // Clone Python references under the lock, never execute Python copy hooks
+        // there: a fact's __deepcopy__ may access the original configuration.
+        let snapshot: Vec<_> = {
+            let data = base.tree.node_data.read_py()?;
+            data.iter()
+                .map(|(&nid, nd)| {
+                    (
+                        nid,
+                        NodePyData {
+                            facts: nd.facts.as_ref().map(|v| v.clone_ref(py)),
+                            comments: nd.comments.as_ref().map(|v| v.clone_ref(py)),
+                            instances: nd.instances.as_ref().map(|v| v.clone_ref(py)),
+                        },
+                    )
+                })
+                .collect()
+        };
         let new_driver = slf.driver_obj.clone_ref(py);
+        new_shared_tree.set_driver(new_driver.clone_ref(py))?;
         let new_conf = Py::new(
             py,
             (
@@ -1161,9 +1141,24 @@ impl PyHConfig {
                 },
             ),
         )?;
-        let mut handle = new_shared_tree.root_handle.write().unwrap();
-        *handle = Some(new_conf.clone_ref(py).into_any());
-        drop(handle);
+        *new_shared_tree.root_handle.write_py()? = Some(new_conf.clone_ref(py).into_any());
+        // Register the shell before traversing facts so back-references resolve to
+        // this object, and carry the caller's memo through every recursive copy.
+        memo.set_item(slf.as_ptr() as usize, new_conf.bind(py))?;
+        let deepcopy = py.import("copy")?.getattr("deepcopy")?;
+        for (nid, nd) in snapshot {
+            let mut copied = NodePyData::default();
+            if let Some(facts) = nd.facts {
+                copied.facts = Some(deepcopy.call1((facts, memo))?.extract()?);
+            }
+            if let Some(comments) = nd.comments {
+                copied.comments = Some(deepcopy.call1((comments, memo))?.extract()?);
+            }
+            if let Some(instances) = nd.instances {
+                copied.instances = Some(deepcopy.call1((instances, memo))?.extract()?);
+            }
+            new_shared_tree.node_data.write_py()?.insert(nid, copied);
+        }
         Ok(new_conf)
     }
 
@@ -1193,13 +1188,13 @@ impl PyHConfig {
         ))
     }
 
-    fn __str__(slf: PyRef<'_, Self>) -> String {
+    fn __str__(slf: PyRef<'_, Self>) -> PyResult<String> {
         // Mirrors the reference implementation, which joins ``str(child)`` over
         // the *direct* children only. Each child already renders its own
         // subtree, so walking every descendant here would emit nested lines
         // twice. ``lines`` skips the root's own text and exit, making it
         // exactly equivalent.
-        slf.as_ref().lines(true).join("\n")
+        Ok(slf.as_ref().lines(true)?.join("\n"))
     }
 
     fn __eq__(slf: PyRef<'_, Self>, other: &Bound<'_, PyAny>) -> PyResult<PyObject> {

@@ -3,9 +3,9 @@
 hier_config exposes exactly two ways for a consumer to extend driver
 behavior without forking the library:
 
-1. **Post-load callbacks** -- ``HConfigDriverRules.post_load_callbacks``, the
-   only callback collection. Stock/project-defined callbacks run natively in
-   Rust, so anything registered here is purely *additive*.
+1. **Callbacks** -- ``HConfigDriverRules.post_load_callbacks`` and
+   ``remediation_transform_callbacks``. Stock platform parsing callbacks run
+   natively in Rust; user post-load callbacks run afterward.
 2. **Code-injected rules** -- the fifteen rule collections on
    ``HConfigDriverRules`` plus the scalar ``indentation``.
 
@@ -74,9 +74,8 @@ def _driver() -> HConfigDriverBase:
 def test_extension_surface_is_fully_enumerated() -> None:
     """Pin the extension surface so a new rules field forces a doc update.
 
-    ``post_load_callbacks`` is the only callback collection; everything else on
-    ``HConfigDriverRules`` is a code-injectable rule list, apart from the
-    scalar ``indentation``.
+    Both callback collections and the code-injectable rule lists are exposed
+    on ``HConfigDriverRules``, alongside the scalar ``indentation``.
     """
     injectable_rule_fields = {
         "full_text_sub",
@@ -543,22 +542,12 @@ def test_negation_prefix_override_is_honored() -> None:
     assert _remediate(driver, "vlan 5\n", "") == ("undo vlan 5",)
 
 
-def test_config_preprocessor_override_is_not_honored() -> None:
-    """``config_preprocessor`` is resolved natively; the override never runs."""
-    calls: list[str] = []
-
-    class Driver(HConfigDriverCiscoIOS):
-        """Driver overriding the config preprocessor."""
-
-        @staticmethod
-        def config_preprocessor(config_text: str) -> str:
-            calls.append(config_text)
-            return config_text.replace("SECRET", "REDACTED")
-
-    config = get_hconfig(Driver(), "hostname SECRET\n")
-
-    assert config.dump_simple() == ("hostname SECRET",)
-    assert not calls
+def test_explicit_preprocessing_redacts_before_parsing() -> None:
+    """Custom text rewriting happens explicitly rather than in an ignored hook."""
+    config = get_hconfig(
+        HConfigDriverCiscoIOS(), "hostname SECRET\n".replace("SECRET", "REDACTED")
+    )
+    assert config.dump_simple() == ("hostname REDACTED",)
 
 
 def _unreachable_hook(*_args: object, **_kwargs: object) -> None:

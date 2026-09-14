@@ -1,12 +1,67 @@
 """Probe script for verifying parity with the legacy object protocol."""
 
-# pylint: disable=broad-exception-caught,too-many-try-statements,too-many-statements,too-few-public-methods
+from __future__ import annotations
 
 import copy
-import pickle
+import pickle  # ruff: ignore[suspicious-pickle-import] - round-trip only objects constructed here
+import sys
+from typing import TYPE_CHECKING, cast
+
 from hier_config import HConfigChild, get_hconfig
 from hier_config.base import HConfigBase
 from hier_config.models import Platform
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from hier_config import HConfig
+
+_CUSTOM_ATTRIBUTE = "custom_attr"
+
+
+def _attempt(operation: Callable[[], str]) -> str:
+    """Capture backend-specific failures as parity data rather than aborting."""
+    try:
+        return operation()
+    # Every exception is recorded, including unexpected backend failures.
+    except Exception as exc:  # ruff: ignore[blind-except]  # pylint: disable=broad-exception-caught
+        return f"{type(exc).__name__}: {exc}"
+
+
+def _set_attribute(child: HConfigChild) -> str:
+    try:
+        setattr(child, _CUSTOM_ATTRIBUTE, "hello_probe")
+    except AttributeError:
+        return "AttributeError (has __slots__)"
+    return str(getattr(child, _CUSTOM_ATTRIBUTE))
+
+
+def _unpickle(config: HConfig) -> HConfig:
+    # The payload is produced locally immediately before loading, never input.
+    return cast("HConfig", pickle.loads(pickle.dumps(config)))  # ruff: ignore[suspicious-pickle-usage]
+
+
+def _subclass() -> str:
+    # A single method is sufficient to prove that native nodes are subclassable.
+    class CustomChild(HConfigChild):  # pylint: disable=too-few-public-methods
+        """Subclass probe."""
+
+        def custom_method(self) -> str:
+            return f"custom: {self.text}"
+
+    return f"OK {CustomChild.__name__}"
+
+
+def _representation(value: object) -> str:
+    try:
+        return repr(value)
+    # Preserve backend-specific repr failures as baseline data.
+    except Exception as exc:  # ruff: ignore[blind-except]  # pylint: disable=broad-exception-caught
+        return type(exc).__name__
+
+
+def _is_base(value: object) -> bool:
+    return isinstance(value, HConfigBase)
 
 
 def probe() -> str:
@@ -14,90 +69,53 @@ def probe() -> str:
     c = hc.add_child("interface GigabitEthernet0/1")
     c.add_child("ip address 10.0.0.1 255.255.255.0")
 
-    results = []
+    results: list[str] = []
 
     # 1. Object identity
     first_get = hc.children[0]
     second_get = hc.children[0]
-    results.append(f"identity: {first_get is second_get}")
-
-    # 2. setattr (__slots__ behavior)
-    try:
-        c.custom_attr = "hello_probe"
-        results.append(f"setattr: {c.custom_attr}")
-    except AttributeError:
-        results.append("setattr: AttributeError (has __slots__)")
-    except Exception as e:
-        results.append(f"setattr: {type(e).__name__}: {e}")
+    results.extend(
+        (
+            f"identity: {first_get is second_get}",
+            f"setattr: {_attempt(lambda: _set_attribute(c))}",
+        )
+    )
 
     # 3. facts dict
     c.facts["custom_key"] = "hello_facts"
-    results.append(f"facts: {c.facts.get('custom_key')}")
-
-    # 4. deepcopy
-    try:
-        d = copy.deepcopy(hc)
-        results.append(f"deepcopy: OK len={len(list(d.all_children()))}")
-    except Exception as e:
-        results.append(f"deepcopy: {type(e).__name__}: {e}")
-
-    # 5. pickle
-    try:
-        p = pickle.dumps(hc)
-        loaded = pickle.loads(p)
-        results.append(f"pickle: OK len={len(list(loaded.all_children()))}")
-    except Exception as e:
-        results.append(f"pickle: {type(e).__name__}: {e}")
-
-    # 6. subclassing
-    try:
-
-        class CustomChild(HConfigChild):
-            """Subclass probe."""
-
-            def custom_method(self):
-                return "custom"
-
-        results.append(f"subclass: OK {CustomChild.__name__}")
-    except Exception as e:
-        results.append(f"subclass: {type(e).__name__}: {e}")
+    results.extend(
+        (
+            f"facts: {c.facts.get('custom_key')}",
+            "deepcopy: "
+            + _attempt(lambda: f"OK len={len(list(copy.deepcopy(hc).all_children()))}"),
+            "pickle: "
+            + _attempt(lambda: f"OK len={len(list(_unpickle(hc).all_children()))}"),
+            f"subclass: {_attempt(_subclass)}",
+        )
+    )
 
     # 7. tags (frozenset & tags_add)
     c.tags_add("tag_x")
-    results.append(f"tags_type: {type(c.tags).__name__}")
-    results.append(f"tags_contain: {'tag_x' in c.tags}")
+    results.extend(
+        (f"tags_type: {type(c.tags).__name__}", f"tags_contain: {'tag_x' in c.tags}")
+    )
 
     # 8. live comments mutation
     c.comments.add("comment_x")
-    results.append(f"comments_mutation: {'comment_x' in c.comments}")
-
-    # 9. children container
-    results.append(f"children_type: {type(c.children).__name__}")
-
-    # 10. vars / __dict__
-    results.append(f"has_dict: {hasattr(c, '__dict__')}")
-
-    # 11. class hierarchy
-    results.append(f"hc_is_child: {isinstance(hc, HConfigChild)}")
-    results.append(f"hc_is_base: {isinstance(hc, HConfigBase)}")
-    results.append(f"child_is_base: {isinstance(c, HConfigBase)}")
-
-    # 12. repr
-    try:
-        child_repr = repr(c)
-        results.append(f"child_repr: {child_repr}")
-    except Exception as e:
-        results.append(f"child_repr: {type(e).__name__}")
-
-    try:
-        hc_repr = repr(hc)
-        results.append(f"hc_repr: {hc_repr}")
-    except Exception as e:
-        results.append(f"hc_repr: {type(e).__name__}")
-
-    output = "\n".join(results)
-    return output
+    results.extend(
+        (
+            f"comments_mutation: {'comment_x' in c.comments}",
+            f"children_type: {type(c.children).__name__}",
+            f"has_dict: {hasattr(c, '__dict__')}",
+            f"hc_is_child: {isinstance(hc, HConfigChild)}",
+            f"hc_is_base: {_is_base(hc)}",
+            f"child_is_base: {_is_base(c)}",
+            f"child_repr: {_representation(c)}",
+            f"hc_repr: {_representation(hc)}",
+        )
+    )
+    return "\n".join(results)
 
 
 if __name__ == "__main__":
-    print(probe())
+    sys.stdout.write(f"{probe()}\n")

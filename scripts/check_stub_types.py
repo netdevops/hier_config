@@ -369,7 +369,7 @@ def _is_empty(value: object) -> bool:
     return False
 
 
-def _configs() -> Iterator[tuple[str, object]]:
+def _configs() -> Iterator[tuple[str, HConfig]]:
     from hier_config import HConfig, Platform
 
     prefixes = {
@@ -414,17 +414,17 @@ def build_probes() -> dict[str, list[object]]:
             "WorkflowRemediation",
         )
     }
-    by_platform: dict[str, list[object]] = {}
+    by_platform: dict[str, list[HConfig]] = {}
     for platform, config in _configs():
         by_platform.setdefault(platform, []).append(config)
         probes["HConfig"].append(config)
         probes["HConfigBase"].append(config)
-        children: list[object] = list(config.all_children())  # type: ignore[attr-defined]
+        children: list[object] = list(config.all_children())
         probes["HConfigChild"].extend(children[:40])
         probes["HConfigBase"].extend(children[:40])
-        probes["HConfigChildren"].append(config.children)  # type: ignore[attr-defined]
+        probes["HConfigChildren"].append(config.children)
         try:
-            view = HConfigView(config)  # type: ignore[arg-type]
+            view = HConfigView(config)
         except PROBE_ERRORS:  # pragma: no cover - platform specific
             continue
         try:
@@ -442,7 +442,7 @@ def build_probes() -> dict[str, list[object]]:
     return probes
 
 
-def _workflow_probes(by_platform: dict[str, list[object]]) -> list[object]:
+def _workflow_probes(by_platform: dict[str, list[HConfig]]) -> list[object]:
     """Pair same-platform configs so remediation and rollback are exercised."""
     from hier_config.workflows import WorkflowRemediation
 
@@ -450,7 +450,7 @@ def _workflow_probes(by_platform: dict[str, list[object]]) -> list[object]:
     for configs in by_platform.values():
         for running, generated in itertools.pairwise(configs):
             try:
-                workflow = WorkflowRemediation(running, generated)  # type: ignore[arg-type]
+                workflow = WorkflowRemediation(running, generated)
             except PROBE_ERRORS:  # pragma: no cover - platform specific
                 continue
             built.append(workflow)
@@ -458,7 +458,7 @@ def _workflow_probes(by_platform: dict[str, list[object]]) -> list[object]:
     return built
 
 
-def _plugin_workflow_probes(by_platform: dict[str, list[object]]) -> list[object]:
+def _plugin_workflow_probes(by_platform: dict[str, list[HConfig]]) -> list[object]:
     """Build one workflow carrying a plugin so `plugins` is non-empty.
 
     Without this every corpus workflow reports an empty tuple, which would
@@ -474,8 +474,8 @@ def _plugin_workflow_probes(by_platform: dict[str, list[object]]) -> list[object
             continue
         try:
             workflow = WorkflowRemediation(
-                configs[0],  # type: ignore[arg-type]
-                configs[1],  # type: ignore[arg-type]
+                configs[0],
+                configs[1],
                 plugins=[_noop],
             )
         except PROBE_ERRORS:  # pragma: no cover - platform specific

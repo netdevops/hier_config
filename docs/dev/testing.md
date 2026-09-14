@@ -4,27 +4,114 @@ hier_config follows **Test-Driven Development (TDD)**: write a failing test that
 
 ## Commands
 
-All commands use uv:
+Install Python dependencies with `uv sync --locked --extra yaml` and build the
+extension with `uv run --no-sync maturin develop --release --locked` first.
+Use `--no-sync` afterward: automatic synchronization can replace the fresh
+extension with an older cached wheel. Rebuild after `uv sync` or Rust edits;
+otherwise Python tests can exercise the old binary. Source builds need
+Python 3.10+, a linker, and Rust meeting the MSRV in `Cargo.toml`.
 
 ```bash
-# Full lint + test suite (what CI runs)
-uv run ./scripts/build.py lint-and-test
+# Python lint + test suite (native gates are separate)
+uv run --no-sync ./scripts/build.py lint-and-test
 
 # Tests only (95% coverage required)
-uv run ./scripts/build.py pytest --coverage
+uv run --no-sync ./scripts/build.py pytest --coverage
 
 # A single test
-uv run pytest tests/integration/test_cisco_ios.py::test_delete_sectional_exit_regression -v
+uv run --no-sync pytest tests/integration/test_cisco_ios.py::test_delete_sectional_exit_regression -v
 
 # A single file
-uv run pytest tests/integration/test_cisco_ios.py -v
+uv run --no-sync pytest tests/integration/test_cisco_ios.py -v
 
 # Only unit tests / only integration tests
-uv run pytest tests/unit/ -v
-uv run pytest tests/integration/ -v
+uv run --no-sync pytest tests/unit/ -v
+uv run --no-sync pytest tests/integration/ -v
 ```
 
 Coverage must stay at or above **95%** (`--cov-fail-under=95`, enforced by `scripts/build.py` and CI).
+
+## Native and boundary tests
+
+The implementation is split between `crates/hier_config_core` (algorithms,
+parsing, formats, views) and `crates/hier_config_py` (Python bindings).
+Python coverage does not measure either crate. The separate Rust-core line
+coverage gate currently has a **47% floor**, not the Python gate's 95%.
+Do not lower either gate when moving behavior across the boundary.
+
+```bash
+cargo fmt --check
+cargo clippy --locked --all-targets --all-features -- -D warnings
+cargo test --locked --workspace --all-features
+cargo llvm-cov --locked --package hier_config_core --fail-under-lines 47
+uv run --no-sync pytest tests/native/ tests/parity/ -v
+```
+
+`cargo llvm-cov` requires the cargo-llvm-cov tool and `llvm-tools-preview`.
+CI additionally checks the declared MSRV, Rust docs, dependency policy, clean
+wheel installation, and supported Python/OS combinations.
+
+- Rust unit/integration tests cover implementation behavior without Python.
+- `tests/native/` covers extension imports, signatures, callbacks, handles,
+  native fast paths, and the Python runner for the shared corpus.
+- `tests/parity/` compares object protocols against the recorded upstream
+  behavior. Intentional differences must be explicit, reviewed expectations,
+  not blanket skips.
+- Stub freshness, `stubtest`, and observed return-type checks complement runtime
+  tests. Regenerate stubs after changing the PyO3 surface.
+
+### Shared remediation corpus
+
+Each `testdata/cases/<platform>/<case>/` contains `case.json`, `running.conf`,
+`intended.conf`, and optional `remediation.conf`. Both
+`crates/hier_config_core/tests/corpus.rs` and `tests/native/test_corpus.py`
+consume these cases. Missing `remediation.conf` means the expected remediation
+is empty. Indentation in the expected output is significant.
+
+Keep `assert_rollback` enabled: assert exact remediation, apply it, compute and
+apply rollback, and assert no diff from the original. Disable rollback only
+for a documented prediction limitation, never to hide a regression. Add
+Python-boundary tests too when a fix involves wrapper identity, exceptions,
+constructors, or callback dispatch.
+
+Preserve the source test's setup, not just its text and expected output:
+`cisco_nxos/line_console_terminal_settings_negation_negate_with` carries its
+upstream injected negation rules in case metadata, rather than changing stock
+NX-OS defaults. Both that case and `cisco_xr/template_block_indent_adjust`
+select `loader: "lines"` to match the source tests' `from_lines()` calls instead
+of text preprocessing. Their manifest `source` entries identify the exact
+upstream test at `upstream/next@0866dc2`.
+The expected outputs are unchanged; the correction is to loader/custom-rule
+setup and provenance, **not an intentional divergence**. See
+`testdata/README.md` for the manifest schema. Corpus coverage alone still does
+not prove universal upstream parity.
+
+When moving a Python assertion into Rust, retain equivalent assertions and
+identify the target with a `displaced_by` marker (`corpus:<path>` or a native
+test target). `scripts/check_displacement_markers.py` validates targets.
+A marker alone does not prove equivalent coverage; review the assertions.
+
+### Structured-format reference provenance
+
+The format fixtures distinguish an independent reference from native regression
+snapshots:
+
+- `testdata/formats/expected.json` contains IOS/EOS and error expectations
+  captured from the fingerprinted pure-Python source at
+  `upstream/next@0866dc2316443909edea2d629117b44a3a9ed472`.
+- `testdata/formats/native-v1.json` retains historical Junos expectations
+  from `fa49af6fffd1a529807c0e14aeb5e6ff9dc83a6c`. These are native regression
+  snapshots, **not independent upstream parity evidence**: the Python
+  reference rejects that unflattened JSON/XML remediation input because it
+  expects set/delete syntax.
+
+`scripts/gen_formats_corpus.py --check` compares the current backend to both
+frozen sets; the Rust harness likewise preserves their disjoint cases. Only
+the stable `InvalidConfigError` prefixes for malformed JSON/XML are normalized,
+not semantic outputs. Default invocation refuses to overwrite references.
+`--capture-reference` requires the exact fingerprinted pure-Python archive on
+`PYTHONPATH`; it must not capture the implementation under test as its own
+oracle. The script cannot regenerate the native snapshots.
 
 ## Conventions
 
@@ -59,10 +146,10 @@ Performance benchmarks live in `tests/benchmarks/test_benchmarks.py` and are **s
 
 ```bash
 # All benchmarks, with timing output
-uv run pytest -m benchmark -v -s
+uv run --no-sync pytest -m benchmark -v -s
 
 # One benchmark
-uv run pytest -m benchmark -k test_parse_large_ios_config -v -s
+uv run --no-sync pytest -m benchmark -k test_parse_large_ios_config -v -s
 ```
 
 If a benchmark fails its time threshold, investigate the relevant code path for performance regressions.
@@ -78,10 +165,10 @@ Two tests consume it:
 
 ```bash
 # Diff against a live v3 install
-uv run pytest -m v3_differential -v
+uv run --no-sync pytest -m v3_differential -v
 
 # Re-record the baseline after changing v3_scenarios.py
-uv run ./scripts/generate_v3_baseline.py
+uv run --no-sync ./scripts/generate_v3_baseline.py
 ```
 
 After changing `v3_scenarios.py`, regenerate the baseline and **review the diff**. A changed value for an existing scenario means v4 no longer matches v3 -- fix the compatibility surface, not the recording.

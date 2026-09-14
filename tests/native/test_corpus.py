@@ -6,26 +6,38 @@ public API (get_hconfig, config_to_get_to, future, unified_diff).
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
-from typing import Any
+from typing import Literal
 
 import pytest
+from pydantic import TypeAdapter
 
-from hier_config import get_hconfig
-from hier_config.models import Platform
+from hier_config import HConfig, get_hconfig_driver
+from hier_config.models import BaseModel, NegationRule, Platform
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CASES_DIR = REPO_ROOT / "testdata" / "cases"
 
 
-def _discover_cases() -> list[tuple[str, Path, dict[str, Any]]]:
+class CaseManifest(BaseModel):
+    """Record the source scenario's inputs, rather than only its expected output."""
+
+    platform: str
+    description: str
+    tags: tuple[str, ...] = ()
+    assert_rollback: bool = True
+    loader: Literal["text", "lines"] = "text"
+    negation: tuple[NegationRule, ...] = ()
+    source: str = ""
+
+
+def _discover_cases() -> list[tuple[str, Path, dict[str, object]]]:
     """Discover all valid case directories containing case.json."""
     if not CASES_DIR.is_dir():
         msg = f"Corpus directory not found: {CASES_DIR}"
         raise RuntimeError(msg)
 
-    found_cases: list[tuple[str, Path, dict[str, Any]]] = []
+    found_cases: list[tuple[str, Path, dict[str, object]]] = []
     for platform_dir in sorted(CASES_DIR.iterdir()):
         if not platform_dir.is_dir():
             continue
@@ -35,7 +47,7 @@ def _discover_cases() -> list[tuple[str, Path, dict[str, Any]]]:
             manifest_file = case_dir / "case.json"
             if not manifest_file.is_file():
                 continue
-            manifest: dict[str, Any] = json.loads(
+            manifest = TypeAdapter(dict[str, object]).validate_json(
                 manifest_file.read_text(encoding="utf-8")
             )
             case_id = f"{platform_dir.name}/{case_dir.name}"
@@ -72,20 +84,26 @@ def _read_config_files(case_dir: Path) -> tuple[str, str, tuple[str, ...]]:
 def test_corpus_case(
     case_id: str,
     case_dir: Path,
-    manifest: dict[str, Any],
+    manifest: dict[str, object],
 ) -> None:
     """Run a single corpus round-trip and rollback test case."""
     del case_id
-    platform = Platform[manifest["platform"]]
+    case = CaseManifest.model_validate(manifest)
+    driver = get_hconfig_driver(Platform[case.platform])
+    driver.rules.negation[:0] = case.negation
     running_text, intended_text, expected_lines = _read_config_files(case_dir)
 
-    running = get_hconfig(platform, running_text)
-    intended = get_hconfig(platform, intended_text)
+    if case.loader == "lines":
+        running = HConfig.from_lines(driver, running_text.splitlines())
+        intended = HConfig.from_lines(driver, intended_text.splitlines())
+    else:
+        running = HConfig.from_text(driver, running_text)
+        intended = HConfig.from_text(driver, intended_text)
     remediation = running.config_to_get_to(intended)
 
     assert remediation.dump_simple() == expected_lines
 
-    if manifest.get("assert_rollback", True):
+    if case.assert_rollback:
         future = running.future(remediation)
         rollback = future.config_to_get_to(running)
         restored = future.future(rollback)

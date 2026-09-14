@@ -6,6 +6,10 @@ This file is the canonical quick reference for AI coding agents (and humans) wor
 
 hier_config is a Python library that compares network device configurations (running vs intended) and generates minimal remediation commands. It parses config text into hierarchical trees and computes diffs respecting vendor-specific syntax rules. Runtime dependencies are deliberately minimal (`pydantic` only).
 
+The Rust rewrite ships as **v4 in this repository**. Rust owns the engine and
+views; PyO3 exposes them through thin Python facades. PyYAML is optional via
+`hier-config[yaml]`. There is no pure-Python engine fallback.
+
 ## Branching Strategy
 
 - `master` — stable branch for v3.x releases and maintenance.
@@ -14,59 +18,82 @@ hier_config is a Python library that compares network device configurations (run
 
 ## Build & Test Commands
 
-All commands use **uv** (not pip):
+Use **uv** for Python dependencies and **maturin** for extension builds.
+Source builds require Python 3.10+, a linker, and Rust meeting the MSRV in
+`Cargo.toml` (currently 1.98). Before Python checks, and after Rust edits:
 
 ```bash
-# Full lint + test suite (equivalent to CI's lint + pytest --coverage steps)
-uv run ./scripts/build.py lint-and-test
+uv sync --locked --extra yaml
+uv run --no-sync maturin develop --release --locked
+
+# Python lint + test suite (native gates are separate)
+uv run --no-sync ./scripts/build.py lint-and-test
 
 # Lint only (ruff, mypy, pyright, pylint, yamllint, flynt — run in parallel)
-uv run ./scripts/build.py lint
+uv run --no-sync ./scripts/build.py lint
 
 # Tests only (95% coverage required)
-uv run ./scripts/build.py pytest --coverage
+uv run --no-sync ./scripts/build.py pytest --coverage
 
 # Run a single test
-uv run pytest tests/integration/test_cisco_xr.py::test_name -v
+uv run --no-sync pytest tests/integration/test_cisco_xr.py::test_name -v
 
 # Run a single test file
-uv run pytest tests/integration/test_cisco_xr.py -v
+uv run --no-sync pytest tests/integration/test_cisco_xr.py -v
 
 # Run only unit tests / only integration tests
-uv run pytest tests/unit/ -v
-uv run pytest tests/integration/ -v
+uv run --no-sync pytest tests/unit/ -v
+uv run --no-sync pytest tests/integration/ -v
 
 # Auto-fix formatting
-uv run ruff format hier_config tests scripts
+uv run --no-sync ruff format hier_config tests scripts
 
 # Validate docs (CI runs this unconditionally on every push/PR)
-uv run mkdocs build --strict
+uv run --no-sync mkdocs build --strict
 
 # Benchmarks (deselected by default via the `benchmark` marker)
-uv run pytest -m benchmark -v -s
+uv run --no-sync pytest -m benchmark -v -s
 
 # Diff this tree against a live hier-config v3 install
 # (deselected by default via the `v3_differential` marker; builds a venv)
-uv run pytest -m v3_differential -v
+uv run --no-sync pytest -m v3_differential -v
+
+# Native gates
+cargo fmt --check
+cargo clippy --locked --all-targets --all-features -- -D warnings
+cargo test --locked --workspace --all-features
+cargo llvm-cov --locked --package hier_config_core --fail-under-lines 47
 ```
 
 CI facts that matter for changes:
 
 - **Python matrix**: CI tests on Python 3.10–3.14 and ruff targets `py310` — write 3.10-compatible syntax even though your local interpreter may be newer.
 - **Docs job**: CI builds docs with `mkdocs build --strict` on every push/PR using `docs/requirements.txt` (pip, not uv). Adding an mkdocs plugin requires updating **both** `pyproject.toml` and `docs/requirements.txt`.
-- **Lockfile**: CI syncs with `uv sync --locked`, so any dependency change must ship a regenerated `uv.lock`. Use `uv add` / `uv add --dev` (or `uv lock` after editing `pyproject.toml` by hand) and commit the updated lockfile.
+- **Lockfiles**: dependency changes must update `uv.lock` and/or `Cargo.lock`. Use `uv add` / `uv add --dev` (or `uv lock` after editing `pyproject.toml`); native gates use `--locked`.
+
+Use `--no-sync` after a manual maturin rebuild: automatic uv synchronization
+can replace the fresh extension with a cached wheel. Rebuild after any later
+`uv sync`.
 
 ## Architecture in Brief
 
 Three-layer design — full detail in [docs/dev/architecture.md](docs/dev/architecture.md):
 
-- **Tree** (`base.py`, `root.py`, `child.py`, `children.py`, `tree_algorithms.py`, `constructors.py`): `HConfig` root and `HConfigChild` nodes; key operations `remediation()`, `future()`, `future_with_report()`, `unified_diff()`, `to_lines()`. Constructors are classmethods: `HConfig.from_text()`, `HConfig.from_lines()`, `HConfig.from_dump()`, `HConfig.from_json()`, `HConfig.from_xml()`. Supporting modules: `formats.py` (JSON/XML ingestion and rendering, NETCONF `edit-config` XML, gNMI-style JSON via `GnmiRemediation`), `plugins.py` (`RemediationPlugin` extension point), `exceptions.py` (exception hierarchy under `HierConfigError`), `utils.py` (file/YAML rule loaders).
+- **Native core** (`crates/hier_config_core/src/`): arena-backed trees, parser, remediation/future/diff algorithms, platform operations, structured formats and views. The crate works without Python.
+- **Python boundary** (`crates/hier_config_py/src/`): PyO3 handles, exception translation, Python callbacks, and native views/workflows. `hier_config/{base,root,child,children,workflows}.py` and platform view files are thin facades; `tree_algorithms.py` retains only `FutureReport`. Keep the compiled extension and shipped `.pyi` stubs synchronized.
 - **Driver** (`platforms/`): each platform subclasses `HConfigDriverBase` and overrides `_instantiate_rules()` returning `HConfigDriverRules` — typed, frozen Pydantic rule models matched against config lineage via `MatchRule` tuples. Drivers register in `registry.py` (`get_hconfig_driver()`, `register_driver()`, `unregister_driver()`, `get_registered_platforms()`) and expose their config view via the `view_class` attribute. Registry keys are canonicalized to uppercase platform names (`Platform.X.name`); string lookups are case-insensitive (#284/#295).
 - **Workflow** (`workflows.py`, `reporting.py`): `WorkflowRemediation` exposes `remediation_config` / `rollback_config` plus structured renderings `remediation_netconf_xml()` / `remediation_json()`; `RemediationReporter` aggregates changes across devices.
 
 Supported platforms (`Platform` enum in `models.py`): ARISTA_EOS, ARUBA_AOSCX, CISCO_IOS, CISCO_NXOS, CISCO_XR, FORTINET_FORTIOS, GENERIC, HP_COMWARE5, HP_PROCURVE, HUAWEI_VRP, JUNIPER_JUNOS, NOKIA_SRL, VYOS.
 
 ## Hard Rules
+
+Native migration contracts: custom `config_preprocessor()` is rejected along
+with `idempotent_for()`, `negate_with()`, `sectional_exit()`, and `swap_negation()`.
+Preprocess custom text explicitly before `HConfig.from_text()`; marked stock
+preprocessors remain callable helpers. Built-in device-view subclasses remain
+supported, but Generic native views, direct interface-view construction, and
+old capability-mixin `issubclass()` relationships do not.
 
 These are enforced by CI and by reviewers; violations block merges:
 
@@ -75,6 +102,11 @@ These are enforced by CI and by reviewers; violations block merges:
 3. **Lint**: ruff `select = ["ALL"]` with preview, line length 88. Never loosen lint or coverage configuration to make a change pass.
 4. **TDD**: write a failing test first, confirm it fails for the right reason, implement minimally, run the full suite. 95% coverage floor.
 5. **Tests**: flat function-based (no classes except benchmarks); unit tests mirror the source in `tests/unit/` (config views in `tests/unit/platforms/views/`), end-to-end driver scenarios go in `tests/integration/test_<platform>.py`; fixtures are module-scoped in the relevant `conftest.py` reading the sibling `fixtures/` directory; the dominant idiom is `HConfig.from_lines()` → `remediation()` → assert `to_lines()` tuple → `future()` → rollback → assert no `unified_diff()`.
+   Native-boundary contracts belong in `tests/native/`, upstream comparisons in
+   `tests/parity/`, and shared Rust/Python round-trips in `testdata/cases/`.
+   Moving a test to Rust requires identified equivalent assertions, not just a
+   skip marker. Python coverage has a 95% floor; the separate Rust-core gate
+   currently has a 47% floor. Never lower either gate.
 6. **Rules containers**: fields on `HConfigDriverRules` use named module-level default factory functions, not lambdas.
 7. **v3 compatibility**: the v3 names restored in `hier_config/constructors.py`,
    `utils.py`, `models.py`, `root.py`, and `child.py` are a permanent supported
@@ -102,7 +134,8 @@ These are enforced by CI and by reviewers; violations block merges:
 
 ## Before Opening a PR
 
-- [ ] `uv run ./scripts/build.py lint-and-test` exits 0.
+- [ ] `uv run --no-sync ./scripts/build.py lint-and-test` exits 0.
+- [ ] Release extension rebuilt; Cargo formatting, Clippy, tests, and coverage pass.
 - [ ] Tests written first (TDD) and cover the change.
 - [ ] `CHANGELOG.md` updated under `## [Unreleased]`.
 - [ ] Docs updated if public API or driver behavior changed; `mkdocs build --strict` passes if docs touched.

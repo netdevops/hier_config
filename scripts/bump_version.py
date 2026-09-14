@@ -1,4 +1,4 @@
-"""Bump the project version in the workspace ``Cargo.toml``.
+"""Bump the project version in ``Cargo.toml`` and local ``Cargo.lock`` entries.
 
 The build moved from poetry to maturin, so ``[project.version]`` in
 ``pyproject.toml`` is dynamic and Cargo owns the real number. ``poetry version``
@@ -27,7 +27,18 @@ _VERSION = re.compile(
     re.MULTILINE,
 )
 
-BUMPS = ("major", "minor", "patch", "premajor", "preminor", "prepatch", "prerelease")
+BUMPS = (
+    "major",
+    "minor",
+    "patch",
+    "premajor",
+    "preminor",
+    "prepatch",
+    "prerelease",
+    "alpha",
+    "beta",
+    "rc",
+)
 
 # Cargo pre-release label -> PEP 440 suffix.
 _PEP440_LABELS = {"alpha": "a", "beta": "b", "rc": "rc"}
@@ -49,6 +60,11 @@ def bump(current: re.Match[str], kind: str) -> str:
     patch = int(current["patch"])
     label = current["pre_label"]
     number = int(current["pre_num"]) if current["pre_num"] else 0
+
+    if kind in _PEP440_LABELS:
+        next_patch = patch + 1 if label is None else patch
+        next_number = number + 1 if label == kind else 1
+        return f"{major}.{minor}.{next_patch}-{kind}.{next_number}"
 
     if kind == "prerelease":
         if label is None:
@@ -82,6 +98,22 @@ def bump(current: re.Match[str], kind: str) -> str:
     }[kind]
 
 
+def _updated_lock(text: str, old_version: str, new_version: str) -> str:
+    """Update local workspace versions without touching registry dependencies."""
+    sections = text.split("[[package]]")
+    for index, section in enumerate(sections[1:], start=1):
+        if re.search(r"^source\s*=", section, re.MULTILINE):
+            continue
+        sections[index] = re.sub(
+            rf'^version\s*=\s*"{re.escape(old_version)}"$',
+            f'version = "{new_version}"',
+            section,
+            count=1,
+            flags=re.MULTILINE,
+        )
+    return "[[package]]".join(sections)
+
+
 def main() -> int:
     """Rewrite the Cargo version and print the new Cargo and PEP 440 forms."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -106,10 +138,16 @@ def main() -> int:
         return 1
 
     if not args.dry_run:
+        lock_path = CARGO_TOML.with_name("Cargo.lock")
+        old_version = match.group(0).split('"')[1]
+        updated_lock = _updated_lock(
+            lock_path.read_text(encoding="utf-8"), old_version, new_version
+        )
         updated = (
             f'{text[: match.start()]}version = "{new_version}"{text[match.end() :]}'
         )
         CARGO_TOML.write_text(updated, encoding="utf-8")
+        lock_path.write_text(updated_lock, encoding="utf-8")
 
     sys.stdout.write(f"{new_version}\n{_pep440(new_version)}\n")
     return 0

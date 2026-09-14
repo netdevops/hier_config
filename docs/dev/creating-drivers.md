@@ -1,6 +1,6 @@
 # Creating a Platform Driver
 
-This page is the full deep dive into building a platform driver: the anatomy of `HConfigDriverBase`, declaring rules, negation and declaration prefixes, config preprocessors, config views with the mixin model, and wiring everything into the registry. For a quick registration-focused overview, start with [Custom Drivers and Registration](../admin/custom-drivers.md).
+This page is the full deep dive into building a platform driver: the anatomy of `HConfigDriverBase`, declaring rules, negation and declaration prefixes, config preprocessors, native config views, and wiring everything into the registry. For a quick registration-focused overview, start with [Custom Drivers and Registration](../admin/custom-drivers.md).
 
 ## Anatomy of `HConfigDriverBase`
 
@@ -12,9 +12,11 @@ Every driver subclasses `HConfigDriverBase` (`hier_config/platforms/driver_base.
 
 **Optional overrides:**
 
+- `platform: ClassVar[Platform]` — selects native vendor operations. Inherited
+  from a built-in driver; unset (`None`) uses Generic native operations. Rule
+  contents and registry names do not infer a vendor implementation.
 - `negation_prefix` (property) — the string prepended to negate a command. Default `"no "`.
 - `declaration_prefix` (property) — the string prepended to positive commands on set-style platforms. Default `""`.
-- `config_preprocessor(config_text)` — static method transforming raw text before parsing (e.g. flattening JunOS curly-brace config into `set` commands).
 - `view_class` (class attribute) — the `HConfigView` subclass instantiated by `get_hconfig_view()`. `None` (default) means the platform has no config view.
 
 The simplest possible driver is the generic one:
@@ -116,18 +118,27 @@ Real-world reference points:
 | HP Comware5 / Huawei VRP | `""` | `"undo "` |
 | JunOS / VyOS / Nokia SRL | `"set "` | `"delete "` |
 
-## Step 3: Add a config preprocessor (if needed)
+## Step 3: Preprocess custom text explicitly (if needed)
 
-If the platform's native rendering is not indentation-hierarchical CLI text, transform it before parsing. The set-style drivers use this to flatten hierarchical output:
+If a custom platform's rendering is not indentation-hierarchical CLI text,
+transform it before calling the constructor. Do not define
+`config_preprocessor()` on a custom driver: `__init_subclass__` rejects it
+with `TypeError`.
 
 ```python
-    @staticmethod
-    def config_preprocessor(config_text: str) -> str:
-        """Convert the platform's native rendering into parseable lines."""
-        return convert_to_set_commands(config_text)
+def preprocess_config(config_text: str) -> str:
+    """Convert the platform's rendering into parseable lines."""
+    return convert_to_set_commands(config_text)
+
+
+config = HConfig.from_text(CustomHConfigDriver(), preprocess_config(raw_text))
 ```
 
-The preprocessor runs inside `HConfig.from_text()` after full-text substitutions and before tree construction.
+Explicit preprocessing now precedes the constructor's full-text substitutions;
+review transformations that previously depended on the opposite order.
+Built-in set-style preprocessing runs in Rust, selected by `platform`.
+Stock `core_owned` preprocessor methods remain callable helpers; the marker
+does not arrange dispatch to arbitrary Python overrides.
 
 ## Step 4: Add imperative callbacks (if needed)
 
@@ -176,13 +187,18 @@ override, and defining one on a subclass raises `TypeError`. Shape these
 behaviors through `rules.negation`, `rules.negate_with`,
 `rules.idempotent_commands`, and `rules.sectional_exiting` instead.
 
+Custom `config_preprocessor()` is the fifth removed override hook; use the
+explicit preprocessing step above, not a driver override.
+
 Idempotency matching is structural: the core builds an *idempotency key* from the child's lineage and the rule's match criteria (prefix matched, regex capture groups, ...), so two commands are only considered interchangeable when their structural identities agree. Craft your `MatchRule`s to capture the identifying parts of a command (e.g. `re_search=r"^neighbor (\S+) description"`).
 
 ## Adding a config view
 
-Config views are implemented in Rust. Adding one to a platform means writing the
-native ops and re-exporting them from Python; there is no Python property code
-to write.
+Built-in config views are implemented in Rust. Adding built-in platform behavior
+means writing native ops and exposing them through the Python facade and stubs.
+For Python-only extensions, consult the
+[native view migration contract](../user/rust-core-changes.md#native-config-views)
+before porting a v3 view subclass or capability mixin.
 
 **1. Native ops** — implement `InterfaceOps` and `ConfigOps` in
 `crates/hier_config_core/src/view/platforms/<name>.rs`. Every trait method has a
@@ -241,7 +257,13 @@ class HConfigViewCustomNOS(HConfigView):
 **3. Wire it up** — point the driver at the device view:
 
 ```python
+from typing import ClassVar
+
+from hier_config import Platform
+
+
 class HConfigDriverCustomNOS(HConfigDriverBase):
+    platform: ClassVar[Platform] = Platform.CUSTOM_NOS
     view_class = HConfigViewCustomNOS
 ```
 
@@ -256,6 +278,8 @@ stays `None` and `get_hconfig_view()` raises.
 
 Built-in drivers live in `hier_config/platforms/<name>/driver.py` and are wired into:
 
+- native `Platform` mapping, `PlatformOps`, and canonical rules under
+  `crates/hier_config_core/src/platforms/`,
 - the `Platform` enum in `hier_config/models.py`,
 - the `_BUILTIN_DRIVERS` mapping in `hier_config/registry.py`,
 - unit tests under `tests/unit/platforms/` and integration tests under `tests/integration/`.

@@ -1,9 +1,7 @@
 """Machine-normalised performance regression gate.
 
-Absolute timings cannot gate CI: shared runners vary by an order of magnitude
-between runs, so any fixed millisecond threshold is either so loose it catches
-nothing or so tight it fails constantly. `baseline.json` records absolute
-numbers from one developer laptop and is useless anywhere else.
+Shared-runner timings vary between runs. `baseline.json` records absolute
+numbers from one developer laptop, not a portable CI baseline.
 
 This previously measured the same operation under the native backend and the
 pure-Python backend and asserted the speedup ratio. The pure-Python
@@ -12,24 +10,24 @@ implementation -- so there is no second backend to divide by.
 
 Instead each operation is divided by a *calibration workload*: a fixed lump of
 pure-Python interpreter work (dict churn, string building, list joins) timed in
-the same process on the same machine. That gives a machine-speed unit. A slow
-runner slows the calibration and the measured operation together, so the
-resulting "cost in calibration units" stays stable across wildly different
-hardware while remaining sensitive to exactly the regressions that hurt:
+the same process on the same machine. This reduces sensitivity to general machine
+load, but Python and native throughput do not necessarily scale together across
+architectures or Python versions. These ratios therefore still need validation
+on the actual CI runner. They can detect regressions such as:
 
 * a native fast path silently falling back to Python,
 * work being redone per-call that used to be hoisted or cached,
 * Python objects being materialised where the Rust side used to stay native.
 
-Ceilings sit ~1.75x above the highest value observed across repeated local
-runs. Measured spread is 5-10%, so ordinary noise cannot trip them, while any
-regression that doubles an operation's cost does. They are tripwires for
-structural regressions, not precise assertions.
+The ceilings below are existing policy budgets, not automatically calibrated
+limits or measurements from GitHub-hosted runners. Keep them unchanged when
+collecting new evidence; report failures rather than increasing a threshold to
+make a run pass. Local success does not establish CI calibration.
 
 The one thing this cannot normalise away is a Python release that changes
 interpreter throughput without changing native throughput (or vice versa),
 which shifts every ratio at once. A uniform shift across all six operations
-means recalibrate; a shift in a single operation is a real regression.
+requires investigation; a shift in a single operation may indicate a regression.
 
 Run with `pytest -m benchmark tests/benchmarks/test_perf_regression.py`.
 """
@@ -50,17 +48,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 
 # Operation -> maximum acceptable cost, expressed in calibration units.
 #
-# Observed maximums on Apple Silicon (release build, 400-interface config,
-# three consecutive runs):
-#
-#   parse 0.227 | fast_load 0.204 | deepcopy 0.049 | dump 0.318
-#   iteration 0.099 | remediation 0.133
-#
-# Ceilings are ~1.5x those values. That tolerates far more noise than the
-# 5-10% actually measured, while still failing on any regression that meaningfully
-# increases the cost of an operation -- for example, disabling the compiled-regex
-# cache roughly doubles parse, which trips its ceiling. fast_load shares parse's
-# ceiling since it does the same class of parsing work.
+# Historical comments quoted observations above some of these budgets and
+# incorrectly described uniform 1.5x/1.75x headroom. No such margin is assumed.
+# CI calibration requires measurements on the release build and runner in use.
 MAX_COST_UNITS = {
     "parse": 0.27,
     "fast_load": 0.24,

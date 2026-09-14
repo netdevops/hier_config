@@ -5,8 +5,8 @@ use crate::models::{
     SectionalExitingRule, SectionalOverwriteNoNegateRule, SectionalOverwriteRule, StringPattern,
     UnusedObjectRule,
 };
+use crate::regex_cache::{MatchRegex, python_replacement, rule_regex};
 use serde::{Deserialize, Serialize};
-use std::fmt::Write as _;
 use std::sync::{Arc, OnceLock, RwLock};
 
 /// Collection of all rule sets for a platform driver.
@@ -80,47 +80,15 @@ serde_skip_default_copy!(is_default_indentation, usize, default_indentation());
 /// Used to keep `negate_with` templating opt-in: a `use` string without
 /// backreferences is emitted verbatim and never touches the regex engine.
 fn has_backreference(s: &str) -> bool {
-    let mut chars = s.chars().peekable();
+    let mut chars = s.chars();
     while let Some(c) = chars.next() {
         if c == '\\'
-            && let Some(&next_c) = chars.peek()
-            && (next_c.is_ascii_digit() || next_c == 'g')
+            && let Some('1'..='9' | 'g') = chars.next()
         {
             return true;
         }
     }
     false
-}
-
-fn python_to_rust_replacement(s: &str) -> String {
-    let mut result = String::new();
-    let mut chars = s.chars().peekable();
-    while let Some(c) = chars.next() {
-        if c == '\\'
-            && let Some(&next_c) = chars.peek()
-        {
-            if next_c.is_ascii_digit() {
-                chars.next();
-                result.push('$');
-                result.push(next_c);
-                continue;
-            } else if next_c == 'g' {
-                let remaining: String = chars.clone().collect();
-                if remaining.starts_with("g<")
-                    && let Some(end_idx) = remaining.find('>')
-                {
-                    let name = &remaining[2..end_idx];
-                    let _ = write!(result, "${{{name}}}");
-                    for _ in 0..=end_idx {
-                        chars.next();
-                    }
-                    continue;
-                }
-            }
-        }
-        result.push(c);
-    }
-    result
 }
 
 impl Default for DriverRules {
@@ -148,6 +116,57 @@ impl Default for DriverRules {
 }
 
 impl DriverRules {
+    /// Validates rule regexes before parsing or evaluating a configuration.
+    ///
+    /// # Errors
+    ///
+    /// Invalid patterns or replacement templates, and unsupported syntax in
+    /// capture-producing rules, are rejected with the relevant field name.
+    pub fn validate_regexes(&self) -> Result<(), String> {
+        let substitution = |field: &str, search: &str, replace: &str| {
+            let re = rule_regex(search).map_err(|e| format!("{field}: {e}"))?;
+            python_replacement(&re, replace)
+                .map(|_| ())
+                .map_err(|e| format!("{field} replacement: {e}"))
+        };
+        for rule in &self.per_line_sub {
+            substitution("per_line_sub", &rule.search, &rule.replace)?;
+        }
+        for rule in &self.full_text_sub {
+            substitution("full_text_sub", &rule.search, &rule.replace)?;
+        }
+        for rule in &self.negation_sub {
+            substitution("negation_sub", &rule.search, &rule.replace)?;
+        }
+        for rule in &self.negation {
+            if rule.strategy == NegationStrategy::RegexSub {
+                substitution("negation REGEX_SUB", &rule.search, &rule.replace)?;
+            } else if rule.strategy == NegationStrategy::Replace {
+                validate_negate_with(&rule.as_default_with())?;
+            }
+        }
+        for rule in &self.negate_with {
+            validate_negate_with(rule)?;
+        }
+        for rule in &self.idempotent_commands {
+            for matching in &rule.match_rules {
+                if let Some(pattern) = &matching.re_search {
+                    rule_regex(pattern).map_err(|e| format!("idempotent_commands: {e}"))?;
+                }
+            }
+        }
+        for rule in &self.indent_adjust {
+            MatchRegex::cached(&rule.start_expression)
+                .map_err(|e| format!("indent_adjust.start_expression: {e}"))?;
+            MatchRegex::cached(&rule.end_expression)
+                .map_err(|e| format!("indent_adjust.end_expression: {e}"))?;
+        }
+        for rule in &self.unused_objects {
+            rule_regex(&rule.name_re).map_err(|e| format!("unused_objects.name_re: {e}"))?;
+        }
+        Ok(())
+    }
+
     /// Returns negation rules in evaluation order.
     ///
     /// Mirrors `HConfigDriverRules.all_negation_rules()`: when no v3-spelled
@@ -183,6 +202,21 @@ impl DriverRules {
         }));
         Some(resolved)
     }
+}
+
+fn validate_negate_with(rule: &NegationDefaultWithRule) -> Result<(), String> {
+    if has_backreference(&rule.use_cmd)
+        && let Some(pattern) = rule
+            .match_rules
+            .iter()
+            .rev()
+            .find_map(|rule| rule.re_search.as_deref())
+    {
+        let re = rule_regex(pattern).map_err(|e| format!("negate_with: {e}"))?;
+        python_replacement(&re, &rule.use_cmd)
+            .map_err(|e| format!("negate_with replacement: {e}"))?;
+    }
+    Ok(())
 }
 
 /// Platform driver holding rules and syntax specifics (e.g. indentation, negation prefixes).
@@ -315,11 +349,30 @@ impl Driver {
     }
 
     /// Computes the negation string for `text` given its lineage.
+    ///
+    /// # Panics
+    ///
+    /// Panics for invalid rule regexes. Use [`Self::try_compute_negation`] for
+    /// dynamically supplied rules.
     pub fn compute_negation(
         &self,
         text: &str,
         is_lineage_match: impl Fn(&[MatchRule]) -> bool,
     ) -> String {
+        self.try_compute_negation(text, is_lineage_match)
+            .expect("invalid negation rule")
+    }
+
+    /// Computes a negation while reporting invalid regex rules.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for unsupported patterns or malformed replacement templates.
+    pub fn try_compute_negation(
+        &self,
+        text: &str,
+        is_lineage_match: impl Fn(&[MatchRule]) -> bool,
+    ) -> Result<String, String> {
         if let Some(resolved) = self.rules.resolved_negation() {
             return self.compute_negation_unified(text, &resolved, is_lineage_match);
         }
@@ -327,7 +380,7 @@ impl Driver {
         // 1. negate_with rule
         for rule in &self.rules.negate_with {
             if is_lineage_match(&rule.match_rules) {
-                return Self::expand_negate_with(text, rule);
+                return Self::try_expand_negate_with(text, rule);
             }
         }
 
@@ -335,7 +388,7 @@ impl Driver {
         for rule in &self.rules.negation_default_when {
             if is_lineage_match(&rule.match_rules) {
                 let stripped = self.text_without_negation(text);
-                return format!("default {stripped}");
+                return Ok(format!("default {stripped}"));
             }
         }
 
@@ -343,15 +396,14 @@ impl Driver {
         for rule in &self.rules.negation_sub {
             if is_lineage_match(&rule.match_rules) {
                 let negated = format!("{}{}", self.negation_prefix, text);
-                if let Some(re) = crate::regex_cache::regex(&rule.search) {
-                    let rust_replace = python_to_rust_replacement(&rule.replace);
-                    return re.replace(&negated, rust_replace.as_str()).to_string();
-                }
+                let re = rule_regex(&rule.search)?;
+                let rust_replace = python_replacement(&re, &rule.replace)?;
+                return Ok(re.replace_all(&negated, rust_replace.as_str()).to_string());
             }
         }
 
         // 4. swap negation
-        self.swap_negation(text)
+        Ok(self.swap_negation(text))
     }
 
     /// Resolves negation against the unified rule list.
@@ -364,10 +416,10 @@ impl Driver {
         text: &str,
         resolved: &[NegationRule],
         is_lineage_match: impl Fn(&[MatchRule]) -> bool,
-    ) -> String {
+    ) -> Result<String, String> {
         for rule in resolved {
             if rule.strategy == NegationStrategy::Replace && is_lineage_match(&rule.match_rules) {
-                return Self::expand_negate_with(text, &rule.as_default_with());
+                return Self::try_expand_negate_with(text, &rule.as_default_with());
             }
         }
 
@@ -379,19 +431,18 @@ impl Driver {
                 NegationStrategy::Replace => {}
                 NegationStrategy::Default => {
                     let stripped = self.text_without_negation(text);
-                    return format!("default {stripped}");
+                    return Ok(format!("default {stripped}"));
                 }
                 NegationStrategy::RegexSub => {
                     let negated = format!("{}{}", self.negation_prefix, text);
-                    if let Some(re) = crate::regex_cache::regex(&rule.search) {
-                        let rust_replace = python_to_rust_replacement(&rule.replace);
-                        return re.replace(&negated, rust_replace.as_str()).to_string();
-                    }
+                    let re = rule_regex(&rule.search)?;
+                    let rust_replace = python_replacement(&re, &rule.replace)?;
+                    return Ok(re.replace_all(&negated, rust_replace.as_str()).to_string());
                 }
             }
         }
 
-        self.swap_negation(text)
+        Ok(self.swap_negation(text))
     }
 
     /// Resolves a [`NegationDefaultWithRule`]'s replacement command.
@@ -405,9 +456,12 @@ impl Driver {
     ///
     /// Falls back to the literal `use` string when there are no backreferences,
     /// when no `re_search` is present, or when the pattern does not match.
-    pub(crate) fn expand_negate_with(text: &str, rule: &NegationDefaultWithRule) -> String {
+    pub(crate) fn try_expand_negate_with(
+        text: &str,
+        rule: &NegationDefaultWithRule,
+    ) -> Result<String, String> {
         if !has_backreference(&rule.use_cmd) {
-            return rule.use_cmd.clone();
+            return Ok(rule.use_cmd.clone());
         }
         let Some(pattern) = rule
             .match_rules
@@ -415,19 +469,18 @@ impl Driver {
             .rev()
             .find_map(|match_rule| match_rule.re_search.as_deref())
         else {
-            return rule.use_cmd.clone();
+            return Ok(rule.use_cmd.clone());
         };
-        let Some(re) = crate::regex_cache::regex(pattern) else {
-            return rule.use_cmd.clone();
-        };
+        let re = rule_regex(pattern)?;
+        let replacement = python_replacement(&re, &rule.use_cmd)?;
         let Some(captures) = re.captures(text) else {
-            return rule.use_cmd.clone();
+            return Ok(rule.use_cmd.clone());
         };
         // `expand` builds the command from the template alone, so an unanchored
         // pattern cannot leak unmatched leading/trailing text into the result.
         let mut expanded = String::new();
-        captures.expand(&python_to_rust_replacement(&rule.use_cmd), &mut expanded);
-        expanded
+        captures.expand(&replacement, &mut expanded);
+        Ok(expanded)
     }
 
     /// Determines the exit command for a section.
@@ -452,13 +505,32 @@ impl Driver {
     }
 
     /// Computes the idempotency key for a node's lineage.
+    ///
+    /// # Panics
+    ///
+    /// Panics for invalid rule regexes. Use [`Self::try_idempotency_key`] for
+    /// dynamically supplied rules.
     pub fn idempotency_key(
         &self,
         lineage_texts: &[&str],
         match_rules: &[MatchRule],
     ) -> Vec<String> {
+        self.try_idempotency_key(lineage_texts, match_rules)
+            .expect("invalid idempotency rule")
+    }
+
+    /// Computes idempotency keys without silently ignoring unsupported regexes.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for invalid or unsupported capture-producing patterns.
+    pub fn try_idempotency_key(
+        &self,
+        lineage_texts: &[&str],
+        match_rules: &[MatchRule],
+    ) -> Result<Vec<String>, String> {
         if lineage_texts.len() != match_rules.len() {
-            return Vec::new();
+            return Ok(Vec::new());
         }
 
         lineage_texts
@@ -468,7 +540,7 @@ impl Driver {
             .collect()
     }
 
-    fn idempotency_component_key(&self, text: &str, rule: &MatchRule) -> String {
+    fn idempotency_component_key(&self, text: &str, rule: &MatchRule) -> Result<String, String> {
         let normalized_text = self.text_without_negation(text);
         let mut parts = Vec::new();
 
@@ -503,7 +575,7 @@ impl Driver {
 
         // regex
         if let Some(pattern) = &rule.re_search
-            && let Some(key) = Self::key_from_regex(pattern, normalized_text, text)
+            && let Some(key) = Self::key_from_regex(pattern, normalized_text, text)?
         {
             parts.push(format!("re|{key}"));
         }
@@ -512,15 +584,21 @@ impl Driver {
             parts.push(format!("text|{normalized_text}"));
         }
 
-        parts.join(";")
+        Ok(parts.join(";"))
     }
 
-    fn key_from_regex(pattern: &str, normalized_text: &str, original_text: &str) -> Option<String> {
-        let re = crate::regex_cache::regex(pattern)?;
+    fn key_from_regex(
+        pattern: &str,
+        normalized_text: &str,
+        original_text: &str,
+    ) -> Result<Option<String>, String> {
+        let re = rule_regex(pattern)?;
         let (matched, source) = if let Some(m) = re.find(normalized_text) {
             (m, normalized_text)
         } else {
-            let m = re.find(original_text)?;
+            let Some(m) = re.find(original_text) else {
+                return Ok(None);
+            };
             (m, original_text)
         };
 
@@ -535,7 +613,7 @@ impl Driver {
                 .filter(|s| !s.is_empty())
                 .collect();
             if !groups.is_empty() {
-                return Some(groups.join("|"));
+                return Ok(Some(groups.join("|")));
             }
         }
 
@@ -550,14 +628,14 @@ impl Driver {
                 {
                     let candidate = m.as_str().trim();
                     if !candidate.is_empty() {
-                        return Some(candidate.to_string());
+                        return Ok(Some(candidate.to_string()));
                     }
                 }
                 break;
             }
         }
 
-        Some(matched.as_str().trim().to_string())
+        Ok(Some(matched.as_str().trim().to_string()))
     }
 }
 

@@ -3,7 +3,7 @@
 This directory contains a language-neutral test corpus of configuration
 remediation test cases. These cases are executed by both:
 - Native Rust tests (`crates/hier_config_core/tests/corpus.rs`)
-- Python pytest suite (`tests/test_corpus.py`)
+- Python pytest suite (`tests/native/test_corpus.py`)
 
 ## Directory Layout
 
@@ -37,6 +37,16 @@ testdata/
 | `description` | string | **yes** | — | One sentence explaining what the case pins down. |
 | `tags` | array of string | no | `[]` | Free-form grouping (e.g. `["bgp", "post_load"]`). |
 | `assert_rollback` | bool | no | `true` | When `false`, the harness asserts remediation only and skips the `future()`/rollback verification. |
+| `loader` | string | no | `"text"` | `"text"` uses the full-text parser; `"lines"` uses the fast loader, matching source tests built with `HConfig.from_lines()`. |
+| `negation` | array | no | `[]` | Explicit unified negation rules prepended to the platform defaults for this case only. Preserve source tests' injected rules here, not in platform defaults. |
+| `source` | string | no | `""` | Source revision and test function for scenarios transcribed from the pure-Python baseline. |
+
+The NX-OS console-terminal case includes the custom replacement rules used by its
+source test. Those rules are not evidence for changing the default driver.
+The XR template-block case uses the source test's fast loader, which does not
+apply full-text indentation adjustments. Its expected output omits sectional
+exit lines because both corpus harnesses render with sectional exiting disabled.
+These are baseline-derived scenarios, not expectations regenerated from Rust.
 
 ## Config Files
 

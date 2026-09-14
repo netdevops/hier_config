@@ -1,6 +1,6 @@
-use hier_config_core::NodeId;
 use hier_config_core::models::Platform;
 use hier_config_core::tree::{Tree, TreeError};
+use hier_config_core::{Driver, NodeId, parse_fast};
 use proptest::prelude::*;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet as HashSet};
 use std::fs;
@@ -11,6 +11,7 @@ use std::sync::LazyLock;
 struct Fragment {
     header: String,
     children: Vec<String>,
+    closing: Option<String>,
 }
 
 const ROLLBACK_PLATFORMS: &[Platform] = &[
@@ -70,13 +71,26 @@ fn load_all_corpus_fragments(cases_dir: &Path) -> HashMap<Platform, Vec<Fragment
         let mut fragments = Vec::new();
 
         for case_dir in case_dirs {
+            let manifest: serde_json::Value = serde_json::from_str(
+                &fs::read_to_string(case_dir.join("case.json")).expect("case manifest exists"),
+            )
+            .expect("case manifest is valid JSON");
             for conf_name in &["running.conf", "intended.conf"] {
                 let conf_path = case_dir.join(conf_name);
                 let Ok(content) = fs::read_to_string(&conf_path) else {
                     continue;
                 };
 
-                let Ok(tree) = Tree::from_str(platform, &content) else {
+                let parsed = if manifest["loader"] == "lines" {
+                    parse_fast(
+                        Driver::for_platform(platform),
+                        &content.lines().collect::<Vec<_>>(),
+                        true,
+                    )
+                } else {
+                    Tree::from_str(platform, &content)
+                };
+                let Ok(tree) = parsed else {
                     continue;
                 };
 
@@ -106,14 +120,21 @@ fn load_all_corpus_fragments(cases_dir: &Path) -> HashMap<Platform, Vec<Fragment
                     seen_headers.insert(header.clone());
                     let _ = seen_tree.add_child(seen_tree.root, &header, false, false);
 
-                    let lines = tree.lines(child_id, false);
+                    // These fragments feed the raw-text parser. Preserve terminators
+                    // so a virtual-indent block cannot absorb the next fragment.
+                    let mut lines = tree.lines(child_id, true);
+                    let closing = tree.sectional_exit(child_id).and_then(|_| lines.pop());
                     let children = if lines.len() > 1 {
                         lines[1..].to_vec()
                     } else {
                         Vec::new()
                     };
 
-                    fragments.push(Fragment { header, children });
+                    fragments.push(Fragment {
+                        header,
+                        children,
+                        closing,
+                    });
                 }
             }
         }
@@ -148,6 +169,9 @@ fn render_fragment(
     out.push(frag.header.clone());
     if !opt.truncated {
         out.extend(frag.children.iter().cloned());
+    }
+    if let Some(closing) = &frag.closing {
+        out.push(closing.clone());
     }
 }
 
@@ -326,7 +350,9 @@ proptest! {
         prop_assert_eq!(tree.dump_simple(false), loaded.dump_simple(false));
 
         let simple_text = tree.dump_simple(false).join("\n");
-        let reparsed = Tree::from_str(platform, &simple_text).expect("Reparsing dump_simple should succeed");
+        // dump_simple(false) deliberately omits parser-required block terminators.
+        let reparsed = parse_fast(Driver::for_platform(platform), &simple_text.lines().collect::<Vec<_>>(), true)
+            .expect("Reparsing normalized lines should succeed");
         prop_assert_eq!(tree.dump_simple(false), reparsed.dump_simple(false));
     }
 

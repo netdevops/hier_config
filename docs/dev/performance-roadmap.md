@@ -1,6 +1,9 @@
 # Performance Roadmap: API Changes That Unlock Further Gains
 
-The Rust rewrite deliberately preserved the pure-Python package's public API. That constraint has been pushed to its limit: the remaining hot paths are bounded by **CPython object construction**, not by Rust.
+The Rust rewrite retains the main tree/driver/workflow API but includes explicit
+[migration breaks](../user/rust-core-changes.md). The measurements below describe
+the profiled release build, not a proof that every future optimization requires
+an API break. Some measured hot paths are dominated by CPython object construction.
 
 This document records what is *left* to do. It lists the two remaining optimisations, what each would cost to unlock, and the measurements that justify them. Work that has already shipped is not tracked here — see `CHANGELOG.md` for history, [Performance & Benchmarks](benchmarks.md) for the 3.x to 4.0 benchmark story, [Architecture](architecture.md#core-tree-model) for the data-layout decisions and invariants that came out of it, and the [3.x → 4.0 migration guide](../user/rust-core-changes.md) for consumer-facing consequences.
 
@@ -90,7 +93,7 @@ It does **not** break attribute reads, `config.dump()`, or `get_hconfig_from_dum
 
 Reading one attribute from every node costs one Python-level call per node, and every traversal constructs one `HConfigChild` per node whether or not the caller reads anything from it. A method returning parallel lists (or a single list of tuples) for a whole subtree would amortise the boundary crossing across the entire tree instead of paying it per node per attribute — and would skip wrapper construction entirely.
 
-This is the natural escape hatch for callers who currently write `[c.text for c in config.all_children()]`.
+This is the natural escape hatch for callers who currently write `[c.text for c in config.descendants()]`.
 
 ### Why this is what remains in `iteration`
 

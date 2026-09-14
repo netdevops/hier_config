@@ -442,11 +442,7 @@ impl std::fmt::Debug for PyConfigViewInterface {
 impl PyConfigViewInterface {
     /// Run `action` against a native view built over the locked tree.
     fn with_view<T>(&self, action: impl FnOnce(&InterfaceView<'_>) -> T) -> PyResult<T> {
-        let tree = self
-            .tree
-            .tree
-            .read()
-            .map_err(|_| PyRuntimeError::new_err("config lock was poisoned"))?;
+        let tree = self.tree.read_node(self.node)?;
         let view = InterfaceView::new(&tree, self.node, self.ops);
         Ok(action(&view))
     }

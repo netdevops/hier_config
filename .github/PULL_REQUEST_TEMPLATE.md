@@ -6,11 +6,12 @@
 
 <!-- The full standards live in AGENTS.md and https://hier-config.readthedocs.io/en/latest/dev/contributing/ -->
 
-- [ ] `uv run ./scripts/build.py lint-and-test` passes locally (lint + 95% test coverage).
+- [ ] `uv run --no-sync ./scripts/build.py lint-and-test` passes locally (lint + 95% test coverage).
+- [ ] The release extension was rebuilt with `uv run --no-sync maturin develop --release --locked`; Cargo formatting, Clippy, tests, and native coverage (95%) pass.
 - [ ] Tests were written first (TDD) and cover the change, following the [testing conventions](https://hier-config.readthedocs.io/en/latest/dev/testing/).
 - [ ] `CHANGELOG.md` has an entry under `## [Unreleased]` referencing this issue/PR (`(#NNN)`).
 - [ ] Documentation is updated if public API or driver behavior changed (and `mkdocs build --strict` passes if docs were touched).
-- [ ] Commit messages follow the [contributing guide](https://github.com/netdevops/hier_config/blob/master/CONTRIBUTING.md): imperative mood, subject ≤72 characters, body explains *why*.
+- [ ] Commit messages follow the [contributing guide](https://github.com/netdevops/hier_config/blob/next/CONTRIBUTING.md): imperative mood, subject ≤72 characters, body explains *why*.
 
 ## AI-Assisted Contributions
 

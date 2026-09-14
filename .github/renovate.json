@@ -26,9 +26,9 @@
       "enabled": false
     },
     {
-      "description": "For library runtime deps, only refresh the lockfile rather than raising the lower-bound constraint (keeps the library installable for users on older minor versions)",
+      "description": "PEP 621 manages uv.lock: refresh runtime and optional dependency locks without raising supported lower bounds",
       "matchManagers": ["pep621"],
-      "matchDepTypes": ["project.dependencies"],
+      "matchDepTypes": ["project.dependencies", "project.optional-dependencies"],
       "rangeStrategy": "update-lockfile"
     },
     {

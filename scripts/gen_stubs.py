@@ -134,21 +134,18 @@ OVERRIDES: dict[str, tuple[str, str | None]] = {
     "HConfigBase.move_child": ("(self, child: HConfigChild) -> None", None),
     "HConfigBase.get_children_object": ("(self) -> HConfigChildren", None),
     "HConfigChildren.__delitem__": ("(self, key: str, /) -> None", None),
-    "HConfig.__deepcopy__": ("(self, _memo: dict[int, Any]) -> HConfig", None),
+    "HConfig.__deepcopy__": ("(self, _memo: dict[int, object]) -> HConfig", None),
+    "HConfigChild.__deepcopy__": (
+        "(self, memo: dict[int, object]) -> HConfigChild",
+        None,
+    ),
 }
 
-# The v3.7.0 implementations were generators, but the Rust port returns eager
-# collections (`tuple`/`list`).  Keeping the recovered `Iterator[...]` would be a
-# lie -- callers can index these results and iterate them more than once.  Only
-# the return annotation is replaced, so the recovered docstring survives intact.
+# These methods intentionally return eager collections. Query, lineage, path,
+# and diff methods retain their baseline Iterator annotations.
 RETURN_OVERRIDES: dict[str, str] = {
     "HConfigBase.all_children_sorted": "Sequence[HConfigChild]",
     "HConfigBase.all_children_sorted_by_tags": "Sequence[HConfigChild]",
-    "HConfigBase.get_children": "Sequence[HConfigChild]",
-    "HConfigBase.get_children_deep": "Sequence[HConfigChild]",
-    "HConfigBase.lineage": "Sequence[HConfigChild]",
-    "HConfigBase.path": "Sequence[str]",
-    "HConfigBase.unified_diff": "Sequence[str]",
     "HConfig.unused_objects": "Sequence[HConfigChild]",
 }
 
@@ -627,25 +624,34 @@ def parse_check_flag() -> bool:
     return bool(parser.parse_args().check)
 
 
-def normalise_and_diff(
-    targets: list[pathlib.Path], originals: dict[pathlib.Path, str]
-) -> list[pathlib.Path]:
-    """Ruff-normalise `targets` and return those differing from `originals`."""
-    ruff_fix(targets)
-    return [path for path in targets if path.read_text() != originals[path]]
+def normalise_text(path: pathlib.Path, text: str) -> str:
+    """Normalize through stdin, preserving path-specific rules without writes."""
+    for argv in (["check", "--fix", "-q"], ["format", "-q"]):
+        text = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "ruff",
+                *argv,
+                "--stdin-filename",
+                str(path),
+                "-",
+            ],
+            input=text,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout
+    return text
 
 
-def verify(targets: list[pathlib.Path], originals: dict[pathlib.Path, str]) -> int:
-    """Normalise the freshly written stubs, diff them, then restore `originals`.
-
-    The restore runs unconditionally so a failed check never leaves the working
-    tree dirty -- CI reports drift, it does not repair it.
-    """
-    try:
-        drifted = normalise_and_diff(targets, originals)
-    finally:
-        for path, original in originals.items():
-            path.write_text(original)
+def verify(generated: dict[pathlib.Path, str]) -> int:
+    """Compare normalized generated content without changing the source tree."""
+    drifted = [
+        path
+        for path, text in generated.items()
+        if normalise_text(path, text) != path.read_text()
+    ]
 
     if not drifted:
         return 0
@@ -767,11 +773,7 @@ def main() -> int:
 
     check = parse_check_flag()
     defs = original_defs()
-    targets = [STUB_DIR / f"{module}.pyi" for module in MODULES]
-    # Generation happens in place even under --check: ruff's per-file ignores are
-    # keyed on `hier_config/*.pyi`, so generating anywhere else would lint
-    # differently. Originals are restored below, so the tree is left untouched.
-    originals = {path: path.read_text() for path in targets} if check else {}
+    generated: dict[pathlib.Path, str] = {}
     for cls_name, (module, base) in CLASSES.items():
         cls = getattr(_native, cls_name)
         lines = [
@@ -814,18 +816,20 @@ def main() -> int:
 
         rendered = "\n".join(lines).rstrip()
         text = f"{rendered}\n"
-        (STUB_DIR / f"{module}.pyi").write_text(text)
+        path = STUB_DIR / f"{module}.pyi"
+        generated[path] = text
         if not check:
+            path.write_text(text)
             print(f"wrote hier_config/{module}.pyi  ({text.count(chr(10))} lines)")
 
     if check:
         return (
-            verify(targets, originals)
+            verify(generated)
             or verify_extension_surface(_native)
             or verify_stub_class_members(_native)
             or verify_root_stub()
         )
-    ruff_fix(targets)
+    ruff_fix(list(generated))
     ROOT_NATIVE_STUB.write_text(NATIVE_STUB.read_text())
     return (
         verify_extension_surface(_native)

@@ -4,6 +4,16 @@ This page covers the helpers in `hier_config.utils` that load driver rules and t
 
 > **Note:** post-load callbacks and remediation transform callbacks are Python code and are deliberately *not* loadable from YAML. Anything imperative belongs in a [driver subclass](customizing-rules.md) or a [plugin](../user/remediation-workflows.md#the-remediation-transform-pipeline).
 
+Install YAML support before passing a file path to these loaders:
+
+```bash
+pip install --pre 'hier-config[yaml]'
+```
+
+PyYAML is optional, not a core runtime dependency. Dictionary-based rules and
+ordinary text-file reads do not need it. YAML-loading calls raise a clear
+`ImportError` with the extra's installation command when PyYAML is unavailable.
+
 ## `read_text_from_file`
 
 Reads the contents of a file into memory — a convenience for loading device configurations:

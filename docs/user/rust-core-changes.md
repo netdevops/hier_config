@@ -1,187 +1,84 @@
 # Rust core behavior changes
 
-hier_config 4.0 replaces the pure-Python core with a Rust implementation exposed
-through PyO3. This page covers the behavior differences that fall out of that
-engine swap. It is the companion to [Migrating from v3](migrating-from-v3.md),
-which covers the v4 API renames; read that one first, then this one. For the
-measured speedup figures and the architectural story behind the rewrite, see
-[Performance & Benchmarks](../dev/benchmarks.md).
+hier_config **4.0** replaces the pure-Python engine with Rust and PyO3 in the
+existing repository and Python distribution. This is not a v5 release or a
+separate project. The familiar tree/driver/workflow concepts remain, but the
+rewrite is **not a drop-in replacement for every Python API**.
 
-Module layout and import paths are unchanged, and every v3 name remains a
-supported alias, so most projects upgrade by bumping the pin and re-running
-their test suite.
-
-The exceptions are concentrated in two areas. The larger one is **custom driver
-subclasses**: four `HConfigDriverBase` hooks that worked in 3.x are no longer
-consulted by the engine, and they fail *silently* — the driver still builds, the
-remediation still runs, and the output is simply the stock platform behaviour.
-The smaller one is **object identity**: handles returned from bulk traversals are
-no longer interned, so `is` comparisons that held in 3.x now return `False`.
-
-!!! warning "Read this section even if your tests pass"
-    The driver hook changes, the `HConfigChildren.__eq__` change, and the
-    traversal identity change do not raise. A green test suite does not prove
-    your custom driver still customizes anything, nor that your `is` comparisons
-    still mean what they did. Work through [Custom drivers](#custom-drivers) and
-    [Handle identity across bulk
-    traversals](#handle-identity-across-bulk-traversals) explicitly.
-
-## At a glance
-
-| Change | Impact | Silent? |
-| --- | --- | --- |
-| `idempotent_for()`, `negate_with()`, `sectional_exit()`, `swap_negation()` removed; overrides raise `TypeError` | Custom drivers fail at import | **Yes** |
-| `config_preprocessor()`, `declaration_prefix` overrides only partially honored | Custom drivers emit stock output in some paths | **Yes** |
-| `HConfigChildren.__eq__` compares child `text` in insertion order | Equality results can flip in either direction | **Yes** |
-| Source installs need a Rust toolchain | Only affects `--no-binary` / unsupported platforms | No — build error |
-| Invalid custom rule payloads now raise | Previously fell back to stock rules | No — exception |
-| `HConfigBase.__contains__` does real membership | `"x" in config` was always `False` in 3.x | **Yes** |
-| `str(HConfig)` no longer duplicates nested lines | Bug fix; output changes if you snapshotted the broken form | **Yes** |
-| `future()` negation handling corrected | Bug fix; fewer stray `no ...` lines survive | **Yes** |
-| `DuplicateChildError` now inherits `HierConfigError` | Broader `except` clauses now catch it | No |
-| `all_children*()` / `unused_objects()` return a tuple, not a generator | `Iterator[...]` annotations fail type-checking | No — type error |
-| `len(config)` counts all descendants in O(1) without materializing handles | Replaces temporary tuple allocation with O(1) count | **Yes** |
-| Bulk traversals no longer intern handles | `child_a is child_b` across traversals is now `False` | **Yes** |
-| `WorkflowRemediation` cached via `OnceLock` | Thread-safe, lock-free immutable property access | **Yes** |
-| `pydantic` and `pyyaml` now declared as runtime deps | Fixes an undeclared-import bug in 3.x | No |
-
-Everything else — `hier_config.base`, `.child`, `.children`, `.root`,
-`.platforms.*`, `.models`, `.constructors`, `.workflows`, `.utils`, the
-`Platform` enum, and every config view — keeps its 3.x import path and signature.
+Read [Migrating from v3](migrating-from-v3.md) for the earlier v4 renames and
+[v3 compatibility](v3-compatibility.md) for the explicitly retained aliases.
+An alias commitment is not a promise that every undocumented helper or Python
+object protocol remains identical. This page lists the additional migration
+work required by the native implementation.
 
 ## Installation and packaging
 
-### Wheels
+The build backend is maturin. `Cargo.toml` supplies the package version.
+Compatible CPython 3.10+ `abi3` wheels need no Rust toolchain; sdist and checkout
+builds require Python 3.10+, a linker, and the Rust MSRV in `Cargo.toml`
+(currently 1.98). There is no pure-Python fallback.
+See [Installation](install.md) for wheel targets and source-build commands.
 
-4.0 ships pre-built `abi3` wheels for Linux, macOS, and Windows on CPython 3.10
-and newer. `pip install hier-config` needs no toolchain on those platforms.
-
-Installing from an sdist — or on a platform without a published wheel — now
-requires a **Rust toolchain** (`rustup`, stable). The build backend moved from
-Poetry to [maturin](https://www.maturin.rs/), and the package version is derived
-from `Cargo.toml`.
-
-See [Install hier_config](install.md) for the full matrix.
-
-### Python version
-
-`requires-python` is `>=3.10`, unchanged from 3.7. CI covers 3.10 through 3.14.
-
-### Runtime dependencies
-
-```toml
-dependencies = ["pydantic>=2.9,<3", "pyyaml>=6,<7"]
-```
-
-`pyyaml` is **not** a new import — `hier_config.utils` used it in 3.x too, but the
-wheel never declared it. If you were relying on a transitive `pyyaml`, nothing
-changes; if you had pinned it out, the dependency is now explicit and correct.
-
-!!! tip "Pin defensively during the upgrade"
-    Downstream packages that declare an unbounded `hier-config>=3.x` will pick up
-    4.0 automatically. Cap those to `<4` until you have worked through this guide.
+`pydantic` is the only required Python runtime dependency. YAML file helpers
+require `pip install --pre 'hier-config[yaml]'`. Importing the library and
+loading rule dictionaries do not require PyYAML; YAML calls without it raise
+an `ImportError` with installation instructions.
 
 ## Custom drivers
 
-This is where real breakage lives.
-
-### Why hooks stopped firing
-
-In 4.0 the remediation engine runs entirely in Rust. The only bridge from a
-Python driver into that engine serializes two things:
-
-- the `negation_prefix` property, and
-- `driver.rules`, as JSON (excluding `post_load_callbacks`, which are registered
-  separately).
-
-Anything expressed as **data on `rules`** crosses the boundary. Anything
-expressed as **imperative Python on the driver class** does not — the engine
-never calls back into Python during remediation, so an override is simply never
-reached.
-
 ### Hook support matrix
 
-| Hook | 4.0 status |
+| Extension point | v4 behavior |
 | --- | --- |
-| `_instantiate_rules()` | ✅ Supported |
-| `negation_prefix` property | ✅ Supported |
-| Appending to `driver.rules.*` collections | ✅ Supported |
-| `post_load_callbacks` | ✅ Supported (additive; project callbacks are built in) |
-| `swap_negation()` | ❌ **Removed** — defining it raises `TypeError` |
-| `idempotent_for()` | ❌ **Removed** — defining it raises `TypeError` |
-| `negate_with()` | ❌ **Removed** — defining it raises `TypeError` |
-| `sectional_exit()` | ❌ **Removed** — defining it raises `TypeError` |
-| `config_preprocessor()` | ⚠️ Runs in `HConfig.from_text()`; skipped by `from_lines()` |
-| `declaration_prefix` property | ❌ **Silently ignored** |
+| `_instantiate_rules()` | Supported; returns `HConfigDriverRules` |
+| `negation_prefix`, `declaration_prefix` | Supported properties |
+| Mutable rule collections | Supported, including retained v3 negation lists |
+| `post_load_callbacks` | Supported; built-in native callbacks are not applied twice |
+| `remediation_transform_callbacks`, workflow plugins | Supported Python transforms |
+| Custom `config_preprocessor()` | Removed override hook; defining one raises `TypeError` at class creation |
+| `idempotent_for()`, `negate_with()`, `sectional_exit()`, `swap_negation()` | Removed; defining an override raises `TypeError` when the class is created |
 
-`idempotent_for()`, `negate_with()`, `sectional_exit()`, and `swap_negation()`
-no longer exist on `HConfigDriverBase`. The engine resolves all four inside the
-Rust core from the driver's rules and its `negation_prefix` /
-`declaration_prefix`, so a Python override could never be consulted. Rather than
-let that fail silently, `__init_subclass__` raises `TypeError` at class-creation
-time for any subclass that defines one. There is no opt-out: express the intent
-as rules (see [Negation rules](migrating-from-v3.md#negation-rules)) instead.
-
-The private helpers that existed only to serve these hooks —
+The five removed override hooks are **not silently ignored**:
+`HConfigDriverBase.__init_subclass__()` rejects them. The core resolves the four
+negation/idempotency/exiting hooks from rule data and prefixes; custom text
+preprocessing must happen explicitly before construction. Remove those
+overrides before importing the custom driver. The private helpers
 `_idempotent_for_helper()`, `_negation_negate_with_helper()`, and
-`_idempotency_key()` — are removed along with them.
+`_idempotency_key()` are also removed.
 
-See [Key methods in `HConfigDriverBase`](../dev/creating-drivers.md#behavior-the-core-owns)
-for the authoritative reference, which is pinned by
-`tests/native/test_extension_surface.py`.
+### Selecting native platform operations
 
-### Detecting the problem
-
-You do not have to instrument anything for the four removed hooks — importing
-the module raises:
-
-```text
-TypeError: MyDriver defines idempotent_for(), which the v4 engine never calls:
-only rule data crosses into the Rust core. Express this as a rule on
-HConfigDriverRules instead.
-```
-
-For `config_preprocessor()` and `declaration_prefix`, which are only partially
-honored, instrument the subclass and confirm what actually runs:
+The public `platform` class attribute selects native vendor operations:
 
 ```python
-from hier_config import get_hconfig
-from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
+from typing import ClassVar
+
+from hier_config import HConfigDriverBase, HConfigDriverRules, Platform
+from hier_config.platforms.driver_base import load_platform_rules
 
 
-class Probe(HConfigDriverCiscoIOS):
-    seen: list[str] = []
+class CustomIOS(HConfigDriverBase):
+    platform: ClassVar[Platform] = Platform.CISCO_IOS
 
-    @classmethod
-    def config_preprocessor(cls, config_text: str) -> str:
-        cls.seen.append("config_preprocessor")
-        return config_text
-
-
-get_hconfig(Probe(), "interface Eth1\n")  # runs the preprocessor
-print(Probe.seen)
+    @staticmethod
+    def _instantiate_rules() -> HConfigDriverRules:
+        return load_platform_rules(Platform.CISCO_IOS)
 ```
 
-### Migrating `idempotent_for()`
+Subclassing a built-in driver inherits its selector. Without a selector, a
+custom driver uses Generic native operations, even if its registry name
+resembles a vendor or its rules were loaded from a built-in platform. Explicit
+rules, prefixes, and callbacks still apply; vendor-specific parsing and fixups
+are not inferred from the class name. Use Generic for genuinely new syntax,
+or select a built-in platform whose native behavior you intend to inherit.
+An invalid explicit `platform` selector raises `ValueError`; it does not
+silently fall back to Generic.
 
-Express the same intent as an `IdempotentCommandsRule` instead:
+### Migrating removed hooks
 
-```python
-from hier_config.models import IdempotentCommandsRule, MatchRule
-
-driver.rules.idempotent_commands.append(
-    IdempotentCommandsRule(
-        match_rules=(MatchRule(re_search=r"^tacacs-server host (\S+) encrypted-key"),),
-    )
-)
-```
-
-### Migrating `negate_with()`
-
-`negate_with()` maps to appending a `NegationDefaultWithRule` to
-`driver.rules.negate_with`. New in 4.0, `use` accepts regex backreferences
-against the last `match_rule` carrying a `re_search`, which replaces the v3
-`_negation_negate_with_helper()` "rebuild from the first *N* words" idiom:
+Use `IdempotentCommandsRule` for `idempotent_for()`,
+`SectionalExitingRule` for `sectional_exit()`, and negation rules for
+`negate_with()`. For example:
 
 ```python
 from hier_config.models import MatchRule, NegationDefaultWithRule
@@ -194,421 +91,269 @@ driver.rules.negate_with.append(
 )
 ```
 
-`sectional_exit()` maps to appending a `SectionalExitingRule` to
-`driver.rules.sectional_exiting`. `swap_negation()` has no rule equivalent: the
-core derives it from `negation_prefix` and `declaration_prefix`, which remain
-overridable properties.
-[Customizing Driver Rules](../admin/customizing-rules.md) has worked examples
-for each rule type.
+`swap_negation()` derives its behavior from the negation/declaration prefixes.
+Regex compatibility depends on whether the rule needs captures or only a
+boolean match. See the boundary below before migrating custom patterns.
 
-### Migrating `config_preprocessor()`
+### Regex compatibility boundary
 
-There is no rule equivalent for arbitrary text rewriting. Apply the
-transformation to the config string **before** handing it to `get_hconfig`:
+Python replacement-template semantics are preserved for per-line/full-text
+substitutions and negation `REGEX_SUB`: numbered/named captures, literal dollar
+signs, escaped backslashes, common escapes and octal escapes. Invalid or
+malformed group references raise errors even if the pattern finds no match.
+`REGEX_SUB` replaces all occurrences, as `re.sub`
+does by default, rather than just the first match.
 
-```python
-config_text = my_preprocessor(raw_config_text)
-config = get_hconfig(driver, config_text)
-```
+This is **not complete Python regex-pattern compatibility**. Capture-producing
+patterns used in substitutions, negation templates, idempotency keys and
+unused-object name/reference extraction must use the Rust `regex` syntax subset.
+Lookarounds, pattern backreferences and Python's `\Z` are unsupported there
+and raise contextual errors rather than being silently ignored. Python API
+callers receive `ValueError` for these invalid/unsupported rule patterns.
+Move unsupported text transformations into explicit preprocessing or rewrite
+the affected rule without changing its intended matching behavior.
 
-If the rewrite is line-shaped rather than text-shaped, a
-`per_line_sub` rule or a `post_load_callback` is usually a better fit.
+Matching-only `MatchRule` and indentation checks can use a bounded
+`fancy-regex` fallback for richer patterns; its execution-limit failures are
+also errors, not false matches. A pattern accepted for boolean matching can
+therefore still be rejected when a rule needs its captured groups.
 
-### `_instantiate_rules()` is concrete, not abstract
+Standalone Rust consumers loading dynamic rules should use fallible APIs:
+`Driver::try_compute_negation()`, `Driver::try_idempotency_key()`,
+`try_negate_with()`, `try_unused_objects()`, and `try_is_object_referenced()`.
+Their infallible convenience counterparts may panic on invalid rule regexes.
 
-`HConfigDriverBase` remains an `ABC`, and `_instantiate_rules()` remains a
-`staticmethod` — existing overrides need no change. What moved is the base
-implementation: it is no longer decorated `@abstractmethod`, and instead raises
-`NotImplementedError` when called.
+### Text preprocessing and callbacks
 
-The distinction matters for one case. In 3.x a subclass that forgot
-`_instantiate_rules()` could not be instantiated at all; in 4.0 it constructs
-successfully and fails at the point the rules are first needed. Subclasses that
-do define the override behave identically.
-
-Each in-tree driver now declares its own override rather than deriving the
-platform from a class attribute:
-
-```python
-@staticmethod
-def _instantiate_rules() -> HConfigDriverRules:
-    return load_platform_rules(Platform.CISCO_IOS)
-```
-
-`load_platform_rules()` reads the canonical rules the Rust core compiles
-against, so a custom driver that wants stock platform behavior plus additions
-can call it and then append to the returned collections.
-
-### Invalid rules now raise
-
-If a custom driver's `rules` payload cannot be converted for the Rust engine,
-4.0 raises. 3.x silently discarded the custom rules and ran with stock platform
-behaviour. This is strictly better — but a driver that "worked" in 3.x only
-because its broken rules were being dropped will now fail loudly.
-
-## Behaviour changes
-
-### `HConfigChildren.__eq__`
-
-3.x compared children sorted by `order_weight`, recursing into `text`, `tags`,
-and grandchildren. 4.0 compares child `text` in **insertion order**.
-
-Results can differ in *both* directions: two configs with the same lines in a
-different order now compare unequal, and children differing only in tags or
-grandchildren now compare equal.
+Move a custom `config_preprocessor()` out of the driver and call it explicitly
+before `HConfig.from_text()`:
 
 ```python
-# Compare the children objects, not the collection, to keep 3.x semantics
-a.children["interface Eth1"] == b.children["interface Eth1"]  # full recursive ==
+from hier_config import HConfig, Platform
+
+
+def preprocess_config(config_text: str) -> str:
+    return config_text.replace("hostname old-router", "hostname new-router")
+
+
+config = HConfig.from_text(
+    Platform.CISCO_IOS, preprocess_config("hostname old-router")
+)
 ```
 
-Individual `HConfigChild` comparison is unchanged and still recursive.
+This explicit step runs **before** the constructor's full-text substitutions,
+unlike the former override hook. Review order-dependent transformations.
+Built-in platform preprocessing still runs natively for text constructors;
+stock `config_preprocessor()` methods remain callable helpers, explicitly
+marked `core_owned`, not Python override dispatch points. The marker is not a
+supported way to make a custom override execute. Fast line loading bypasses
+full-text/native platform preprocessing. A `per_line_sub` rule or post-load
+callback may be more appropriate for line/tree edits.
 
-### `HConfigBase.__contains__`
+`core_owned` also marks built-in post-load callback implementations already
+executed natively so they are not applied twice. It does not enable the four
+other removed hooks or cause the engine to call arbitrary Python overrides.
 
-3.x defined no `__contains__`, so `"hostname r1" in config` fell through to
-iteration semantics and was effectively always `False`. 4.0 implements real
-membership against child `text`:
+**Callback ordering differs from the pure-Python implementation.** Enabled
+stock platform callbacks run natively before additive Python post-load
+callbacks. Custom Python callbacks retain their relative list order, but
+inserting one at index zero does not make it run before stock normalization.
+If a transformation must precede native parsing or normalization, apply it
+explicitly to the input text before calling the constructor.
+
+### Rule construction and errors
+
+`_instantiate_rules()` remains a static method, but is concrete rather than
+abstract; the base implementation raises `NotImplementedError` when a driver
+without an implementation is initialized. Invalid rule serialization raises
+instead of silently selecting stock rules.
+
+## Python API migration
+
+### Descendants and removed helpers
+
+`all_children()` was renamed to **`descendants()`**, with no `all_children`
+alias. Update recursive walks:
 
 ```python
-"hostname r1" in config  # True in 4.0 when that child exists
+for child in config.descendants():
+    print(child.text)
 ```
 
-Any code that relied on the always-`False` behaviour — for example
-`if line not in config:` guards that were unconditionally taken — changes
-meaning.
+`config.children` still means direct children. `len(config)` counts all
+descendants; `len(config.children)` counts only direct children.
 
-### `str(HConfig)` no longer duplicates lines
+The following construction and implementation helpers were removed:
 
-The 3.7 Rust backend rendered nested structures repeatedly. A tree of `a/b/c`
-plus a sibling `c` produced `a, b, c, exit, exit, b, c, exit, c`. 4.0 restores
-the invariant:
+| Removed surface | Replacement |
+| --- | --- |
+| `HConfigChildren()` direct construction | Use `config.children` or `child.children` |
+| `HConfigChild.instantiate_child()` | Use a parent's `add_child()` |
+| `tree_algorithms.compute_remediation()` | `source.remediation(target)` |
+| `tree_algorithms.compute_difference()` | `source.difference(target)` |
+| `tree_algorithms.compute_future()` | `source.future(changes)` |
+| `tree_algorithms.compute_future_with_report()` | `source.future_with_report(changes)` |
+| `tree_algorithms.compute_with_tags()` | `source.with_tags(tags)` |
+| `tree_algorithms.prune_emptied_branches()` | `source.future(changes, prune_empty_branches=True)` |
 
-```python
-str(config) == "\n".join(str(c) for c in sorted(config.children))
-```
+`hier_config.tree_algorithms` retains `FutureReport`, not the six algorithm
+functions. Code importing those functions must migrate even though the module
+itself still imports.
 
-If you snapshot-tested against the broken output, regenerate those fixtures.
+### Traversal return types
 
-### `future()` negation handling
+Consult the shipped stubs for the precise iterator versus collection contract
+of each method. The native boundary preserves these method-specific contracts:
 
-Negations whose positive form is present now remove that line instead of
-surviving as a literal `no ...`. Shorthand negations such as `no description`
-remove the valued line they match. Negations with no corresponding positive line
-are still retained.
+| Surface | v4 return contract |
+| --- | --- |
+| `get_children()`, `get_children_deep()`, `lineage()` | Iterator; supports `next(...)` |
+| `path` | Iterator; supports `next(...)` |
+| `unified_diff()` | Iterator; supports `next(...)` |
+| `all_children_sorted()`, `all_children_sorted_by_tags()` | Tuple; use `iter(...)` before `next(...)` |
 
-```python
-running = get_hconfig(Platform.CISCO_IOS, "interface Eth1\n  description old\n")
-remediation = get_hconfig(Platform.CISCO_IOS, "interface Eth1\n  no description\n")
-running.future(remediation).dump_simple()
-# 4.0: ('interface Eth1',)   — 3.x left a stray 'no description'
-```
-
-### `DuplicateChildError`
-
-Now inherits `HierConfigError`. Handlers written as `except HierConfigError:`
-previously did **not** catch it and now do. It remains an `Exception` subclass,
-so bare `except Exception` handlers are unaffected.
-
-### `expand_range` bounds
-
-`expand_range` and `hp_procurve_expand_range` cap expansion both per-segment and
-in aggregate. Oversized ranges return an error and leave the line untouched
-rather than attempting to materialize the range. `vlan 1-4000000000` no longer
-exhausts memory.
-
-### Config view identity
-
-`interface_views`, `interface_view_by_name()`, and `bundle_interface_views()`
-return interned `HConfigChild` handles, so identity checks hold:
-
-```python
-view.config is config.children["interface Eth1"]  # True
-```
-
-### Tree sizing and descendant counting (`len(config)` vs `len(config.children)`)
-
-A subtle semantic distinction that often surfaces during migration is what
-`len(config)` actually measures:
-
-- `len(config)` returns the total count of **all recursive descendants** across
-  the configuration tree (every child, grandchild, etc., excluding the root node
-  itself).
-- `len(config.children)` returns the count of **direct top-level children**
-  (e.g., top-level interface or router stanzas).
-- `len(child)` returns the number of **descendants** underneath that specific
-  child node.
-
-In 3.x, `len(config)` was implemented in Python as `len(tuple(self.all_children()))`.
-On large configs (e.g. 10,000+ lines), this built a temporary 10,000-element tuple
-and allocated Python wrapper handles for every node in the entire tree simply to
-count them.
-
-In 4.0 with the Rust core:
-
-- `len(config)` on the root is an **$O(1)$ query** via `tree.node_count()`
-  (checking the underlying arena length minus one), allocating zero memory and
-  materializing zero handles.
-- `len(child)` walks descendants with a zero-allocation iterator, counting
-  nodes without building temporary tuples or allocating intermediate collections.
-
-```python
-# Count top-level stanzas only:
-num_stanzas = len(config.children)
-
-# Count total lines/nodes across the entire hierarchy:
-total_nodes = len(config)  # O(1) on root in 4.0, zero-allocation
-```
-
-### Traversals: direct children vs recursive descendants
-
-The library distinguishes between direct child access and recursive descendant
-traversals:
-
-- `config.children` is a mapping-like container of direct children (1 level deep).
-- `config.all_children()` yields all descendant nodes recursively in depth-first
-  pre-order as a Python generator.
-- `config.all_children_sorted()` returns all descendant nodes recursively sorted
-  by `order_weight` as an immutable tuple (`Sequence[HConfigChild]`).
-- `config.all_children_sorted_by_tags(...)` returns filtered descendant nodes
-  matching tag rules as an immutable tuple.
-
-In the standalone Rust core (`hier_config_core`), this distinction is formalized
-directly on `Tree`:
-
-- `tree.children(node_id)` and `tree.sorted_children(node_id)` return direct
-  child slices or sorted vectors.
-- `tree.descendants(node_id)` and `tree.descendants_sorted(node_id)` return
-  zero-allocation, stack-based depth-first iterators (`Descendants<'a>`,
-  `DescendantsSorted<'a>`), which replace recursive vector-accumulating passes.
-- `tree.all_children(node_id)` and `tree.all_children_sorted(node_id)` return
-  materialized `Vec<NodeId>` when an eager collection is specifically required.
-- `tree.node_count(node_id)` evaluates the total descendant count (O(1) on root).
-
-### Some traversal methods return tuples, not generators
-
-`all_children()` is still a true generator, so `isinstance(x,
-types.GeneratorType)`, `.send()`, `.throw()`, and `.close()` all still work.
-
-`all_children_sorted()`, `all_children_sorted_by_tags()`, and
-`HConfig.unused_objects()` return a **tuple** instead. The rule is whether the
-method can be lazy at all: none of these three can produce a result before it
-has seen the whole tree, so the 3.x generator was a wrapper around an
-already-materialized list — it added a Python frame per item and bought no
-laziness. Dropping it makes a full `all_children_sorted()` walk roughly six
-times faster.
-
-For those three, the change is mostly additive at runtime:
-
-```python
-children = config.all_children_sorted_by_tags(frozenset({"safe"}), frozenset())
-len(children)          # now works
-children[0]            # now works
-list(children)         # now repeatable -- no longer exhausted after one pass
-```
-
-Two things break:
-
-- **Static annotations.** `Sequence` is not an `Iterator`, so
-  `x: Iterator[HConfigChild] = config.unused_objects()` is now a mypy/pyright
-  error. Change the annotation to `Sequence[HConfigChild]`, or to
-  `Iterable[HConfigChild]` if you want to accept both.
-- **Generator-specific operations.** `isinstance(x, types.GeneratorType)` is now
-  `False` for these two, and `.send()`, `.throw()`, and `.close()` no longer
-  exist. If you need a true iterator, wrap the call: `iter(...)`.
-
-Ordinary `for` loops, comprehensions, unpacking, and `tuple(...)` /
-`list(...)` calls are unaffected.
+An iterator need not be a Python generator or a live view of later mutations.
+An eager list/tuple is iterable but is **not** an iterator:
+`next(values)` fails; `next(iter(values))` works. Likewise, `Iterator[T]`
+annotations do not accept a `Sequence[T]`. Prefer `Iterable[T]` for code that
+only loops, and use `iter(...)` when consuming incrementally. Generator-only
+operations (`send`, `throw`, `close`) are not a general iterable contract.
 
 ### Handle identity across bulk traversals
 
-`HConfigChild` handles are Python wrappers over nodes in a shared native tree.
-In 4.0, **bulk traversals no longer intern their handles**, so two handles for
-the same node obtained from *different* traversals are no longer the same
-Python object:
+Native nodes live in a shared tree. Bulk traversal can return distinct Python
+wrappers for the same node; do not use `is` or `id()` to compare those wrappers.
+Single-node lookups and view-backed node access retain interning.
 
 ```python
-config.all_children()[0] is config.all_children()[0]  # False in 4.0, True in 3.x
+a = next(iter(config.descendants()))
+b = next(iter(config.descendants()))
+a == b  # node comparison, not Python wrapper identity
 ```
 
-Interning costs a lock, a hash, a weakref allocation, and a weakref upgrade per
-node. On a whole-tree walk that dominates the cost — removing it is where the
-61% `iteration` improvement comes from.
+Metadata changes through one live handle are visible through another handle
+for that node. A handle does not keep a removed node attached: reacquire nodes
+after destructive edits rather than accessing a stale handle.
 
-**Everything that depends on value semantics still works**, because `__eq__` and
-`__hash__` are derived from the node rather than the wrapper:
+Node methods/properties and child containers whose owner has been deleted raise
+`ValueError("configuration node has been deleted")`. Catch this ordinary
+exception at the edit boundary if stale references are expected; do not rely
+on a native panic or an empty success-shaped result.
 
-```python
-a, b = config.all_children()[0], config.all_children()[0]
-a == b                    # True
-hash(a) == hash(b)        # True
-a in config.all_children()  # True
-set(config.all_children()) # deduplicates correctly
-```
+Retained native interface views are stale too when their interface node is
+deleted. Their node-backed accessors, including `config`, raise
+`ValueError` rather than panicking or returning an empty name. Code holding
+both nodes and views across edits can catch `ValueError` and
+reacquire the appropriate object from the updated tree.
 
-Mutation visibility is also unaffected — tags, comments, and facts live in the
-shared tree keyed by node, so a write through one handle is visible through any
-other handle for the same node.
+### Copying trees and metadata
 
-**Single-node lookups still intern**, and this is guaranteed, not incidental:
+`copy.deepcopy()` creates an independent native tree and uses Python's memo
+dictionary when copying metadata. Cycles and repeated references in a copied
+object graph are preserved rather than recursively copying forever or
+duplicating shared objects. Native tree locks are released before invoking
+Python metadata copy hooks.
 
-```python
-child = config.add_child("interface Eth1")
-config.add_child("interface Eth1", return_if_present=True) is child  # True
-config.children.get("interface Eth1") is child                      # True
-config.get_child(equals="interface Eth1") is child                   # True
-view.config is config.children["interface Eth1"]                     # True
-```
+`remove_tags("tag")` raises `KeyError` if that tag is absent from any affected
+leaf; earlier leaves may already have been changed, so the operation is not
+transactional. In contrast, `remove_tags(iterable_of_tags)` uses set-difference
+semantics and ignores absent tags. These preserve the Python contracts.
 
-**What to check:** grep for `is` / `is not` / `id()` comparisons on
-`HConfigChild` objects, and for code that uses handles as dict keys *expecting
-identity semantics*. Replace `is` with `==`. Dict and set usage keyed on
-`HConfigChild` needs no change, since those already use `__hash__`/`__eq__`.
+### Child collection equality
 
-Because this change is silent, grep is the reliable detector — a test suite that
-happens to compare handles from the *same* traversal will keep passing:
+`HConfigChildren.__eq__` compares direct child text in insertion order, not the
+previous sorted recursive comparison of tags and descendants. This is a silent
+semantic change. Compare child nodes or use `unified_diff()` when recursive
+configuration equality is intended.
 
-```bash
-# Candidate sites. Review each: only comparisons on handles from *different*
-# traversals actually change behaviour.
-grep -rnE '\bis (not )?[a-z_]+\b' --include='*.py' . | grep -i 'child\|node\|view'
-grep -rn 'id(' --include='*.py' . | grep -i 'child\|node'
-```
+### Workflow inputs are read-only
 
-The mechanical fix is `is` → `==` and `id(x)` → `x` as a dict key. Both are
-safe even where identity happens to still hold, so you do not need to work out
-which call sites are affected — converting all of them is correct.
+`WorkflowRemediation.running_config` and `.generated_config` cannot be
+reassigned. Construct a new workflow when replacing either input; assignment
+raises `AttributeError`. The input and returned config trees remain mutable.
+Remediation and rollback are computed lazily and cached. Caching does not make
+the entire mutable tree API lock-free or safe to mutate concurrently.
 
-### Comments
+### Native config views
 
-Comments written by built-in post-load callbacks now surface through
-`HConfigChild.comments`. In earlier builds they were stored but not visible from
-Python.
+The six supported platform views now use **one native implementation**, not an
+unchanged Python implementation beside a Rust copy. `HConfigViewBase` and
+`ConfigViewInterfaceBase` are aliases for native classes. Capability mixins
+are markers for `isinstance()` checks, not Python implementations to inherit
+for their default property bodies. See [Config Views](config-views.md).
 
-### View properties return `None` instead of raising
+Device-level subclasses of a built-in view remain supported through the
+driver's `view_class`, provided the config selects a platform with native view
+operations. Keep the inherited constructor accepting an `HConfig`. A Generic
+config cannot acquire native view support by assigning a Python `view_class`;
+constructing that native-backed view is unsupported.
 
-The view layer is now the native Rust implementation, exposed through PyO3, so
-these divergences **do** affect Python users. Three properties that raised in v3
-now return a value:
+Direct construction of `ConfigViewInterfaceBase` (or a Python interface-view
+subclass) is no longer supported: obtain interface views from a device view's
+`interface_views` or `interface_view_by_name()`. Adding a Python `__init__`
+does not restore the native base constructor.
 
-| Platform | Property | v3 | v4 |
-| --- | --- | --- | --- |
-| Cisco IOS, Aruba AOS-CX | `nac_max_dot1x_clients`, `nac_max_mab_clients` | `NotImplementedError` | `None` |
-| Arista EOS, Cisco NX-OS, Cisco XR | `module_number` | `AttributeError` | `None` |
-| HP `ProCurve` | `bundle_member_interfaces` | `ValueError` on a non-trunk interface | `()` |
+Capability and platform marker membership is instance-based.
+`issubclass(ConfigViewInterfaceCiscoIOS, InterfaceVlanViewMixin)` no longer
+describes IOS capabilities; use `isinstance(interface_view, InterfaceVlanViewMixin)`
+or `interface_view.capabilities`. Multiple-inheritance mixin recipes do not
+install new native behaviors. For a genuinely new platform, implement native
+view ops or use a separate application-owned wrapper over `HConfig`.
 
-Rust favors a total function over a panic, because a panic in a getter is not a
-usable error-handling contract for a library. If you caught any of these
-exceptions, replace the `try`/`except` with a falsy check:
+| Value/property | Before | v4 |
+| --- | --- | --- |
+| `InterfaceDuplex.value` | `"1"`, `"2"`, `"3"` | `"auto"`, `"full"`, `"half"` |
+| IOS/AOS-CX `nac_max_dot1x_clients`, `nac_max_mab_clients` | `NotImplementedError` | `None` |
+| EOS/NX-OS/XR `module_number` | `AttributeError` | `None` |
+| ProCurve `bundle_member_interfaces` on non-trunk interfaces | `ValueError` | `()` |
+| IOS speed configured as `auto` | `ValueError` | `None` |
+| IOS unrecognized `authentication host-mode` | `ValueError` | `None` |
 
-```python
-# v3
-try:
-    limit = interface_view.nac_max_dot1x_clients
-except NotImplementedError:
-    limit = None
+Serialize duplex member names or migrate stored numeric-string values
+explicitly; `InterfaceDuplex("1")` no longer reconstructs a value.
+Treat an unknown NAC mode as absent/unsupported; inspect the original config if
+your application must distinguish an unknown token from a missing command.
+Replace exception-based tests of unsupported properties with explicit
+`None`/empty-value checks. ProCurve `speed` still returns `None`.
 
-# v4
-limit = interface_view.nac_max_dot1x_clients
-```
+## Correctness changes and parity
 
-Two Python behaviors are reproduced faithfully even though they look like bugs,
-because changing them would be a behavior change rather than a port:
+- `HConfigBase.__contains__` now tests direct child text. Membership guards that
+  relied on the old always-false result change behavior.
+- Nested text rendering no longer repeats descendants.
+- `future()` correctly resolves matching negations and platform idempotency.
+  Unresolved negations can still remain; inspect `future_with_report()`.
+- `DuplicateChildError` derives from `HierConfigError`. JSON/XML duplicate
+  list identities preserve that exception across the native boundary.
+- Native range expansion is bounded rather than allocating arbitrarily large
+  ranges from input.
 
-- HP `ProCurve` `speed` is always `None`. The Python implementation passes the
-  whole `speed-duplex 1000-full` line into a parser that expects just the value,
-  so no branch ever matches. `duplex` works only incidentally, by matching the
-  line's `half`/`full` suffix.
-- Cisco IOS `speed` raises `ValueError` in Python whenever the configured value
-  is `auto`, because it calls `int()` on it. Rust returns `None`.
+Shared `testdata/cases/` exercises exact remediation and rollback in Rust and
+Python. It is not an assertion of universal upstream equivalence. Two initially
+mismatched cases now preserve their original source setup and expectations:
+`cisco_nxos/line_console_terminal_settings_negation_negate_with` supplies its
+test-specific negation rules explicitly; both it and
+`cisco_xr/template_block_indent_adjust` select the lines loader to match
+`from_lines()`. Manifest provenance names the source tests at
+`upstream/next@0866dc2`. Expected outputs are unchanged: these are corrections
+to the test setup, not intentional platform-behavior divergences.
 
-Both are single-implementation behaviors now; changing either is a behavior
-change to the library, not a porting decision.
-
-### `WorkflowRemediation` thread-safety and lazy caching
-
-`WorkflowRemediation` calculates and lazily caches its `remediation_config` and
-`rollback_config` trees on first access using `std::sync::OnceLock`.
-
-All query methods and properties on `WorkflowRemediation` take `&self` immutably
-without requiring exclusive locks or internal mutable re-borrowing. This
-guarantees thread-safe access from both Python and Rust, eliminates runtime PyO3
-`BorrowMutError` under concurrent read access across threads, and guarantees
-that the input running and generated trees are never mutated during diff
-calculation.
-
-## Import surface
-
-No import paths were removed or moved.
-
-- `hier_config.base`, `.child`, `.children`, and `.root` are re-export shims over
-  the extension. `tests/test_import_surface.py` pins them.
-- `hier_config.platforms.view_base` and every
-  `hier_config/platforms/<platform>/view.py` are unchanged pure Python. The
-  Rust core carries a parallel native view for standalone Rust use; the two are
-  pinned together by the shared corpus under `testdata/views/`.
-- Type stubs (`hier_config/*.pyi`) are shipped, so downstream annotations resolve
-  to real types instead of `Any`.
-- Native classes report `__module__` correctly, which makes `HConfig` and
-  `HConfigChild` **picklable**. They were not in 3.7.
-- `HConfigBase.children` is a real property rather than a `__getattr__`
-  fallback, so it now appears in `dir()`, IDE completion, and type checkers.
-- `TextStyle` in `hier_config.models` is an explicit `TypeAlias`.
-
-## Performance
-
-`get_hconfig_fast_load` now has a native implementation. It was roughly 25x
-slower than `get_hconfig` in 3.x; an 8,431-line config went from ~41.6 ms to
-~1.5 ms. If you avoided `fast_load` for performance reasons, re-benchmark it.
-
-4.0 also collected the optimizations that required a compatibility break.
-Relative to the start of the 4.0 cycle:
-
-| Operation | Change |
-| --- | --- |
-| Whole-tree iteration | **−61%** |
-| `deepcopy` | **−32%** |
-| Parsing | −11% |
-| Remediation | −11% |
-| `fast_load` | −7% |
-
-The iteration gain comes from the two breaks documented above —
-[sequence returns](#some-traversal-methods-return-tuples-not-generators) and
-[bulk-traversal de-interning](#handle-identity-across-bulk-traversals). The
-others come from a Rust-internal change with no Python-visible surface.
-
-Remaining optimizations under consideration are tracked in the
-[performance roadmap](../dev/performance-roadmap.md). Those are **not** part of
-4.0.
+Review representative real configurations before deploying v4. Object-protocol
+parity, retained v3 scenarios, formats, and native boundary tests provide
+complementary checks; see [Testing](../dev/testing.md).
 
 ## Upgrade checklist
 
-1. Cap any unbounded `hier-config>=3.x` requirements at `<4` before upgrading, so
-   the bump is deliberate.
-2. Confirm your platforms have wheels; otherwise provision a Rust toolchain in
-   the build image.
-3. **Audit every `HConfigDriverBase` subclass.** For each override of
-   `idempotent_for`, `negate_with`, `sectional_exit`, `config_preprocessor`, or
-   `declaration_prefix`, re-express it as a rule or delete it. Use the probe in
-   [Detecting the problem](#detecting-the-problem) to verify.
-4. Grep for `.children ==` and `.children !=` comparisons and switch to
-   comparing `HConfigChild` objects where recursive semantics matter.
-5. Grep for `in config` / `not in config` membership tests.
-6. Regenerate any snapshots taken from `str(HConfig)` or from `future()` output.
-7. Review `except HierConfigError` blocks for newly-caught `DuplicateChildError`.
-8. Grep for `Iterator[HConfigChild]` / `Generator[...]` annotations on
-   `all_children*()` and `unused_objects()` results and change them to
-   `Sequence[HConfigChild]`.
-9. Grep for `is` / `is not` / `id()` comparisons on `HConfigChild` objects and
-   switch them to `==` / `!=` unless the handle came from a single-node lookup.
-10. Check usage of `len(config)`: `len(config)` counts all recursive descendant
-    nodes across the entire tree, whereas `len(config.children)` counts direct
-    top-level children.
-11. Run your suite, then diff real remediation output for a representative device
-    sample against 3.x rather than relying on unit tests alone.
+1. Pin `<4` until this migration has been reviewed; opt into v4 deliberately.
+2. Provision a compatible wheel or source-build toolchain, and `[yaml]` if needed.
+3. Replace `all_children()` and removed constructors/algorithm helpers.
+4. Audit every custom driver, its platform selector, and the five removed hooks.
+5. Review traversal return types, wrapper identity, collection equality, and
+   any code retaining handles after deletion.
+6. Replace workflow input reassignment with a new workflow.
+7. Audit custom views and serialized duplex/NAC values.
+8. Compare real remediation/rollback output against upstream as well as running
+   application tests.
 
-## Getting help
-
-If you hit a break that is not covered here, please
-[open an issue](https://github.com/netdevops/hier_config/issues) with the
-config snippets and driver code needed to reproduce it.
+See [Performance & Benchmarks](../dev/benchmarks.md) for recorded measurements,
+not a guarantee for a particular device or CI runner.

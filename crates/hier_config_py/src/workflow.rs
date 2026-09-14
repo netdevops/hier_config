@@ -11,6 +11,7 @@ use pyo3::types::{PyTuple, PyType};
 use crate::base::{PyHConfigBase, extract_strings, parse_match_rules_seq};
 use crate::errors::to_py_err;
 use crate::root::{PyHConfig, create_py_hconfig};
+use crate::tree::PyRwLockExt;
 
 pub(crate) fn parse_tag_rules_seq(
     py: Python<'_>,
@@ -249,15 +250,14 @@ impl PyWorkflowRemediation {
         let running_tree = Arc::clone(&running_base.tree);
         let generated_tree = Arc::clone(&generated_base.tree);
 
-        let delta_tree = py
-            .allow_threads(move || {
-                let r_tree = running_tree.tree.read().unwrap();
-                let g_tree = generated_tree.tree.read().unwrap();
-                let mut rem = hier_config_core::remediation::config_to_get_to(&r_tree, &g_tree)?;
-                rem.set_order_weight();
-                Ok::<Tree, hier_config_core::tree::TreeError>(rem)
-            })
-            .map_err(to_py_err)?;
+        let delta_tree = py.allow_threads(move || {
+            let r_tree = running_tree.tree.read_py()?;
+            let g_tree = generated_tree.tree.read_py()?;
+            let mut rem = hier_config_core::remediation::config_to_get_to(&r_tree, &g_tree)
+                .map_err(to_py_err)?;
+            rem.set_order_weight();
+            Ok::<Tree, PyErr>(rem)
+        })?;
 
         let driver_obj = running_bound.getattr("driver")?.unbind();
         let hconfig = create_py_hconfig(py, delta_tree, platform, driver_obj)?;
@@ -297,15 +297,14 @@ impl PyWorkflowRemediation {
         let running_tree = Arc::clone(&running_base.tree);
         let generated_tree = Arc::clone(&generated_base.tree);
 
-        let delta_tree = py
-            .allow_threads(move || {
-                let r_tree = running_tree.tree.read().unwrap();
-                let g_tree = generated_tree.tree.read().unwrap();
-                let mut roll = hier_config_core::remediation::config_to_get_to(&g_tree, &r_tree)?;
-                roll.set_order_weight();
-                Ok::<Tree, hier_config_core::tree::TreeError>(roll)
-            })
-            .map_err(to_py_err)?;
+        let delta_tree = py.allow_threads(move || {
+            let r_tree = running_tree.tree.read_py()?;
+            let g_tree = generated_tree.tree.read_py()?;
+            let mut roll = hier_config_core::remediation::config_to_get_to(&g_tree, &r_tree)
+                .map_err(to_py_err)?;
+            roll.set_order_weight();
+            Ok::<Tree, PyErr>(roll)
+        })?;
 
         let driver_obj = running_bound.getattr("driver")?.unbind();
         let hconfig = create_py_hconfig(py, delta_tree, platform, driver_obj)?;
@@ -324,10 +323,10 @@ impl PyWorkflowRemediation {
         let rem_base = rem_bound.extract::<PyRef<'_, PyHConfigBase>>()?;
         let rem_tree = Arc::clone(&rem_base.tree);
         py.allow_threads(move || {
-            let mut tree = rem_tree.tree.write().unwrap();
+            let mut tree = rem_tree.tree.write_py()?;
             tree.apply_tag_rules(&parsed_rules);
-        });
-        Ok(())
+            Ok(())
+        })
     }
 
     #[pyo3(signature = (include_tags = None, exclude_tags = None))]
@@ -344,11 +343,11 @@ impl PyWorkflowRemediation {
         let rem_base = rem_bound.extract::<PyRef<'_, PyHConfigBase>>()?;
         let rem_tree = Arc::clone(&rem_base.tree);
         let text = py.allow_threads(move || {
-            let tree = rem_tree.tree.read().unwrap();
+            let tree = rem_tree.tree.read_py()?;
             let inc_refs: Vec<&str> = inc.iter().map(String::as_str).collect();
             let exc_refs: Vec<&str> = exc.iter().map(String::as_str).collect();
-            tree.rendered_text_by_tags(&inc_refs, &exc_refs)
-        });
+            Ok::<String, PyErr>(tree.rendered_text_by_tags(&inc_refs, &exc_refs))
+        })?;
         Ok(text)
     }
 
@@ -376,11 +375,11 @@ impl PyWorkflowRemediation {
         let roll_base = roll_bound.extract::<PyRef<'_, PyHConfigBase>>()?;
         let roll_tree = Arc::clone(&roll_base.tree);
         let text = py.allow_threads(move || {
-            let tree = roll_tree.tree.read().unwrap();
+            let tree = roll_tree.tree.read_py()?;
             let inc_refs: Vec<&str> = inc.iter().map(String::as_str).collect();
             let exc_refs: Vec<&str> = exc.iter().map(String::as_str).collect();
-            tree.rendered_text_by_tags(&inc_refs, &exc_refs)
-        });
+            Ok::<String, PyErr>(tree.rendered_text_by_tags(&inc_refs, &exc_refs))
+        })?;
         Ok(text)
     }
 

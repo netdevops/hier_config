@@ -655,28 +655,6 @@
           }
         ],
         "use": "session-limit 32"
-      },
-      {
-        "match_rules": [
-          {
-            "equals": "line console"
-          },
-          {
-            "startswith": "terminal length"
-          }
-        ],
-        "use": "terminal length 24"
-      },
-      {
-        "match_rules": [
-          {
-            "equals": "line console"
-          },
-          {
-            "startswith": "terminal width"
-          }
-        ],
-        "use": "terminal width 80"
       }
     ],
     "per_line_sub": [

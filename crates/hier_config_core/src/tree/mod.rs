@@ -18,6 +18,7 @@ pub enum TreeError {
     NodeNotFound(NodeId),
     InvalidParent(NodeId),
     UnterminatedBanner(String),
+    InvalidRegex(String),
 }
 
 impl std::fmt::Display for TreeError {
@@ -27,6 +28,7 @@ impl std::fmt::Display for TreeError {
             Self::DuplicateChild(path) => write!(f, "Found a duplicate section: {path:?}"),
             Self::NodeNotFound(id) => write!(f, "Node not found: {id:?}"),
             Self::InvalidParent(id) => write!(f, "Invalid parent: {id:?}"),
+            Self::InvalidRegex(message) => write!(f, "Invalid regex rule: {message}"),
             Self::UnterminatedBanner(text) => write!(
                 f,
                 "Unterminated banner: we are still in a banner for some reason at \
@@ -981,14 +983,27 @@ impl Tree {
     }
 
     /// Finds top-level children that are defined objects with no references across the config.
+    ///
+    /// # Panics
+    ///
+    /// Panics for invalid rule regexes; use [`Self::try_unused_objects`] to handle errors.
     pub fn unused_objects(&self) -> Vec<NodeId> {
+        self.try_unused_objects()
+            .expect("invalid unused_objects rule")
+    }
+
+    /// Finds unused objects without silently skipping invalid regexes.
+    ///
+    /// # Errors
+    ///
+    /// Returns invalid object-name or reference-pattern errors.
+    pub fn try_unused_objects(&self) -> Result<Vec<NodeId>, TreeError> {
         let mut unused = Vec::new();
         let mut seen_names = std::collections::HashSet::new();
 
         for rule in &self.driver.rules.unused_objects {
-            let Some(re) = crate::regex_cache::regex(&rule.name_re) else {
-                continue;
-            };
+            let re =
+                crate::regex_cache::rule_regex(&rule.name_re).map_err(TreeError::InvalidRegex)?;
             for definition_id in self.get_children_deep(self.root, &rule.match_rules) {
                 let text = &self.arena[definition_id].text;
                 let Some(caps) = re.captures(text) else {
@@ -1001,40 +1016,60 @@ impl Tree {
                     continue;
                 }
 
-                if !self.is_object_referenced(name, &rule.reference_locations) {
+                if !self.try_is_object_referenced(name, &rule.reference_locations)? {
                     unused.push(definition_id);
                 }
             }
         }
 
-        unused
+        Ok(unused)
     }
 
     /// Checks whether an object name is referenced anywhere matching the given reference locations.
+    ///
+    /// # Panics
+    ///
+    /// Panics for invalid reference regexes; use [`Self::try_is_object_referenced`] instead.
     pub fn is_object_referenced(
         &self,
         name: &str,
         locations: &[crate::models::ReferenceLocation],
     ) -> bool {
+        self.try_is_object_referenced(name, locations)
+            .expect("invalid object reference rule")
+    }
+
+    /// Checks references while reporting invalid patterns.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for unsupported or invalid reference patterns.
+    pub fn try_is_object_referenced(
+        &self,
+        name: &str,
+        locations: &[crate::models::ReferenceLocation],
+    ) -> Result<bool, TreeError> {
         let escaped = regex::escape(name);
         for loc in locations {
             let pattern = loc.reference_re.replace("{name}", &escaped);
             // The object name is interpolated into the pattern, so each distinct name
             // yields a unique pattern that would never be a cache hit. Routing these
-            // through the process-wide, never-evicting `regex_cache` would leak memory
-            // monotonically on input-controlled strings, so compile without caching.
-            let Some(re) = crate::regex_cache::compile_uncached(&pattern) else {
-                continue;
-            };
+            // through the shared cache would evict reusable patterns, so compile
+            // these one-off expressions without caching.
+            let re = crate::regex_cache::compile_uncached(&pattern).ok_or_else(|| {
+                TreeError::InvalidRegex(format!(
+                    "invalid or unsupported object reference regex {pattern:?}"
+                ))
+            })?;
             for section_id in self.get_children_deep(self.root, &loc.match_rules) {
                 for child_id in self.all_children(section_id) {
                     if re.is_match(&self.arena[child_id].text) {
-                        return true;
+                        return Ok(true);
                     }
                 }
             }
         }
-        false
+        Ok(false)
     }
 
     /// Determines if self.text is an idempotent command change.
@@ -1189,24 +1224,68 @@ impl Tree {
     }
 
     /// Computes the negation string for a node.
+    ///
+    /// # Panics
+    ///
+    /// Panics if a negation rule is invalid. Use [`Self::try_compute_negation`]
+    /// for dynamically supplied rules.
     pub fn compute_negation(&self, node_id: NodeId) -> String {
-        if let Some(with_cmd) = self.negate_with(node_id) {
-            return with_cmd;
+        self.try_compute_negation(node_id)
+            .expect("invalid negation rule")
+    }
+
+    /// Computes a node's negation without suppressing rule errors.
+    ///
+    /// # Errors
+    ///
+    /// Reports invalid regexes and replacement templates.
+    pub fn try_compute_negation(&self, node_id: NodeId) -> Result<String, TreeError> {
+        if let Some(with_cmd) = self.try_negate_with(node_id)? {
+            return Ok(with_cmd);
         }
         let text = &self.arena[node_id].text;
         self.driver
-            .compute_negation(text, |rules| self.is_lineage_match(node_id, rules))
+            .try_compute_negation(text, |rules| self.is_lineage_match(node_id, rules))
+            .map_err(TreeError::InvalidRegex)
     }
 
     /// Returns the custom negation string if defined by a `negate_with` rule.
+    ///
+    /// # Panics
+    ///
+    /// Panics for invalid rule regexes; use [`Self::try_negate_with`] to handle errors.
     pub fn negate_with(&self, node_id: NodeId) -> Option<String> {
+        self.try_negate_with(node_id)
+            .expect("invalid negate_with rule")
+    }
+
+    /// Returns a custom negation following unified-before-legacy rule order.
+    ///
+    /// # Errors
+    ///
+    /// Reports invalid regexes and replacement templates.
+    pub fn try_negate_with(&self, node_id: NodeId) -> Result<Option<String>, TreeError> {
+        for rule in &self.driver.rules.negation {
+            if rule.strategy == crate::models::NegationStrategy::Replace
+                && self.is_lineage_match(node_id, &rule.match_rules)
+            {
+                return Driver::try_expand_negate_with(
+                    &self.arena[node_id].text,
+                    &rule.as_default_with(),
+                )
+                .map(Some)
+                .map_err(TreeError::InvalidRegex);
+            }
+        }
         for rule in &self.driver.rules.negate_with {
             if self.is_lineage_match(node_id, &rule.match_rules) {
-                return Some(Driver::expand_negate_with(&self.arena[node_id].text, rule));
+                return Driver::try_expand_negate_with(&self.arena[node_id].text, rule)
+                    .map(Some)
+                    .map_err(TreeError::InvalidRegex);
             }
         }
 
-        None
+        Ok(None)
     }
 
     /// Checks if a node should use sectional overwrite with negation.

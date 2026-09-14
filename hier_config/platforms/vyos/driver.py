@@ -2,6 +2,7 @@ from hier_config.models import Platform
 from hier_config.platforms.driver_base import (
     HConfigDriverBase,
     HConfigDriverRules,
+    core_owned,
     load_platform_rules,
 )
 from hier_config.platforms.functions import convert_to_set_commands
@@ -34,3 +35,5 @@ class HConfigDriverVYOS(HConfigDriverBase):
     @staticmethod
     def config_preprocessor(config_text: str) -> str:
         return convert_to_set_commands(config_text)
+
+    core_owned(config_preprocessor)

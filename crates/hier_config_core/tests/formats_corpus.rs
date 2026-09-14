@@ -1,8 +1,9 @@
-//! Holds the Rust format port to the Python reference implementation.
+//! Checks independently captured parity and separately versioned native behavior.
 //!
-//! `testdata/formats/expected.json` is captured from `hier_config/formats.py`
-//! by `scripts/gen_formats_corpus.py`. It is the source of truth: when a case
-//! mismatches, fix the Rust port, never the corpus.
+//! `expected.json` is frozen from a pinned pure-Python upstream/next revision.
+//! `native-v1.json` preserves Junos cases that the reference cannot remediate;
+//! these are native regression tests, not independent parity evidence.
+//! Provenance lives in each snapshot. Never regenerate from a failing backend.
 
 use std::collections::BTreeMap;
 use std::fs;
@@ -26,13 +27,34 @@ const XML_PARSE_PREFIX: &str = "The config is not valid XML:";
 /// `serde_json` and Python's `json` word parse failures differently too.
 const JSON_PARSE_PREFIX: &str = "The config is not valid JSON:";
 
-fn corpus() -> Map<String, Value> {
+fn load_corpus(filename: &str) -> Map<String, Value> {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../testdata/formats/expected.json")
+        .join("../../testdata/formats")
+        .join(filename)
         .canonicalize()
         .expect("corpus path");
     let raw = fs::read_to_string(path).expect("read corpus");
     serde_json::from_str(&raw).expect("parse corpus")
+}
+
+fn corpus() -> Map<String, Value> {
+    let mut reference = load_corpus("expected.json");
+    let native = load_corpus("native-v1.json");
+    assert_eq!(reference["_provenance"]["implementation"], "pure-python");
+    assert_eq!(native["_provenance"]["implementation"], "native");
+    for section in ["json", "xml", "netconf", "gnmi"] {
+        let target = reference
+            .get_mut(section)
+            .and_then(Value::as_object_mut)
+            .expect("reference case section");
+        for (key, value) in native[section].as_object().expect("native case section") {
+            assert!(
+                target.insert(key.clone(), value.clone()).is_none(),
+                "{section}/{key}: native case must not replace reference evidence"
+            );
+        }
+    }
+    reference
 }
 
 fn parse_key(key: &str) -> CaseKey {
@@ -163,7 +185,7 @@ fn sorted(value: &Value) -> Value {
 }
 
 #[test]
-fn json_cases_match_python() {
+fn json_cases_match_recorded_expectations() {
     let corpus = corpus();
     let cases = corpus["json"].as_object().expect("json section");
     for (key, expected) in cases {
@@ -198,7 +220,7 @@ fn json_cases_match_python() {
 }
 
 #[test]
-fn xml_cases_match_python() {
+fn xml_cases_match_recorded_expectations() {
     let corpus = corpus();
     let cases = corpus["xml"].as_object().expect("xml section");
     for (key, expected) in cases {
@@ -232,7 +254,7 @@ fn xml_cases_match_python() {
 }
 
 #[test]
-fn netconf_cases_match_python() {
+fn netconf_cases_match_recorded_expectations() {
     let corpus = corpus();
     let cases = corpus["netconf"].as_object().expect("netconf section");
     for (key, expected) in cases {
@@ -270,7 +292,7 @@ fn netconf_cases_match_python() {
 }
 
 #[test]
-fn gnmi_cases_match_python() {
+fn gnmi_cases_match_recorded_expectations() {
     let corpus = corpus();
     let cases = corpus["gnmi"].as_object().expect("gnmi section");
     for (key, expected) in cases {

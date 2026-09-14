@@ -112,12 +112,12 @@ class HConfigBase:
         endswith: str | tuple[str, ...] | None = None,
         contains: str | tuple[str, ...] | None = None,
         re_search: str | None = None,
-    ) -> Sequence[HConfigChild]:
+    ) -> Iterator[HConfigChild]:
         """Find all children matching a text_match rule and return them."""
 
     def get_children_deep(
         self, match_rules: tuple[MatchRule, ...]
-    ) -> Sequence[HConfigChild]:
+    ) -> Iterator[HConfigChild]:
         """Find children recursively given a tuple of MatchRules."""
 
     def get_children_object(self) -> HConfigChildren: ...
@@ -134,10 +134,10 @@ class HConfigBase:
     def is_leaf(self) -> bool:
         """True if there are no children and is not an instance of HConfig."""
 
-    def lineage(self) -> Sequence[HConfigChild]: ...
+    def lineage(self) -> Iterator[HConfigChild]: ...
     def lines(self, *, sectional_exiting: bool = False) -> Iterable[str]: ...
     def move_child(self, child: HConfigChild) -> None: ...
-    def path(self) -> Sequence[str]: ...
+    def path(self) -> Iterator[str]: ...
     def remove_tags(self, tag: str | Iterable[str]) -> None:
         """v4 name for `tags_remove()`."""
 
@@ -156,7 +156,7 @@ class HConfigBase:
     def to_lines(self, *, sectional_exiting: bool = False) -> tuple[str, ...]:
         """v4 name for `dump_simple()`."""
 
-    def unified_diff(self, target: HConfig | HConfigChild) -> Sequence[str]:
+    def unified_diff(self, target: HConfig | HConfigChild) -> Iterator[str]:
         """Yield unified-diff lines comparing self to target.
 
         Each yielded string is prefixed with ``-`` (present in self but not

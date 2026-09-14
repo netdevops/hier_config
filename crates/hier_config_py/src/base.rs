@@ -9,7 +9,7 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyFrozenSet, PyString, PyTuple};
 
 use crate::errors::to_py_err;
-use crate::tree::SharedTree;
+use crate::tree::{PyRwLockExt, SharedTree, ensure_live};
 
 /// Wraps an already-materialized batch of handles in an immutable Python sequence.
 ///
@@ -29,18 +29,35 @@ pub struct PyHConfigBase {
 }
 
 impl PyHConfigBase {
-    pub fn text(&self) -> String {
-        let tree = self.tree.tree.read().unwrap();
-        tree.arena
-            .get(self.node_id)
-            .map_or_else(String::new, |n| n.text.to_string())
+    pub(crate) fn read_tree(
+        &self,
+    ) -> PyResult<std::sync::RwLockReadGuard<'_, hier_config_core::Tree>> {
+        self.tree.read_node(self.node_id)
     }
 
-    pub fn set_text(&self, text: &str) {
-        let mut tree = self.tree.tree.write().unwrap();
-        if tree.arena.contains(self.node_id) {
-            tree.set_text(self.node_id, text);
-        }
+    pub(crate) fn write_tree(
+        &self,
+    ) -> PyResult<std::sync::RwLockWriteGuard<'_, hier_config_core::Tree>> {
+        self.tree.write_node(self.node_id)
+    }
+
+    pub(crate) fn ensure_live(&self) -> PyResult<()> {
+        drop(self.read_tree()?);
+        Ok(())
+    }
+
+    pub fn text(&self) -> PyResult<String> {
+        let tree = self.read_tree()?;
+        Ok(tree
+            .arena
+            .get(self.node_id)
+            .map_or_else(String::new, |n| n.text.to_string()))
+    }
+
+    pub fn set_text(&self, text: &str) -> PyResult<()> {
+        let mut tree = self.write_tree()?;
+        tree.set_text(self.node_id, text);
+        Ok(())
     }
 }
 
@@ -54,35 +71,37 @@ impl PyHConfigBase {
     }
 
     #[getter]
-    pub fn depth(&self) -> usize {
-        let tree = self.tree.tree.read().unwrap();
-        tree.depth(self.node_id)
+    pub fn depth(&self) -> PyResult<usize> {
+        let tree = self.read_tree()?;
+        Ok(tree.depth(self.node_id))
     }
 
-    pub fn path(&self) -> Vec<String> {
-        let tree = self.tree.tree.read().unwrap();
-        tree.path(self.node_id)
-    }
-
-    #[getter]
-    pub fn is_leaf(&self) -> bool {
-        let tree = self.tree.tree.read().unwrap();
-        tree.arena
-            .get(self.node_id)
-            .is_some_and(hier_config_core::Node::is_leaf)
+    pub fn path(&self, py: Python<'_>) -> PyResult<PyObject> {
+        let path = self.read_tree()?.path(self.node_id);
+        Ok(PyTuple::new(py, path)?.try_iter()?.into_any().unbind())
     }
 
     #[getter]
-    pub fn is_branch(&self) -> bool {
-        let tree = self.tree.tree.read().unwrap();
-        tree.arena
+    pub fn is_leaf(&self) -> PyResult<bool> {
+        let tree = self.read_tree()?;
+        Ok(tree
+            .arena
             .get(self.node_id)
-            .is_some_and(hier_config_core::Node::is_branch)
+            .is_some_and(hier_config_core::Node::is_leaf))
+    }
+
+    #[getter]
+    pub fn is_branch(&self) -> PyResult<bool> {
+        let tree = self.read_tree()?;
+        Ok(tree
+            .arena
+            .get(self.node_id)
+            .is_some_and(hier_config_core::Node::is_branch))
     }
 
     #[getter]
     pub fn tags(&self, py: Python<'_>) -> PyResult<Py<PyFrozenSet>> {
-        let tree = self.tree.tree.read().unwrap();
+        let tree = self.read_tree()?;
         let tag_set = tree.tags(self.node_id);
         let py_elements: Vec<Bound<'_, PyString>> =
             tag_set.into_iter().map(|t| PyString::new(py, &t)).collect();
@@ -93,7 +112,7 @@ impl PyHConfigBase {
     pub fn set_tags(&self, value: &Bound<'_, PyAny>) -> PyResult<()> {
         let tags = extract_strings(value)?;
         let tag_set: BTreeSet<String> = tags.into_iter().collect();
-        let mut tree = self.tree.tree.write().unwrap();
+        let mut tree = self.write_tree()?;
         tree.set_tags(self.node_id, tag_set);
         Ok(())
     }
@@ -101,7 +120,7 @@ impl PyHConfigBase {
     pub fn tags_add(&self, tag: &Bound<'_, PyAny>) -> PyResult<()> {
         let tags = extract_strings(tag)?;
         let tag_refs: Vec<&str> = tags.iter().map(String::as_str).collect();
-        let mut tree = self.tree.tree.write().unwrap();
+        let mut tree = self.write_tree()?;
         tree.tags_add(self.node_id, &tag_refs);
         Ok(())
     }
@@ -109,8 +128,25 @@ impl PyHConfigBase {
     pub fn tags_remove(&self, tag: &Bound<'_, PyAny>) -> PyResult<()> {
         let tags = extract_strings(tag)?;
         let tag_refs: Vec<&str> = tags.iter().map(String::as_str).collect();
-        let mut tree = self.tree.tree.write().unwrap();
-        tree.tags_remove(self.node_id, &tag_refs);
+        let mut tree = self.write_tree()?;
+        if let Ok(single_tag) = tag.extract::<String>() {
+            let leaves = if tree.arena[self.node_id].is_leaf() && self.node_id != tree.root {
+                vec![self.node_id]
+            } else {
+                tree.all_children(self.node_id)
+                    .into_iter()
+                    .filter(|&id| tree.arena[id].is_leaf())
+                    .collect()
+            };
+            for id in leaves {
+                if !tree.tags(id).contains(&single_tag) {
+                    return Err(pyo3::exceptions::PyKeyError::new_err(single_tag));
+                }
+                tree.tags_remove(id, &tag_refs);
+            }
+        } else {
+            tree.tags_remove(self.node_id, &tag_refs);
+        }
         Ok(())
     }
 
@@ -126,7 +162,12 @@ impl PyHConfigBase {
 
     /// v4 name for `cisco_style_text()`.
     #[pyo3(signature = (style = None, tag = None))]
-    pub fn indented_text(&self, py: Python<'_>, style: Option<&str>, tag: Option<&str>) -> String {
+    pub fn indented_text(
+        &self,
+        py: Python<'_>,
+        style: Option<&str>,
+        tag: Option<&str>,
+    ) -> PyResult<String> {
         self.cisco_style_text(py, style, tag)
     }
 
@@ -136,11 +177,12 @@ impl PyHConfigBase {
         py: Python<'_>,
         style: Option<&str>,
         tag: Option<&str>,
-    ) -> String {
+    ) -> PyResult<String> {
+        self.ensure_live()?;
         // Sync any comments and instances from node_data into the Rust tree
         {
-            let data_map = self.tree.node_data.read().unwrap();
-            let mut tree = self.tree.tree.write().unwrap();
+            let data_map = self.tree.node_data.read_py()?;
+            let mut tree = self.write_tree()?;
             for (nid, pdata) in data_map.iter() {
                 if let Some(node) = tree.arena.get_mut(*nid) {
                     if let Some(comments) = &pdata.comments {
@@ -188,8 +230,8 @@ impl PyHConfigBase {
             Some("with_comments") => TextStyle::WithComments,
             _ => TextStyle::WithoutComments,
         };
-        let tree = self.tree.tree.read().unwrap();
-        tree.cisco_style_text(self.node_id, parsed_style, tag)
+        let tree = self.read_tree()?;
+        Ok(tree.cisco_style_text(self.node_id, parsed_style, tag))
     }
 
     #[pyo3(signature = (text, *, return_if_present = false, check_if_present = true))]
@@ -201,7 +243,7 @@ impl PyHConfigBase {
         check_if_present: bool,
     ) -> PyResult<PyObject> {
         let child_id = {
-            let mut tree = self.tree.tree.write().unwrap();
+            let mut tree = self.write_tree()?;
             tree.add_child(self.node_id, text, check_if_present, return_if_present)
                 .map_err(to_py_err)?
         };
@@ -211,6 +253,7 @@ impl PyHConfigBase {
     }
 
     pub fn add_children(&self, py: Python<'_>, lines: &Bound<'_, PyAny>) -> PyResult<()> {
+        self.ensure_live()?;
         for line in lines.try_iter()? {
             let text: String = line?.extract()?;
             self.add_child(py, &text, false, true)?;
@@ -250,13 +293,14 @@ impl PyHConfigBase {
 
         let new_child_id = {
             if Arc::ptr_eq(&self.tree, &other_tree) {
-                let mut my_tree = self.tree.tree.write().unwrap();
+                let mut my_tree = self.write_tree()?;
+                ensure_live(&my_tree, other_node_id)?;
                 my_tree
                     .add_shallow_copy_within(self.node_id, other_node_id, merged)
                     .map_err(to_py_err)?
             } else {
-                let mut my_tree = self.tree.tree.write().unwrap();
-                let src_tree = other_tree.tree.read().unwrap();
+                let mut my_tree = self.write_tree()?;
+                let src_tree = other_tree.read_node(other_node_id)?;
                 my_tree
                     .add_shallow_copy_of(self.node_id, &src_tree, other_node_id, merged)
                     .map_err(to_py_err)?
@@ -282,37 +326,58 @@ impl PyHConfigBase {
     pub fn del_child(&self, child: &Bound<'_, PyAny>) -> PyResult<()> {
         let child_base = child.extract::<PyRef<'_, Self>>()?;
         let child_node_id = child_base.node_id;
+        child_base.ensure_live()?;
+        if !Arc::ptr_eq(&self.tree, &child_base.tree) {
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                "child belongs to another configuration",
+            ));
+        }
         {
-            let mut tree = self.tree.tree.write().unwrap();
+            let mut tree = self.write_tree()?;
+            ensure_live(&tree, child_node_id)?;
+            if tree.arena[child_node_id].parent != Some(self.node_id) {
+                return Err(pyo3::exceptions::PyValueError::new_err(
+                    "node is not a direct child",
+                ));
+            }
             tree.delete_child(child_node_id);
         }
-        self.tree.clear_node_cache(child_node_id);
+        self.tree.clear_node_cache(child_node_id)?;
         Ok(())
     }
 
-    pub fn del_child_by_text(&self, text: &str) {
+    pub fn del_child_by_text(&self, text: &str) -> PyResult<()> {
         let child_to_delete = {
-            let tree = self.tree.tree.read().unwrap();
+            let tree = self.read_tree()?;
             tree.arena
                 .get(self.node_id)
                 .and_then(|n| n.children.get(text))
         };
         if let Some(child_id) = child_to_delete {
-            let mut tree = self.tree.tree.write().unwrap();
+            let mut tree = self.write_tree()?;
             tree.delete_child(child_id);
-            self.tree.clear_node_cache(child_id);
+            self.tree.clear_node_cache(child_id)?;
         }
+        Ok(())
     }
 
     pub fn move_child(&self, child: &Bound<'_, PyAny>) -> PyResult<()> {
         let child_base = child.extract::<PyRef<'_, Self>>()?;
         let child_node_id = child_base.node_id;
-        let mut tree = self.tree.tree.write().unwrap();
+        child_base.ensure_live()?;
+        if !Arc::ptr_eq(&self.tree, &child_base.tree) {
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                "child belongs to another configuration",
+            ));
+        }
+        let mut tree = self.write_tree()?;
+        ensure_live(&tree, child_node_id)?;
         tree.move_child(child_node_id, self.node_id)
             .map_err(to_py_err)
     }
 
     pub fn get_children_object(&self, py: Python<'_>) -> PyResult<PyObject> {
+        self.ensure_live()?;
         let children = Py::new(
             py,
             crate::children::PyHConfigChildren {
@@ -331,7 +396,7 @@ impl PyHConfigBase {
 
     pub fn all_children(&self, py: Python<'_>) -> PyResult<PyObject> {
         let node_ids = {
-            let tree = self.tree.tree.read().unwrap();
+            let tree = self.read_tree()?;
             tree.all_children(self.node_id)
         };
         lazy_children(&self.tree, py, &node_ids)
@@ -339,7 +404,7 @@ impl PyHConfigBase {
 
     pub fn all_children_sorted(&self, py: Python<'_>) -> PyResult<PyObject> {
         let node_ids = {
-            let tree = self.tree.tree.read().unwrap();
+            let tree = self.read_tree()?;
             tree.all_children_sorted(self.node_id)
         };
         // Sorting has to see every node before the first one can be yielded, so a
@@ -369,7 +434,7 @@ impl PyHConfigBase {
         let exc_refs: Vec<&str> = exc.iter().map(String::as_str).collect();
 
         let node_ids = {
-            let tree = self.tree.tree.read().unwrap();
+            let tree = self.read_tree()?;
             tree.all_children_sorted_by_tags(self.node_id, &inc_refs, &exc_refs)
         };
 
@@ -387,7 +452,7 @@ impl PyHConfigBase {
         let tag_strings: Vec<String> = extract_strings(tags)?;
         let tag_set: BTreeSet<String> = tag_strings.into_iter().collect();
         let child_ids = {
-            let my_tree = self.tree.tree.read().unwrap();
+            let my_tree = self.read_tree()?;
             my_tree
                 .arena
                 .get(self.node_id)
@@ -397,7 +462,7 @@ impl PyHConfigBase {
 
         for cid in child_ids {
             let child_tags = {
-                let tree = self.tree.tree.read().unwrap();
+                let tree = self.tree.read_node(cid)?;
                 tree.tags(cid)
             };
             if tag_set.is_subset(&child_tags) {
@@ -422,7 +487,7 @@ impl PyHConfigBase {
     ) -> PyResult<Option<PyObject>> {
         let rule = parse_match_rule(py, equals, startswith, endswith, contains, re_search)?;
         let child_id = {
-            let tree = self.tree.tree.read().unwrap();
+            let tree = self.read_tree()?;
             let matches = tree.get_children(self.node_id, &rule);
             matches.into_iter().next()
         };
@@ -444,10 +509,10 @@ impl PyHConfigBase {
         endswith: Option<&Bound<'_, PyAny>>,
         contains: Option<&Bound<'_, PyAny>>,
         re_search: Option<String>,
-    ) -> PyResult<Vec<PyObject>> {
+    ) -> PyResult<PyObject> {
         let rule = parse_match_rule(py, equals, startswith, endswith, contains, re_search)?;
         let child_ids = {
-            let tree = self.tree.tree.read().unwrap();
+            let tree = self.read_tree()?;
             tree.get_children(self.node_id, &rule)
         };
 
@@ -456,7 +521,7 @@ impl PyHConfigBase {
             let child = SharedTree::get_or_create_child(&self.tree, py, id, None)?;
             result.push(child.into_any());
         }
-        Ok(result)
+        Ok(PyTuple::new(py, result)?.try_iter()?.into_any().unbind())
     }
 
     pub fn get_child_deep(
@@ -466,7 +531,7 @@ impl PyHConfigBase {
     ) -> PyResult<Option<PyObject>> {
         let parsed_rules = parse_match_rules_seq(py, match_rules)?;
         let child_id = {
-            let tree = self.tree.tree.read().unwrap();
+            let tree = self.read_tree()?;
             let matches = tree.get_children_deep(self.node_id, &parsed_rules);
             matches.into_iter().next()
         };
@@ -483,10 +548,10 @@ impl PyHConfigBase {
         &self,
         py: Python<'_>,
         match_rules: &Bound<'_, PyAny>,
-    ) -> PyResult<Vec<PyObject>> {
+    ) -> PyResult<PyObject> {
         let parsed_rules = parse_match_rules_seq(py, match_rules)?;
         let child_ids = {
-            let tree = self.tree.tree.read().unwrap();
+            let tree = self.read_tree()?;
             tree.get_children_deep(self.node_id, &parsed_rules)
         };
 
@@ -495,12 +560,12 @@ impl PyHConfigBase {
             let child = SharedTree::get_or_create_child(&self.tree, py, id, None)?;
             result.push(child.into_any());
         }
-        Ok(result)
+        Ok(PyTuple::new(py, result)?.try_iter()?.into_any().unbind())
     }
 
-    pub fn lineage(&self, py: Python<'_>) -> PyResult<Vec<PyObject>> {
+    pub fn lineage(&self, py: Python<'_>) -> PyResult<PyObject> {
         let lineage_ids = {
-            let tree = self.tree.tree.read().unwrap();
+            let tree = self.read_tree()?;
             tree.lineage(self.node_id)
         };
         let mut result = Vec::with_capacity(lineage_ids.len());
@@ -508,18 +573,18 @@ impl PyHConfigBase {
             let child = SharedTree::get_or_create_child(&self.tree, py, id, None)?;
             result.push(child.into_any());
         }
-        Ok(result)
+        Ok(PyTuple::new(py, result)?.try_iter()?.into_any().unbind())
     }
 
     #[pyo3(signature = (*, sectional_exiting = false))]
-    pub fn lines(&self, sectional_exiting: bool) -> Vec<String> {
-        let tree = self.tree.tree.read().unwrap();
-        tree.lines(self.node_id, sectional_exiting)
+    pub fn lines(&self, sectional_exiting: bool) -> PyResult<Vec<String>> {
+        let tree = self.read_tree()?;
+        Ok(tree.lines(self.node_id, sectional_exiting))
     }
 
     #[pyo3(signature = (*, sectional_exiting = false))]
     pub fn dump_simple(&self, py: Python<'_>, sectional_exiting: bool) -> PyResult<Py<PyTuple>> {
-        let tree = self.tree.tree.read().unwrap();
+        let tree = self.read_tree()?;
         let lines = tree.lines(self.node_id, sectional_exiting);
         let tuple = PyTuple::new(py, lines)?;
         Ok(tuple.unbind())
@@ -531,59 +596,62 @@ impl PyHConfigBase {
         self.dump_simple(py, sectional_exiting)
     }
 
-    pub fn unified_diff(&self, target: &Bound<'_, PyAny>) -> PyResult<Vec<String>> {
+    pub fn unified_diff(&self, py: Python<'_>, target: &Bound<'_, PyAny>) -> PyResult<PyObject> {
         let target_base = target.downcast::<Self>()?;
-        let target_tree = Arc::clone(&target_base.borrow().tree);
-
-        let my_tree = self.tree.tree.read().unwrap();
-        let other_tree = target_tree.tree.read().unwrap();
-
-        Ok(my_tree.unified_diff(&other_tree))
+        let lines = {
+            let target_base = target_base.borrow();
+            let my_tree = self.read_tree()?;
+            let other_tree = target_base.read_tree()?;
+            my_tree.unified_diff(&other_tree)
+        };
+        Ok(PyTuple::new(py, lines)?.try_iter()?.into_any().unbind())
     }
 
-    pub fn use_sectional_overwrite(&self) -> bool {
-        let tree = self.tree.tree.read().unwrap();
-        tree.use_sectional_overwrite(self.node_id)
+    pub fn use_sectional_overwrite(&self) -> PyResult<bool> {
+        let tree = self.read_tree()?;
+        Ok(tree.use_sectional_overwrite(self.node_id))
     }
 
-    pub fn use_sectional_overwrite_without_negation(&self) -> bool {
-        let tree = self.tree.tree.read().unwrap();
-        tree.use_sectional_overwrite_without_negation(self.node_id)
+    pub fn use_sectional_overwrite_without_negation(&self) -> PyResult<bool> {
+        let tree = self.read_tree()?;
+        Ok(tree.use_sectional_overwrite_without_negation(self.node_id))
     }
 
-    pub fn delete_sectional_exit(&self) {
-        let mut tree = self.tree.tree.write().unwrap();
+    pub fn delete_sectional_exit(&self) -> PyResult<()> {
+        let mut tree = self.write_tree()?;
         tree.delete_sectional_exit(self.node_id);
+        Ok(())
     }
 
-    fn __len__(&self) -> usize {
-        let tree = self.tree.tree.read().unwrap();
-        tree.node_count(self.node_id)
+    fn __len__(&self) -> PyResult<usize> {
+        let tree = self.read_tree()?;
+        Ok(tree.node_count(self.node_id))
     }
 
-    const fn __bool__(&self) -> bool {
-        _ = self.node_id;
-        true
+    fn __bool__(&self) -> PyResult<bool> {
+        self.ensure_live()?;
+        Ok(true)
     }
 
-    fn __contains__(&self, text: &str) -> bool {
-        let tree = self.tree.tree.read().unwrap();
-        tree.arena
+    fn __contains__(&self, text: &str) -> PyResult<bool> {
+        let tree = self.read_tree()?;
+        Ok(tree
+            .arena
             .get(self.node_id)
-            .is_some_and(|n| n.children.contains(text))
+            .is_some_and(|n| n.children.contains(text)))
     }
 
-    fn __iter__(&self) -> crate::children::PyHConfigChildrenIter {
-        let tree = self.tree.tree.read().unwrap();
+    fn __iter__(&self) -> PyResult<crate::children::PyHConfigChildrenIter> {
+        let tree = self.read_tree()?;
         let child_ids = tree
             .arena
             .get(self.node_id)
             .map_or_else(Vec::new, |n| n.children.as_slice().to_vec());
-        crate::children::PyHConfigChildrenIter {
+        Ok(crate::children::PyHConfigChildrenIter {
             tree: Arc::clone(&self.tree),
             child_ids,
             index: 0,
-        }
+        })
     }
 }
 

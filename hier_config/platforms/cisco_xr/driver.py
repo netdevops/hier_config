@@ -12,7 +12,7 @@ from hier_config.root import HConfig
 @core_owned
 def fixup_xr_comments(config: HConfig) -> None:
     """Move ``!`` comment lines into the next sibling's comments set."""
-    for parent in (config, *config.all_children()):
+    for parent in reversed((config, *config.all_children())):
         siblings = list(parent.children)
         comment_buffer: list[str] = []
         for sibling in siblings:
