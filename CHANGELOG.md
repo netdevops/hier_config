@@ -186,14 +186,14 @@ v4 design decisions, for the record:
   uv. Package metadata uses PEP 621 `[project]`, development dependencies use
   PEP 735 `[dependency-groups]`, and the build backend is `uv_build`. Lockfile
   migrated from `poetry.lock` to `uv.lock`. GitHub Actions workflows now use
-  `astral-sh/setup-uv@v5` with `uv sync` and native `uv build` / `uv publish`,
-  and the build matrix pins `UV_PYTHON` to the matrix Python version so each
-  leg is tested on the interpreter it names. Package metadata now carries the
+  `astral-sh/setup-uv@v7` with `uv sync` and native `uv build` / `uv publish`,
+  and `setup-uv` manages the Python version for each matrix leg.
+  Package metadata now carries the
   README as its long description and an SPDX `License-Expression: MIT` (the
   OSI license classifier is gone, as PEP 639 requires); `LICENSE` is shipped
   in the sdist and wheel via `license-files`, so the setuptools-only
   `MANIFEST.in` was removed. The unmaintained `pytest-runner` dev dependency
-  was dropped. (#NNN — replace with the PR number before merge)
+  was dropped. (#301)
 - Restructured the documentation into User, Administrator, and Developer
   guides (`docs/user/`, `docs/admin/`, `docs/dev/`) with a rewritten landing
   page, new pages for loading configurations and remediation workflows, and

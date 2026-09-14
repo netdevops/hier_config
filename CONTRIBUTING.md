@@ -134,7 +134,7 @@ NegationDefaultWithRule model so that the behaviour is preserved.
 
 - **Tests required** — all new behaviour must be covered by tests: unit tests in
   `tests/unit/`, end-to-end driver scenarios in `tests/integration/test_<platform>.py`.
-- **Linting must pass** — `python scripts/build.py lint-and-test` must exit 0.
+- **Linting must pass** — `uv run python scripts/build.py lint-and-test` must exit 0.
 - **Changelog entry required** — every PR adds an entry to `CHANGELOG.md` under
   `## [Unreleased]` (Keep a Changelog categories, with a `(#NNN)` reference).
 - **Docstrings for new public API** — any new public class, method, or function

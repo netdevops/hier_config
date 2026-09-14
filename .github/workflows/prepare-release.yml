@@ -40,15 +40,13 @@ jobs:
           }
     - uses: actions/checkout@v6
     - name: Set up uv
-      uses: astral-sh/setup-uv@v5
-    - name: Set up Python
-      uses: actions/setup-python@v6
+      uses: astral-sh/setup-uv@v7
       with:
         python-version: "3.12"
     - name: Bump version
       id: bump
       run: |
-        uv version --bump "${{ inputs.bump }}"
+        uv version --bump "${{ inputs.bump }}" --no-sync
         echo "version=$(uv version --short)" >> "$GITHUB_OUTPUT"
     - name: Rotate changelog
       if: "!contains(fromJSON('[\"alpha\", \"beta\", \"rc\"]'), inputs.bump)"
