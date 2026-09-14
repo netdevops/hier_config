@@ -168,6 +168,18 @@ v4 design decisions, for the record:
 
 ### Added
 
+- Enforce ~30 additional strict Clippy lints across the workspace in `Cargo.toml`
+  covering bug prevention (`as_ptr_cast_mut`, `path_buf_push_overwrite`,
+  `debug_assert_with_mut_call`, `suspicious_xor_used_as_pow`, `fallible_impl_from`,
+  `collection_is_never_read`, `trailing_empty_array`, `transmute_undefined_repr`,
+  `volatile_composites`, `uninhabited_references`), performance/waste prevention
+  (`clear_with_drain`, `needless_collect`, `redundant_clone`, `set_contains_or_insert`,
+  `search_is_some`, `iter_on_empty_collections`, `iter_on_single_items`,
+  `large_stack_frames`), type design (`derive_partial_eq_without_eq`, `empty_drop`,
+  `empty_enum_variants_with_brackets`, `error_impl_error`, `mutex_integer`,
+  `needless_pass_by_ref_mut`, `nonstandard_macro_braces`, `or_fun_call`,
+  `unnecessary_self_imports`, `unused_peekable`), and manifest cleanliness
+  (`wildcard_dependencies`, `negative_feature_names`, `redundant_feature_names`).
 - Stub-freshness gate. `python scripts/build.py check-stubs` (also wired into
   `lint` and `lint-and-test`) runs `scripts/gen_stubs.py --check` and fails when
   the committed `hier_config/{base,child,children,root}.pyi` stubs no longer
