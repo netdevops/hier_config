@@ -4,24 +4,24 @@ hier_config follows **Test-Driven Development (TDD)**: write a failing test that
 
 ## Commands
 
-All commands use poetry:
+All commands use uv:
 
 ```bash
 # Full lint + test suite (what CI runs)
-poetry run ./scripts/build.py lint-and-test
+uv run ./scripts/build.py lint-and-test
 
 # Tests only (95% coverage required)
-poetry run ./scripts/build.py pytest --coverage
+uv run ./scripts/build.py pytest --coverage
 
 # A single test
-poetry run pytest tests/integration/test_cisco_ios.py::test_delete_sectional_exit_regression -v
+uv run pytest tests/integration/test_cisco_ios.py::test_delete_sectional_exit_regression -v
 
 # A single file
-poetry run pytest tests/integration/test_cisco_ios.py -v
+uv run pytest tests/integration/test_cisco_ios.py -v
 
 # Only unit tests / only integration tests
-poetry run pytest tests/unit/ -v
-poetry run pytest tests/integration/ -v
+uv run pytest tests/unit/ -v
+uv run pytest tests/integration/ -v
 ```
 
 Coverage must stay at or above **95%** (`--cov-fail-under=95`, enforced by `scripts/build.py` and CI).
@@ -59,10 +59,10 @@ Performance benchmarks live in `tests/benchmarks/test_benchmarks.py` and are **s
 
 ```bash
 # All benchmarks, with timing output
-poetry run pytest -m benchmark -v -s
+uv run pytest -m benchmark -v -s
 
 # One benchmark
-poetry run pytest -m benchmark -k test_parse_large_ios_config -v -s
+uv run pytest -m benchmark -k test_parse_large_ios_config -v -s
 ```
 
 If a benchmark fails its time threshold, investigate the relevant code path for performance regressions.
@@ -78,10 +78,10 @@ Two tests consume it:
 
 ```bash
 # Diff against a live v3 install
-poetry run pytest -m v3_differential -v
+uv run pytest -m v3_differential -v
 
 # Re-record the baseline after changing v3_scenarios.py
-poetry run ./scripts/generate_v3_baseline.py
+uv run ./scripts/generate_v3_baseline.py
 ```
 
 After changing `v3_scenarios.py`, regenerate the baseline and **review the diff**. A changed value for an existing scenario means v4 no longer matches v3 -- fix the compatibility surface, not the recording.

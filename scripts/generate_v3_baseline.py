@@ -11,7 +11,7 @@ Re-run this after changing v3_scenarios.py, and review the diff -- a changed
 value means v4 no longer matches v3 for that scenario.
 
 Usage:
-    poetry run ./scripts/generate_v3_baseline.py
+    uv run ./scripts/generate_v3_baseline.py
 """
 
 from __future__ import annotations

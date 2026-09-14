@@ -2,7 +2,7 @@
 
 The baseline in `tests/fixtures/v3_baseline.json` was recorded by running
 `tests/integration/v3_scenarios.py` under hier-config 3.7.0; regenerate it with
-`poetry run ./scripts/generate_v3_baseline.py`. Comparing against a committed
+`uv run ./scripts/generate_v3_baseline.py`. Comparing against a committed
 recording keeps this check in the normal suite -- no second environment and no
 network. `test_v3_differential.py` runs the same scenarios against a live v3
 install for the cases the frozen recording cannot catch.

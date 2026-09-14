@@ -14,10 +14,10 @@ Performance benchmarks are in `tests/benchmarks/test_benchmarks.py` and are **de
 
 ```bash
 # Run all benchmarks with timing output
-poetry run pytest -m benchmark -v -s
+uv run pytest -m benchmark -v -s
 
 # Run a specific benchmark
-poetry run pytest -m benchmark -k test_parse_large_ios_config -v -s
+uv run pytest -m benchmark -k test_parse_large_ios_config -v -s
 ```
 
 Use `-s` to see printed timing results. Each benchmark reports the best time over 3 iterations and asserts an upper bound (parsing `< 5s`; remediation `< 5s` small diff / `< 10s` large; iteration `< 2s`–`< 5s`). If a benchmark fails its time threshold, investigate the relevant code path for performance regressions.

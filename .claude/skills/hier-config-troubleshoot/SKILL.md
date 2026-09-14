@@ -69,4 +69,4 @@ If a driver rule should match but doesn't, print the rule set (`config.driver.ru
 - Core algorithm (`base.py`, `root.py`, `child.py`, `tree_algorithms.py`): rare; read `docs/dev/architecture.md` first and check `git log` for related fixes before changing shared behavior.
 - User-side workaround (can't wait for a release): customize the driver at runtime — `docs/admin/customizing-rules.md`.
 
-Every fix ships with a regression test that reproduces the original symptom (`docs/dev/testing.md`, round-trip idiom) and a `CHANGELOG.md` entry. Fixes to one platform must not leak: run the full suite (`poetry run ./scripts/build.py lint-and-test`), not just the platform's test file.
+Every fix ships with a regression test that reproduces the original symptom (`docs/dev/testing.md`, round-trip idiom) and a `CHANGELOG.md` entry. Fixes to one platform must not leak: run the full suite (`uv run ./scripts/build.py lint-and-test`), not just the platform's test file.

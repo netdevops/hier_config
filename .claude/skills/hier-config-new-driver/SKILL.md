@@ -94,9 +94,9 @@ Replace `#` in the `per_line_sub` regex with the platform's actual comment token
 ## Step 6: Run the Gates
 
 ```bash
-poetry run pytest tests/integration/test_<platform>.py -v
-poetry run ./scripts/build.py lint-and-test
-poetry run mkdocs build --strict
+uv run pytest tests/integration/test_<platform>.py -v
+uv run ./scripts/build.py lint-and-test
+uv run mkdocs build --strict
 ```
 
 All three must pass (mypy/pyright are strict; coverage floor is 95%). Then run the `hier-config-review` skill before opening the PR.
