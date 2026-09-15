@@ -385,6 +385,15 @@ class HConfigDriverRuckusFastIron(HConfigDriverBase):
                     match_rules=(MatchRule(startswith="no mac filter "),),
                     weight=20,
                 ),
+                # A filter has to exist before an interface names it:
+                # `mac filter-group 32` against an undefined filter is refused
+                # outright ("filter 32 is not configured in the global table").
+                # Without this rule the order would ride on whichever line the
+                # intended config happens to declare first.
+                OrderingRule(
+                    match_rules=(MatchRule(startswith="mac filter "),),
+                    weight=-25,
+                ),
                 # ACLs go first, ahead of the interfaces that bind them, so a
                 # newly created ACL exists before an `ip access-group` points at
                 # it. An interface fails open while its ACL is missing, so the

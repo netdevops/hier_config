@@ -339,6 +339,45 @@ def test_interface_reset_runs_before_the_port_is_repopulated() -> None:
     )
 
 
+@pytest.mark.parametrize(
+    "generated_lines",
+    (
+        pytest.param(
+            (
+                "interface ethernet 1/1/11",
+                " mac filter-group 20",
+                "mac filter 20 permit bbbb.bbbb.bbbb 0000.0000.0000 any",
+            ),
+            id="binding-declared-first",
+        ),
+        pytest.param(
+            (
+                "mac filter 20 permit bbbb.bbbb.bbbb 0000.0000.0000 any",
+                "interface ethernet 1/1/11",
+                " mac filter-group 20",
+            ),
+            id="filter-declared-first",
+        ),
+    ),
+)
+def test_a_new_mac_filter_exists_before_an_interface_binds_it(
+    generated_lines: tuple[str, ...],
+) -> None:
+    """The filter has to be created before an interface names it.
+
+    Verified on an ICX 6650: `mac filter-group 32` against an undefined filter
+    is refused with "filter 32 is not configured in the global table", so the
+    order cannot be left to ride on whichever line the intended config happens
+    to declare first.
+    """
+    running_config = _load(("interface ethernet 1/1/11",))
+    generated_config = _load(generated_lines)
+    lines = _ordered_remediation(running_config, generated_config)
+    assert lines.index(
+        "mac filter 20 permit bbbb.bbbb.bbbb 0000.0000.0000 any",
+    ) < lines.index(" mac filter-group 20")
+
+
 def test_mac_filter_is_unbound_before_it_is_removed() -> None:
     running_config = _load(
         (

@@ -486,8 +486,12 @@ Platform-specific behaviour:
 - **Ordering rules** reflect device-enforced dependencies: a port leaves its
   old untagged VLAN before joining a new one; `no vlan` is deferred because it
   also drops every membership in that VLAN; and a `mac filter-group` binding is
-  removed from the interface before the filter itself, because FastIron refuses
-  to delete a bound `mac filter`.
+  removed from the interface before the filter itself, and a newly created
+  `mac filter` sorts ahead of the interfaces that bind it. FastIron guards a
+  `mac filter` from both sides: binding one that does not exist is refused
+  (*filter 32 is not configured in the global table*) and deleting one that is
+  still bound is refused too. ACLs are guarded in neither direction, which is
+  why the two are ordered differently.
 
     ACLs are ordered the other way, ahead of the interfaces that bind them, so
     a newly created ACL exists before an `ip access-group` names it. The
