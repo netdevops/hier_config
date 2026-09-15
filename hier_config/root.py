@@ -7,6 +7,6 @@ core hands back -- including those returned by `future()` and `remediation()` --
 carries the full API.
 """
 
-from _hier_config_rust import HConfig
+from hier_config._hier_config_rust import HConfig
 
 __all__ = ("HConfig",)

@@ -1,0 +1,63 @@
+"""A Python 3.10 consumer using only the installed wheel's shipped types."""
+
+from ipaddress import IPv4Address, IPv4Interface
+
+from typing_extensions import assert_type
+
+from _hier_config_rust import HConfig as LegacyHConfig
+from hier_config import HConfig, HConfigChild, Platform, RemediationPlugin
+from hier_config import WorkflowRemediation
+from hier_config._hier_config_rust import HConfig as NativeHConfig
+from hier_config.base import HConfigBase
+from hier_config.child import HConfigChild as ChildFacade
+from hier_config.children import HConfigChildren
+from hier_config.platforms.models import Vlan
+from hier_config.platforms.view_base import ConfigViewInterfaceBase, HConfigViewBase
+from hier_config.registry import get_hconfig_driver
+from hier_config.root import HConfig as RootFacade
+from hier_config.workflows import RemediationTransform
+from hier_config.workflows import WorkflowRemediation as WorkflowFacade
+
+config = HConfig.from_lines(Platform.CISCO_IOS, ("hostname router",))
+assert_type(config, HConfig)
+assert_type(RootFacade.from_lines("cisco_ios", iter(("hostname router",))), HConfig)
+assert_type(NativeHConfig.from_lines(Platform.CISCO_IOS, ["hostname router"]), HConfig)
+assert_type(LegacyHConfig.from_lines(Platform.CISCO_IOS, ("hostname router",)), HConfig)
+assert_type(HConfig.from_lines(get_hconfig_driver(Platform.CISCO_IOS), ()), HConfig)
+assert_type(HConfig.from_lines(platform_or_driver="cisco_ios", lines=()), HConfig)
+base: HConfigBase = config
+assert_type(base.children, HConfigChildren)
+assert_type(config.children, HConfigChildren)
+assert_type(config.children[0], HConfigChild)
+assert_type(config.children["hostname router"], ChildFacade)
+assert_type(config.children[:], list[HConfigChild])
+assert_type(config.children.get("missing"), HConfigChild | None)
+assert_type(config.children.get("missing", None), HConfigChild | None)
+
+
+def check_collection_default(sentinel: int) -> None:
+    assert_type(config.children.get("missing", sentinel), HConfigChild | int)
+
+
+view = HConfigViewBase(config)
+assert_type(view.vlan_ids, frozenset[int])
+assert_type(view.vlans, list[Vlan])
+assert_type(view.ipv4_default_gw, IPv4Address | None)
+assert_type(view.interface_view_by_name("Ethernet1"), ConfigViewInterfaceBase | None)
+for interface in view.interface_views:
+    assert_type(interface.ipv4_interface, IPv4Interface | None)
+    assert_type(interface.ipv4_interfaces, list[IPv4Interface])
+
+
+def transform(remediation: HConfig) -> None:
+    remediation.add_child("hostname transformed")
+
+
+def check_plugins(plugin: RemediationPlugin) -> None:
+    callback: RemediationTransform = transform
+    workflow = WorkflowRemediation(config, config, plugins=(callback, plugin))
+    assert_type(workflow, WorkflowFacade)
+    assert_type(workflow.plugins, tuple[RemediationTransform, ...])
+    assert_type(workflow.plugins[0](config), None)
+    assert_type(workflow.remediation_config, HConfig)
+    assert_type(workflow.rollback_config, HConfig)

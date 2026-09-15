@@ -55,8 +55,8 @@ pub struct SharedTree {
     pub platform: Platform,
     pub node_data: RwLock<HashMap<NodeId, NodePyData>>,
     pub intern_cache: RwLock<HashMap<NodeId, Py<PyWeakrefReference>>>,
-    pub root_handle: RwLock<Option<PyObject>>,
-    pub driver_obj: RwLock<Option<PyObject>>,
+    pub root_handle: RwLock<Option<Py<PyAny>>>,
+    pub driver_obj: RwLock<Option<Py<PyAny>>>,
 }
 
 impl SharedTree {
@@ -83,7 +83,7 @@ impl SharedTree {
         }
     }
 
-    pub fn set_driver(&self, driver: PyObject) -> PyResult<()> {
+    pub fn set_driver(&self, driver: Py<PyAny>) -> PyResult<()> {
         *self.driver_obj.write_py()? = Some(driver);
         Ok(())
     }
@@ -142,7 +142,7 @@ impl SharedTree {
         self_arc: &Arc<Self>,
         py: Python<'_>,
         node_id: NodeId,
-        parent_handle: Option<PyObject>,
+        parent_handle: Option<Py<PyAny>>,
     ) -> PyResult<Py<crate::child::PyHConfigChild>> {
         drop(self_arc.read_node(node_id)?);
         // 1. Check intern cache. `upgrade` is a C-level dereference; going through
@@ -198,7 +198,7 @@ impl SharedTree {
         self_arc: &Arc<Self>,
         py: Python<'_>,
         node_ids: &[NodeId],
-    ) -> PyResult<Vec<PyObject>> {
+    ) -> PyResult<Vec<Py<PyAny>>> {
         let mut out = Vec::with_capacity(node_ids.len());
         for &node_id in node_ids {
             out.push(Self::new_child_handle(self_arc, py, node_id)?.into_any());

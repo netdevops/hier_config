@@ -12,22 +12,34 @@ use crate::errors::to_py_err;
 use crate::root::PyHConfig;
 use crate::tree::{PyRwLockExt, SharedTree, ensure_live};
 
-#[pyclass(extends = PyHConfigBase, subclass, module = "_hier_config_rust", name = "HConfigChild")]
+/// A single node in the hierarchical configuration tree.
+///
+/// Each `HConfigChild` holds one configuration line (`text`), an ordered
+/// collection of its own children, optional tags/comments, and a reference
+/// back to its parent.  The tree is rooted at an `HConfig` instance; every
+/// other node is an `HConfigChild`.
+#[pyo3_stub_gen::derive::gen_stub_pyclass]
+#[pyclass(extends = PyHConfigBase, subclass, module = "hier_config._hier_config_rust", name = "HConfigChild")]
 #[derive(Debug)]
 pub struct PyHConfigChild {
-    pub parent_handle: Option<PyObject>,
+    pub parent_handle: Option<Py<PyAny>>,
 }
 
+#[pyo3_stub_gen::derive::gen_stub_pymethods]
 #[pymethods]
 impl PyHConfigChild {
     #[new]
+    #[gen_stub(override_return_type(type_repr="typing_extensions.Self", imports=("typing_extensions")))]
     #[pyo3(signature = (parent, text))]
     fn new(
-        _py: Python<'_>,
-        parent: &Bound<'_, PyAny>,
-        text: &str,
+        #[gen_stub(override_type(type_repr="HConfig | HConfigChild", imports=()))] _py: Python<'_>,
+        #[gen_stub(override_type(type_repr="HConfig | HConfigChild", imports=()))] parent: &Bound<
+            '_,
+            PyAny,
+        >,
+        #[gen_stub(override_type(type_repr="str", imports=()))] text: &str,
     ) -> PyResult<(Self, PyHConfigBase)> {
-        let parent_base = parent.downcast::<PyHConfigBase>()?;
+        let parent_base = parent.cast::<PyHConfigBase>()?;
         let parent_node_id = parent_base.borrow().node_id;
         let shared_tree = Arc::clone(&parent_base.borrow().tree);
 
@@ -49,16 +61,21 @@ impl PyHConfigChild {
     }
 
     #[getter]
+    #[gen_stub(override_return_type(type_repr="str", imports=()))]
     pub fn text(slf: PyRef<'_, Self>) -> PyResult<String> {
         slf.as_ref().text()
     }
 
     #[setter]
-    pub fn set_text(slf: PyRef<'_, Self>, text: &str) -> PyResult<()> {
+    pub fn set_text(
+        slf: PyRef<'_, Self>,
+        #[gen_stub(override_type(type_repr="str", imports=()))] text: &str,
+    ) -> PyResult<()> {
         slf.as_ref().set_text(text)
     }
 
     #[getter]
+    #[gen_stub(override_return_type(type_repr="str", imports=()))]
     pub fn indentation(slf: PyRef<'_, Self>) -> PyResult<String> {
         let base = slf.as_ref();
         let tree = base.read_tree()?;
@@ -66,7 +83,8 @@ impl PyHConfigChild {
     }
 
     #[getter]
-    pub fn parent(slf: PyRef<'_, Self>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="HConfig | HConfigChild", imports=()))]
+    pub fn parent(slf: PyRef<'_, Self>) -> PyResult<Py<PyAny>> {
         let py = slf.py();
         let base = slf.as_ref();
         let parent_id = {
@@ -122,12 +140,18 @@ impl PyHConfigChild {
     }
 
     #[setter]
-    pub fn set_parent(slf: &Bound<'_, Self>, new_parent: &Bound<'_, PyAny>) -> PyResult<()> {
+    pub fn set_parent(
+        slf: &Bound<'_, Self>,
+        #[gen_stub(override_type(type_repr="HConfig | HConfigChild", imports=()))]
+        new_parent: &Bound<'_, PyAny>,
+    ) -> PyResult<()> {
         Self::move_(slf, new_parent)
     }
 
     #[getter]
-    pub fn root(slf: PyRef<'_, Self>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="HConfig", imports=()))]
+    /// The `HConfig` object at the base of the tree.
+    pub fn root(slf: PyRef<'_, Self>) -> PyResult<Py<PyAny>> {
         let py = slf.py();
         let base = slf.as_ref();
         base.ensure_live()?;
@@ -160,6 +184,8 @@ impl PyHConfigChild {
         Ok(obj)
     }
 
+    #[gen_stub(override_return_type(type_repr="HConfigChild", imports=()))]
+    /// Prefix the line with `default ` in place and return this child.
     pub fn _default(slf: PyRef<'_, Self>) -> PyResult<PyRef<'_, Self>> {
         let py = slf.py();
         let text_wo_neg = {
@@ -173,12 +199,13 @@ impl PyHConfigChild {
         let slf_obj = slf.into_py_any(py)?;
         let slf_bound = slf_obj.bind(py);
         slf_bound.setattr("text", new_text)?;
-        slf_bound.extract()
+        Ok(slf_bound.extract()?)
     }
 
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
     pub fn use_default_for_negation(
         slf: PyRef<'_, Self>,
-        config: &Bound<'_, PyAny>,
+        #[gen_stub(override_type(type_repr="HConfigChild", imports=()))] config: &Bound<'_, PyAny>,
     ) -> PyResult<bool> {
         let py = slf.py();
         let base = slf.as_ref();
@@ -196,9 +223,14 @@ impl PyHConfigChild {
         Ok(false)
     }
 
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
+    /// Given the `line_tags`, `include_tags`, and `exclude_tags`,
+    /// determine if the line should be included.
     pub fn line_inclusion_test(
         slf: PyRef<'_, Self>,
+        #[gen_stub(override_type(type_repr="collections.abc.Iterable[str]", imports=("collections.abc")))]
         include_tags: &Bound<'_, PyAny>,
+        #[gen_stub(override_type(type_repr="collections.abc.Iterable[str]", imports=("collections.abc")))]
         exclude_tags: &Bound<'_, PyAny>,
     ) -> PyResult<bool> {
         let inc: Vec<String> = crate::base::extract_strings(include_tags)?;
@@ -218,10 +250,16 @@ impl PyHConfigChild {
         Ok(include_line)
     }
 
-    pub fn add_children_deep(slf: PyRef<'_, Self>, lines: &Bound<'_, PyAny>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="HConfigChild", imports=()))]
+    /// Add child instances of `HConfigChild` deeply.
+    pub fn add_children_deep(
+        slf: PyRef<'_, Self>,
+        #[gen_stub(override_type(type_repr="collections.abc.Iterable[str]", imports=("collections.abc")))]
+        lines: &Bound<'_, PyAny>,
+    ) -> PyResult<Py<PyAny>> {
         slf.as_ref().ensure_live()?;
         let py = slf.py();
-        let mut curr: PyObject = slf.into_py_any(py)?;
+        let mut curr: Py<PyAny> = slf.into_py_any(py)?;
         for line in lines.try_iter()? {
             let l: String = line?.extract()?;
             let curr_bound = curr.bind(py);
@@ -234,13 +272,15 @@ impl PyHConfigChild {
     }
 
     #[getter]
-    pub fn driver(slf: PyRef<'_, Self>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="hier_config.platforms.driver_base.HConfigDriverBase", imports=("hier_config.platforms.driver_base")))]
+    pub fn driver(slf: PyRef<'_, Self>) -> PyResult<Py<PyAny>> {
         let py = slf.py();
         let root = Self::root(slf)?;
         root.getattr(py, "driver")
     }
 
     #[getter]
+    #[gen_stub(override_return_type(type_repr="str", imports=()))]
     pub fn text_without_negation(slf: PyRef<'_, Self>) -> PyResult<String> {
         let base = slf.as_ref();
         let text = base.text()?;
@@ -250,6 +290,7 @@ impl PyHConfigChild {
     }
 
     #[getter]
+    #[gen_stub(override_return_type(type_repr="str | None", imports=()))]
     pub fn sectional_exit(slf: PyRef<'_, Self>) -> PyResult<Option<String>> {
         let base = slf.as_ref();
         let tree = base.read_tree()?;
@@ -257,6 +298,7 @@ impl PyHConfigChild {
     }
 
     #[getter]
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
     pub fn sectional_exit_text_parent_level(slf: PyRef<'_, Self>) -> PyResult<bool> {
         let base = slf.as_ref();
         let tree = base.read_tree()?;
@@ -264,6 +306,7 @@ impl PyHConfigChild {
     }
 
     #[getter]
+    #[gen_stub(override_return_type(type_repr="int", imports=()))]
     pub fn real_indent_level(slf: PyRef<'_, Self>) -> PyResult<i32> {
         let base = slf.as_ref();
         let tree = base.read_tree()?;
@@ -274,7 +317,10 @@ impl PyHConfigChild {
     }
 
     #[setter]
-    pub fn set_real_indent_level(slf: PyRef<'_, Self>, val: i32) -> PyResult<()> {
+    pub fn set_real_indent_level(
+        slf: PyRef<'_, Self>,
+        #[gen_stub(override_type(type_repr="int", imports=()))] val: i32,
+    ) -> PyResult<()> {
         let base = slf.as_ref();
         let mut tree = base.write_tree()?;
         if let Some(node) = tree.arena.get_mut(base.node_id) {
@@ -284,6 +330,7 @@ impl PyHConfigChild {
     }
 
     #[getter]
+    #[gen_stub(override_return_type(type_repr="int", imports=()))]
     pub fn order_weight(slf: PyRef<'_, Self>) -> PyResult<i32> {
         let base = slf.as_ref();
         let tree = base.read_tree()?;
@@ -291,7 +338,10 @@ impl PyHConfigChild {
     }
 
     #[setter]
-    pub fn set_order_weight(slf: PyRef<'_, Self>, val: i32) -> PyResult<()> {
+    pub fn set_order_weight(
+        slf: PyRef<'_, Self>,
+        #[gen_stub(override_type(type_repr="int", imports=()))] val: i32,
+    ) -> PyResult<()> {
         let base = slf.as_ref();
         let mut tree = base.write_tree()?;
         if let Some(node) = tree.arena.get_mut(base.node_id) {
@@ -301,6 +351,7 @@ impl PyHConfigChild {
     }
 
     #[getter]
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
     pub fn new_in_config(slf: PyRef<'_, Self>) -> PyResult<bool> {
         let base = slf.as_ref();
         let tree = base.read_tree()?;
@@ -311,7 +362,10 @@ impl PyHConfigChild {
     }
 
     #[setter]
-    pub fn set_new_in_config(slf: PyRef<'_, Self>, val: bool) -> PyResult<()> {
+    pub fn set_new_in_config(
+        slf: PyRef<'_, Self>,
+        #[gen_stub(override_type(type_repr="bool", imports=()))] val: bool,
+    ) -> PyResult<()> {
         let base = slf.as_ref();
         let mut tree = base.write_tree()?;
         if let Some(node) = tree.arena.get_mut(base.node_id) {
@@ -321,14 +375,19 @@ impl PyHConfigChild {
     }
 
     #[getter]
-    pub fn comments(slf: PyRef<'_, Self>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="set[str]", imports=()))]
+    pub fn comments(slf: PyRef<'_, Self>) -> PyResult<Py<PyAny>> {
         let py = slf.py();
         let base = slf.as_ref();
         Ok(base.tree.get_node_comments(py, base.node_id)?.into_any())
     }
 
     #[setter]
-    pub fn set_comments(slf: PyRef<'_, Self>, val: &Bound<'_, PyAny>) -> PyResult<()> {
+    pub fn set_comments(
+        slf: PyRef<'_, Self>,
+        #[gen_stub(override_type(type_repr="collections.abc.Iterable[str]", imports=("collections.abc")))]
+        val: &Bound<'_, PyAny>,
+    ) -> PyResult<()> {
         let py = slf.py();
         let base = slf.as_ref();
         let items: Vec<Bound<'_, PyAny>> = val.try_iter()?.collect::<PyResult<Vec<_>>>()?;
@@ -341,14 +400,19 @@ impl PyHConfigChild {
     }
 
     #[getter]
-    pub fn instances(slf: PyRef<'_, Self>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="list[hier_config.models.Instance]", imports=("hier_config.models")))]
+    pub fn instances(slf: PyRef<'_, Self>) -> PyResult<Py<PyAny>> {
         let py = slf.py();
         let base = slf.as_ref();
         Ok(base.tree.get_node_instances(py, base.node_id)?.into_any())
     }
 
     #[setter]
-    pub fn set_instances(slf: PyRef<'_, Self>, val: &Bound<'_, PyAny>) -> PyResult<()> {
+    pub fn set_instances(
+        slf: PyRef<'_, Self>,
+        #[gen_stub(override_type(type_repr="collections.abc.Iterable[hier_config.models.Instance]", imports=("collections.abc", "hier_config.models")))]
+        val: &Bound<'_, PyAny>,
+    ) -> PyResult<()> {
         let py = slf.py();
         let base = slf.as_ref();
         let items: Vec<Bound<'_, PyAny>> = val.try_iter()?.collect::<PyResult<Vec<_>>>()?;
@@ -361,14 +425,21 @@ impl PyHConfigChild {
     }
 
     #[getter]
-    pub fn facts(slf: PyRef<'_, Self>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="dict[str, object]", imports=()))]
+    pub fn facts(slf: PyRef<'_, Self>) -> PyResult<Py<PyAny>> {
         let py = slf.py();
         let base = slf.as_ref();
         Ok(base.tree.get_node_facts(py, base.node_id)?.into_any())
     }
 
     #[setter]
-    pub fn set_facts(slf: PyRef<'_, Self>, val: &Bound<'_, PyDict>) -> PyResult<()> {
+    pub fn set_facts(
+        slf: PyRef<'_, Self>,
+        #[gen_stub(override_type(type_repr="dict[str, object]", imports=()))] val: &Bound<
+            '_,
+            PyDict,
+        >,
+    ) -> PyResult<()> {
         let base = slf.as_ref();
         let _tree = base.read_tree()?;
         let mut data = base.tree.node_data.write_py()?;
@@ -378,7 +449,8 @@ impl PyHConfigChild {
     }
 
     #[getter]
-    pub fn instance(slf: PyRef<'_, Self>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="hier_config.models.Instance", imports=("hier_config.models")))]
+    pub fn instance(slf: PyRef<'_, Self>) -> PyResult<Py<PyAny>> {
         let py = slf.py();
         let comments = slf
             .as_ref()
@@ -397,6 +469,8 @@ impl PyHConfigChild {
         Ok(inst.unbind())
     }
 
+    #[gen_stub(override_return_type(type_repr="None", imports=()))]
+    /// Delete the current object from its parent.
     pub fn delete(slf: PyRef<'_, Self>) -> PyResult<()> {
         let base = slf.as_ref();
         let (parent_id, child_id) = {
@@ -415,7 +489,12 @@ impl PyHConfigChild {
     }
 
     #[pyo3(name = "move")]
-    pub fn move_(slf: &Bound<'_, Self>, new_parent: &Bound<'_, PyAny>) -> PyResult<()> {
+    /// Move this node under another root or child, preserving its descendants.
+    pub fn move_(
+        slf: &Bound<'_, Self>,
+        #[gen_stub(override_type(type_repr="HConfig | HConfigChild", imports=()))]
+        new_parent: &Bound<'_, PyAny>,
+    ) -> PyResult<()> {
         let (target_tree, target_node_id) =
             if let Ok(root) = new_parent.extract::<PyRef<'_, PyHConfig>>() {
                 let base = root.as_ref();
@@ -488,6 +567,21 @@ impl PyHConfigChild {
         }
     }
 
+    #[gen_stub(override_return_type(type_repr="HConfigChild", imports=()))]
+    /// Negate self.text using driver-specific negation rules.
+    ///
+    /// Negation is resolved in the following priority order:
+    ///
+    /// 1. ``negate_with`` rule — replaces ``self.text`` with a custom
+    ///    negation string defined in the driver (e.g. ``no ip route``).
+    /// 2. ``negation_default_when`` rule — rewrites the command to its
+    ///    ``default`` form (e.g. ``no shutdown`` → ``default shutdown``).
+    /// 3. ``negation_sub`` rule — applies a regex substitution to the
+    ///    negated text (e.g. truncating after a specific token).
+    /// 4. ``swap_negation`` — toggles the negation prefix/declaration
+    ///    prefix (e.g. ``shutdown`` ↔ ``no shutdown``).
+    ///
+    /// Returns self so that callers can chain further operations.
     pub fn negate(slf: PyRef<'_, Self>) -> PyResult<PyRef<'_, Self>> {
         let py = slf.py();
         let base = slf.as_ref();
@@ -505,13 +599,36 @@ impl PyHConfigChild {
     }
 
     #[pyo3(signature = (*, equals = None, startswith = None, endswith = None, contains = None, re_search = None))]
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
+    /// Return True if ``self.text`` satisfies all supplied criteria.
+    ///
+    /// All arguments are optional.  When *all* arguments are ``None`` the
+    /// method returns ``True`` (matches everything).  When multiple arguments
+    /// are provided, **all** must match.
+    ///
+    /// Args:
+    ///     equals: Exact string match, or a frozenset of acceptable values.
+    ///     startswith: ``str.startswith`` prefix (str or tuple of strs).
+    ///     endswith: ``str.endswith`` suffix (str or tuple of strs).
+    ///     contains: Substring(s) that must appear in ``self.text``.
+    ///     re_search: Regular expression applied via :func:`re.search`.
+    ///
+    /// Returns:
+    ///     ``True`` if every non-``None`` criterion is satisfied.
+    #[expect(
+        clippy::doc_markdown,
+        reason = "Python Args entries require unquoted parameter names for mkdocstrings."
+    )]
     pub fn is_match(
         slf: PyRef<'_, Self>,
+        #[gen_stub(override_type(type_repr="str | (frozenset[str] | set[str]) | None", imports=()))]
         equals: Option<&Bound<'_, PyAny>>,
-        startswith: Option<&Bound<'_, PyAny>>,
+        #[gen_stub(override_type(type_repr="str | tuple[str, ...] | None", imports=()))] startswith: Option<&Bound<'_, PyAny>>,
+        #[gen_stub(override_type(type_repr="str | tuple[str, ...] | None", imports=()))]
         endswith: Option<&Bound<'_, PyAny>>,
+        #[gen_stub(override_type(type_repr="str | tuple[str, ...] | None", imports=()))]
         contains: Option<&Bound<'_, PyAny>>,
-        re_search: Option<String>,
+        #[gen_stub(override_type(type_repr="str | None", imports=()))] re_search: Option<String>,
     ) -> PyResult<bool> {
         let py = slf.py();
         let rule =
@@ -522,7 +639,13 @@ impl PyHConfigChild {
         Ok(rule.is_match(text))
     }
 
-    pub fn is_lineage_match(slf: PyRef<'_, Self>, rules: &Bound<'_, PyAny>) -> PyResult<bool> {
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
+    /// A generic test against a lineage of `HConfigChild` objects.
+    pub fn is_lineage_match(
+        slf: PyRef<'_, Self>,
+        #[gen_stub(override_type(type_repr="tuple[hier_config.models.MatchRule, ...]", imports=("hier_config.models")))]
+        rules: &Bound<'_, PyAny>,
+    ) -> PyResult<bool> {
         let py = slf.py();
         let match_rules = crate::base::parse_match_rules_seq(py, rules)?;
         let base = slf.as_ref();
@@ -530,8 +653,11 @@ impl PyHConfigChild {
         Ok(tree.is_lineage_match(base.node_id, &match_rules))
     }
 
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
+    /// Determine if self.text is an idempotent change.
     pub fn is_idempotent_command(
         slf: PyRef<'_, Self>,
+        #[gen_stub(override_type(type_repr="collections.abc.Iterable[HConfigChild]", imports=("collections.abc")))]
         other_children: &Bound<'_, PyAny>,
     ) -> PyResult<bool> {
         let base = slf.as_ref();
@@ -541,7 +667,7 @@ impl PyHConfigChild {
         let mut other_tree_arc: Option<Arc<SharedTree>> = None;
         for child in other_children.try_iter()? {
             let c = child?;
-            if let Ok(b) = c.downcast::<PyHConfigBase>() {
+            if let Ok(b) = c.cast::<PyHConfigBase>() {
                 b.borrow().ensure_live()?;
                 if let Some(ref other_tree) = other_tree_arc
                     && !Arc::ptr_eq(other_tree, &b.borrow().tree)
@@ -574,15 +700,30 @@ impl PyHConfigChild {
     }
 
     #[pyo3(signature = (target, delta, *, negate = true))]
+    #[gen_stub(override_return_type(type_repr="None", imports=()))]
+    /// Overwrite self's section in delta with a deep copy of target.
+    ///
+    /// When the children of self and target differ, this method mutates
+    /// ``delta`` in-place: the existing entry for ``self.text`` is negated
+    /// (if ``negate=True``) or simply deleted (if ``negate=False``), and a
+    /// fresh deep copy of ``target`` is appended.  A ``"re-create section"``
+    /// comment is attached to the new entry, and a ``"dropping section"``
+    /// comment is added to the negated entry when applicable.
+    ///
+    /// Used by :meth:`_config_to_get_to_right` when a sectional-overwrite
+    /// rule is active for ``self.text``.
     pub fn overwrite_with(
         slf: PyRef<'_, Self>,
-        target: &Bound<'_, PyAny>,
-        delta: &Bound<'_, PyAny>,
-        negate: bool,
+        #[gen_stub(override_type(type_repr="HConfigChild", imports=()))] target: &Bound<'_, PyAny>,
+        #[gen_stub(override_type(type_repr="HConfig | HConfigChild", imports=()))] delta: &Bound<
+            '_,
+            PyAny,
+        >,
+        #[gen_stub(override_type(type_repr="bool", imports=()))] negate: bool,
     ) -> PyResult<()> {
         let base = slf.as_ref();
-        let target_base = target.downcast::<PyHConfigBase>()?;
-        let delta_base = delta.downcast::<PyHConfigBase>()?;
+        let target_base = target.cast::<PyHConfigBase>()?;
+        let delta_base = delta.cast::<PyHConfigBase>()?;
 
         let target_node_id = target_base.borrow().node_id;
         let delta_node_id = delta_base.borrow().node_id;
@@ -627,7 +768,14 @@ impl PyHConfigChild {
         Ok(())
     }
 
-    pub fn __deepcopy__(slf: PyRef<'_, Self>, memo: &Bound<'_, PyDict>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="HConfigChild", imports=()))]
+    pub fn __deepcopy__(
+        slf: PyRef<'_, Self>,
+        #[gen_stub(override_type(type_repr="dict[int, object]", imports=()))] memo: &Bound<
+            '_,
+            PyDict,
+        >,
+    ) -> PyResult<Py<PyAny>> {
         let py = slf.py();
         let base = slf.as_ref();
         base.ensure_live()?;
@@ -665,7 +813,12 @@ impl PyHConfigChild {
         Ok(base.lines(true)?.join("\n"))
     }
 
-    fn __lt__(slf: PyRef<'_, Self>, other: &Bound<'_, PyAny>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
+    /// Return self<value.
+    fn __lt__(
+        slf: PyRef<'_, Self>,
+        #[gen_stub(override_type(type_repr="HConfigChild", imports=()))] other: &Bound<'_, PyAny>,
+    ) -> PyResult<Py<PyAny>> {
         slf.as_ref().ensure_live()?;
         let py = slf.py();
         let Ok(other_child) = other.extract::<PyRef<'_, Self>>() else {
@@ -688,7 +841,12 @@ impl PyHConfigChild {
         (my_weight < other_weight).into_py_any(py)
     }
 
-    fn __eq__(slf: PyRef<'_, Self>, other: &Bound<'_, PyAny>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
+    /// Return self==value.
+    fn __eq__(
+        slf: PyRef<'_, Self>,
+        #[gen_stub(override_type(type_repr="object", imports=()))] other: &Bound<'_, PyAny>,
+    ) -> PyResult<Py<PyAny>> {
         slf.as_ref().ensure_live()?;
         let py = slf.py();
         if let Ok(other_child) = other.extract::<PyRef<'_, Self>>() {
@@ -702,7 +860,11 @@ impl PyHConfigChild {
         Ok(py.NotImplemented())
     }
 
-    fn __ne__(slf: PyRef<'_, Self>, other: &Bound<'_, PyAny>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
+    fn __ne__(
+        slf: PyRef<'_, Self>,
+        #[gen_stub(override_type(type_repr="object", imports=()))] other: &Bound<'_, PyAny>,
+    ) -> PyResult<Py<PyAny>> {
         slf.as_ref().ensure_live()?;
         let py = slf.py();
         if let Ok(other_child) = other.extract::<PyRef<'_, Self>>() {
@@ -716,6 +878,8 @@ impl PyHConfigChild {
         Ok(py.NotImplemented())
     }
 
+    #[gen_stub(override_return_type(type_repr="int", imports=()))]
+    /// Return hash(self).
     fn __hash__(slf: PyRef<'_, Self>) -> PyResult<isize> {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};

@@ -1,8 +1,7 @@
-# stubtest allowlist for the `hier_config` package.
+# Runtime-introspection exceptions for the `hier_config` typing contract.
 #
-# `python scripts/build.py stubtest` runs mypy.stubtest against both
-# `_hier_config_rust` and `hier_config`, comparing the .pyi stubs against the
-# real runtime objects. The extension module is clean and has no allowlist.
+# `python scripts/build.py stubtest` checks `hier_config` recursively, including
+# its native submodule. Native bindings have no exemptions: fix their metadata.
 #
 # Every entry below was audited and falls into one of these categories:
 #
@@ -11,42 +10,14 @@
 #   * PyO3 enums (`Platform`, `NegationStrategy`, `InterfaceDot1qMode`,
 #     `InterfaceDuplex`, `NACHostMode`) - `__new__` takes `value`, and members
 #     are native objects rather than the stub's Python enum members.
-#   * PyO3 classes - construction happens in `tp_new`, so the runtime has
-#     `__new__` where the stub documents `__init__`; the non-`object` C layout
-#     also needs `@disjoint_base`, which cannot be expressed for these.
-#   * Sentinel defaults - the Rust signatures default to `None` and substitute
-#     the real default internally (`style=None` -> `"without_comments"`,
-#     `include_tags=None` -> `()`). The stubs document the *effective* default,
-#     which is what callers need, so the stub is deliberately more precise.
-#   * Stub-only `TypeAlias`es (`SetLikeOfStr`, `JsonValue`, `TextStyle`,
-#     `RemediationTransform`) - annotation-only, never materialised at runtime.
-#   * Dunder methods that PyO3 exposes as accepting positional-only arguments.
-#   * `__all__` - the stubs deliberately omit it; re-exports are explicit.
+#   * Recursive/string-based `TypeAlias`es (`JsonValue`, `TextStyle`) differ
+#     from the runtime representation of their annotations.
+#   * Cached rule helpers expose wrapper signatures rather than their
+#     underlying function signatures.
 #
 # Unused entries are an error, so this list stays honest: when a divergence is
 # fixed the entry must be deleted. Do not add an entry to silence a genuine
 # signature mismatch - fix the Rust binding or the stub instead.
-hier_config.base.HConfigBase
-hier_config.base.HConfigBase.__contains__
-hier_config.base.HConfigBase.all_children_sorted_by_tags
-hier_config.base.HConfigBase.cisco_style_text
-hier_config.base.HConfigBase.indented_text
-hier_config.base.SetLikeOfStr
-hier_config.base.__all__
-hier_config.child.HConfigChild
-hier_config.child.HConfigChild.__eq__
-hier_config.child.HConfigChild.__init__
-hier_config.child.HConfigChild.__lt__
-hier_config.child.HConfigChild.__new__
-hier_config.child.SetLikeOfStr
-hier_config.child.__all__
-hier_config.children.HConfigChildren
-hier_config.children.HConfigChildren.__contains__
-hier_config.children.HConfigChildren.__eq__
-hier_config.children.HConfigChildren.__getitem__
-hier_config.children.HConfigChildren.__setitem__
-hier_config.children.HConfigChildren.append
-hier_config.children.__all__
 hier_config.formats.JsonValue
 hier_config.models.BaseModel.__init__
 hier_config.models.ChangeDetail.__init__
@@ -99,17 +70,3 @@ hier_config.platforms.models.InterfaceDuplex.__new__
 hier_config.platforms.models.NACHostMode.__new__
 hier_config.platforms.models.StackMember.__init__
 hier_config.platforms.models.Vlan.__init__
-hier_config.root.HConfig
-hier_config.root.HConfig.__eq__
-hier_config.root.HConfig._load_file_native
-hier_config.root.HConfig._load_from_dump_native
-hier_config.root.HConfig._load_native
-hier_config.root.HConfig.to_json
-hier_config.root.HConfig.to_xml
-hier_config.root.__all__
-hier_config.workflows.RemediationTransform
-hier_config.workflows.WorkflowRemediation
-hier_config.workflows.WorkflowRemediation.remediation_config_filtered_text
-hier_config.workflows.WorkflowRemediation.remediation_text
-hier_config.workflows.WorkflowRemediation.rollback_config_filtered_text
-hier_config.workflows.WorkflowRemediation.rollback_text

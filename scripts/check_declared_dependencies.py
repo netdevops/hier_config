@@ -44,12 +44,8 @@ def installed_wheel_errors(wheel: Path) -> list[str]:
         errors.append(
             f"installed hier-config {installed} does not match built wheel {expected}"
         )
-    native = importlib.import_module("_hier_config_rust")
-    binary = (
-        importlib.import_module("_hier_config_rust._hier_config_rust")
-        if hasattr(native, "__path__")
-        else native
-    )
+    native = importlib.import_module("hier_config._hier_config_rust")
+    binary = native
     if (
         binary.__file__ is None
         or not binary.__file__.endswith(tuple(machinery.EXTENSION_SUFFIXES))

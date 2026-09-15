@@ -57,8 +57,18 @@ wheel installation, and supported Python/OS combinations.
 - `tests/parity/` compares object protocols against the recorded upstream
   behavior. Intentional differences must be explicit, reviewed expectations,
   not blanket skips.
-- Stub freshness, `stubtest`, and observed return-type checks complement runtime
-  tests. Regenerate stubs after changing the PyO3 surface.
+- Native stub freshness, export coverage, `stubtest`, and observed return-type
+  checks complement runtime tests. Regenerate the canonical
+  `hier_config/_hier_config_rust.pyi` after changing binding metadata with
+  `uv run --no-sync ./scripts/build.py generate-stubs`. Generation needs no Git
+  history; `check-stubs` must fail on drift without rewriting files.
+- Packaging CI runs positive and negative consumer typing contracts with mypy
+  and pyright against an installed wheel outside the checkout. The contracts
+  and audited runtime allowlists live in `tests/typing/`; no repository-local
+  `mypy_path` or `stubPath` is required.
+  Pylint checks every runtime `.py` source; Ruff and the type checkers validate
+  the `.pyi` declarations rather than treating their empty bodies as executable
+  Python.
 
 ### Shared remediation corpus
 

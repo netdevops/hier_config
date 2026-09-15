@@ -39,6 +39,12 @@ can replace the fresh extension with a cached wheel. Rebuild after any later
 
 ## Rules to Enforce in Review
 
+Native typing has one generated artifact, `hier_config/_hier_config_rust.pyi`.
+Update `pyo3-stub-gen` metadata/docs beside bindings, then run
+`uv run --no-sync ./scripts/build.py generate-stubs`. No historical Git input
+or duplicate facade stubs. `check-stubs` is read-only; preserve independent
+runtime/export and wheel-consumer checks. Allowlists live in `tests/typing/`.
+
 Native migration contracts: custom `config_preprocessor()` is rejected along
 with `idempotent_for()`, `negate_with()`, `sectional_exit()`, and `swap_negation()`.
 Preprocess custom text explicitly before `HConfig.from_text()`; marked stock

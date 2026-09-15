@@ -2,13 +2,28 @@
 
 use hier_config_core::formats::FormatError;
 use hier_config_core::tree::TreeError;
-use pyo3::create_exception;
 use pyo3::exceptions::{PyException, PyValueError};
 use pyo3::prelude::*;
+use pyo3_stub_gen::create_exception;
 
-create_exception!(_hier_config_rust, HierConfigError, PyException);
-create_exception!(_hier_config_rust, DuplicateChildError, HierConfigError);
-create_exception!(_hier_config_rust, InvalidConfigError, HierConfigError);
+create_exception!(
+    hier_config._hier_config_rust,
+    HierConfigError,
+    PyException,
+    "Base exception for hierarchical configuration errors."
+);
+create_exception!(
+    hier_config._hier_config_rust,
+    DuplicateChildError,
+    HierConfigError,
+    "A child with this text already exists in the destination."
+);
+create_exception!(
+    hier_config._hier_config_rust,
+    InvalidConfigError,
+    HierConfigError,
+    "The supplied configuration is malformed."
+);
 
 /// Converts a core [`TreeError`] into the matching Python exception.
 ///

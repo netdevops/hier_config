@@ -1,4 +1,4 @@
-# Members whose declared return type cannot be confirmed against a live value.
+# Native members whose declared return type cannot be confirmed against a live value.
 #
 # `python scripts/build.py check-stub-types` calls every property and safe
 # zero-argument method on a corpus of parsed fixtures and compares the result

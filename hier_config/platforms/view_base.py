@@ -23,7 +23,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from _hier_config_rust import ConfigViewInterface, HConfigView
+from hier_config._hier_config_rust import ConfigViewInterface, HConfigView
 
 if TYPE_CHECKING:
     from hier_config.models import Platform

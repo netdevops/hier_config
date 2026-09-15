@@ -53,9 +53,9 @@ identically. ``testdata/formats/expected.json`` pins the two together.
 from __future__ import annotations
 
 from json import dumps
-from typing import TYPE_CHECKING, Any, TypeAlias, TypedDict
+from typing import TYPE_CHECKING, TypeAlias, TypedDict
 
-from _hier_config_rust import (
+from hier_config._hier_config_rust import (
     formats_from_json,
     formats_from_xml,
     formats_to_gnmi_json,
@@ -67,6 +67,7 @@ from _hier_config_rust import (
 from .registry import resolve_driver
 
 if TYPE_CHECKING:
+    from ._typing import ValueT
     from .models import Platform
     from .platforms.driver_base import HConfigDriverBase
     from .root import HConfig
@@ -93,7 +94,7 @@ def _keys(list_keys: tuple[str, ...] | None) -> list[str] | None:
 
 def hconfig_from_json(
     platform_or_driver: Platform | str | HConfigDriverBase,
-    data: str | dict[str, Any],
+    data: str | dict[str, ValueT],
     *,
     list_keys: tuple[str, ...] | None = None,
 ) -> HConfig:

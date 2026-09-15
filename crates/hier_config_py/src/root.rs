@@ -19,7 +19,7 @@ fn get_dump_field<'py>(
     key: &Bound<'py, PyString>,
 ) -> PyResult<Bound<'py, PyAny>> {
     if let Ok(dict_obj) = item.getattr(n_dict)
-        && let Ok(dict) = dict_obj.downcast::<PyDict>()
+        && let Ok(dict) = dict_obj.cast::<PyDict>()
         && let Some(val) = dict.get_item(key)?
     {
         return Ok(val);
@@ -29,11 +29,11 @@ fn get_dump_field<'py>(
 
 fn extract_dump_strings(val: Bound<'_, PyAny>) -> PyResult<BTreeSet<String>> {
     let mut set = BTreeSet::new();
-    if let Ok(fset) = val.downcast::<PyFrozenSet>() {
+    if let Ok(fset) = val.cast::<PyFrozenSet>() {
         for item in fset.iter() {
             set.insert(item.extract::<String>()?);
         }
-    } else if let Ok(pyset) = val.downcast::<PySet>() {
+    } else if let Ok(pyset) = val.cast::<PySet>() {
         for item in pyset.iter() {
             set.insert(item.extract::<String>()?);
         }
@@ -68,14 +68,17 @@ fn parse_dump_line<'py>(
     })
 }
 
-#[pyclass(extends = PyHConfigBase, subclass, module = "_hier_config_rust", name = "HConfig")]
+/// A class for representing and comparing Cisco like configurations in a
+/// hierarchical tree data structure.
+#[pyo3_stub_gen::derive::gen_stub_pyclass]
+#[pyclass(extends = PyHConfigBase, subclass, module = "hier_config._hier_config_rust", name = "HConfig")]
 #[derive(Debug)]
 pub struct PyHConfig {
-    pub driver_obj: PyObject,
+    pub driver_obj: Py<PyAny>,
 }
 
 impl PyHConfig {
-    pub fn parse_platform(py: Python<'_>, driver: &PyObject) -> PyResult<Platform> {
+    pub fn parse_platform(py: Python<'_>, driver: &Py<PyAny>) -> PyResult<Platform> {
         let selector = driver.getattr(py, "platform")?;
         if selector.is_none(py) {
             return Ok(Platform::Generic);
@@ -94,7 +97,7 @@ impl PyHConfig {
         })
     }
 
-    pub fn get_default_driver(py: Python<'_>, platform: Platform) -> PyResult<PyObject> {
+    pub fn get_default_driver(py: Python<'_>, platform: Platform) -> PyResult<Py<PyAny>> {
         let constructors = py.import("hier_config.constructors")?;
         let plat_str = match platform {
             Platform::AristaEos => "ARISTA_EOS",
@@ -126,7 +129,7 @@ type DumpRow = (usize, Py<PyAny>, Py<PyAny>, Py<PyAny>, bool);
 ///
 /// Pydantic's `BaseModel` overrides `__setattr__`, so populating an instance's
 /// slots has to go through `object`'s implementation. Calling it as a bound
-/// method allocates an argument tuple per assignment; `PyObject_GenericSetAttr`
+/// method allocates an argument tuple per assignment; `Py<PyAny>_GenericSetAttr`
 /// *is* that implementation and takes its arguments directly.
 ///
 /// # Safety
@@ -187,7 +190,7 @@ pub(crate) fn create_py_hconfig(
     py: Python<'_>,
     tree: Tree,
     platform: Platform,
-    driver_obj: PyObject,
+    driver_obj: Py<PyAny>,
 ) -> PyResult<Py<PyHConfig>> {
     let root_id = tree.root;
     let shared_tree = Arc::new(SharedTree::new(tree, platform));
@@ -209,11 +212,17 @@ pub(crate) fn create_py_hconfig(
     Ok(hconfig)
 }
 
+#[pyo3_stub_gen::derive::gen_stub_pymethods]
 #[pymethods]
 impl PyHConfig {
     #[new]
+    #[gen_stub(override_return_type(type_repr="typing_extensions.Self", imports=("typing_extensions")))]
     #[pyo3(signature = (driver))]
-    fn new(py: Python<'_>, driver: PyObject) -> PyResult<(Self, PyHConfigBase)> {
+    fn new(
+        py: Python<'_>,
+        #[gen_stub(override_type(type_repr="hier_config.platforms.driver_base.HConfigDriverBase", imports=("hier_config.platforms.driver_base")))]
+        driver: Py<PyAny>,
+    ) -> PyResult<(Self, PyHConfigBase)> {
         let platform = Self::parse_platform(py, &driver)?;
         let tree = Tree::for_platform(platform);
         let root_id = tree.root;
@@ -231,7 +240,12 @@ impl PyHConfig {
     }
 
     #[pyo3(signature = (driver))]
-    fn __init__(slf: &Bound<'_, Self>, driver: &Bound<'_, PyAny>) -> PyResult<()> {
+    #[gen_stub(override_return_type(type_repr="None", imports=()))]
+    fn __init__(
+        slf: &Bound<'_, Self>,
+        #[gen_stub(override_type(type_repr="hier_config.platforms.driver_base.HConfigDriverBase", imports=("hier_config.platforms.driver_base")))]
+        driver: &Bound<'_, PyAny>,
+    ) -> PyResult<()> {
         let _ = driver;
         let base_ref = slf.extract::<PyRef<'_, PyHConfigBase>>()?;
         *base_ref.tree.root_handle.write_py()? = Some(slf.clone().unbind().into_any());
@@ -239,13 +253,16 @@ impl PyHConfig {
     }
 
     #[getter]
-    pub fn driver(slf: PyRef<'_, Self>) -> PyObject {
+    #[gen_stub(override_return_type(type_repr="hier_config.platforms.driver_base.HConfigDriverBase", imports=("hier_config.platforms.driver_base")))]
+    pub fn driver(slf: PyRef<'_, Self>) -> Py<PyAny> {
         let py = slf.py();
         slf.driver_obj.clone_ref(py)
     }
 
     #[getter]
-    pub fn root(slf: PyRef<'_, Self>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="HConfig", imports=()))]
+    /// The `HConfig` object at the base of the tree.
+    pub fn root(slf: PyRef<'_, Self>) -> PyResult<Py<PyAny>> {
         let py = slf.py();
         let tree = Arc::clone(&slf.as_ref().tree);
         {
@@ -261,11 +278,13 @@ impl PyHConfig {
     }
 
     #[getter]
-    pub fn parent(slf: PyRef<'_, Self>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="HConfig", imports=()))]
+    pub fn parent(slf: PyRef<'_, Self>) -> PyResult<Py<PyAny>> {
         Self::root(slf)
     }
 
     #[getter]
+    #[gen_stub(override_return_type(type_repr="int", imports=()))]
     pub fn real_indent_level(_slf: PyRef<'_, Self>) -> i32 {
         -1
     }
@@ -280,7 +299,11 @@ impl PyHConfig {
         true
     }
 
-    pub fn instantiate_child(slf: PyRef<'_, Self>, text: &str) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="HConfigChild", imports=()))]
+    pub fn instantiate_child(
+        slf: PyRef<'_, Self>,
+        #[gen_stub(override_type(type_repr="str", imports=()))] text: &str,
+    ) -> PyResult<Py<PyAny>> {
         let py = slf.py();
         let base = slf.as_ref();
         let child_id = {
@@ -291,7 +314,13 @@ impl PyHConfig {
         Ok(child.into_any())
     }
 
-    pub fn merge(slf: PyRef<'_, Self>, other: &Bound<'_, PyAny>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="HConfig", imports=()))]
+    /// Merges other `HConfig` objects into this one.
+    pub fn merge(
+        slf: PyRef<'_, Self>,
+        #[gen_stub(override_type(type_repr="HConfig | collections.abc.Iterable[HConfig]", imports=("collections.abc")))]
+        other: &Bound<'_, PyAny>,
+    ) -> PyResult<Py<PyAny>> {
         let py = slf.py();
         let slf_obj = slf.into_py_any(py)?;
         let slf_bound = slf_obj.bind(py);
@@ -328,10 +357,11 @@ impl PyHConfig {
     /// post-load callbacks for the platform are applied as well; callers pass false
     /// when a custom driver supplies its own Python callbacks.
     #[pyo3(signature = (config_raw, run_post_load = true))]
+    #[gen_stub(override_return_type(type_repr="None", imports=()))]
     pub fn _load_native(
         slf: PyRef<'_, Self>,
-        config_raw: &str,
-        run_post_load: bool,
+        #[gen_stub(override_type(type_repr="str", imports=()))] config_raw: &str,
+        #[gen_stub(override_type(type_repr="bool", imports=()))] run_post_load: bool,
     ) -> PyResult<()> {
         let py = slf.py();
         let base: &PyHConfigBase = slf.as_ref();
@@ -339,7 +369,7 @@ impl PyHConfig {
         // Copy the text out of Python memory so the GIL can be released for the parse.
         let owned = config_raw.to_owned();
 
-        py.allow_threads(move || {
+        py.detach(move || {
             let mut tree = shared.tree.write_py()?;
             hier_config_core::parser::parse_into_tree(&mut tree, &owned).map_err(to_py_err)?;
             hier_config_core::post_load::delete_sectional_exit_recursive(&mut tree);
@@ -362,10 +392,12 @@ impl PyHConfig {
     ///
     /// Returns an error if `lines` is not a `str` or an iterable of `str`, or if a
     /// line cannot be inserted into the tree.
+    #[gen_stub(override_return_type(type_repr="None", imports=()))]
     pub fn _load_fast_native(
         slf: PyRef<'_, Self>,
+        #[gen_stub(override_type(type_repr="str | collections.abc.Iterable[str]", imports=("collections.abc")))]
         lines: &Bound<'_, PyAny>,
-        run_post_load: bool,
+        #[gen_stub(override_type(type_repr="bool", imports=()))] run_post_load: bool,
     ) -> PyResult<()> {
         let py = slf.py();
         let base: &PyHConfigBase = slf.as_ref();
@@ -373,7 +405,7 @@ impl PyHConfig {
 
         // The parse runs without the GIL, so the text has to be copied out of Python
         // memory first.
-        let (buf, spans) = if let Ok(text) = lines.downcast::<PyString>() {
+        let (buf, spans) = if let Ok(text) = lines.cast::<PyString>() {
             // A single string only needs one copy; splitting happens Rust-side.
             (text.to_str()?.to_owned(), None)
         } else {
@@ -385,18 +417,18 @@ impl PyHConfig {
             let mut spans: Vec<(usize, usize)> = Vec::new();
             let mut push = |line: &Bound<'_, PyAny>| -> PyResult<()> {
                 let start = buf.len();
-                buf.push_str(line.downcast::<PyString>()?.to_str()?);
+                buf.push_str(line.cast::<PyString>()?.to_str()?);
                 spans.push((start, buf.len()));
                 Ok(())
             };
             // A list or tuple is by far the common case and can be walked by index,
             // which skips constructing a Python iterator and calling `__next__` once
             // per line.
-            if let Ok(list) = lines.downcast::<PyList>() {
+            if let Ok(list) = lines.cast::<PyList>() {
                 for line in list {
                     push(&line)?;
                 }
-            } else if let Ok(tuple) = lines.downcast::<PyTuple>() {
+            } else if let Ok(tuple) = lines.cast::<PyTuple>() {
                 for line in tuple {
                     push(&line)?;
                 }
@@ -408,7 +440,7 @@ impl PyHConfig {
             (buf, Some(spans))
         };
 
-        py.allow_threads(move || {
+        py.detach(move || {
             let borrowed: Vec<&str> = match &spans {
                 Some(spans) => spans.iter().map(|&(s, e)| &buf[s..e]).collect(),
                 None => buf.lines().collect(),
@@ -424,17 +456,18 @@ impl PyHConfig {
     /// Reads the file directly via `std::fs::read_to_string` with the GIL released,
     /// avoiding intermediate Python `str` allocations.
     #[pyo3(signature = (path, run_post_load = true))]
+    #[gen_stub(override_return_type(type_repr="None", imports=()))]
     pub fn _load_file_native(
         slf: PyRef<'_, Self>,
-        path: &str,
-        run_post_load: bool,
+        #[gen_stub(override_type(type_repr="str", imports=()))] path: &str,
+        #[gen_stub(override_type(type_repr="bool", imports=()))] run_post_load: bool,
     ) -> PyResult<()> {
         let py = slf.py();
         let base: &PyHConfigBase = slf.as_ref();
         let shared = Arc::clone(&base.tree);
         let path_buf = std::path::PathBuf::from(path);
 
-        py.allow_threads(move || {
+        py.detach(move || {
             let content = std::fs::read_to_string(&path_buf)?;
             let mut tree = shared.tree.write_py()?;
             hier_config_core::parser::parse_into_tree(&mut tree, &content).map_err(to_py_err)?;
@@ -451,7 +484,12 @@ impl PyHConfig {
     /// Unpacks line attributes and delegates tree reconstruction to native Rust in O(N)
     /// without per-node Python FFI round-trips.
     #[pyo3(signature = (dump))]
-    pub fn _load_from_dump_native(slf: PyRef<'_, Self>, dump: &Bound<'_, PyAny>) -> PyResult<()> {
+    #[gen_stub(override_return_type(type_repr="None", imports=()))]
+    pub fn _load_from_dump_native(
+        slf: PyRef<'_, Self>,
+        #[gen_stub(override_type(type_repr="collections.abc.Iterable[hier_config.models.DumpLine]", imports=("collections.abc", "hier_config.models")))]
+        dump: &Bound<'_, PyAny>,
+    ) -> PyResult<()> {
         let py = slf.py();
         let base: &PyHConfigBase = slf.as_ref();
         let shared = Arc::clone(&base.tree);
@@ -470,7 +508,7 @@ impl PyHConfig {
         let k_new_in_config = PyString::intern(py, "new_in_config");
 
         let mut dump_lines = Vec::new();
-        if let Ok(tuple) = lines_attr.downcast::<PyTuple>() {
+        if let Ok(tuple) = lines_attr.cast::<PyTuple>() {
             dump_lines.reserve(tuple.len());
             for item in tuple.iter() {
                 dump_lines.push(parse_dump_line(
@@ -483,7 +521,7 @@ impl PyHConfig {
                     &k_new_in_config,
                 )?);
             }
-        } else if let Ok(list) = lines_attr.downcast::<PyList>() {
+        } else if let Ok(list) = lines_attr.cast::<PyList>() {
             dump_lines.reserve(list.len());
             for item in list.iter() {
                 dump_lines.push(parse_dump_line(
@@ -510,16 +548,22 @@ impl PyHConfig {
             }
         }
 
-        py.allow_threads(move || {
+        py.detach(move || {
             let mut tree = shared.tree.write_py()?;
             tree.load_from_dump(&Dump { lines: dump_lines })
                 .map_err(to_py_err)
         })
     }
 
-    pub fn add_children_deep(slf: PyRef<'_, Self>, lines: &Bound<'_, PyAny>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="HConfigChild", imports=()))]
+    /// Add child instances of `HConfigChild` deeply.
+    pub fn add_children_deep(
+        slf: PyRef<'_, Self>,
+        #[gen_stub(override_type(type_repr="collections.abc.Iterable[str]", imports=("collections.abc")))]
+        lines: &Bound<'_, PyAny>,
+    ) -> PyResult<Py<PyAny>> {
         let py = slf.py();
-        let mut current: PyObject = slf.into_py_any(py)?;
+        let mut current: Py<PyAny> = slf.into_py_any(py)?;
         let mut count = 0;
         for line in lines.try_iter()? {
             let text: String = line?.extract()?;
@@ -535,10 +579,16 @@ impl PyHConfig {
         Ok(current)
     }
 
+    #[gen_stub(override_return_type(type_repr="HConfig | HConfigChild", imports=()))]
+    /// Add a copy of the ancestry of `parent_to_add` to self
+    /// and return the deepest child which is equivalent to `parent_to_add`.
     pub fn add_ancestor_copy_of(
         slf: PyRef<'_, Self>,
-        parent_to_add: &Bound<'_, PyAny>,
-    ) -> PyResult<PyObject> {
+        #[gen_stub(override_type(type_repr="HConfigChild", imports=()))] parent_to_add: &Bound<
+            '_,
+            PyAny,
+        >,
+    ) -> PyResult<Py<PyAny>> {
         let py = slf.py();
         let parent_child = parent_to_add.extract::<PyRef<'_, crate::child::PyHConfigChild>>()?;
         let parent_base = parent_child.as_ref();
@@ -562,7 +612,12 @@ impl PyHConfig {
         Ok(child.into_any())
     }
 
-    pub fn difference(slf: PyRef<'_, Self>, target: &Bound<'_, PyAny>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="HConfig", imports=()))]
+    /// Creates a new `HConfig` object with the config from self that is not in target.
+    pub fn difference(
+        slf: PyRef<'_, Self>,
+        #[gen_stub(override_type(type_repr="HConfig", imports=()))] target: &Bound<'_, PyAny>,
+    ) -> PyResult<Py<PyAny>> {
         let py = slf.py();
         let base = slf.as_ref();
         let target_hconfig = target.extract::<PyRef<'_, Self>>()?;
@@ -586,20 +641,29 @@ impl PyHConfig {
 
     /// v4 name for `config_to_get_to()`.
     #[pyo3(signature = (target, delta = None))]
+    #[gen_stub(override_return_type(type_repr="HConfig", imports=()))]
     pub fn remediation(
         slf: PyRef<'_, Self>,
-        target: &Bound<'_, PyAny>,
-        delta: Option<&Bound<'_, PyAny>>,
-    ) -> PyResult<PyObject> {
+        #[gen_stub(override_type(type_repr="HConfig", imports=()))] target: &Bound<'_, PyAny>,
+        #[gen_stub(override_type(type_repr="HConfig | None", imports=()))] delta: Option<
+            &Bound<'_, PyAny>,
+        >,
+    ) -> PyResult<Py<PyAny>> {
         Self::config_to_get_to(slf, target, delta)
     }
 
     #[pyo3(signature = (target, delta = None))]
+    #[gen_stub(override_return_type(type_repr="HConfig", imports=()))]
+    /// Figures out what commands need to be executed to transition from self to target.
+    /// self is the source data structure(i.e. the `running_config`),
+    /// target is the destination(i.e. `generated_config`).
     pub fn config_to_get_to(
         slf: PyRef<'_, Self>,
-        target: &Bound<'_, PyAny>,
-        delta: Option<&Bound<'_, PyAny>>,
-    ) -> PyResult<PyObject> {
+        #[gen_stub(override_type(type_repr="HConfig", imports=()))] target: &Bound<'_, PyAny>,
+        #[gen_stub(override_type(type_repr="HConfig | None", imports=()))] delta: Option<
+            &Bound<'_, PyAny>,
+        >,
+    ) -> PyResult<Py<PyAny>> {
         let py = slf.py();
         let base = slf.as_ref();
         base.tree.sync_rules(py)?;
@@ -657,11 +721,21 @@ impl PyHConfig {
     }
 
     #[pyo3(signature = (config, *, prune_empty_branches = false))]
+    #[gen_stub(override_return_type(type_repr="HConfig", imports=()))]
+    /// EXPERIMENTAL - predict the future config after config is applied to self.
+    ///
+    /// The quality of this method's output will in part depend on how well
+    /// the OS options are tuned. Ensuring that idempotency rules are accurate is
+    /// especially important.
+    ///
+    /// With `prune_empty_branches`, sections that the change emptied out are
+    /// removed, matching devices that prune empty stanzas on commit; sections
+    /// that were already empty are kept.
     pub fn future(
         slf: PyRef<'_, Self>,
-        config: &Bound<'_, PyAny>,
-        prune_empty_branches: bool,
-    ) -> PyResult<PyObject> {
+        #[gen_stub(override_type(type_repr="HConfig", imports=()))] config: &Bound<'_, PyAny>,
+        #[gen_stub(override_type(type_repr="bool", imports=()))] prune_empty_branches: bool,
+    ) -> PyResult<Py<PyAny>> {
         let (future_config, _) = Self::future_with_report(slf, config, prune_empty_branches)?;
         Ok(future_config)
     }
@@ -671,11 +745,12 @@ impl PyHConfig {
     /// Returns `(future_config, FutureReport)`. The report's nodes belong to
     /// the returned tree, so callers can walk their surrounding context.
     #[pyo3(signature = (config, *, prune_empty_branches = false))]
+    #[gen_stub(override_return_type(type_repr="tuple[HConfig, hier_config.tree_algorithms.FutureReport]", imports=("hier_config.tree_algorithms")))]
     pub fn future_with_report(
         slf: PyRef<'_, Self>,
-        config: &Bound<'_, PyAny>,
-        prune_empty_branches: bool,
-    ) -> PyResult<(PyObject, PyObject)> {
+        #[gen_stub(override_type(type_repr="HConfig", imports=()))] config: &Bound<'_, PyAny>,
+        #[gen_stub(override_type(type_repr="bool", imports=()))] prune_empty_branches: bool,
+    ) -> PyResult<(Py<PyAny>, Py<PyAny>)> {
         let py = slf.py();
         let base = slf.as_ref();
         base.tree.sync_rules(py)?;
@@ -714,7 +789,7 @@ impl PyHConfig {
         *handle = Some(hconfig.clone_ref(py).into_any());
         drop(handle);
 
-        let wrap = |ids: &[hier_config_core::NodeId]| -> PyResult<Vec<PyObject>> {
+        let wrap = |ids: &[hier_config_core::NodeId]| -> PyResult<Vec<Py<PyAny>>> {
             ids.iter()
                 .map(|&id| {
                     SharedTree::get_or_create_child(&shared_tree, py, id, None).map(Py::into_any)
@@ -734,7 +809,9 @@ impl PyHConfig {
         Ok((hconfig.into_any(), py_report.unbind()))
     }
 
-    pub fn deep_copy(slf: PyRef<'_, Self>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="HConfig", imports=()))]
+    /// Return a copy of this object.
+    pub fn deep_copy(slf: PyRef<'_, Self>) -> PyResult<Py<PyAny>> {
         let py = slf.py();
         let base = slf.as_ref();
         let cloned_tree = {
@@ -763,7 +840,13 @@ impl PyHConfig {
         Ok(hconfig.into_any())
     }
 
-    pub fn with_tags(slf: PyRef<'_, Self>, tags: &Bound<'_, PyAny>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="HConfig", imports=()))]
+    /// Returns a new instance recursively containing children that only have a subset of tags.
+    pub fn with_tags(
+        slf: PyRef<'_, Self>,
+        #[gen_stub(override_type(type_repr="collections.abc.Iterable[str]", imports=("collections.abc")))]
+        tags: &Bound<'_, PyAny>,
+    ) -> PyResult<Py<PyAny>> {
         let py = slf.py();
         let mut tag_set = BTreeSet::new();
         for t in tags.try_iter()? {
@@ -786,6 +869,7 @@ impl PyHConfig {
     pub fn _is_object_referenced(
         slf: PyRef<'_, Self>,
         name: &str,
+        #[gen_stub(override_type(type_repr="collections.abc.Iterable[hier_config.models.ReferenceLocation]", imports=("collections.abc", "hier_config.models")))]
         reference_locations: &Bound<'_, PyAny>,
     ) -> PyResult<bool> {
         let py = slf.py();
@@ -819,7 +903,13 @@ impl PyHConfig {
         Ok(false)
     }
 
-    pub fn unused_objects(slf: PyRef<'_, Self>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="collections.abc.Sequence[HConfigChild]", imports=("collections.abc")))]
+    /// Yield top-level children that are defined objects with no references.
+    ///
+    /// Uses ``self.driver.rules.unused_objects`` to identify object definitions,
+    /// extract their names, and search for references across the config tree.
+    /// Objects with zero references are yielded.
+    pub fn unused_objects(slf: PyRef<'_, Self>) -> PyResult<Py<PyAny>> {
         let py = slf.py();
         let base = slf.as_ref();
         base.tree.sync_rules(py)?;
@@ -831,6 +921,8 @@ impl PyHConfig {
         crate::base::items_sequence(py, items)
     }
 
+    #[gen_stub(override_return_type(type_repr="HConfig", imports=()))]
+    /// Sets self.order integer on all children.
     pub fn set_order_weight(slf: PyRef<'_, Self>) -> PyResult<PyRef<'_, Self>> {
         let base = slf.as_ref();
         {
@@ -841,6 +933,7 @@ impl PyHConfig {
     }
 
     #[pyo3(signature = (*, sectional_exiting = false))]
+    #[gen_stub(override_return_type(type_repr="tuple[str, ...]", imports=()))]
     pub fn dump_simple(
         slf: PyRef<'_, Self>,
         py: Python<'_>,
@@ -853,12 +946,15 @@ impl PyHConfig {
     /// Create an `HConfig` from raw configuration text (or a Path to it).
     #[classmethod]
     #[pyo3(signature = (platform_or_driver, config_text = None))]
+    #[gen_stub(override_return_type(type_repr="HConfig", imports=()))]
     pub fn from_text(
         _cls: &Bound<'_, PyType>,
         py: Python<'_>,
-        platform_or_driver: PyObject,
-        config_text: Option<PyObject>,
-    ) -> PyResult<PyObject> {
+        #[gen_stub(override_type(type_repr="hier_config.models.Platform | str | hier_config.platforms.driver_base.HConfigDriverBase", imports=("hier_config.models", "hier_config.platforms.driver_base")))]
+        platform_or_driver: Py<PyAny>,
+        #[gen_stub(override_type(type_repr="str | os.PathLike[str] | None", imports=("os")))]
+        config_text: Option<Py<PyAny>>,
+    ) -> PyResult<Py<PyAny>> {
         let text = match config_text {
             Some(obj) => obj,
             None => "".into_pyobject(py)?.into_any().unbind(),
@@ -871,12 +967,15 @@ impl PyHConfig {
 
     /// Create an `HConfig` from pre-split configuration lines (fast load).
     #[classmethod]
+    #[gen_stub(override_return_type(type_repr="HConfig", imports=()))]
     pub fn from_lines(
         _cls: &Bound<'_, PyType>,
         py: Python<'_>,
-        platform_or_driver: PyObject,
-        lines: PyObject,
-    ) -> PyResult<PyObject> {
+        #[gen_stub(override_type(type_repr="hier_config.models.Platform | str | hier_config.platforms.driver_base.HConfigDriverBase", imports=("hier_config.models", "hier_config.platforms.driver_base")))]
+        platform_or_driver: Py<PyAny>,
+        #[gen_stub(override_type(type_repr="collections.abc.Iterable[str]", imports=("collections.abc")))]
+        lines: Py<PyAny>,
+    ) -> PyResult<Py<PyAny>> {
         py.import("hier_config.constructors")?
             .getattr("hconfig_from_lines")?
             .call1((platform_or_driver, lines))
@@ -885,12 +984,15 @@ impl PyHConfig {
 
     /// Reconstruct an `HConfig` from a serialized `Dump`.
     #[classmethod]
+    #[gen_stub(override_return_type(type_repr="HConfig", imports=()))]
     pub fn from_dump(
         _cls: &Bound<'_, PyType>,
         py: Python<'_>,
-        platform_or_driver: PyObject,
-        dump: PyObject,
-    ) -> PyResult<PyObject> {
+        #[gen_stub(override_type(type_repr="hier_config.models.Platform | str | hier_config.platforms.driver_base.HConfigDriverBase", imports=("hier_config.models", "hier_config.platforms.driver_base")))]
+        platform_or_driver: Py<PyAny>,
+        #[gen_stub(override_type(type_repr="hier_config.models.Dump", imports=("hier_config.models")))]
+        dump: Py<PyAny>,
+    ) -> PyResult<Py<PyAny>> {
         py.import("hier_config.constructors")?
             .getattr("hconfig_from_dump")?
             .call1((platform_or_driver, dump))
@@ -900,13 +1002,17 @@ impl PyHConfig {
     /// Create an `HConfig` from a JSON object or JSON text.
     #[classmethod]
     #[pyo3(signature = (platform_or_driver, data, *, list_keys = None))]
+    #[gen_stub(override_return_type(type_repr="HConfig", imports=()))]
     pub fn from_json(
         _cls: &Bound<'_, PyType>,
         py: Python<'_>,
-        platform_or_driver: PyObject,
-        data: PyObject,
-        list_keys: Option<PyObject>,
-    ) -> PyResult<PyObject> {
+        #[gen_stub(override_type(type_repr="hier_config.models.Platform | str | hier_config.platforms.driver_base.HConfigDriverBase", imports=("hier_config.models", "hier_config.platforms.driver_base")))]
+        platform_or_driver: Py<PyAny>,
+        #[gen_stub(override_type(type_repr="str | dict[str, hier_config._typing.ValueT]", imports=("hier_config._typing")))]
+        data: Py<PyAny>,
+        #[gen_stub(override_type(type_repr="tuple[str, ...] | None", imports=()))]
+        list_keys: Option<Py<PyAny>>,
+    ) -> PyResult<Py<PyAny>> {
         let kwargs = PyDict::new(py);
         kwargs.set_item("list_keys", list_keys)?;
         py.import("hier_config.formats")?
@@ -918,13 +1024,16 @@ impl PyHConfig {
     /// Create an `HConfig` from an XML document.
     #[classmethod]
     #[pyo3(signature = (platform_or_driver, source, *, list_keys = None))]
+    #[gen_stub(override_return_type(type_repr="HConfig", imports=()))]
     pub fn from_xml(
         _cls: &Bound<'_, PyType>,
         py: Python<'_>,
-        platform_or_driver: PyObject,
-        source: PyObject,
-        list_keys: Option<PyObject>,
-    ) -> PyResult<PyObject> {
+        #[gen_stub(override_type(type_repr="hier_config.models.Platform | str | hier_config.platforms.driver_base.HConfigDriverBase", imports=("hier_config.models", "hier_config.platforms.driver_base")))]
+        platform_or_driver: Py<PyAny>,
+        #[gen_stub(override_type(type_repr="str", imports=()))] source: Py<PyAny>,
+        #[gen_stub(override_type(type_repr="tuple[str, ...] | None", imports=()))]
+        list_keys: Option<Py<PyAny>>,
+    ) -> PyResult<Py<PyAny>> {
         let kwargs = PyDict::new(py);
         kwargs.set_item("list_keys", list_keys)?;
         py.import("hier_config.formats")?
@@ -934,12 +1043,15 @@ impl PyHConfig {
     }
 
     /// Render a tree built by `from_json` back to JSON text.
-    #[pyo3(signature = (*, indent = Some(2)))]
+    // PyO3 renders non-literal defaults such as `Some(2)` as `Ellipsis` in
+    // `__text_signature__`; spell the default out so runtime and stub agree.
+    #[pyo3(signature = (*, indent = Some(2)), text_signature = "($self, *, indent=2)")]
+    #[gen_stub(override_return_type(type_repr="str", imports=()))]
     pub fn to_json(
         slf: PyRef<'_, Self>,
         py: Python<'_>,
         indent: Option<u32>,
-    ) -> PyResult<PyObject> {
+    ) -> PyResult<Py<PyAny>> {
         let kwargs = PyDict::new(py);
         kwargs.set_item("indent", indent)?;
         py.import("hier_config.formats")?
@@ -949,7 +1061,8 @@ impl PyHConfig {
     }
 
     /// Render a tree built by `from_xml` back to XML text.
-    pub fn to_xml(slf: PyRef<'_, Self>, py: Python<'_>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="str", imports=()))]
+    pub fn to_xml(slf: PyRef<'_, Self>, py: Python<'_>) -> PyResult<Py<PyAny>> {
         py.import("hier_config.formats")?
             .getattr("hconfig_to_xml")?
             .call1((slf.into_pyobject(py)?,))
@@ -958,6 +1071,7 @@ impl PyHConfig {
 
     /// v4 name for `dump_simple()`.
     #[pyo3(signature = (*, sectional_exiting = false))]
+    #[gen_stub(override_return_type(type_repr="tuple[str, ...]", imports=()))]
     pub fn to_lines(
         slf: PyRef<'_, Self>,
         py: Python<'_>,
@@ -967,7 +1081,9 @@ impl PyHConfig {
         base.dump_simple(py, sectional_exiting)
     }
 
-    pub fn dump(slf: PyRef<'_, Self>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="hier_config.models.Dump", imports=("hier_config.models")))]
+    /// Dump loaded `HConfig` data.
+    pub fn dump(slf: PyRef<'_, Self>) -> PyResult<Py<PyAny>> {
         let py = slf.py();
         let base = slf.as_ref();
         let models_mod = py.import("hier_config.models")?;
@@ -1064,7 +1180,7 @@ impl PyHConfig {
         template.set_item(&k_comments, &none)?;
         template.set_item(&k_new_in_config, &py_false)?;
 
-        let line_type = dump_line_cls.downcast::<PyType>()?;
+        let line_type = dump_line_cls.cast::<PyType>()?;
         let mut lines = Vec::with_capacity(ordered.len());
         for (depth, text, tags, comments, new_in_config) in ordered {
             let fields = template.copy()?;
@@ -1099,7 +1215,14 @@ impl PyHConfig {
         Ok(dump_obj.unbind())
     }
 
-    pub fn __deepcopy__(slf: PyRef<'_, Self>, memo: &Bound<'_, PyDict>) -> PyResult<Py<Self>> {
+    #[gen_stub(override_return_type(type_repr="HConfig", imports=()))]
+    pub fn __deepcopy__(
+        slf: PyRef<'_, Self>,
+        #[gen_stub(override_type(type_repr="dict[int, object]", imports=()))] memo: &Bound<
+            '_,
+            PyDict,
+        >,
+    ) -> PyResult<Py<Self>> {
         let py = slf.py();
         let base = slf.as_ref();
         let cloned_tree = {
@@ -1162,7 +1285,8 @@ impl PyHConfig {
         Ok(new_conf)
     }
 
-    pub fn __reduce__(slf: PyRef<'_, Self>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="tuple[collections.abc.Callable[..., HConfig], tuple[hier_config.platforms.driver_base.HConfigDriverBase, hier_config.models.Dump]]", imports=("collections.abc", "hier_config.platforms.driver_base", "hier_config.models")))]
+    pub fn __reduce__(slf: PyRef<'_, Self>) -> PyResult<Py<PyAny>> {
         let py = slf.py();
         let constructors = py.import("hier_config.constructors")?;
         let func = constructors.getattr("get_hconfig_from_dump")?;
@@ -1197,7 +1321,12 @@ impl PyHConfig {
         Ok(slf.as_ref().lines(true)?.join("\n"))
     }
 
-    fn __eq__(slf: PyRef<'_, Self>, other: &Bound<'_, PyAny>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
+    /// Return self==value.
+    fn __eq__(
+        slf: PyRef<'_, Self>,
+        #[gen_stub(override_type(type_repr="object", imports=()))] other: &Bound<'_, PyAny>,
+    ) -> PyResult<Py<PyAny>> {
         let py = slf.py();
         if let Ok(other_hconfig) = other.extract::<PyRef<'_, Self>>() {
             let base = slf.as_ref();
@@ -1210,7 +1339,11 @@ impl PyHConfig {
         Ok(py.NotImplemented())
     }
 
-    fn __ne__(slf: PyRef<'_, Self>, other: &Bound<'_, PyAny>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
+    fn __ne__(
+        slf: PyRef<'_, Self>,
+        #[gen_stub(override_type(type_repr="object", imports=()))] other: &Bound<'_, PyAny>,
+    ) -> PyResult<Py<PyAny>> {
         let py = slf.py();
         if let Ok(other_hconfig) = other.extract::<PyRef<'_, Self>>() {
             let base = slf.as_ref();
@@ -1223,6 +1356,8 @@ impl PyHConfig {
         Ok(py.NotImplemented())
     }
 
+    #[gen_stub(override_return_type(type_repr="int", imports=()))]
+    /// Return hash(self).
     fn __hash__(slf: PyRef<'_, Self>) -> PyResult<isize> {
         let py = slf.py();
         let base = slf.as_ref();

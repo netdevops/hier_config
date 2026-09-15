@@ -34,7 +34,7 @@ if TYPE_CHECKING:
 #: when the extension is unavailable, in which case the on-disk copy is read.
 get_platform_rules_json: Callable[[str], str] | None
 try:
-    from _hier_config_rust import get_platform_rules_json
+    from hier_config._hier_config_rust import get_platform_rules_json
 except ImportError:  # pragma: no cover - the extension is a hard requirement
     get_platform_rules_json = None
 

@@ -17,11 +17,23 @@ use crate::tree::{PyRwLockExt, SharedTree, ensure_live};
 /// stream. Returning a real sequence lets callers use `len()`, indexing and repeated
 /// iteration, and skips the per-call generator frame that the previous implementation
 /// paid for on every traversal.
-pub(crate) fn items_sequence(py: Python<'_>, items: Vec<PyObject>) -> PyResult<PyObject> {
+pub(crate) fn items_sequence(py: Python<'_>, items: Vec<Py<PyAny>>) -> PyResult<Py<PyAny>> {
     Ok(PyTuple::new(py, items)?.into_any().unbind())
 }
 
-#[pyclass(subclass, weakref, module = "_hier_config_rust", name = "HConfigBase")]
+/// Abstract base class for the hierarchical configuration tree.
+///
+/// Both `HConfig` (the root) and `HConfigChild` (individual nodes) inherit from
+/// this class.  It provides the shared tree-manipulation API: adding, searching,
+/// and diffing children, as well as the `_future` / `_config_to_get_to` algorithms
+/// that power `WorkflowRemediation`.
+#[pyo3_stub_gen::derive::gen_stub_pyclass]
+#[pyclass(
+    subclass,
+    weakref,
+    module = "hier_config._hier_config_rust",
+    name = "HConfigBase"
+)]
 #[derive(Debug)]
 pub struct PyHConfigBase {
     pub tree: Arc<SharedTree>,
@@ -61,9 +73,11 @@ impl PyHConfigBase {
     }
 }
 
+#[pyo3_stub_gen::derive::gen_stub_pymethods]
 #[pymethods]
 impl PyHConfigBase {
     #[new]
+    #[gen_stub(override_return_type(type_repr="typing_extensions.Self", imports=("typing_extensions")))]
     fn new() -> PyResult<Self> {
         Err(PyTypeError::new_err(
             "HConfigBase is an abstract base class and cannot be instantiated directly",
@@ -71,17 +85,22 @@ impl PyHConfigBase {
     }
 
     #[getter]
+    #[gen_stub(override_return_type(type_repr="int", imports=()))]
+    /// Distance from the root of the configuration tree.
     pub fn depth(&self) -> PyResult<usize> {
         let tree = self.read_tree()?;
         Ok(tree.depth(self.node_id))
     }
 
-    pub fn path(&self, py: Python<'_>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="collections.abc.Iterator[str]", imports=("collections.abc")))]
+    pub fn path(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let path = self.read_tree()?.path(self.node_id);
         Ok(PyTuple::new(py, path)?.try_iter()?.into_any().unbind())
     }
 
     #[getter]
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
+    /// True if there are no children and is not an instance of `HConfig`.
     pub fn is_leaf(&self) -> PyResult<bool> {
         let tree = self.read_tree()?;
         Ok(tree
@@ -91,6 +110,8 @@ impl PyHConfigBase {
     }
 
     #[getter]
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
+    /// True if there are children or is an instance of `HConfig`.
     pub fn is_branch(&self) -> PyResult<bool> {
         let tree = self.read_tree()?;
         Ok(tree
@@ -100,6 +121,8 @@ impl PyHConfigBase {
     }
 
     #[getter]
+    #[gen_stub(override_return_type(type_repr="frozenset[str]", imports=()))]
+    /// Recursive access to tags on all leaf nodes.
     pub fn tags(&self, py: Python<'_>) -> PyResult<Py<PyFrozenSet>> {
         let tree = self.read_tree()?;
         let tag_set = tree.tags(self.node_id);
@@ -109,7 +132,11 @@ impl PyHConfigBase {
     }
 
     #[setter]
-    pub fn set_tags(&self, value: &Bound<'_, PyAny>) -> PyResult<()> {
+    pub fn set_tags(
+        &self,
+        #[gen_stub(override_type(type_repr="collections.abc.Iterable[str]", imports=("collections.abc")))]
+        value: &Bound<'_, PyAny>,
+    ) -> PyResult<()> {
         let tags = extract_strings(value)?;
         let tag_set: BTreeSet<String> = tags.into_iter().collect();
         let mut tree = self.write_tree()?;
@@ -117,7 +144,13 @@ impl PyHConfigBase {
         Ok(())
     }
 
-    pub fn tags_add(&self, tag: &Bound<'_, PyAny>) -> PyResult<()> {
+    #[gen_stub(override_return_type(type_repr="None", imports=()))]
+    /// Add a tag to self._tags on all leaf nodes.
+    pub fn tags_add(
+        &self,
+        #[gen_stub(override_type(type_repr="str | collections.abc.Iterable[str]", imports=("collections.abc")))]
+        tag: &Bound<'_, PyAny>,
+    ) -> PyResult<()> {
         let tags = extract_strings(tag)?;
         let tag_refs: Vec<&str> = tags.iter().map(String::as_str).collect();
         let mut tree = self.write_tree()?;
@@ -125,7 +158,13 @@ impl PyHConfigBase {
         Ok(())
     }
 
-    pub fn tags_remove(&self, tag: &Bound<'_, PyAny>) -> PyResult<()> {
+    #[gen_stub(override_return_type(type_repr="None", imports=()))]
+    /// Remove a tag from self._tags on all leaf nodes.
+    pub fn tags_remove(
+        &self,
+        #[gen_stub(override_type(type_repr="str | collections.abc.Iterable[str]", imports=("collections.abc")))]
+        tag: &Bound<'_, PyAny>,
+    ) -> PyResult<()> {
         let tags = extract_strings(tag)?;
         let tag_refs: Vec<&str> = tags.iter().map(String::as_str).collect();
         let mut tree = self.write_tree()?;
@@ -151,32 +190,47 @@ impl PyHConfigBase {
     }
 
     /// v4 name for `tags_add()`.
-    pub fn add_tags(&self, tag: &Bound<'_, PyAny>) -> PyResult<()> {
+    #[gen_stub(override_return_type(type_repr="None", imports=()))]
+    pub fn add_tags(
+        &self,
+        #[gen_stub(override_type(type_repr="str | collections.abc.Iterable[str]", imports=("collections.abc")))]
+        tag: &Bound<'_, PyAny>,
+    ) -> PyResult<()> {
         self.tags_add(tag)
     }
 
     /// v4 name for `tags_remove()`.
-    pub fn remove_tags(&self, tag: &Bound<'_, PyAny>) -> PyResult<()> {
+    #[gen_stub(override_return_type(type_repr="None", imports=()))]
+    pub fn remove_tags(
+        &self,
+        #[gen_stub(override_type(type_repr="str | collections.abc.Iterable[str]", imports=("collections.abc")))]
+        tag: &Bound<'_, PyAny>,
+    ) -> PyResult<()> {
         self.tags_remove(tag)
     }
 
     /// v4 name for `cisco_style_text()`.
     #[pyo3(signature = (style = None, tag = None))]
+    #[gen_stub(override_return_type(type_repr="str", imports=()))]
     pub fn indented_text(
         &self,
         py: Python<'_>,
+        #[gen_stub(override_type(type_repr="hier_config.models.TextStyle | None", imports=("hier_config.models")))]
         style: Option<&str>,
-        tag: Option<&str>,
+        #[gen_stub(override_type(type_repr="str | None", imports=()))] tag: Option<&str>,
     ) -> PyResult<String> {
         self.cisco_style_text(py, style, tag)
     }
 
     #[pyo3(signature = (style = None, tag = None))]
+    #[gen_stub(override_return_type(type_repr="str", imports=()))]
+    /// Return a Cisco style formated line i.e. `indentation_level` + text ! comments.
     pub fn cisco_style_text(
         &self,
         py: Python<'_>,
+        #[gen_stub(override_type(type_repr="hier_config.models.TextStyle | None", imports=("hier_config.models")))]
         style: Option<&str>,
-        tag: Option<&str>,
+        #[gen_stub(override_type(type_repr="str | None", imports=()))] tag: Option<&str>,
     ) -> PyResult<String> {
         self.ensure_live()?;
         // Sync any comments and instances from node_data into the Rust tree
@@ -235,13 +289,15 @@ impl PyHConfigBase {
     }
 
     #[pyo3(signature = (text, *, return_if_present = false, check_if_present = true))]
+    #[gen_stub(override_return_type(type_repr="HConfigChild", imports=()))]
+    /// Add a child instance of `HConfigChild`.
     pub fn add_child(
         &self,
         py: Python<'_>,
-        text: &str,
-        return_if_present: bool,
-        check_if_present: bool,
-    ) -> PyResult<PyObject> {
+        #[gen_stub(override_type(type_repr="str", imports=()))] text: &str,
+        #[gen_stub(override_type(type_repr="bool", imports=()))] return_if_present: bool,
+        #[gen_stub(override_type(type_repr="bool", imports=()))] check_if_present: bool,
+    ) -> PyResult<Py<PyAny>> {
         let child_id = {
             let mut tree = self.write_tree()?;
             tree.add_child(self.node_id, text, check_if_present, return_if_present)
@@ -252,7 +308,14 @@ impl PyHConfigBase {
         Ok(child.into_any())
     }
 
-    pub fn add_children(&self, py: Python<'_>, lines: &Bound<'_, PyAny>) -> PyResult<()> {
+    #[gen_stub(override_return_type(type_repr="None", imports=()))]
+    /// Add child instances of `HConfigChild`.
+    pub fn add_children(
+        &self,
+        py: Python<'_>,
+        #[gen_stub(override_type(type_repr="collections.abc.Iterable[str]", imports=("collections.abc")))]
+        lines: &Bound<'_, PyAny>,
+    ) -> PyResult<()> {
         self.ensure_live()?;
         for line in lines.try_iter()? {
             let text: String = line?.extract()?;
@@ -262,12 +325,17 @@ impl PyHConfigBase {
     }
 
     #[pyo3(signature = (child_to_add, *, merged = false))]
+    #[gen_stub(override_return_type(type_repr="HConfigChild", imports=()))]
+    /// Add a nested copy of a child to self.
     pub fn add_deep_copy_of(
         &self,
         py: Python<'_>,
-        child_to_add: &Bound<'_, PyAny>,
-        merged: bool,
-    ) -> PyResult<PyObject> {
+        #[gen_stub(override_type(type_repr="HConfigChild", imports=()))] child_to_add: &Bound<
+            '_,
+            PyAny,
+        >,
+        #[gen_stub(override_type(type_repr="bool", imports=()))] merged: bool,
+    ) -> PyResult<Py<PyAny>> {
         let new_child = self.add_shallow_copy_of(py, child_to_add, merged)?;
         let new_child_bound = new_child.bind(py);
         let children = child_to_add.getattr("children")?;
@@ -281,12 +349,17 @@ impl PyHConfigBase {
     }
 
     #[pyo3(signature = (child_to_add, *, merged = false))]
+    #[gen_stub(override_return_type(type_repr="HConfigChild", imports=()))]
+    /// Add a nested copy of a `child_to_add` to self.children.
     pub fn add_shallow_copy_of(
         &self,
         py: Python<'_>,
-        child_to_add: &Bound<'_, PyAny>,
-        merged: bool,
-    ) -> PyResult<PyObject> {
+        #[gen_stub(override_type(type_repr="HConfigChild", imports=()))] child_to_add: &Bound<
+            '_,
+            PyAny,
+        >,
+        #[gen_stub(override_type(type_repr="bool", imports=()))] merged: bool,
+    ) -> PyResult<Py<PyAny>> {
         let other_base = child_to_add.extract::<PyRef<'_, Self>>()?;
         let other_node_id = other_base.node_id;
         let other_tree = Arc::clone(&other_base.tree);
@@ -323,7 +396,11 @@ impl PyHConfigBase {
         Ok(child.into_any())
     }
 
-    pub fn del_child(&self, child: &Bound<'_, PyAny>) -> PyResult<()> {
+    #[gen_stub(override_return_type(type_repr="None", imports=()))]
+    pub fn del_child(
+        &self,
+        #[gen_stub(override_type(type_repr="HConfigChild", imports=()))] child: &Bound<'_, PyAny>,
+    ) -> PyResult<()> {
         let child_base = child.extract::<PyRef<'_, Self>>()?;
         let child_node_id = child_base.node_id;
         child_base.ensure_live()?;
@@ -346,7 +423,11 @@ impl PyHConfigBase {
         Ok(())
     }
 
-    pub fn del_child_by_text(&self, text: &str) -> PyResult<()> {
+    #[gen_stub(override_return_type(type_repr="None", imports=()))]
+    pub fn del_child_by_text(
+        &self,
+        #[gen_stub(override_type(type_repr="str", imports=()))] text: &str,
+    ) -> PyResult<()> {
         let child_to_delete = {
             let tree = self.read_tree()?;
             tree.arena
@@ -361,7 +442,11 @@ impl PyHConfigBase {
         Ok(())
     }
 
-    pub fn move_child(&self, child: &Bound<'_, PyAny>) -> PyResult<()> {
+    #[gen_stub(override_return_type(type_repr="None", imports=()))]
+    pub fn move_child(
+        &self,
+        #[gen_stub(override_type(type_repr="HConfigChild", imports=()))] child: &Bound<'_, PyAny>,
+    ) -> PyResult<()> {
         let child_base = child.extract::<PyRef<'_, Self>>()?;
         let child_node_id = child_base.node_id;
         child_base.ensure_live()?;
@@ -376,7 +461,8 @@ impl PyHConfigBase {
             .map_err(to_py_err)
     }
 
-    pub fn get_children_object(&self, py: Python<'_>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="HConfigChildren", imports=()))]
+    pub fn get_children_object(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         self.ensure_live()?;
         let children = Py::new(
             py,
@@ -390,11 +476,14 @@ impl PyHConfigBase {
 
     /// The direct children of this node.
     #[getter(children)]
-    pub fn children_property(&self, py: Python<'_>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="HConfigChildren", imports=()))]
+    pub fn children_property(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         self.get_children_object(py)
     }
 
-    pub fn all_children(&self, py: Python<'_>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="collections.abc.Iterator[HConfigChild]", imports=("collections.abc")))]
+    /// Recursively find and yield all children at each hierarchy.
+    pub fn all_children(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let node_ids = {
             let tree = self.read_tree()?;
             tree.all_children(self.node_id)
@@ -402,7 +491,9 @@ impl PyHConfigBase {
         lazy_children(&self.tree, py, &node_ids)
     }
 
-    pub fn all_children_sorted(&self, py: Python<'_>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="collections.abc.Sequence[HConfigChild]", imports=("collections.abc")))]
+    /// Recursively find and yield all children sorted at each hierarchy.
+    pub fn all_children_sorted(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let node_ids = {
             let tree = self.read_tree()?;
             tree.all_children_sorted(self.node_id)
@@ -415,12 +506,16 @@ impl PyHConfigBase {
     }
 
     #[pyo3(signature = (include_tags = None, exclude_tags = None))]
+    #[gen_stub(override_return_type(type_repr="collections.abc.Sequence[HConfigChild]", imports=("collections.abc")))]
+    /// Yield all children recursively that match include/exclude tags.
     pub fn all_children_sorted_by_tags(
         &self,
         py: Python<'_>,
+        #[gen_stub(override_type(type_repr="collections.abc.Iterable[str] | None", imports=("collections.abc")))]
         include_tags: Option<&Bound<'_, PyAny>>,
+        #[gen_stub(override_type(type_repr="collections.abc.Iterable[str] | None", imports=("collections.abc")))]
         exclude_tags: Option<&Bound<'_, PyAny>>,
-    ) -> PyResult<PyObject> {
+    ) -> PyResult<Py<PyAny>> {
         let inc: Vec<String> = include_tags
             .map(extract_strings)
             .transpose()?
@@ -443,12 +538,15 @@ impl PyHConfigBase {
     }
 
     #[pyo3(name = "_with_tags")]
+    #[gen_stub(override_return_type(type_repr="HConfig | HConfigChild", imports=()))]
     pub fn with_tags_internal(
         &self,
         py: Python<'_>,
+        #[gen_stub(override_type(type_repr="collections.abc.Iterable[str]", imports=("collections.abc")))]
         tags: &Bound<'_, PyAny>,
+        #[gen_stub(override_type(type_repr="HConfig | HConfigChild", imports=()))]
         new_instance: &Bound<'_, PyAny>,
-    ) -> PyResult<PyObject> {
+    ) -> PyResult<Py<PyAny>> {
         let tag_strings: Vec<String> = extract_strings(tags)?;
         let tag_set: BTreeSet<String> = tag_strings.into_iter().collect();
         let child_ids = {
@@ -476,15 +574,20 @@ impl PyHConfigBase {
     }
 
     #[pyo3(signature = (*, equals = None, startswith = None, endswith = None, contains = None, re_search = None))]
+    #[gen_stub(override_return_type(type_repr="HConfigChild | None", imports=()))]
+    /// Find a child by `text_match` rule. If it is not found, return None.
     pub fn get_child(
         &self,
         py: Python<'_>,
+        #[gen_stub(override_type(type_repr="str | (frozenset[str] | set[str]) | None", imports=()))]
         equals: Option<&Bound<'_, PyAny>>,
-        startswith: Option<&Bound<'_, PyAny>>,
+        #[gen_stub(override_type(type_repr="str | tuple[str, ...] | None", imports=()))] startswith: Option<&Bound<'_, PyAny>>,
+        #[gen_stub(override_type(type_repr="str | tuple[str, ...] | None", imports=()))]
         endswith: Option<&Bound<'_, PyAny>>,
+        #[gen_stub(override_type(type_repr="str | tuple[str, ...] | None", imports=()))]
         contains: Option<&Bound<'_, PyAny>>,
-        re_search: Option<String>,
-    ) -> PyResult<Option<PyObject>> {
+        #[gen_stub(override_type(type_repr="str | None", imports=()))] re_search: Option<String>,
+    ) -> PyResult<Option<Py<PyAny>>> {
         let rule = parse_match_rule(py, equals, startswith, endswith, contains, re_search)?;
         let child_id = {
             let tree = self.read_tree()?;
@@ -501,15 +604,20 @@ impl PyHConfigBase {
     }
 
     #[pyo3(signature = (*, equals = None, startswith = None, endswith = None, contains = None, re_search = None))]
+    #[gen_stub(override_return_type(type_repr="collections.abc.Iterator[HConfigChild]", imports=("collections.abc")))]
+    /// Find all children matching a `text_match` rule and return them.
     pub fn get_children(
         &self,
         py: Python<'_>,
+        #[gen_stub(override_type(type_repr="str | (frozenset[str] | set[str]) | None", imports=()))]
         equals: Option<&Bound<'_, PyAny>>,
-        startswith: Option<&Bound<'_, PyAny>>,
+        #[gen_stub(override_type(type_repr="str | tuple[str, ...] | None", imports=()))] startswith: Option<&Bound<'_, PyAny>>,
+        #[gen_stub(override_type(type_repr="str | tuple[str, ...] | None", imports=()))]
         endswith: Option<&Bound<'_, PyAny>>,
+        #[gen_stub(override_type(type_repr="str | tuple[str, ...] | None", imports=()))]
         contains: Option<&Bound<'_, PyAny>>,
-        re_search: Option<String>,
-    ) -> PyResult<PyObject> {
+        #[gen_stub(override_type(type_repr="str | None", imports=()))] re_search: Option<String>,
+    ) -> PyResult<Py<PyAny>> {
         let rule = parse_match_rule(py, equals, startswith, endswith, contains, re_search)?;
         let child_ids = {
             let tree = self.read_tree()?;
@@ -524,11 +632,14 @@ impl PyHConfigBase {
         Ok(PyTuple::new(py, result)?.try_iter()?.into_any().unbind())
     }
 
+    #[gen_stub(override_return_type(type_repr="HConfigChild | None", imports=()))]
+    /// Find the first child recursively given a tuple of `MatchRules`.
     pub fn get_child_deep(
         &self,
         py: Python<'_>,
+        #[gen_stub(override_type(type_repr="tuple[hier_config.models.MatchRule, ...]", imports=("hier_config.models")))]
         match_rules: &Bound<'_, PyAny>,
-    ) -> PyResult<Option<PyObject>> {
+    ) -> PyResult<Option<Py<PyAny>>> {
         let parsed_rules = parse_match_rules_seq(py, match_rules)?;
         let child_id = {
             let tree = self.read_tree()?;
@@ -544,11 +655,14 @@ impl PyHConfigBase {
         }
     }
 
+    #[gen_stub(override_return_type(type_repr="collections.abc.Iterator[HConfigChild]", imports=("collections.abc")))]
+    /// Find children recursively given a tuple of `MatchRules`.
     pub fn get_children_deep(
         &self,
         py: Python<'_>,
+        #[gen_stub(override_type(type_repr="tuple[hier_config.models.MatchRule, ...]", imports=("hier_config.models")))]
         match_rules: &Bound<'_, PyAny>,
-    ) -> PyResult<PyObject> {
+    ) -> PyResult<Py<PyAny>> {
         let parsed_rules = parse_match_rules_seq(py, match_rules)?;
         let child_ids = {
             let tree = self.read_tree()?;
@@ -563,7 +677,8 @@ impl PyHConfigBase {
         Ok(PyTuple::new(py, result)?.try_iter()?.into_any().unbind())
     }
 
-    pub fn lineage(&self, py: Python<'_>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="collections.abc.Iterator[HConfigChild]", imports=("collections.abc")))]
+    pub fn lineage(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let lineage_ids = {
             let tree = self.read_tree()?;
             tree.lineage(self.node_id)
@@ -577,13 +692,22 @@ impl PyHConfigBase {
     }
 
     #[pyo3(signature = (*, sectional_exiting = false))]
-    pub fn lines(&self, sectional_exiting: bool) -> PyResult<Vec<String>> {
+    #[gen_stub(override_return_type(type_repr="collections.abc.Iterable[str]", imports=("collections.abc")))]
+    pub fn lines(
+        &self,
+        #[gen_stub(override_type(type_repr="bool", imports=()))] sectional_exiting: bool,
+    ) -> PyResult<Vec<String>> {
         let tree = self.read_tree()?;
         Ok(tree.lines(self.node_id, sectional_exiting))
     }
 
     #[pyo3(signature = (*, sectional_exiting = false))]
-    pub fn dump_simple(&self, py: Python<'_>, sectional_exiting: bool) -> PyResult<Py<PyTuple>> {
+    #[gen_stub(override_return_type(type_repr="tuple[str, ...]", imports=()))]
+    pub fn dump_simple(
+        &self,
+        py: Python<'_>,
+        #[gen_stub(override_type(type_repr="bool", imports=()))] sectional_exiting: bool,
+    ) -> PyResult<Py<PyTuple>> {
         let tree = self.read_tree()?;
         let lines = tree.lines(self.node_id, sectional_exiting);
         let tuple = PyTuple::new(py, lines)?;
@@ -592,12 +716,39 @@ impl PyHConfigBase {
 
     /// v4 name for `dump_simple()`.
     #[pyo3(signature = (*, sectional_exiting = false))]
-    pub fn to_lines(&self, py: Python<'_>, sectional_exiting: bool) -> PyResult<Py<PyTuple>> {
+    #[gen_stub(override_return_type(type_repr="tuple[str, ...]", imports=()))]
+    pub fn to_lines(
+        &self,
+        py: Python<'_>,
+        #[gen_stub(override_type(type_repr="bool", imports=()))] sectional_exiting: bool,
+    ) -> PyResult<Py<PyTuple>> {
         self.dump_simple(py, sectional_exiting)
     }
 
-    pub fn unified_diff(&self, py: Python<'_>, target: &Bound<'_, PyAny>) -> PyResult<PyObject> {
-        let target_base = target.downcast::<Self>()?;
+    #[gen_stub(override_return_type(type_repr="collections.abc.Iterator[str]", imports=("collections.abc")))]
+    /// Yield unified-diff lines comparing self to target.
+    ///
+    /// Each yielded string is prefixed with ``-`` (present in self but not
+    /// target) or ``+`` (present in target but not self), followed by the
+    /// appropriate indentation and the command text.
+    ///
+    /// .. `note::`
+    ///     This algorithm does not account for duplicate child differences
+    ///     (e.g. two ``endif`` tokens in an IOS-XR route-policy) and does
+    ///     not preserve command order where it matters (e.g. ACLs without
+    ///     sequence numbers).  Use sequence numbers in ACL entries when
+    ///     order is significant.
+    ///
+    /// Produces output similar to :func:`difflib.unified_diff`.
+    pub fn unified_diff(
+        &self,
+        py: Python<'_>,
+        #[gen_stub(override_type(type_repr="HConfig | HConfigChild", imports=()))] target: &Bound<
+            '_,
+            PyAny,
+        >,
+    ) -> PyResult<Py<PyAny>> {
+        let target_base = target.cast::<Self>()?;
         let lines = {
             let target_base = target_base.borrow();
             let my_tree = self.read_tree()?;
@@ -607,33 +758,48 @@ impl PyHConfigBase {
         Ok(PyTuple::new(py, lines)?.try_iter()?.into_any().unbind())
     }
 
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
+    /// Determines if self.text matches a sectional overwrite rule.
     pub fn use_sectional_overwrite(&self) -> PyResult<bool> {
         let tree = self.read_tree()?;
         Ok(tree.use_sectional_overwrite(self.node_id))
     }
 
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
+    /// Check self's text to see if negation should be handled by
+    /// overwriting the section without first negating it.
     pub fn use_sectional_overwrite_without_negation(&self) -> PyResult<bool> {
         let tree = self.read_tree()?;
         Ok(tree.use_sectional_overwrite_without_negation(self.node_id))
     }
 
+    #[gen_stub(override_return_type(type_repr="None", imports=()))]
     pub fn delete_sectional_exit(&self) -> PyResult<()> {
         let mut tree = self.write_tree()?;
         tree.delete_sectional_exit(self.node_id);
         Ok(())
     }
 
+    #[gen_stub(override_return_type(type_repr="int", imports=()))]
+    /// Return len(self).
     fn __len__(&self) -> PyResult<usize> {
         let tree = self.read_tree()?;
         Ok(tree.node_count(self.node_id))
     }
 
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
+    /// True if self else False
     fn __bool__(&self) -> PyResult<bool> {
         self.ensure_live()?;
         Ok(true)
     }
 
-    fn __contains__(&self, text: &str) -> PyResult<bool> {
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
+    /// Return key in self.
+    fn __contains__(
+        &self,
+        #[gen_stub(override_type(type_repr="str", imports=()))] text: &str,
+    ) -> PyResult<bool> {
         let tree = self.read_tree()?;
         Ok(tree
             .arena
@@ -641,6 +807,8 @@ impl PyHConfigBase {
             .is_some_and(|n| n.children.contains(text)))
     }
 
+    #[gen_stub(override_return_type(type_repr="collections.abc.Iterator[HConfigChild]", imports=("collections.abc")))]
+    /// Implement iter(self).
     fn __iter__(&self) -> PyResult<crate::children::PyHConfigChildrenIter> {
         let tree = self.read_tree()?;
         let child_ids = tree
@@ -729,7 +897,7 @@ fn lazy_children(
     tree: &Arc<SharedTree>,
     py: Python<'_>,
     node_ids: &[NodeId],
-) -> PyResult<PyObject> {
+) -> PyResult<Py<PyAny>> {
     // Bulk traversal, so take the uncached materializer: interning costs a lock, a
     // hash and a weakref per node, and nothing about a whole-tree walk needs handle
     // identity. See `SharedTree::get_or_create_children_batch`.

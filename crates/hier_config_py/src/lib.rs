@@ -4,8 +4,8 @@
 // base class fields via `.as_ref()`, so clippy's `needless_pass_by_value` is unactionable.
 #![allow(clippy::needless_pass_by_value)]
 
-// This crate is the `_hier_config_rust` extension module and nothing consumes it
-// as a Rust library, so every module is crate-private. Keeping them private lets
+// Apart from the stub generator entry point, the extension's Rust modules remain
+// crate-private. Keeping them private lets
 // `unreachable_pub` police the internal surface and stops clippy from demanding
 // public-API documentation for what are really implementation details.
 pub(crate) mod base;
@@ -26,6 +26,51 @@ use children::{PyHConfigChildren, PyHConfigChildrenIter};
 use errors::{DuplicateChildError, HierConfigError, InvalidConfigError};
 use root::PyHConfig;
 
+/// Gather the stub metadata registered alongside the native Python bindings.
+///
+/// # Errors
+///
+/// Returns an error if the binding metadata cannot be gathered.
+pub fn stub_info() -> pyo3_stub_gen::Result<pyo3_stub_gen::StubInfo> {
+    gather_stub_info(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../.."))
+}
+
+fn gather_stub_info(
+    project_root: std::path::PathBuf,
+) -> pyo3_stub_gen::Result<pyo3_stub_gen::StubInfo> {
+    // Keep the extension's short library name as the generator default.
+    // All registrations explicitly name the canonical Python module, while
+    // sibling Python modules need fully qualified imports to avoid collisions
+    // between hier_config.models and hier_config.platforms.models.
+    let mut info = pyo3_stub_gen::StubInfo::from_project_root(
+        "_hier_config_rust".to_owned(),
+        project_root,
+        true,
+        pyo3_stub_gen::StubGenConfig::default(),
+    )?;
+    // The generator's exception macro marks user-defined exception bases as
+    // builtins. Resolve those bases against the classes in this same module.
+    for module in info.modules.values_mut() {
+        if module.name == "hier_config._hier_config_rust" {
+            module.verbatim_all_entries.insert("__version__".to_owned());
+        }
+        let names: std::collections::BTreeSet<_> =
+            module.class.values().map(|class| class.name).collect();
+        for class in module.class.values_mut() {
+            for base in &mut class.bases {
+                if let Some(name) = base.name.strip_prefix("builtins.")
+                    && names.contains(name)
+                {
+                    *base = pyo3_stub_gen::TypeInfo::unqualified(name);
+                }
+            }
+        }
+    }
+    Ok(info)
+}
+
+pyo3_stub_gen::module_variable!("hier_config._hier_config_rust", "__version__", String);
+
 // Parsing allocates a node (and a lookup key) per configuration line, so the
 // allocator sits squarely on the hot path. The platform allocator — macOS's in
 // particular — is markedly slower than mimalloc under that pattern. This only
@@ -35,8 +80,12 @@ use root::PyHConfig;
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 /// Returns the canonical platform rules JSON for a given platform name or ID.
+#[pyo3_stub_gen::derive::gen_stub_pyfunction(module = "hier_config._hier_config_rust")]
 #[pyfunction]
-fn get_platform_rules_json(platform_str: &str) -> PyResult<&'static str> {
+#[gen_stub(override_return_type(type_repr="str", imports=()))]
+fn get_platform_rules_json(
+    #[gen_stub(override_type(type_repr="str", imports=()))] platform_str: &str,
+) -> PyResult<&'static str> {
     let platform = platform_str
         .parse::<hier_config_core::Platform>()
         .map_err(|e| {
@@ -48,8 +97,13 @@ fn get_platform_rules_json(platform_str: &str) -> PyResult<&'static str> {
 }
 
 /// Swaps the negation prefix of a command string for a platform according to its driver syntax rules.
+#[pyo3_stub_gen::derive::gen_stub_pyfunction(module = "hier_config._hier_config_rust")]
 #[pyfunction]
-fn driver_swap_negation(platform_str: &str, text: &str) -> PyResult<String> {
+#[gen_stub(override_return_type(type_repr="str", imports=()))]
+fn driver_swap_negation(
+    #[gen_stub(override_type(type_repr="str", imports=()))] platform_str: &str,
+    #[gen_stub(override_type(type_repr="str", imports=()))] text: &str,
+) -> PyResult<String> {
     let platform = platform_str
         .parse::<hier_config_core::Platform>()
         .map_err(|e| {
@@ -64,14 +118,23 @@ fn driver_swap_negation(platform_str: &str, text: &str) -> PyResult<String> {
 }
 
 /// Converts a hierarchical configuration into flat set commands.
+#[pyo3_stub_gen::derive::gen_stub_pyfunction(module = "hier_config._hier_config_rust")]
 #[pyfunction]
-fn convert_to_set_commands(config_raw: &str) -> String {
+#[gen_stub(override_return_type(type_repr="str", imports=()))]
+fn convert_to_set_commands(
+    #[gen_stub(override_type(type_repr="str", imports=()))] config_raw: &str,
+) -> String {
     hier_config_core::convert_to_set_commands(config_raw)
 }
 
 /// Applies platform-specific configuration preprocessor (e.g. converting to set commands for JunOS/VyOS/SRL).
+#[pyo3_stub_gen::derive::gen_stub_pyfunction(module = "hier_config._hier_config_rust")]
 #[pyfunction]
-fn config_preprocessor(platform_str: &str, config_text: &str) -> PyResult<String> {
+#[gen_stub(override_return_type(type_repr="str", imports=()))]
+fn config_preprocessor(
+    #[gen_stub(override_type(type_repr="str", imports=()))] platform_str: &str,
+    #[gen_stub(override_type(type_repr="str", imports=()))] config_text: &str,
+) -> PyResult<String> {
     let platform = platform_str
         .parse::<hier_config_core::Platform>()
         .map_err(|e| {
@@ -113,4 +176,24 @@ fn _hier_config_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<workflow::PyWorkflowRemediation>()?;
     view::register(m)?;
     Ok(())
+}
+
+#[cfg(test)]
+mod stub_tests {
+    #[test]
+    fn compiled_metadata_is_independent_of_source_files_and_git_history() {
+        pyo3::Python::initialize();
+        let directory = tempfile::tempdir_in(env!("CARGO_MANIFEST_DIR")).unwrap();
+        assert_eq!(std::fs::read_dir(directory.path()).unwrap().count(), 0);
+
+        let isolated = super::gather_stub_info(directory.path().to_owned()).unwrap();
+        let current = super::stub_info().unwrap();
+        let module = "hier_config._hier_config_rust";
+
+        assert_eq!(
+            isolated.modules[module].to_string(),
+            current.modules[module].to_string()
+        );
+        assert_eq!(std::fs::read_dir(directory.path()).unwrap().count(), 0);
+    }
 }

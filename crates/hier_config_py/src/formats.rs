@@ -16,7 +16,7 @@ use crate::root::{PyHConfig, create_py_hconfig};
 
 /// Borrows the whole tree behind an `HConfig` so a format renderer can read it.
 fn with_tree<T>(config: &Bound<'_, PyHConfig>, action: impl FnOnce(&Tree) -> T) -> PyResult<T> {
-    let base = config.downcast::<PyHConfig>()?.try_borrow()?;
+    let base = config.cast::<PyHConfig>()?.try_borrow()?;
     let shared = &base.as_super().tree;
     let tree = shared
         .tree
@@ -35,14 +35,14 @@ fn publish(
     py: Python<'_>,
     tree: Result<Tree, FormatError>,
     platform: Platform,
-    driver_obj: PyObject,
+    driver_obj: Py<PyAny>,
 ) -> PyResult<Py<PyHConfig>> {
     let tree = tree.map_err(|error| format_err(&error))?;
     create_py_hconfig(py, tree, platform, driver_obj)
 }
 
 /// Converts a `serde_json` value into the equivalent Python object.
-fn to_py_value(py: Python<'_>, value: &Value) -> PyResult<PyObject> {
+fn to_py_value(py: Python<'_>, value: &Value) -> PyResult<Py<PyAny>> {
     match value {
         Value::Null => Ok(py.None()),
         Value::Bool(flag) => flag.into_py_any(py),
@@ -80,7 +80,7 @@ fn to_py_object<'py>(
 }
 
 /// Renders a gNMI result as the `GnmiRemediation` dict Python callers expect.
-fn gnmi_to_py(py: Python<'_>, result: &GnmiRemediation) -> PyResult<PyObject> {
+fn gnmi_to_py(py: Python<'_>, result: &GnmiRemediation) -> PyResult<Py<PyAny>> {
     let dict = PyDict::new(py);
     dict.set_item("update", to_py_object(py, &result.update)?)?;
     dict.set_item("delete", PyList::new(py, &result.delete)?)?;
@@ -88,13 +88,17 @@ fn gnmi_to_py(py: Python<'_>, result: &GnmiRemediation) -> PyResult<PyObject> {
 }
 
 /// Builds an `HConfig` from JSON text.
+#[pyo3_stub_gen::derive::gen_stub_pyfunction(module = "hier_config._hier_config_rust")]
 #[pyfunction]
 #[pyo3(signature = (driver_obj, data, list_keys = None))]
+#[gen_stub(override_return_type(type_repr="HConfig", imports=()))]
 pub(crate) fn formats_from_json(
     py: Python<'_>,
-    driver_obj: PyObject,
-    data: &str,
-    list_keys: Option<Vec<String>>,
+    #[gen_stub(override_type(type_repr="object", imports=()))] driver_obj: Py<PyAny>,
+    #[gen_stub(override_type(type_repr="str", imports=()))] data: &str,
+    #[gen_stub(override_type(type_repr="list[str] | None", imports=()))] list_keys: Option<
+        Vec<String>,
+    >,
 ) -> PyResult<Py<PyHConfig>> {
     let platform = PyHConfig::parse_platform(py, &driver_obj)?;
     let keys = keys_arg(list_keys);
@@ -103,23 +107,31 @@ pub(crate) fn formats_from_json(
 }
 
 /// Renders an `HConfig` built by `formats_from_json` back to JSON text.
+#[pyo3_stub_gen::derive::gen_stub_pyfunction(module = "hier_config._hier_config_rust")]
 #[pyfunction]
-#[pyo3(signature = (config, indent = Some(2)))]
+// PyO3 renders non-literal defaults such as `Some(2)` as `Ellipsis` in
+// `__text_signature__`; spell the default out so runtime and stub agree.
+#[pyo3(signature = (config, indent = Some(2)), text_signature = "(config, indent=2)")]
+#[gen_stub(override_return_type(type_repr="str", imports=()))]
 pub(crate) fn formats_to_json(
-    config: &Bound<'_, PyHConfig>,
+    #[gen_stub(override_type(type_repr="HConfig", imports=()))] config: &Bound<'_, PyHConfig>,
     indent: Option<usize>,
 ) -> PyResult<String> {
     with_tree(config, |tree| formats::to_json(tree, indent))
 }
 
 /// Builds an `HConfig` from an XML document.
+#[pyo3_stub_gen::derive::gen_stub_pyfunction(module = "hier_config._hier_config_rust")]
 #[pyfunction]
 #[pyo3(signature = (driver_obj, source, list_keys = None))]
+#[gen_stub(override_return_type(type_repr="HConfig", imports=()))]
 pub(crate) fn formats_from_xml(
     py: Python<'_>,
-    driver_obj: PyObject,
-    source: &str,
-    list_keys: Option<Vec<String>>,
+    #[gen_stub(override_type(type_repr="object", imports=()))] driver_obj: Py<PyAny>,
+    #[gen_stub(override_type(type_repr="str", imports=()))] source: &str,
+    #[gen_stub(override_type(type_repr="list[str] | None", imports=()))] list_keys: Option<
+        Vec<String>,
+    >,
 ) -> PyResult<Py<PyHConfig>> {
     let platform = PyHConfig::parse_platform(py, &driver_obj)?;
     let keys = keys_arg(list_keys);
@@ -128,18 +140,28 @@ pub(crate) fn formats_from_xml(
 }
 
 /// Renders an `HConfig` built by `formats_from_xml` back to XML text.
+#[pyo3_stub_gen::derive::gen_stub_pyfunction(module = "hier_config._hier_config_rust")]
 #[pyfunction]
-pub(crate) fn formats_to_xml(config: &Bound<'_, PyHConfig>) -> PyResult<String> {
+#[gen_stub(override_return_type(type_repr="str", imports=()))]
+pub(crate) fn formats_to_xml(
+    #[gen_stub(override_type(type_repr="HConfig", imports=()))] config: &Bound<'_, PyHConfig>,
+) -> PyResult<String> {
     with_tree(config, formats::to_xml)?.map_err(|error| format_err(&error))
 }
 
 /// Renders a remediation as a NETCONF `edit-config` payload.
+#[pyo3_stub_gen::derive::gen_stub_pyfunction(module = "hier_config._hier_config_rust")]
 #[pyfunction]
 #[pyo3(signature = (remediation, running = None, list_keys = None))]
+#[gen_stub(override_return_type(type_repr="str", imports=()))]
 pub(crate) fn formats_to_netconf_xml(
-    remediation: &Bound<'_, PyHConfig>,
-    running: Option<&Bound<'_, PyHConfig>>,
-    list_keys: Option<Vec<String>>,
+    #[gen_stub(override_type(type_repr="HConfig", imports=()))] remediation: &Bound<'_, PyHConfig>,
+    #[gen_stub(override_type(type_repr="HConfig | None", imports=()))] running: Option<
+        &Bound<'_, PyHConfig>,
+    >,
+    #[gen_stub(override_type(type_repr="list[str] | None", imports=()))] list_keys: Option<
+        Vec<String>,
+    >,
 ) -> PyResult<String> {
     let keys = keys_arg(list_keys);
     let render = |running_tree: Option<&Tree>| -> PyResult<String> {
@@ -155,14 +177,20 @@ pub(crate) fn formats_to_netconf_xml(
 }
 
 /// Renders a remediation as a gNMI-`SetRequest`-style dict.
+#[pyo3_stub_gen::derive::gen_stub_pyfunction(module = "hier_config._hier_config_rust")]
 #[pyfunction]
 #[pyo3(signature = (remediation, running = None, list_keys = None))]
+#[gen_stub(override_return_type(type_repr="hier_config.formats.GnmiRemediation", imports=("hier_config.formats")))]
 pub(crate) fn formats_to_gnmi_json(
     py: Python<'_>,
-    remediation: &Bound<'_, PyHConfig>,
-    running: Option<&Bound<'_, PyHConfig>>,
-    list_keys: Option<Vec<String>>,
-) -> PyResult<PyObject> {
+    #[gen_stub(override_type(type_repr="HConfig", imports=()))] remediation: &Bound<'_, PyHConfig>,
+    #[gen_stub(override_type(type_repr="HConfig | None", imports=()))] running: Option<
+        &Bound<'_, PyHConfig>,
+    >,
+    #[gen_stub(override_type(type_repr="list[str] | None", imports=()))] list_keys: Option<
+        Vec<String>,
+    >,
+) -> PyResult<Py<PyAny>> {
     let keys = keys_arg(list_keys);
     let render = |running_tree: Option<&Tree>| -> PyResult<GnmiRemediation> {
         with_tree(remediation, |tree| {

@@ -3,7 +3,7 @@ from ipaddress import IPv4Interface
 
 _convert_to_set_commands_rust: Callable[[str], str] | None
 try:
-    from _hier_config_rust import (
+    from hier_config._hier_config_rust import (
         convert_to_set_commands as _convert_to_set_commands_rust,
     )
 except ImportError:

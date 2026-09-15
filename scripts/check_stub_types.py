@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Verify declared return types against what the extension actually returns.
 
-``gen_stubs.py --check`` guards stub *names* and ``mypy.stubtest`` guards
+``check_native_surface.py`` guards stub *names* and ``mypy.stubtest`` guards
 *signatures*, but neither can see a return type: annotations are not
 recoverable from a compiled ``.so``. For an extension module the stub *is*
 the type checker's only source of truth, so a wrong return type is not an
@@ -14,36 +14,26 @@ strict error count by zero, because nothing iterates it revealingly. The same
 edit to ``vlans -> list[Vlan]`` does surface 38 errors, but every one of them
 lands in the tests that touch ``.id``, and none point at the stub.
 
-Generating the stub from the PyO3 layer does not fix this: 30% of the
-exported methods return an opaque ``PyObject``/``Vec<PyObject>``, so
-``vlans``, ``stack_members`` and ``ipv4_default_gw`` share one Rust signature
-and three different Python types. Deriving annotations from Rust would
-replace ``list[Vlan]`` with ``Any``. That holds for ``pyo3-stub-gen`` and for
-``pyo3-introspection`` alike -- PyO3 maps an unconstrained object to
-``_typeshed.Incomplete`` (see ``PyTypeInfo::TYPE_HINT``), which is ``Any`` --
-because the information was never in the Rust types to begin with.
-``pyo3-stub-gen`` can override an erased type, but ``type_repr`` is an
-unvalidated string: its own test fixture carries the malformed
-``"collections.abc.Callable[[str]]"``. For those 39 members an override is a
-hand-written annotation relocated into a proc-macro attribute, so it inherits
-the trust gap it would need to close. It also requires ``pyo3 >= 0.27``
-against our pinned ``0.24``.
+Binding-driven generation supplies concrete types where Rust has enough
+information and explicit Python-facing metadata for erased types. Those
+overrides still need independent validation: ``vlans``, ``stack_members``
+and ``ipv4_default_gw`` have distinct Python types despite similar opaque
+Rust return types.
 
 The type information does exist at runtime, so this script recovers it there:
 it exercises the declared members against a corpus of real configs and checks
 each observed value against its declared annotation, descending into
 container element types. Parameter types stay unverifiable by construction --
 nothing observes an argument that was never passed -- so those remain the
-type checkers' responsibility alone. ``pyo3-stub-gen``'s ``override_type``
-would cover them, and would derive the ~70% of returns that are not erased;
-that is complementary to this script rather than a replacement, and worth
-revisiting whenever PyO3 is upgraded for other reasons.
+type checkers' responsibility. Installed-wheel positive and negative typing
+contracts complement this runtime check.
 """
 
 from __future__ import annotations
 
 import argparse
 import ast
+import builtins
 import collections.abc
 import ipaddress
 import itertools
@@ -60,22 +50,12 @@ if typing.TYPE_CHECKING:
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-# Stubs that describe objects implemented in the extension. The tree stubs are
-# included because `_hier_config_rust.pyi` re-exports those classes rather than
-# restating them, so their annotations describe native objects too.
-STUB_FILES = (
-    REPO_ROOT / "stubs" / "_hier_config_rust.pyi",
-    REPO_ROOT / "hier_config" / "base.pyi",
-    REPO_ROOT / "hier_config" / "child.pyi",
-    REPO_ROOT / "hier_config" / "children.pyi",
-    REPO_ROOT / "hier_config" / "root.pyi",
-    REPO_ROOT / "hier_config" / "workflows.pyi",
-)
+STUB_FILES = (REPO_ROOT / "hier_config" / "_hier_config_rust.pyi",)
 
 # Members that no fixture exercises with a non-empty value. Listing one keeps
 # the check quiet about it; omitting a genuinely unobserved member, or listing
 # one that later becomes observed, is an error. See the file's header.
-UNOBSERVED_ALLOWLIST = REPO_ROOT / "stubs" / "unobserved-allowlist.txt"
+UNOBSERVED_ALLOWLIST = REPO_ROOT / "tests" / "typing" / "unobserved-allowlist.txt"
 
 # Zero-argument methods that are safe to call on a probe. Properties are
 # invoked automatically; methods are opt-in so that probing never mutates the
@@ -216,6 +196,9 @@ def _namespace() -> dict[str, object]:
     from hier_config.platforms import view_base
 
     space: dict[str, object] = {
+        "builtins": builtins,
+        "collections": collections,
+        "hier_config": hier_config,
         "ipaddress": ipaddress,
         "IPv4Address": ipaddress.IPv4Address,
         "IPv4Interface": ipaddress.IPv4Interface,

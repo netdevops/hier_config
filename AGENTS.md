@@ -88,6 +88,14 @@ Supported platforms (`Platform` enum in `models.py`): ARISTA_EOS, ARUBA_AOSCX, C
 
 ## Hard Rules
 
+Native typing has one generated artifact,
+`hier_config/_hier_config_rust.pyi`. Update `pyo3-stub-gen` metadata and
+documentation beside the PyO3 bindings, then run
+`uv run --no-sync ./scripts/build.py generate-stubs`. Never recover signatures
+from Git history or maintain duplicate facade stubs. `check-stubs` is
+read-only; runtime/export checks and wheel-consumer typing checks remain
+independent gates. Validation allowlists belong in `tests/typing/`.
+
 Native migration contracts: custom `config_preprocessor()` is rejected along
 with `idempotent_for()`, `negate_with()`, `sectional_exit()`, and `swap_negation()`.
 Preprocess custom text explicitly before `HConfig.from_text()`; marked stock

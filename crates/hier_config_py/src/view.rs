@@ -26,7 +26,7 @@ use hier_config_core::{NodeId, Platform};
 use pyo3::IntoPyObjectExt;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::sync::GILOnceCell;
+use pyo3::sync::PyOnceLock;
 use pyo3::types::{PyFrozenSet, PyTuple, PyType};
 
 use crate::root::PyHConfig;
@@ -36,7 +36,7 @@ use crate::tree::SharedTree;
 struct CachedType {
     module: &'static str,
     name: &'static str,
-    cell: GILOnceCell<Py<PyType>>,
+    cell: PyOnceLock<Py<PyType>>,
 }
 
 impl CachedType {
@@ -45,7 +45,7 @@ impl CachedType {
         Self {
             module,
             name,
-            cell: GILOnceCell::new(),
+            cell: PyOnceLock::new(),
         }
     }
 
@@ -54,7 +54,7 @@ impl CachedType {
         let cached = self.cell.get_or_try_init(py, || {
             py.import(self.module)?
                 .getattr(self.name)?
-                .downcast_into::<PyType>()
+                .cast_into::<PyType>()
                 .map(Bound::unbind)
                 .map_err(PyErr::from)
         })?;
@@ -79,13 +79,13 @@ static STACK_MEMBER: CachedType = CachedType::new("hier_config.platforms.models"
 static VLAN: CachedType = CachedType::new("hier_config.platforms.models", "Vlan");
 
 /// Build `ipaddress.IPv4Interface("addr/len")`.
-fn to_py_ipv4_interface(py: Python<'_>, value: Ipv4Interface) -> PyResult<PyObject> {
+fn to_py_ipv4_interface(py: Python<'_>, value: Ipv4Interface) -> PyResult<Py<PyAny>> {
     let text = format!("{}/{}", value.address, value.prefix_len);
     IPV4_INTERFACE.get(py)?.call1((text,))?.into_py_any(py)
 }
 
 /// Build `hier_config.platforms.models.Vlan(id=…, name=…)`.
-fn to_py_vlan(py: Python<'_>, value: &Vlan) -> PyResult<PyObject> {
+fn to_py_vlan(py: Python<'_>, value: &Vlan) -> PyResult<Py<PyAny>> {
     let kwargs = pyo3::types::PyDict::new(py);
     kwargs.set_item("id", value.id)?;
     kwargs.set_item("name", value.name.clone())?;
@@ -93,7 +93,7 @@ fn to_py_vlan(py: Python<'_>, value: &Vlan) -> PyResult<PyObject> {
 }
 
 /// Build `hier_config.platforms.models.StackMember(...)`.
-fn to_py_stack_member(py: Python<'_>, value: &StackMember) -> PyResult<PyObject> {
+fn to_py_stack_member(py: Python<'_>, value: &StackMember) -> PyResult<Py<PyAny>> {
     let kwargs = pyo3::types::PyDict::new(py);
     kwargs.set_item("id", value.id)?;
     kwargs.set_item("priority", value.priority)?;
@@ -106,12 +106,12 @@ fn to_py_stack_member(py: Python<'_>, value: &StackMember) -> PyResult<PyObject>
 }
 
 /// Look an enum member up by name, e.g. `InterfaceDuplex["FULL"]`.
-fn enum_member(py: Python<'_>, cached: &CachedType, name: &str) -> PyResult<PyObject> {
+fn enum_member(py: Python<'_>, cached: &CachedType, name: &str) -> PyResult<Py<PyAny>> {
     cached.get(py)?.get_item(name)?.into_py_any(py)
 }
 
 /// Map the native dot1q mode onto its Python enum member.
-fn to_py_dot1q_mode(py: Python<'_>, mode: InterfaceDot1qMode) -> PyResult<PyObject> {
+fn to_py_dot1q_mode(py: Python<'_>, mode: InterfaceDot1qMode) -> PyResult<Py<PyAny>> {
     let name = match mode {
         InterfaceDot1qMode::Access => "ACCESS",
         InterfaceDot1qMode::Tagged => "TAGGED",
@@ -121,7 +121,7 @@ fn to_py_dot1q_mode(py: Python<'_>, mode: InterfaceDot1qMode) -> PyResult<PyObje
 }
 
 /// Map the native duplex setting onto its Python enum member.
-fn to_py_duplex(py: Python<'_>, duplex: InterfaceDuplex) -> PyResult<PyObject> {
+fn to_py_duplex(py: Python<'_>, duplex: InterfaceDuplex) -> PyResult<Py<PyAny>> {
     let name = match duplex {
         InterfaceDuplex::Auto => "AUTO",
         InterfaceDuplex::Full => "FULL",
@@ -131,7 +131,7 @@ fn to_py_duplex(py: Python<'_>, duplex: InterfaceDuplex) -> PyResult<PyObject> {
 }
 
 /// Map the native NAC host mode onto its Python enum member.
-fn to_py_nac_host_mode(py: Python<'_>, mode: NacHostMode) -> PyResult<PyObject> {
+fn to_py_nac_host_mode(py: Python<'_>, mode: NacHostMode) -> PyResult<Py<PyAny>> {
     let name = match mode {
         NacHostMode::SingleHost => "SINGLE_HOST",
         NacHostMode::MultiDomain => "MULTI_DOMAIN",
@@ -164,7 +164,7 @@ const fn platform_name(platform: Platform) -> &'static str {
 }
 
 /// Convert a native platform into its `hier_config.models.Platform` member.
-fn to_py_platform(py: Python<'_>, platform: Platform) -> PyResult<PyObject> {
+fn to_py_platform(py: Python<'_>, platform: Platform) -> PyResult<Py<PyAny>> {
     Ok(PLATFORM.get(py)?.getattr(platform_name(platform))?.unbind())
 }
 
@@ -193,16 +193,17 @@ fn platform_of(config: &Bound<'_, PyHConfig>) -> PyResult<Platform> {
 /// Instances are constructed with an `HConfig`, exactly as the previous
 /// pure-Python `HConfigViewBase` subclasses were, so `driver.view_class`
 /// keeps working for custom drivers.
+#[pyo3_stub_gen::derive::gen_stub_pyclass]
 #[pyclass(
     name = "HConfigView",
-    module = "hier_config.platforms.view_base",
+    module = "hier_config._hier_config_rust",
     subclass
 )]
 pub(crate) struct PyHConfigView {
     tree: Arc<SharedTree>,
     ops: &'static dyn ConfigOps,
     platform: Platform,
-    config: PyObject,
+    config: Py<PyAny>,
 }
 
 impl std::fmt::Debug for PyHConfigView {
@@ -226,7 +227,7 @@ impl PyHConfigView {
     }
 
     /// Build the interface views, mapping each onto its Python wrapper.
-    fn interface_view_objects(&self, py: Python<'_>) -> PyResult<Vec<PyObject>> {
+    fn interface_view_objects(&self, py: Python<'_>) -> PyResult<Vec<Py<PyAny>>> {
         let nodes = self.with_view(|view| {
             view.interface_views()
                 .iter()
@@ -237,7 +238,7 @@ impl PyHConfigView {
     }
 
     /// Wrap already-resolved interface nodes as Python view objects.
-    fn wrap_interfaces(&self, py: Python<'_>, nodes: &[NodeId]) -> PyResult<Vec<PyObject>> {
+    fn wrap_interfaces(&self, py: Python<'_>, nodes: &[NodeId]) -> PyResult<Vec<Py<PyAny>>> {
         let interface_ops = self.ops.interface_ops();
         nodes
             .iter()
@@ -257,10 +258,12 @@ impl PyHConfigView {
     }
 }
 
+#[pyo3_stub_gen::derive::gen_stub_pymethods]
 #[pymethods]
 impl PyHConfigView {
     /// Build a view over `config`.
     #[new]
+    #[gen_stub(override_return_type(type_repr="typing_extensions.Self", imports=("typing_extensions")))]
     fn new(config: &Bound<'_, PyHConfig>) -> PyResult<Self> {
         let platform = platform_of(config)?;
         let borrowed = config.try_borrow()?;
@@ -274,25 +277,29 @@ impl PyHConfigView {
 
     /// The `HConfig` this view reads from.
     #[getter]
-    fn config(&self, py: Python<'_>) -> PyObject {
+    #[gen_stub(override_return_type(type_repr="HConfig", imports=()))]
+    fn config(&self, py: Python<'_>) -> Py<PyAny> {
         self.config.clone_ref(py)
     }
 
     /// The platform this view interprets the config as.
     #[getter]
-    fn platform(&self, py: Python<'_>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="hier_config.models.Platform", imports=("hier_config.models")))]
+    fn platform(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         to_py_platform(py, self.platform)
     }
 
     /// The configured hostname, if the platform records one.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="str | None", imports=()))]
     fn hostname(&self) -> PyResult<Option<String>> {
         self.with_view(|view| view.hostname())
     }
 
     /// The IPv4 default gateway, if one is configured.
     #[getter]
-    fn ipv4_default_gw(&self, py: Python<'_>) -> PyResult<Option<PyObject>> {
+    #[gen_stub(override_return_type(type_repr="ipaddress.IPv4Address | None", imports=("ipaddress")))]
+    fn ipv4_default_gw(&self, py: Python<'_>) -> PyResult<Option<Py<PyAny>>> {
         let Some(address) = self.with_view(|view| view.ipv4_default_gw())? else {
             return Ok(None);
         };
@@ -306,13 +313,15 @@ impl PyHConfigView {
 
     /// A view for every interface in the configuration.
     #[getter]
-    fn interface_views(&self, py: Python<'_>) -> PyResult<Vec<PyObject>> {
+    #[gen_stub(override_return_type(type_repr="list[ConfigViewInterface]", imports=()))]
+    fn interface_views(&self, py: Python<'_>) -> PyResult<Vec<Py<PyAny>>> {
         self.interface_view_objects(py)
     }
 
     /// A view for every interface that is a link bundle.
     #[getter]
-    fn bundle_interface_views(&self, py: Python<'_>) -> PyResult<Vec<PyObject>> {
+    #[gen_stub(override_return_type(type_repr="list[ConfigViewInterface]", imports=()))]
+    fn bundle_interface_views(&self, py: Python<'_>) -> PyResult<Vec<Py<PyAny>>> {
         let nodes = self.with_view(|view| {
             view.bundle_interface_views()
                 .iter()
@@ -324,7 +333,8 @@ impl PyHConfigView {
 
     /// The `HConfigChild` holding each interface's config block.
     #[getter]
-    fn interfaces(&self, py: Python<'_>) -> PyResult<Vec<PyObject>> {
+    #[gen_stub(override_return_type(type_repr="list[HConfigChild]", imports=()))]
+    fn interfaces(&self, py: Python<'_>) -> PyResult<Vec<Py<PyAny>>> {
         let nodes = self.with_view(|view| view.interfaces())?;
         let children = SharedTree::get_or_create_children_batch(&self.tree, py, &nodes)?;
         children
@@ -335,6 +345,7 @@ impl PyHConfigView {
 
     /// The name of every configured interface.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="list[str]", imports=()))]
     fn interfaces_names(&self) -> PyResult<Vec<String>> {
         self.with_view(|view| {
             view.interface_names()
@@ -346,6 +357,7 @@ impl PyHConfigView {
 
     /// Every interface name mentioned anywhere in the configuration.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="frozenset[str]", imports=()))]
     fn interface_names_mentioned<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyFrozenSet>> {
         let names = self.with_view(|view| view.interface_names_mentioned())?;
         PyFrozenSet::new(py, names.iter())
@@ -353,19 +365,22 @@ impl PyHConfigView {
 
     /// The SNMP location string, or an empty string when unset.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="str", imports=()))]
     fn location(&self) -> PyResult<String> {
         self.with_view(|view| view.location())
     }
 
     /// Every hardware module number referenced by an interface.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="list[int]", imports=()))]
     fn module_numbers(&self) -> PyResult<Vec<u32>> {
         self.with_view(|view| view.module_numbers())
     }
 
     /// The members of a switch stack, if the platform reports one.
     #[getter]
-    fn stack_members(&self, py: Python<'_>) -> PyResult<Vec<PyObject>> {
+    #[gen_stub(override_return_type(type_repr="list[hier_config.platforms.models.StackMember]", imports=("hier_config.platforms.models")))]
+    fn stack_members(&self, py: Python<'_>) -> PyResult<Vec<Py<PyAny>>> {
         let members = self.with_view(|view| view.stack_members())?;
         members
             .iter()
@@ -375,6 +390,7 @@ impl PyHConfigView {
 
     /// Every VLAN ID defined in the configuration.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="frozenset[int]", imports=()))]
     fn vlan_ids<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyFrozenSet>> {
         let ids = self.with_view(|view| view.vlan_ids())?;
         PyFrozenSet::new(py, ids.iter())
@@ -382,13 +398,19 @@ impl PyHConfigView {
 
     /// Every VLAN defined in the configuration.
     #[getter]
-    fn vlans(&self, py: Python<'_>) -> PyResult<Vec<PyObject>> {
+    #[gen_stub(override_return_type(type_repr="list[hier_config.platforms.models.Vlan]", imports=("hier_config.platforms.models")))]
+    fn vlans(&self, py: Python<'_>) -> PyResult<Vec<Py<PyAny>>> {
         let vlans = self.with_view(|view| view.vlans())?;
         vlans.iter().map(|vlan| to_py_vlan(py, vlan)).collect()
     }
 
     /// The view for `name`, or `None` when no such interface exists.
-    fn interface_view_by_name(&self, py: Python<'_>, name: &str) -> PyResult<Option<PyObject>> {
+    #[gen_stub(override_return_type(type_repr="ConfigViewInterface | None", imports=()))]
+    fn interface_view_by_name(
+        &self,
+        py: Python<'_>,
+        #[gen_stub(override_type(type_repr="str", imports=()))] name: &str,
+    ) -> PyResult<Option<Py<PyAny>>> {
         let node =
             self.with_view(|view| view.interface_view_by_name(name).map(|iface| iface.node()))?;
         let Some(node) = node else { return Ok(None) };
@@ -398,12 +420,14 @@ impl PyHConfigView {
     /// Classify a switchport from its native and tagged VLANs.
     #[staticmethod]
     #[pyo3(signature = (untagged_vlan=None, tagged_vlans=None, *, tagged_all=false))]
+    #[gen_stub(override_return_type(type_repr="hier_config.platforms.models.InterfaceDot1qMode | None", imports=("hier_config.platforms.models")))]
     fn dot1q_mode_from_vlans(
         py: Python<'_>,
-        untagged_vlan: Option<u32>,
+        #[gen_stub(override_type(type_repr="int | None", imports=()))] untagged_vlan: Option<u32>,
+        #[gen_stub(override_type(type_repr="tuple[int, ...] | None", imports=()))]
         tagged_vlans: Option<Vec<u32>>,
-        tagged_all: bool,
-    ) -> PyResult<Option<PyObject>> {
+        #[gen_stub(override_type(type_repr="bool", imports=()))] tagged_all: bool,
+    ) -> PyResult<Option<Py<PyAny>>> {
         let tagged_vlans = tagged_vlans.unwrap_or_default();
         let mode =
             hier_config_core::view::dot1q_mode_from_vlans(untagged_vlan, &tagged_vlans, tagged_all);
@@ -418,9 +442,10 @@ impl PyHConfigView {
 }
 
 /// A structured, read-only view over a single interface.
+#[pyo3_stub_gen::derive::gen_stub_pyclass]
 #[pyclass(
     name = "ConfigViewInterface",
-    module = "hier_config.platforms.view_base",
+    module = "hier_config._hier_config_rust",
     subclass
 )]
 pub(crate) struct PyConfigViewInterface {
@@ -448,30 +473,35 @@ impl PyConfigViewInterface {
     }
 }
 
+#[pyo3_stub_gen::derive::gen_stub_pymethods]
 #[pymethods]
 impl PyConfigViewInterface {
     /// The `HConfigChild` holding this interface's config block.
     #[getter]
-    fn config(&self, py: Python<'_>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="HConfigChild", imports=()))]
+    fn config(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         let child = SharedTree::get_or_create_child(&self.tree, py, self.node, None)?;
         child.into_py_any(py)
     }
 
     /// The interface description, or an empty string when unset.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="str", imports=()))]
     fn description(&self) -> PyResult<String> {
         self.with_view(|view| view.description())
     }
 
     /// Whether the interface is administratively enabled.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
     fn enabled(&self) -> PyResult<bool> {
         self.with_view(|view| view.enabled())
     }
 
     /// The first configured IPv4 interface address, if any.
     #[getter]
-    fn ipv4_interface(&self, py: Python<'_>) -> PyResult<Option<PyObject>> {
+    #[gen_stub(override_return_type(type_repr="ipaddress.IPv4Interface | None", imports=("ipaddress")))]
+    fn ipv4_interface(&self, py: Python<'_>) -> PyResult<Option<Py<PyAny>>> {
         let value = self.with_view(|view| view.ipv4_interface())?;
         value
             .map(|value| to_py_ipv4_interface(py, value))
@@ -480,7 +510,8 @@ impl PyConfigViewInterface {
 
     /// Every configured IPv4 interface address.
     #[getter]
-    fn ipv4_interfaces(&self, py: Python<'_>) -> PyResult<Vec<PyObject>> {
+    #[gen_stub(override_return_type(type_repr="list[ipaddress.IPv4Interface]", imports=("ipaddress")))]
+    fn ipv4_interfaces(&self, py: Python<'_>) -> PyResult<Vec<Py<PyAny>>> {
         let values = self.with_view(|view| view.ipv4_interfaces())?;
         values
             .into_iter()
@@ -490,103 +521,120 @@ impl PyConfigViewInterface {
 
     /// Whether this is a loopback interface.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
     fn is_loopback(&self) -> PyResult<bool> {
         self.with_view(|view| view.is_loopback())
     }
 
     /// Whether this is a subinterface of another interface.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
     fn is_subinterface(&self) -> PyResult<bool> {
         self.with_view(|view| view.is_subinterface())
     }
 
     /// Whether this is a switched virtual interface.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
     fn is_svi(&self) -> PyResult<bool> {
         self.with_view(|view| view.is_svi())
     }
 
     /// The interface name, e.g. `GigabitEthernet1/0/1`.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="str", imports=()))]
     fn name(&self) -> PyResult<String> {
         self.with_view(|view| view.name().to_owned())
     }
 
     /// The numeric portion of the interface name.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="str", imports=()))]
     fn number(&self) -> PyResult<String> {
         self.with_view(|view| view.number().to_owned())
     }
 
     /// The parent interface's name when this is a subinterface.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="str | None", imports=()))]
     fn parent_name(&self) -> PyResult<Option<String>> {
         self.with_view(|view| view.parent_name())
     }
 
     /// The port portion of the interface number.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="int | None", imports=()))]
     fn port_number(&self) -> PyResult<Option<u32>> {
         self.with_view(|view| view.port_number())
     }
 
     /// The subinterface portion of the interface number.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="int | None", imports=()))]
     fn subinterface_number(&self) -> PyResult<Option<u32>> {
         self.with_view(|view| view.subinterface_number())
     }
 
     /// The VRF this interface belongs to, or an empty string.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="str", imports=()))]
     fn vrf(&self) -> PyResult<String> {
         self.with_view(|view| view.vrf())
     }
 
     /// The bundle this interface is a member of, if any.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="str | None", imports=()))]
     fn bundle_id(&self) -> PyResult<Option<String>> {
         self.with_view(|view| view.bundle_id())
     }
 
     /// The name of the bundle this interface is a member of, if any.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="str | None", imports=()))]
     fn bundle_name(&self) -> PyResult<Option<String>> {
         self.with_view(|view| view.bundle_name())
     }
 
     /// Whether this interface is itself a bundle.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
     fn is_bundle(&self) -> PyResult<bool> {
         self.with_view(|view| view.is_bundle())
     }
 
     /// The names of the interfaces bundled into this one.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="list[str]", imports=()))]
     fn bundle_member_interfaces(&self) -> PyResult<Vec<String>> {
         self.with_view(|view| view.bundle_member_interfaces())
     }
 
     /// The 802.1Q mode of this switchport, if it is one.
     #[getter]
-    fn dot1q_mode(&self, py: Python<'_>) -> PyResult<Option<PyObject>> {
+    #[gen_stub(override_return_type(type_repr="hier_config.platforms.models.InterfaceDot1qMode | None", imports=("hier_config.platforms.models")))]
+    fn dot1q_mode(&self, py: Python<'_>) -> PyResult<Option<Py<PyAny>>> {
         let mode = self.with_view(|view| view.dot1q_mode())?;
         mode.map(|mode| to_py_dot1q_mode(py, mode)).transpose()
     }
 
     /// The untagged VLAN of this switchport, if it has one.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="int | None", imports=()))]
     fn native_vlan(&self) -> PyResult<Option<u32>> {
         self.with_view(|view| view.native_vlan())
     }
 
     /// Whether every VLAN is tagged on this switchport.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
     fn tagged_all(&self) -> PyResult<bool> {
         self.with_view(|view| view.tagged_all())
     }
 
     /// The VLANs tagged on this switchport.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="tuple[int, ...]", imports=()))]
     fn tagged_vlans<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyTuple>> {
         let vlans = self.with_view(|view| view.tagged_vlans())?;
         PyTuple::new(py, vlans)
@@ -594,68 +642,79 @@ impl PyConfigViewInterface {
 
     /// Whether network access control is configured on this interface.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
     fn has_nac(&self) -> PyResult<bool> {
         self.with_view(|view| view.has_nac())
     }
 
     /// Whether NAC control is applied to inbound traffic only.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
     fn nac_control_direction_in(&self) -> PyResult<bool> {
         self.with_view(|view| view.nac_control_direction_in())
     }
 
     /// The configured NAC host mode, if any.
     #[getter]
-    fn nac_host_mode(&self, py: Python<'_>) -> PyResult<Option<PyObject>> {
+    #[gen_stub(override_return_type(type_repr="hier_config.platforms.models.NACHostMode | None", imports=("hier_config.platforms.models")))]
+    fn nac_host_mode(&self, py: Python<'_>) -> PyResult<Option<Py<PyAny>>> {
         let mode = self.with_view(|view| view.nac_host_mode())?;
         mode.map(|mode| to_py_nac_host_mode(py, mode)).transpose()
     }
 
     /// Whether MAC authentication bypass is attempted before 802.1X.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
     fn nac_mab_first(&self) -> PyResult<bool> {
         self.with_view(|view| view.nac_mab_first())
     }
 
     /// The maximum number of 802.1X clients, when the platform reports one.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="int | None", imports=()))]
     fn nac_max_dot1x_clients(&self) -> PyResult<Option<u32>> {
         self.with_view(|view| view.nac_max_dot1x_clients())
     }
 
     /// The maximum number of MAB clients, when the platform reports one.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="int | None", imports=()))]
     fn nac_max_mab_clients(&self) -> PyResult<Option<u32>> {
         self.with_view(|view| view.nac_max_mab_clients())
     }
 
     /// Whether this interface is backed by physical hardware.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
     fn is_physical(&self) -> PyResult<bool> {
         self.with_view(|view| view.is_physical())
     }
 
     /// The configured duplex setting, if any.
     #[getter]
-    fn duplex(&self, py: Python<'_>) -> PyResult<Option<PyObject>> {
+    #[gen_stub(override_return_type(type_repr="hier_config.platforms.models.InterfaceDuplex | None", imports=("hier_config.platforms.models")))]
+    fn duplex(&self, py: Python<'_>) -> PyResult<Option<Py<PyAny>>> {
         let duplex = self.with_view(|view| view.duplex())?;
         duplex.map(|duplex| to_py_duplex(py, duplex)).transpose()
     }
 
     /// The hardware module this interface belongs to, if any.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="int | None", imports=()))]
     fn module_number(&self) -> PyResult<Option<u32>> {
         self.with_view(|view| view.module_number())
     }
 
     /// Whether power over Ethernet is enabled, when the platform reports it.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="bool | None", imports=()))]
     fn poe(&self) -> PyResult<Option<bool>> {
         self.with_view(|view| view.poe())
     }
 
     /// The configured speeds, if any are pinned.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="tuple[int, ...] | None", imports=()))]
     fn speed<'py>(&self, py: Python<'py>) -> PyResult<Option<Bound<'py, PyTuple>>> {
         let Some(speeds) = self.with_view(|view| view.speed())? else {
             return Ok(None);
@@ -665,7 +724,8 @@ impl PyConfigViewInterface {
 
     /// The platform this interface view interprets the config as.
     #[getter]
-    fn platform(&self, py: Python<'_>) -> PyResult<PyObject> {
+    #[gen_stub(override_return_type(type_repr="hier_config.models.Platform", imports=("hier_config.models")))]
+    fn platform(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         to_py_platform(py, self.platform)
     }
 
@@ -674,6 +734,7 @@ impl PyConfigViewInterface {
     /// Mirrors the mixins the pure-Python views used to inherit, so
     /// `isinstance(view, InterfaceVlanViewMixin)` still answers correctly.
     #[getter]
+    #[gen_stub(override_return_type(type_repr="frozenset[str]", imports=()))]
     fn capabilities<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyFrozenSet>> {
         let names = self.with_view(|view| {
             let ops = view.ops();

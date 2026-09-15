@@ -361,7 +361,8 @@ def test_gnmi_remediation_payload() -> None:
 def test_gnmi_scalar_leaf_delete_prunes_branch() -> None:
     """A branch containing only deletions must not appear in the update tree."""
     running = HConfig.from_json(Platform.GENERIC, {"system": {"hostname": "old"}})
-    generated = HConfig.from_json(Platform.GENERIC, {"system": {}})
+    empty_system: dict[str, object] = {"system": {}}
+    generated = HConfig.from_json(Platform.GENERIC, empty_system)
     result = WorkflowRemediation(running, generated).remediation_json()
 
     assert result == {"update": {}, "delete": ["system/hostname"]}
@@ -432,7 +433,8 @@ def test_gnmi_update_reinjects_identity_leaf() -> None:
 
 
 def test_gnmi_pure_addition_has_empty_delete() -> None:
-    running = HConfig.from_json(Platform.GENERIC, {"system": {}})
+    empty_system: dict[str, object] = {"system": {}}
+    running = HConfig.from_json(Platform.GENERIC, empty_system)
     generated = HConfig.from_json(
         Platform.GENERIC, {"system": {}, "ntp": {"enabled": True, "port": 123}}
     )

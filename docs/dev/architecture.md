@@ -65,27 +65,48 @@ Both `HConfig` and `HConfigChild` inherit from `HConfigBase`, which provides:
 - Traversal: `descendants`, `all_children_sorted`.
 - Diffing: `unified_diff`.
 
-### Type stubs (`hier_config/*.pyi`)
+### Native typing (`hier_config/_hier_config_rust.pyi`)
 
 `HConfig`, `HConfigChild`, `HConfigChildren`, and `HConfigBase` are compiled
 PyO3 classes, and neither mypy, pyright, nor griffe (mkdocstrings) can
-introspect a compiled extension. The shipped `.pyi` stubs are what gives those
+introspect a compiled extension. The shipped `.pyi` stub gives those
 tools — and downstream users' own annotations — real types instead of `Any`.
 
-Those four stubs are **generated, not hand-written**. `scripts/gen_stubs.py`
-reflects over the live extension and re-attaches the v3.7.0 docstrings:
+There is **one generated native stub**, beside the packaged extension in
+`hier_config/`. Its source of truth is the PyO3 bindings in
+`crates/hier_config_py`: `pyo3-stub-gen` records the classes, functions,
+signatures, and documentation. Bindings whose Rust signatures erase Python
+types carry explicit Python-facing type metadata, including overloads and
+types from Python models. Never substitute `Any` for an erased return type.
+
+Generation reads the current bindings, not Git history, old releases, or a
+second set of Python class declarations. A shallow checkout or source
+distribution has everything needed to regenerate:
 
 ```bash
-python scripts/gen_stubs.py           # regenerate after changing the PyO3 surface
-python scripts/build.py check-stubs   # fail if the committed stubs are stale
+uv run --no-sync ./scripts/build.py generate-stubs
+uv run --no-sync ./scripts/build.py check-stubs
 ```
 
-The check runs as part of `lint` and `lint-and-test`, so a PyO3 signature change
-that is not reflected in the stubs fails the gate rather than silently shipping
-wrong type information. Never edit these four files by hand.
+`check-stubs` compares generated output without rewriting the committed file.
+It runs in `lint` and `lint-and-test`, together with independent native-export
+coverage, `mypy.stubtest`, and observed return-type checks. Installed-wheel
+contracts check both valid and invalid calls using mypy and pyright outside
+the checkout, with no custom stub search paths. Keep these guards: generation
+cannot prove the correctness of manually supplied metadata for erased types.
+Change binding metadata and regenerate; do not edit the generated stub.
 
-`hier_config/exceptions.pyi` and `hier_config/workflows.pyi` are outside the
-generator and are maintained by hand.
+The public `base.py`, `root.py`, `child.py`, `children.py`, and `workflows.py`
+modules remain thin re-exports; their types and docs resolve to the native
+stub, rather than duplicate `.pyi` declarations. Other Python modules still own
+models, drivers, registration, callbacks, reporting, and compatibility helpers.
+They are necessary runtime code, not a second tree engine.
+
+The old top-level `_hier_config_rust` import remains a compatibility package
+re-exporting the same objects, so historical class references and pickles
+still resolve. New code should use the public `hier_config` APIs. There is no
+root `stubs/` directory; validation allowlists live in `tests/typing/`, and
+the package's `py.typed` marker makes wheel-installed typing discoverable.
 
 ### Tree algorithms
 

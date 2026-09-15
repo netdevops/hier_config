@@ -143,19 +143,16 @@ jobs:
 
   python-lint:
     # `scripts/build.py` is the source of truth for all quality gates.
-    # The extension must be built first: mypy and pyright resolve
-    # `_hier_config_rust` through `stubs/_hier_config_rust.pyi`, which only
-    # type-checks against an installed module.
+    # Build the extension before checking its generated, in-package stub.
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v6
-      with:
-        # gen_stubs.py recovers supported signatures from the v3 baseline commit.
-        fetch-depth: 0
     - name: Set up Python
       uses: actions/setup-python@v6
       with:
         python-version: ${{ env.PYTHON_DEFAULT }}
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v7
     - name: Set up virtual environment
       run: |
         python -m venv .venv
@@ -256,6 +253,10 @@ jobs:
         .wheel-env/bin/python -m pip install "$(echo dist/*.whl)[yaml]"
         echo '[]' > .wheel-env/tags.yaml
         .wheel-env/bin/python scripts/check_declared_dependencies.py --wheel dist/*.whl --yaml-file .wheel-env/tags.yaml
+    - name: Verify installed-wheel consumer typing
+      run: |
+        .wheel-env/bin/python -m pip install mypy pyright typing_extensions
+        python scripts/check_wheel_typing.py --python .wheel-env/bin/python
 
   performance-gate:
     # Guards against silent performance regressions. Divides each operation by a

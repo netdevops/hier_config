@@ -1,6 +1,6 @@
 """Back-compatibility guarantees for the public import surface.
 
-The tree types moved into the Rust extension in v3.7, leaving
+The tree types moved into the Rust extension in v4, leaving
 ``hier_config.base``/``child``/``children``/``root`` as thin re-export shims.
 Nothing inside the package imports some of those modules any more, so without
 these tests a shim could be deleted or renamed without a single failure --
@@ -17,7 +17,7 @@ import pytest
 import hier_config
 from hier_config.exceptions import DuplicateChildError, HierConfigError
 
-_hier_config_rust = importlib.import_module("_hier_config_rust")
+_hier_config_rust = importlib.import_module("hier_config._hier_config_rust")
 
 SHIM_MODULES = (
     ("hier_config.base", "HConfigBase"),
@@ -77,8 +77,7 @@ def test_shim_module_reexports_native_type(module_name: str, attribute: str) -> 
     exported = getattr(module, attribute)
     native = getattr(_hier_config_rust, attribute)
 
-    # ``HConfig`` is a thin subclass of the native type; the rest are aliases.
-    assert exported is native or issubclass(exported, native)
+    assert exported is native
 
 
 def test_top_level_package_exports_are_importable() -> None:
@@ -108,7 +107,7 @@ def test_native_classes_report_their_real_module() -> None:
     """
     for name in ("HConfig", "HConfigBase", "HConfigChild", "HConfigChildren"):
         cls = getattr(_hier_config_rust, name)
-        assert cls.__module__ == "_hier_config_rust", name
+        assert cls.__module__ == "hier_config._hier_config_rust", name
 
 
 def test_children_is_a_discoverable_property() -> None:
@@ -127,25 +126,12 @@ def test_duplicate_child_error_derives_from_the_public_base() -> None:
     assert issubclass(HierConfigError, Exception)
 
 
-def test_type_stubs_ship_alongside_the_shims() -> None:
-    """The ``.pyi`` files are the only typed view of the compiled classes.
+def test_type_stub_ships_alongside_the_extension() -> None:
+    """The native stub supplies types through the public re-export shims.
 
     Without them ``py.typed`` is a false promise: mypy sees every tree type as
     ``Any``, and mkdocstrings cannot resolve the re-export aliases at all.
     """
     package = Path(hier_config.__file__).parent
-    for module in ("base", "child", "children", "root", "exceptions"):
-        assert (package / f"{module}.pyi").is_file(), module
-
-
-def test_native_extension_stub_packaged_for_maturin() -> None:
-    """The root `_hier_config_rust.pyi` exists and matches `stubs/` for maturin wheel packaging."""
-    repo_root = Path(__file__).resolve().parents[2]
-    root_stub = repo_root / "_hier_config_rust.pyi"
-    native_stub = repo_root / "stubs" / "_hier_config_rust.pyi"
-    assert root_stub.is_file(), (
-        "_hier_config_rust.pyi must exist at repo root for maturin wheel packaging"
-    )
-    assert root_stub.read_text() == native_stub.read_text(), (
-        "_hier_config_rust.pyi at repo root must match stubs/_hier_config_rust.pyi"
-    )
+    assert (package / "_hier_config_rust.pyi").is_file()
+    assert (package / "py.typed").is_file()

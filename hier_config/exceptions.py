@@ -9,7 +9,7 @@ the native base.
 
 from __future__ import annotations
 
-from _hier_config_rust import (
+from hier_config._hier_config_rust import (
     DuplicateChildError,
     HierConfigError,
     InvalidConfigError,

@@ -22,12 +22,14 @@ workspace = true
 hier_config_core.workspace = true
 mimalloc = "0.1.52"
 pyo3.workspace = true
+pyo3-stub-gen = { version = "=0.23.0", default-features = false, features = ["infer_signature"] }
 serde.workspace = true
 serde_json.workspace = true
+
+[dev-dependencies]
+tempfile = "3"
 
 [package.metadata.maturin]
 name = "hier_config"
 python-source = "../.."
 module-name = "hier_config._hier_config_rust"
-
-

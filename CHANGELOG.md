@@ -216,6 +216,15 @@ v4 design decisions, for the record:
 
 ### Changed
 
+- Generate one packaged native type stub from current PyO3 binding metadata
+  and documentation instead of recovering signatures from the v3.7 Git
+  baseline. Remove duplicate facade/native stubs and repository-only stub
+  search paths; preserve public Python re-exports and legacy native imports.
+  Validate wheel-installed types with positive and negative consumer checks.
+  The generated stub orders classes so every base precedes its subclasses,
+  and marks C-slot parameters positional-only, so astroid-backed and
+  signature-based checkers analyze it correctly. (#302)
+
 - Regex compatibility is context-dependent: capture-producing rule patterns
   reject syntax outside the Rust `regex` subset with contextual errors;
   matching-only rules retain bounded richer-pattern fallback. Python
@@ -366,11 +375,9 @@ the three v3 negation rule models and their `HConfigDriverRules` fields,
 
 ### Fixed
 
-- Stop the stub-generation unit tests from requiring git history. All baseline
-  lookups in `scripts/gen_stubs.py` now route through a single cached
-  `baseline_source()` helper that raises an actionable `BaselineUnavailableError`
-  when the v3 baseline commit is unreachable, so `pytest tests/` passes in the
-  shallow clones used by the `python-tests` CI jobs. (#302)
+- Stop stub generation and its tests from requiring git history, so
+  `pytest tests/` passes in the shallow clones used by the `python-tests`
+  CI jobs. (#302)
 - Preserve optional regex capture positions in idempotency keys and ignore
   nonsemantic child bookkeeping when deciding whether a sectional overwrite is
   needed, matching the original Python remediation behavior. (#302)
@@ -386,10 +393,6 @@ the three v3 negation rule models and their `HConfigDriverRules` fields,
   `list_keys` uses the default identity keys, malformed XML outside the document
   element is rejected, and XML/NETCONF rendering preserves element and attribute
   namespaces instead of emitting invalid Clark-notation tags. (#302)
-- Normalize Python 3.14's interpreter-provided containment docstring during stub
-  generation so the freshness gate does not require version-dependent stub
-  changes. (#302)
-
 - Native substitutions preserve Python replacement escapes and capture
   references; negation `REGEX_SUB` replaces all matches. Regex caches are
   bounded and regex-set cache keys no longer collide. Fallible Rust `try_*`

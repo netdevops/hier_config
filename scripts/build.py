@@ -36,6 +36,7 @@ def lint(*, fix: bool = False) -> None:
             _flynt_command(fix=fix),
             _check_displacement_markers_command(),
             _check_stubs_command(),
+            _native_surface_command(),
             _stubtest_command(),
             _check_stub_types_command(),
             _check_formats_corpus_command(),
@@ -58,6 +59,7 @@ def lint_and_test(*, fix: bool = False) -> None:
             _flynt_command(fix=fix),
             _check_displacement_markers_command(),
             _check_stubs_command(),
+            _native_surface_command(),
             _stubtest_command(),
             _check_stub_types_command(),
             _check_formats_corpus_command(),
@@ -135,13 +137,26 @@ def _check_displacement_markers_command() -> str:
 
 
 @app.command()
+def generate_stubs() -> None:
+    """Generate the canonical native stub from current PyO3 binding metadata."""
+    _run(_stub_generator_command())
+
+
+def _stub_generator_command() -> str:
+    return (
+        "cargo run --quiet --locked --package hier_config "
+        "--no-default-features --bin gen-stubs"
+    )
+
+
+@app.command()
 def check_stubs() -> None:
-    """Fail when the generated .pyi stubs no longer match the compiled extension."""
+    """Fail on generated-stub drift without rewriting the committed artifact."""
     _run(_check_stubs_command())
 
 
 def _check_stubs_command() -> str:
-    return f"{sys.executable} scripts/gen_stubs.py --check"
+    return f"{_stub_generator_command()} -- --check"
 
 
 @app.command()
@@ -151,16 +166,22 @@ def stubtest() -> None:
 
 
 def _stubtest_command() -> str:
-    # `gen_stubs.py --check` guards *names*; this guards *signatures*, and
+    # `check_native_surface.py` guards *names*; this guards *signatures*, and
     # `check_stub_types.py` guards *return types* by observing live objects.
     # Runtime introspection cannot see annotations, and nothing observes an
     # argument that was never passed, so parameter *types* remain the type
     # checkers' responsibility alone.
+    #
+    # `--ignore-disjoint-bases` is upstream's documented setting for
+    # pyo3-stub-gen: every PyO3 class is a disjoint base at runtime, but the
+    # generator does not emit `@typing.disjoint_base`. The flag suppresses that
+    # one generator gap without exempting any individual binding.
     return (
         f"{sys.executable} -m mypy.stubtest"
         " --mypy-config-file pyproject.toml"
-        " --allowlist stubs/stubtest-allowlist.txt"
-        " _hier_config_rust hier_config"
+        " --ignore-disjoint-bases"
+        " --allowlist tests/typing/stubtest-allowlist.txt"
+        " hier_config"
     )
 
 
@@ -176,6 +197,10 @@ def _check_stub_types_command() -> str:
     # wrong return type is the premise they reason from, not an error they can
     # find. This observes real objects instead, element types included.
     return f"{sys.executable} scripts/check_stub_types.py --check"
+
+
+def _native_surface_command() -> str:
+    return f"{sys.executable} scripts/check_native_surface.py"
 
 
 @app.command()
@@ -213,7 +238,14 @@ def pylint() -> None:
 
 
 def _pylint_command() -> str:
-    return f"pylint {_python_base_paths_str()}"
+    # Pylint treats .pyi bodies as executable code; Ruff and both type checkers
+    # validate those declarations. Keep every runtime Python source in Pylint.
+    sources = (
+        source
+        for path in _python_base_paths()
+        for source in (path.rglob("*.py") if path.is_dir() else (path,))
+    )
+    return f"pylint {' '.join(str(source) for source in sorted(sources))}"
 
 
 @app.command()
@@ -267,7 +299,7 @@ def _project_base_files(glob: str) -> Iterable[Path]:
 
 
 def _project_paths(glob: str) -> Iterable[Path]:
-    for base_dir in ("hier_config", "tests", "scripts"):
+    for base_dir in ("hier_config", "_hier_config_rust", "tests", "scripts"):
         base_path = _repo_path().joinpath(base_dir)
         if not base_path.exists():
             message = f"{base_path=} does not exist"

@@ -379,7 +379,7 @@ provides-extras = ["yaml"]
 [package.metadata.requires-dev]
 dev = [
     { name = "flynt" },
-    { name = "maturin" },
+    { name = "maturin", specifier = ">=1.10" },
     { name = "mkdocs" },
     { name = "mkdocs-include-markdown-plugin" },
     { name = "mkdocs-redirects" },

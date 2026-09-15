@@ -1,0 +1,66 @@
+"""Prove consumer imports are installed files and old pickle globals still work."""
+
+import importlib
+import pickle
+import site
+from importlib.machinery import EXTENSION_SUFFIXES
+from pathlib import Path
+
+import _hier_config_rust as legacy
+import hier_config
+import hier_config._hier_config_rust as native
+from hier_config import HConfig, Platform
+
+installed_roots = tuple(Path(root).resolve() for root in site.getsitepackages())
+modules = (
+    "hier_config",
+    "hier_config._hier_config_rust",
+    "_hier_config_rust",
+    "hier_config.base",
+    "hier_config.root",
+    "hier_config.child",
+    "hier_config.children",
+    "hier_config.exceptions",
+    "hier_config.platforms.view_base",
+    "hier_config.workflows",
+)
+for name in modules:
+    module = importlib.import_module(name)
+    assert module.__file__ is not None, name
+    origin = Path(module.__file__).resolve()
+    assert any(origin.is_relative_to(root) for root in installed_roots), (name, origin)
+
+assert native.__file__ is not None
+assert native.__file__.endswith(tuple(EXTENSION_SUFFIXES))
+assert Path(native.__file__).with_name("_hier_config_rust.pyi").is_file()
+assert Path(native.__file__).with_name("py.typed").is_file()
+assert hier_config.HConfig is native.HConfig is legacy.HConfig
+
+facades = {
+    "HConfig": ("hier_config.root", "HConfig"),
+    "HConfigBase": ("hier_config.base", "HConfigBase"),
+    "HConfigChild": ("hier_config.child", "HConfigChild"),
+    "HConfigChildren": ("hier_config.children", "HConfigChildren"),
+    "HConfigView": ("hier_config.platforms.view_base", "HConfigViewBase"),
+    "ConfigViewInterface": ("hier_config.platforms.view_base", "ConfigViewInterfaceBase"),
+    "WorkflowRemediation": ("hier_config.workflows", "WorkflowRemediation"),
+    "HierConfigError": ("hier_config.exceptions", "HierConfigError"),
+    "DuplicateChildError": ("hier_config.exceptions", "DuplicateChildError"),
+    "InvalidConfigError": ("hier_config.exceptions", "InvalidConfigError"),
+}
+for name, (module_name, alias) in facades.items():
+    cls = getattr(native, name)
+    assert getattr(legacy, name) is cls
+    assert getattr(importlib.import_module(module_name), alias) is cls
+    for legacy_name in ("_hier_config_rust", "hier_config._hier_config_rust"):
+        # Protocol 0 GLOBAL resolves historical class references without depending
+        # on whether instances of each class support serialization.
+        payload = f"c{legacy_name}\n{name}\n.".encode("ascii")
+        assert pickle.loads(payload) is cls
+    assert pickle.loads(pickle.dumps(cls)) is cls
+
+config = HConfig.from_lines(Platform.CISCO_IOS, ("hostname wheel-consumer",))
+assert config.to_lines() == ("hostname wheel-consumer",)
+assert config.children[0] is not None
+assert config.children["hostname wheel-consumer"].text == "hostname wheel-consumer"
+assert len(config.children[:]) == 1
