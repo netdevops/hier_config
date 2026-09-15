@@ -511,12 +511,13 @@ def test_lag_undeploy_wraps_the_rest_of_the_section() -> None:
 
 
 def test_acl_rebuild_negates_before_it_re_creates() -> None:
-    """Regression: the unbind-first ordering must not outrank the rebuild.
+    """Regression: the ACL body must never outrank its own negation.
 
-    `no ip access-list ...` is weighted late so interface bindings are removed
-    first, but the same line is also what a sectional overwrite emits. If the
-    re-created body sorted ahead of it, applying the remediation would delete
-    the ACL instead of rebuilding it.
+    `no ip access-list ...` runs earliest of all the ordering weights, so that
+    a deletion clears the way before anything else. The same line is what a
+    sectional overwrite emits, so the re-created body has to stay just behind
+    it; if the body sorted first, applying the remediation would delete the ACL
+    instead of rebuilding it.
     """
     running_config = _load(
         ("ip access-list extended TEST-EXT", " permit ip host 1.1.1.1 any log"),
@@ -651,4 +652,48 @@ def test_unparsable_lag_member_line_is_left_alone() -> None:
         'lag "TEST" static id 100',
         " ports ethernet 1/1/11 to 2/1/12",
         " deploy",
+    )
+
+
+def test_acl_and_mac_filter_ordering_compose() -> None:
+    """The ACL and mac-filter weights must not interfere with each other.
+
+    They pull in opposite directions -- ACLs run ahead of the interfaces that
+    bind them, mac filters behind -- so a remediation touching both at once is
+    where a weight collision would surface.
+    """
+    running_config = _load(
+        (
+            "ip access-list extended OLD",
+            " permit ip host 1.1.1.1 any",
+            "mac filter 10 permit aaaa.aaaa.aaaa 0000.0000.0000 any",
+            "interface ve 106",
+            " ip access-group OLD in",
+            "interface ethernet 1/1/11",
+            " mac filter-group 10",
+        ),
+    )
+    generated_config = _load(
+        (
+            "ip access-list extended NEW",
+            " permit ip host 2.2.2.2 any",
+            "interface ve 106",
+            " ip access-group NEW in",
+            "interface ethernet 1/1/11",
+        ),
+    )
+    lines = _ordered_remediation(running_config, generated_config)
+
+    assert lines.index("no ip access-list extended OLD") < lines.index(
+        "ip access-list extended NEW",
+    )
+    assert lines.index("ip access-list extended NEW") < lines.index(
+        " ip access-group NEW in",
+    )
+    assert lines.index(" no mac filter-group 10") < lines.index(
+        "no mac filter 10 permit aaaa.aaaa.aaaa 0000.0000.0000 any",
+    )
+    _assert_rollback_restores(
+        running_config,
+        running_config.config_to_get_to(generated_config),
     )
