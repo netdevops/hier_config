@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 from hier_config import (
@@ -620,25 +622,58 @@ def test_round_trip_against_real_l3_configs(
 
 
 @pytest.mark.parametrize(
-    "words",
+    ("words", "expected_message"),
     (
-        pytest.param(("ethe", "1/1/1", "to", "1/2/3"), id="range-spans-two-slots"),
-        pytest.param(("ethe", "1/1", "to", "1/1/3"), id="ends-shaped-differently"),
-        pytest.param(("ethe", "1/1/1/1", "to", "1/1/1/3"), id="too-many-fields"),
-        pytest.param(("ethe", "1/1/8", "to", "1/1/2"), id="range-runs-backwards"),
-        pytest.param(("1/1/1",), id="no-port-keyword"),
-        pytest.param(("ethe", "1/1/1", "ethe"), id="keyword-with-nothing-after"),
-        pytest.param(("ethe", "1/1/1", "to"), id="nothing-after-to"),
-        pytest.param((), id="empty"),
+        pytest.param(
+            ("ethe", "1/1/1", "to", "1/2/3"),
+            "spans multiple slots",
+            id="range-spans-two-slots",
+        ),
+        pytest.param(
+            ("ethe", "1/1", "to", "1/1/3"),
+            "unsupported port range",
+            id="ends-shaped-differently",
+        ),
+        pytest.param(
+            ("ethe", "1/1/1/1", "to", "1/1/1/3"),
+            "unsupported port range",
+            id="too-many-fields",
+        ),
+        pytest.param(
+            ("ethe", "1/1/8", "to", "1/1/2"),
+            "reversed port range",
+            id="range-runs-backwards",
+        ),
+        pytest.param(
+            ("1/1/1",),
+            "unexpected token",
+            id="no-port-keyword",
+        ),
+        pytest.param(
+            ("ethe", "1/1/1", "ethe"),
+            "ended after a port keyword",
+            id="keyword-with-nothing-after",
+        ),
+        pytest.param(
+            ("ethe", "1/1/1", "to"),
+            "ended after 'to'",
+            id="nothing-after-to",
+        ),
+        pytest.param((), "empty port specification", id="empty"),
     ),
 )
-def test_malformed_port_specifications_are_rejected(words: tuple[str, ...]) -> None:
-    """Every failure mode must raise rather than silently drop ports.
+def test_malformed_port_specifications_are_rejected(
+    words: tuple[str, ...],
+    expected_message: str,
+) -> None:
+    """Every failure mode must raise, and raise for the reason it was given.
 
     Callers treat the exception as "leave this line alone", so a specification
-    that cannot be enumerated exactly has to fail loudly here.
+    that cannot be enumerated exactly has to fail loudly here. Matching the
+    message keeps each case pinned to its own branch, so one branch raising
+    another's error would not pass unnoticed.
     """
-    with pytest.raises(ValueError, match=r".+"):
+    with pytest.raises(ValueError, match=re.escape(expected_message)):
         fastiron_expand_ports(words)
 
 

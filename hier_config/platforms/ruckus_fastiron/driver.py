@@ -363,10 +363,10 @@ class HConfigDriverRuckusFastIron(HConfigDriverBase):
                     ),
                     weight=-20,
                 ),
-                # Bindings must be removed before the object they point at.
-                # `mac filter` refuses the removal outright; `ip access-list`
-                # is worse -- it deletes silently and leaves the interface's
-                # `ip access-group` pointing at an ACL that no longer exists.
+                # A `mac filter-group` binding must be removed before the
+                # filter it points at: FastIron refuses to delete a filter
+                # that is still bound. ACLs sort the other way -- see the
+                # trade-off note on the `ip access-list` weights below.
                 OrderingRule(
                     match_rules=(
                         MatchRule(startswith="interface "),
