@@ -14,6 +14,17 @@ def _load(lines: tuple[str, ...]) -> HConfig:
     return get_hconfig_fast_load(Platform.RUCKUS_FASTIRON, lines)
 
 
+def _assert_rollback_restores(
+    running_config: HConfig,
+    remediation: HConfig,
+) -> None:
+    """Prove the change can be backed out, per docs/dev/testing.md."""
+    running_after = running_config.future(remediation)
+    rollback = running_after.config_to_get_to(running_config)
+    running_after_rollback = running_after.future(rollback)
+    assert not tuple(running_config.unified_diff(running_after_rollback))
+
+
 def _ordered_remediation(
     running_config: HConfig,
     generated_config: HConfig,
@@ -124,6 +135,48 @@ def test_single_port_change_only_touches_that_port() -> None:
     assert remediation.dump_simple() == ("vlan 101", " no tagged ethe 1/1/4")
 
 
+@pytest.mark.parametrize(
+    ("before", "after", "expected"),
+    (
+        pytest.param(
+            "vlan 20 by port",
+            "vlan 20 name USERS by port",
+            " vlan 20 name USERS by port",
+            id="naming-an-unnamed-vlan",
+        ),
+        pytest.param(
+            "vlan 20 name USERS by port",
+            "vlan 20 by port",
+            " vlan 20 by port",
+            id="removing-a-vlan-name",
+        ),
+        pytest.param(
+            "vlan 20 name OLD by port",
+            "vlan 20 name NEW by port",
+            " vlan 20 name NEW by port",
+            id="renaming-a-vlan",
+        ),
+    ),
+)
+def test_vlan_header_changes_never_negate_the_vlan(
+    before: str,
+    after: str,
+    expected: str,
+) -> None:
+    """Changing a VLAN header must not emit a negation of the old header.
+
+    FastIron renders an unnamed VLAN as `vlan 20 by port`, which normalises to
+    a child alongside the named form. Both are global commands, so negating
+    either one (`no vlan 20 by port`) deletes the VLAN and every port in it,
+    and the membership lines are not re-added because they did not change.
+    """
+    running_config = _load((before, " tagged ethe 1/1/1 to 1/1/2"))
+    generated_config = _load((after, " tagged ethe 1/1/1 to 1/1/2"))
+    remediation = running_config.config_to_get_to(generated_config)
+    assert remediation.dump_simple() == ("vlan 20", expected)
+    _assert_rollback_restores(running_config, remediation)
+
+
 def test_vlan_negation_drops_the_inline_name() -> None:
     running_config = _load(("vlan 101 name USERS by port", " tagged ethe 1/1/1"))
     generated_config = _load(("hostname SW01",))
@@ -144,6 +197,7 @@ def test_vlan_rename_does_not_delete_the_vlan() -> None:
     generated_config = _load(("vlan 101 name NEW by port", " tagged ethe 1/1/1"))
     remediation = running_config.config_to_get_to(generated_config)
     assert remediation.dump_simple() == ("vlan 101", " vlan 101 name NEW by port")
+    _assert_rollback_restores(running_config, remediation)
 
 
 def test_lag_negation_drops_the_static_id() -> None:
@@ -167,6 +221,47 @@ def test_lag_member_description_is_idempotent() -> None:
         'lag "CORE_UPLINK" static id 10',
         " port-name NEW ethernet 1/1/31",
     )
+
+
+def test_ip_addresses_are_diffed_one_line_at_a_time() -> None:
+    """`ip address` adds an address on FastIron, it does not replace one.
+
+    Verified on an ICX 6650: issuing a second address in another subnet leaves
+    both on the interface. Treating the command as idempotent would make a
+    remediation that removes an address come out empty.
+    """
+    running_config = _load(
+        (
+            "interface ve 106",
+            " ip address 10.0.0.1 255.255.255.0",
+            " ip address 10.0.1.1 255.255.255.0",
+        ),
+    )
+    generated_config = _load(
+        ("interface ve 106", " ip address 10.0.0.1 255.255.255.0"),
+    )
+    remediation = running_config.config_to_get_to(generated_config)
+    assert remediation.dump_simple() == (
+        "interface ve 106",
+        " no ip address 10.0.1.1 255.255.255.0",
+    )
+    _assert_rollback_restores(running_config, remediation)
+
+
+def test_changing_an_ip_address_removes_the_old_one() -> None:
+    running_config = _load(
+        ("interface ve 106", " ip address 10.0.0.1 255.255.255.0"),
+    )
+    generated_config = _load(
+        ("interface ve 106", " ip address 10.0.1.1 255.255.255.0"),
+    )
+    remediation = running_config.config_to_get_to(generated_config)
+    assert remediation.dump_simple() == (
+        "interface ve 106",
+        " no ip address 10.0.0.1 255.255.255.0",
+        " ip address 10.0.1.1 255.255.255.0",
+    )
+    _assert_rollback_restores(running_config, remediation)
 
 
 def test_port_name_is_idempotent() -> None:
@@ -259,12 +354,36 @@ def test_mac_filter_is_unbound_before_it_is_removed() -> None:
     )
 
 
-def test_access_group_is_unbound_before_the_acl_is_removed() -> None:
-    """FastIron does not protect a bound ACL the way it protects a mac filter.
+def test_a_new_acl_exists_before_an_interface_binds_it() -> None:
+    """An interface fails open while the ACL it names does not exist.
 
-    `no ip access-list extended X` succeeds while an interface still has
-    `ip access-group X in`, leaving a dangling binding behind, so the driver has
-    to enforce the unbind-first order itself.
+    Creating the ACL after the binding would leave the interface unfiltered for
+    the rest of the push, which is exactly what the binding was added to
+    prevent.
+    """
+    running_config = _load(("interface ve 106", " ip address 10.0.0.1/24"))
+    generated_config = _load(
+        (
+            "ip access-list extended NEW",
+            " permit ip host 1.1.1.1 any",
+            "interface ve 106",
+            " ip address 10.0.0.1/24",
+            " ip access-group NEW in",
+        ),
+    )
+    lines = _ordered_remediation(running_config, generated_config)
+    assert lines.index("ip access-list extended NEW") < lines.index(
+        " ip access-group NEW in",
+    )
+
+
+def test_a_deleted_acl_is_removed_before_the_interface_unbinds_it() -> None:
+    """The documented trade-off of ordering ACLs ahead of interfaces.
+
+    Unlike `mac filter`, FastIron does not refuse to delete a bound ACL, so the
+    binding is left dangling for the rest of the push and then removed. The end
+    state is the same either way, which is why this loses to keeping a newly
+    created ACL ahead of its binding.
     """
     running_config = _load(
         (
@@ -276,8 +395,8 @@ def test_access_group_is_unbound_before_the_acl_is_removed() -> None:
     )
     generated_config = _load(("interface ve 106",))
     lines = _ordered_remediation(running_config, generated_config)
-    assert lines.index(" no ip access-group TEST-EXT in") < lines.index(
-        "no ip access-list extended TEST-EXT",
+    assert lines.index("no ip access-list extended TEST-EXT") < lines.index(
+        " no ip access-group TEST-EXT in",
     )
 
 
@@ -297,7 +416,8 @@ def test_changed_acl_is_rebuilt_rather_than_appended_to() -> None:
             " permit ip host 3.3.3.3 any log",
         ),
     )
-    lines = running_config.config_to_get_to(generated_config).dump_simple()
+    remediation = running_config.config_to_get_to(generated_config)
+    lines = remediation.dump_simple()
     assert lines[0] == "no ip access-list extended TEST-EXT"
     assert lines[1:] == (
         "ip access-list extended TEST-EXT",
@@ -305,6 +425,7 @@ def test_changed_acl_is_rebuilt_rather_than_appended_to() -> None:
         " permit ip host 2.2.2.2 any log",
         " permit ip host 3.3.3.3 any log",
     )
+    _assert_rollback_restores(running_config, remediation)
 
 
 def test_lag_member_list_is_expanded_per_port() -> None:
@@ -482,17 +603,33 @@ def test_malformed_port_specifications_are_rejected(words: tuple[str, ...]) -> N
 
 
 @pytest.mark.parametrize(
-    "words",
+    ("words", "expected"),
     (
-        ("ethe", "1/1/1"),
-        ("ethernet", "1/1/1"),
-        ("ethe", "1/1/1", "to", "1/1/3"),
-        ("ethe", "1/1/1", "to", "1/1/1"),
-        ("ethe", "1/1/1", "ethe", "1/1/1"),
+        (("ethe", "1/1/1"), ("1/1/1",)),
+        (("ethernet", "1/1/1"), ("1/1/1",)),
+        (("ethe", "1/1/1", "to", "1/1/3"), ("1/1/1", "1/1/2", "1/1/3")),
+        (("ethe", "1/1/1", "to", "1/1/1"), ("1/1/1",)),
+        (("ethe", "1/1/1", "ethe", "1/1/1"), ("1/1/1",)),
+        (
+            ("ethe", "1/1/1", "to", "1/1/2", "ethe", "1/2/4"),
+            ("1/1/1", "1/1/2", "1/2/4"),
+        ),
+        (
+            ("ethe", "1/2/4", "ethe", "1/1/1", "to", "1/1/2"),
+            ("1/2/4", "1/1/1", "1/1/2"),
+        ),
     ),
 )
-def test_well_formed_port_specifications_are_expanded(words: tuple[str, ...]) -> None:
-    assert fastiron_expand_ports(words)[0] == "1/1/1"
+def test_well_formed_port_specifications_are_expanded(
+    words: tuple[str, ...],
+    expected: tuple[str, ...],
+) -> None:
+    """Expansion must reproduce the exact port list, in order and without gaps.
+
+    A VLAN or LAG member list is rewritten from this output, so a range that
+    expands to the wrong length silently adds or drops members.
+    """
+    assert fastiron_expand_ports(words) == expected
 
 
 def test_two_field_port_ids_are_supported() -> None:

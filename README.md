@@ -18,6 +18,7 @@ In addition to the Cisco-style syntax, hier_config offers experimental support f
 
 - [x] Juniper JunOS
 - [x] Nokia SRL (Service Router Linux)
+- [x] Ruckus/Brocade FastIron (ICX)
 - [x] VyOS
 
 Hier Config is compatible with any NOS that utilizes a structured CLI syntax similar to Cisco IOS or Junos OS. The full platform support matrix is maintained in the [driver documentation](https://hier-config.readthedocs.io/en/latest/user/drivers/).

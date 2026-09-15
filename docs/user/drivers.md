@@ -363,10 +363,7 @@ from hier_config import Platform, get_hconfig_driver
 driver = get_hconfig_driver(Platform.FORTINET_FORTIOS)
 ```
 
-
 ---
-
-To learn how these drivers are built, how to customize them, or how to create your own, see [Customizing and Creating Drivers](custom-drivers.md).
 
 ### Ruckus/Brocade FastIron (ICX) Driver
 
@@ -409,8 +406,17 @@ Platform-specific behaviour:
     Marking the header idempotent instead would look equivalent but breaks
     `future()`: an idempotent match makes it keep only the delta's children and
     drop the unchanged ones, which corrupts rollback generation.
+
+    An unnamed VLAN renders as `vlan 20 by port` and normalises the same way,
+    so the name child is matched idempotently on `vlan <id>` rather than on the
+    named form. Both forms are global commands, and negating either one deletes
+    the VLAN along with every port in it.
 - **A LAG section is negated down to its name** (`no lag "CORE_UPLINK"`), and a
   LAG cannot be renamed in place -- a name change is a delete and re-create.
+- **`ip address` is additive, not idempotent.** A second address in another
+  subnet is added to the interface rather than replacing the first, verified on
+  an ICX 6650. Addresses are therefore diffed one line at a time, so removing
+  one emits `no ip address ...` for exactly that address.
 - **IPv4 ACLs are rebuilt when their body changes**, because entries have no
   sequence numbers on this release and can only be appended, so an entry that
   belongs in the middle cannot be inserted in place.
@@ -445,6 +451,11 @@ Platform-specific behaviour:
   missing. Intended configs that spell out every port will diff against a
   running config that lists only the non-default ones; this is expected and the
   resulting remediation is correct.
+- **A LAG member carries the whole LAG into a VLAN.** Issuing
+  `untagged ethe 1/1/11` for a port that belongs to a deployed LAG moves every
+  member of that LAG, and the device renders the result as the full range.
+  Membership stays consistent across diffs because both sides see the same
+  rendering, but a one-line remediation can move more ports than it names.
 - **LAG sections need human review.** A deployed LAG refuses to give up its
   primary port or to change it, so a membership change is a stateful sequence
   (`no deploy` -> `primary-port` -> `no ports` -> `enable ethe` -> `deploy`)
@@ -472,9 +483,24 @@ Platform-specific behaviour:
 
     LAG member descriptions (`port-name ... ethernet ...`) are keyed on the
     member port and are safe to apply on a deployed LAG.
-- **Ordering rules** reflect device-enforced dependencies: a port leaves its old
-  untagged VLAN before joining a new one; `mac filter-group` and
-  `ip access-group` bindings are removed from interfaces before the filter or
-  ACL itself is deleted (`mac filter` refuses the removal while bound, whereas
-  `ip access-list` deletes silently and leaves a dangling `ip access-group`); `no vlan` is issued last because it also drops every
-  membership in that VLAN.
+- **Ordering rules** reflect device-enforced dependencies: a port leaves its
+  old untagged VLAN before joining a new one; `no vlan` is deferred because it
+  also drops every membership in that VLAN; and a `mac filter-group` binding is
+  removed from the interface before the filter itself, because FastIron refuses
+  to delete a bound `mac filter`.
+
+    ACLs are ordered the other way, ahead of the interfaces that bind them, so
+    a newly created ACL exists before an `ip access-group` names it. The
+    negation stays ahead of the body so a rebuild re-creates the ACL rather
+    than deleting it.
+
+    The trade-off is that an ACL being *deleted* is removed before the
+    interface unbinds it, leaving a dangling `ip access-group` for the rest of
+    the push. FastIron permits that -- unlike `mac filter`, it does not refuse
+    the removal -- and both lines are in the same remediation, so the end state
+    is identical either way. An interface left unfiltered because its ACL does
+    not exist yet is not recoverable in the same way, so it wins.
+
+---
+
+To learn how these drivers are built, how to customize them, or how to create your own, see [Customizing and Creating Drivers](custom-drivers.md).

@@ -11,13 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Ruckus/Brocade FastIron (ICX) driver, `Platform.RUCKUS_FASTIRON` (#303).
-  Targets FastIron 08.0.30 on ICX 6450/6650. Expands collapsed VLAN port
-  membership to one line per port, excludes `stack` configuration from
-  remediation, normalises VLAN headers so a rename stays a single line, rebuilds
-  IPv4 ACLs whose body changed, and orders interface resets, VLAN membership
-  moves, LAG un-deploy/re-deploy and filter/ACL unbinding the way the device
-  requires.
+- Ruckus/Brocade FastIron (ICX) platform driver
+  (`Platform.RUCKUS_FASTIRON`), targeting FastIron 08.0.30 (#303).
 
 ### Fixed
 

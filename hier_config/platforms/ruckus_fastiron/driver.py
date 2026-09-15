@@ -114,7 +114,7 @@ def _expand_lag_port_membership(config: HConfig) -> None:
 
     Note that the resulting ``no ports ethernet ...`` is only valid for a
     non-primary member and disables the port it removes; see the LAG note in
-    the driver docstring.
+    the class docstring below.
     """
     for lag in config.get_children(startswith="lag "):
         for membership in tuple(lag.get_children(startswith="ports ")):
@@ -141,14 +141,28 @@ class HConfigDriverRuckusFastIron(HConfigDriverBase):
 
     Behaviour specific to this platform:
 
-    * VLAN membership is normalised at load time to one ``tagged``/``untagged``
-      line per port, because FastIron has no interface-level VLAN membership
-      command and collapsed range lines cannot be diffed safely.
+    * VLAN and LAG membership is normalised at load time to one line per port,
+      because FastIron has no interface-level VLAN membership command and
+      collapsed range lines cannot be diffed safely.
     * ``stack`` configuration is removed at load time and never remediated.
-    * VLAN and LAG section headers carry their name inline, so both are made
-      idempotent on the identifier and negated down to the identifier.
+    * A VLAN header carries its name inline and doubles as the rename command,
+      so it is normalised to ``vlan <id>`` with the name as a child. A LAG
+      header is negated down to its name; a LAG cannot be renamed in place.
+    * ``ip address`` is additive on an interface -- a second address in another
+      subnet is added rather than replacing the first -- so addresses are
+      diffed one line at a time and are not treated as idempotent.
     * IPv4 ACLs have no sequence numbers on this release, so an ACL whose body
       changed is negated and re-created rather than appended to.
+    * A VLAN membership line naming one member of a deployed LAG moves the
+      whole LAG, and the device renders the result as the full range. Diffs
+      stay consistent, but a single remediation line can move several ports.
+    * A deployed LAG refuses to give up or change its primary port, so a
+      membership change is a stateful sequence (``no deploy`` -> ``primary-port``
+      -> ``no ports`` -> ``enable ethe`` -> ``deploy``) that cannot be
+      synthesised from a diff: ``deploy`` is identical on both sides, and the
+      disabled state a removed member is left in is not visible in the running
+      config. Removing a member is valid only for a non-primary port and
+      disables it. LAG changes should be tagged for manual handling.
 
     Platform enum: ``Platform.RUCKUS_FASTIRON``.
     """
@@ -184,11 +198,16 @@ class HConfigDriverRuckusFastIron(HConfigDriverBase):
                 ),
             ],
             idempotent_commands=[
-                # the normalised VLAN name line -- one per VLAN, last one wins
+                # The normalised VLAN header line -- one per VLAN, last one
+                # wins. This has to match every `vlan <id> ...` child, not just
+                # the named form: an unnamed VLAN normalises to a `vlan 20 by
+                # port` child, and naming it would otherwise negate that line.
+                # `no vlan 20 by port` is a global command that deletes the
+                # VLAN and every port in it.
                 IdempotentCommandsRule(
                     match_rules=(
                         MatchRule(startswith="vlan "),
-                        MatchRule(re_search=r"^vlan \d+ name "),
+                        MatchRule(re_search=r"^vlan \d+"),
                     ),
                 ),
                 IdempotentCommandsRule(
@@ -196,9 +215,6 @@ class HConfigDriverRuckusFastIron(HConfigDriverBase):
                 ),
                 IdempotentCommandsRule(
                     match_rules=(MatchRule(startswith="ip default-gateway "),),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(MatchRule(startswith="ip address "),),
                 ),
                 IdempotentCommandsRule(
                     match_rules=(MatchRule(startswith="console timeout "),),
@@ -221,12 +237,6 @@ class HConfigDriverRuckusFastIron(HConfigDriverBase):
                     match_rules=(
                         MatchRule(startswith="interface "),
                         MatchRule(startswith="port-name "),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith="interface "),
-                        MatchRule(startswith="ip address "),
                     ),
                 ),
                 IdempotentCommandsRule(
@@ -375,16 +385,25 @@ class HConfigDriverRuckusFastIron(HConfigDriverBase):
                     match_rules=(MatchRule(startswith="no mac filter "),),
                     weight=20,
                 ),
+                # ACLs go first, ahead of the interfaces that bind them, so a
+                # newly created ACL exists before an `ip access-group` points at
+                # it. An interface fails open while its ACL is missing, so the
+                # alternative would leave the interface unfiltered for the rest
+                # of the push. The negation stays ahead of the body so that a
+                # rebuild re-creates the ACL instead of deleting it.
+                #
+                # The trade-off: an ACL that is being deleted is removed before
+                # the interface unbinds it, leaving a dangling `ip access-group`
+                # for the rest of the push. That is transient and self-resolving
+                # -- unlike `mac filter`, FastIron does not refuse the removal --
+                # whereas an unfiltered interface is not.
                 OrderingRule(
                     match_rules=(MatchRule(startswith="no ip access-list "),),
-                    weight=20,
+                    weight=-30,
                 ),
-                # ... but a rebuilt ACL must land after its own negation, so it
-                # outweighs it. Without this the re-created body sorts ahead of
-                # the `no ip access-list` line and the ACL ends up deleted.
                 OrderingRule(
                     match_rules=(MatchRule(startswith="ip access-list "),),
-                    weight=25,
+                    weight=-25,
                 ),
                 # Removing a VLAN also removes every port membership in it, so
                 # do it after the memberships have been moved elsewhere.
