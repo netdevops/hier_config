@@ -8,9 +8,14 @@ PORT_KEYWORDS = frozenset({"ethe", "ethernet"})
 def _expand_port_pair(start: str, stop: str) -> tuple[str, ...]:
     """Expand ``1/1/1`` .. ``1/1/48`` into every port id in between.
 
-    Only the trailing port field varies in a FastIron range; the unit and slot
-    fields must match, otherwise the range is not something we can safely
-    enumerate and the caller is expected to leave the line untouched.
+    Only the trailing port field varies in a FastIron range: the unit and slot
+    fields must match, and the port field must be a non-negative integer at
+    both ends. Anything else is not something we can enumerate exactly, so it
+    raises and the caller leaves the line untouched. The check runs before the
+    conversion so every failure carries one of this helper's own messages
+    rather than one from ``int()``; it uses ``str.isdecimal`` rather than
+    ``str.isdigit`` because the latter also accepts characters ``int()``
+    rejects, such as superscripts.
     """
     start_parts = start.split("/")
     stop_parts = stop.split("/")
@@ -19,6 +24,10 @@ def _expand_port_pair(start: str, stop: str) -> tuple[str, ...]:
         raise ValueError(message)
     if start_parts[:-1] != stop_parts[:-1]:
         message = f"port range {start!r} to {stop!r} spans multiple slots"
+        raise ValueError(message)
+
+    if not (start_parts[-1].isdecimal() and stop_parts[-1].isdecimal()):
+        message = f"unsupported port range {start!r} to {stop!r}"
         raise ValueError(message)
 
     first = int(start_parts[-1])

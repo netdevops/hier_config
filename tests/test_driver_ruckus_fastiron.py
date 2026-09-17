@@ -640,6 +640,26 @@ def test_round_trip_against_real_l3_configs(
             id="too-many-fields",
         ),
         pytest.param(
+            ("ethe", "1/1/x", "to", "1/1/3"),
+            "unsupported port range",
+            id="non-numeric-start-port",
+        ),
+        pytest.param(
+            ("ethe", "1/1/1", "to", "1/1/y"),
+            "unsupported port range",
+            id="non-numeric-stop-port",
+        ),
+        pytest.param(
+            ("ethe", "1/1/-1", "to", "1/1/3"),
+            "unsupported port range",
+            id="negative-port-number",
+        ),
+        pytest.param(
+            ("ethe", "1/1/\u00b2", "to", "1/1/3"),
+            "unsupported port range",
+            id="superscript-port-number",
+        ),
+        pytest.param(
             ("ethe", "1/1/8", "to", "1/1/2"),
             "reversed port range",
             id="range-runs-backwards",
