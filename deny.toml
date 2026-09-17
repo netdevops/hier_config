@@ -29,6 +29,19 @@ ignore = [
     # fails. Remove both once the pyo3 0.29 migration lands.
     "RUSTSEC-2026-0176",  # OOB read in PyList/PyTuple iterator nth/nth_back
     "RUSTSEC-2026-0177",  # missing Sync bound on PyCFunction::new_closure
+    # The open-i18n `unic-*` crates are unmaintained with no safe upgrade
+    # available. They reach us only through `rustpython-parser`, which
+    # `pyo3-stub-gen` uses to parse doc snippets while generating
+    # `hier_config/_hier_config_rust.pyi`. That is build/codegen tooling: none
+    # of it links into the shipped wheel, and none of it processes untrusted
+    # input. Listed individually so a genuinely new advisory still fails.
+    # Remove once `pyo3-stub-gen` drops `rustpython-parser`.
+    "RUSTSEC-2025-0075",  # unic-char-range unmaintained
+    "RUSTSEC-2025-0080",  # unic-common unmaintained
+    "RUSTSEC-2025-0081",  # unic-char-property unmaintained
+    "RUSTSEC-2025-0090",  # unic-emoji-char unmaintained
+    "RUSTSEC-2025-0098",  # unic-ucd-version unmaintained
+    "RUSTSEC-2025-0100",  # unic-ucd-ident unmaintained
 ]
 
 [licenses]
@@ -42,9 +55,16 @@ allow = [
     "Apache-2.0 WITH LLVM-exception",
     "BSD-2-Clause",
     "BSD-3-Clause",
+    # Public-domain dedication with a permissive fallback licence; FSF Free and
+    # OSI approved. Reaches us via `tiny-keccak`, a build-time transitive
+    # dependency of `pyo3-stub-gen`.
+    "CC0-1.0",
     "ISC",
     "MIT",
     "Unicode-3.0",
+    # Permissive Unicode data licence, superseded by Unicode-3.0 but still used
+    # by `unicode_names2` under the `pyo3-stub-gen` stub-generation tooling.
+    "Unicode-DFS-2016",
     "Unlicense",
     "Zlib",
 ]

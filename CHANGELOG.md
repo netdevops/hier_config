@@ -375,6 +375,11 @@ the three v3 negation rule models and their `HConfigDriverRules` fields,
 
 ### Fixed
 
+- Unblock CI: allow the permissive `CC0-1.0` and `Unicode-DFS-2016` licences
+  and ignore the six unmaintained `unic-*` RustSec advisories, all of which
+  reach us only through `pyo3-stub-gen`'s build-time `rustpython-parser` and
+  never ship in the wheel; disable the uv cache in the `python-tests` jobs,
+  which install with pip and so never populate it. (#302)
 - Stop stub generation and its tests from requiring git history, so
   `pytest tests/` passes in the shallow clones used by the `python-tests`
   CI jobs. (#302)
