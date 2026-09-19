@@ -5,12 +5,12 @@
 //! these are native regression tests, not independent parity evidence.
 //! Provenance lives in each snapshot. Never regenerate from a failing backend.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::PathBuf;
 
 use hier_config_core::{
-    Driver, GnmiRemediation, Platform, Tree, from_json, from_xml, to_gnmi_json, to_json,
+    Driver, GnmiRemediation, Platform, Tree, TreeError, from_json, from_xml, to_gnmi_json, to_json,
     to_netconf_xml, to_xml,
 };
 use serde_json::{Map, Value};
@@ -35,6 +35,124 @@ fn load_corpus(filename: &str) -> Map<String, Value> {
         .expect("corpus path");
     let raw = fs::read_to_string(path).expect("read corpus");
     serde_json::from_str(&raw).expect("parse corpus")
+}
+
+/// Native-only cases whose recorded remediation SF-5 withdrew.
+///
+/// Junos negation of a line that starts with neither `set ` nor `delete `
+/// raises in the pure-Python baseline
+/// (`hier_config/platforms/juniper_junos/driver.py`), which draws no
+/// distinction between CLI text and structured-format element names. The
+/// permissive fallback removed by SF-5 emitted the line as its own negation
+/// instead.
+///
+/// These keys carry no parity evidence: `expected.json` holds zero
+/// `JUNIPER_JUNOS` rows, and `native-v1.json` states that the pure-Python
+/// driver cannot remediate unflattened format trees. The output it recorded is
+/// wrong on the wire — for `simple|JUNIPER_JUNOS|('id',)` it emitted
+/// `<hostname>sw1</hostname>` with no `nc:operation="delete"`, telling the
+/// device to set the value it should remove. The reference platforms produce
+/// `no hostname "sw1"` and the delete operation for the same source.
+///
+/// Each entry is therefore asserted to fail with the Junos swap error, never
+/// skipped. A case that starts remediating again fails the exhaustiveness
+/// check below, and a case that fails any other way fails its own assertion.
+const WITHDRAWN_NATIVE_CASES: &[(&str, &str)] = &[
+    ("netconf", "attrs|JUNIPER_JUNOS|('id',)"),
+    ("netconf", "attrs|JUNIPER_JUNOS|('name', 'id')"),
+    ("netconf", "attrs|JUNIPER_JUNOS|('name', 'id', 'key')"),
+    ("netconf", "attrs|JUNIPER_JUNOS|None"),
+    ("netconf", "escapes|JUNIPER_JUNOS|('id',)"),
+    ("netconf", "escapes|JUNIPER_JUNOS|('name', 'id')"),
+    ("netconf", "escapes|JUNIPER_JUNOS|('name', 'id', 'key')"),
+    ("netconf", "escapes|JUNIPER_JUNOS|None"),
+    ("netconf", "mixed-text|JUNIPER_JUNOS|('id',)"),
+    ("netconf", "mixed-text|JUNIPER_JUNOS|('name', 'id')"),
+    ("netconf", "mixed-text|JUNIPER_JUNOS|('name', 'id', 'key')"),
+    ("netconf", "mixed-text|JUNIPER_JUNOS|None"),
+    ("netconf", "nested|JUNIPER_JUNOS|('id',)"),
+    ("netconf", "nested|JUNIPER_JUNOS|('name', 'id')"),
+    ("netconf", "nested|JUNIPER_JUNOS|('name', 'id', 'key')"),
+    ("netconf", "nested|JUNIPER_JUNOS|None"),
+    ("netconf", "repeated|JUNIPER_JUNOS|('name', 'id')"),
+    ("netconf", "repeated|JUNIPER_JUNOS|('name', 'id', 'key')"),
+    ("netconf", "repeated|JUNIPER_JUNOS|None"),
+    ("netconf", "simple|JUNIPER_JUNOS|('id',)"),
+    ("netconf", "simple|JUNIPER_JUNOS|('name', 'id')"),
+    ("netconf", "simple|JUNIPER_JUNOS|('name', 'id', 'key')"),
+    ("netconf", "simple|JUNIPER_JUNOS|None"),
+    ("netconf", "single-keyed|JUNIPER_JUNOS|('id',)"),
+    ("netconf", "single-keyed|JUNIPER_JUNOS|('name', 'id')"),
+    (
+        "netconf",
+        "single-keyed|JUNIPER_JUNOS|('name', 'id', 'key')",
+    ),
+    ("netconf", "single-keyed|JUNIPER_JUNOS|None"),
+    ("gnmi", "id-keyed|JUNIPER_JUNOS|('id',)"),
+    ("gnmi", "id-keyed|JUNIPER_JUNOS|('name', 'id')"),
+    ("gnmi", "id-keyed|JUNIPER_JUNOS|('name', 'id', 'key')"),
+    ("gnmi", "id-keyed|JUNIPER_JUNOS|None"),
+    ("gnmi", "keyed-list|JUNIPER_JUNOS|('name', 'id')"),
+    ("gnmi", "keyed-list|JUNIPER_JUNOS|('name', 'id', 'key')"),
+    ("gnmi", "keyed-list|JUNIPER_JUNOS|None"),
+    ("gnmi", "nested|JUNIPER_JUNOS|('id',)"),
+    ("gnmi", "nested|JUNIPER_JUNOS|('name', 'id')"),
+    ("gnmi", "nested|JUNIPER_JUNOS|('name', 'id', 'key')"),
+    ("gnmi", "nested|JUNIPER_JUNOS|None"),
+    ("gnmi", "scalar-list|JUNIPER_JUNOS|('id',)"),
+    ("gnmi", "scalar-list|JUNIPER_JUNOS|('name', 'id')"),
+    ("gnmi", "scalar-list|JUNIPER_JUNOS|('name', 'id', 'key')"),
+    ("gnmi", "scalar-list|JUNIPER_JUNOS|None"),
+    ("gnmi", "scalars|JUNIPER_JUNOS|('id',)"),
+    ("gnmi", "scalars|JUNIPER_JUNOS|('name', 'id')"),
+    ("gnmi", "scalars|JUNIPER_JUNOS|('name', 'id', 'key')"),
+    ("gnmi", "scalars|JUNIPER_JUNOS|None"),
+    ("gnmi", "special-chars|JUNIPER_JUNOS|('id',)"),
+    ("gnmi", "special-chars|JUNIPER_JUNOS|('name', 'id')"),
+    ("gnmi", "special-chars|JUNIPER_JUNOS|('name', 'id', 'key')"),
+    ("gnmi", "special-chars|JUNIPER_JUNOS|None"),
+    ("gnmi", "unicode|JUNIPER_JUNOS|('id',)"),
+    ("gnmi", "unicode|JUNIPER_JUNOS|('name', 'id')"),
+    ("gnmi", "unicode|JUNIPER_JUNOS|('name', 'id', 'key')"),
+    ("gnmi", "unicode|JUNIPER_JUNOS|None"),
+];
+
+/// Tail of the Junos swap error. The doubled space is real: `negation_prefix`
+/// is `"delete "` and `declaration_prefix` is `"set "`.
+const JUNOS_SWAP_ERROR_SUFFIX: &str = "did not start with delete  or set .";
+
+fn is_withdrawn_native_case(section: &str, key: &str) -> bool {
+    WITHDRAWN_NATIVE_CASES
+        .iter()
+        .any(|(candidate_section, candidate_key)| {
+            *candidate_section == section && *candidate_key == key
+        })
+}
+
+/// Asserts the case failed with the Junos swap error specifically, so an
+/// unrelated failure such as [`TreeError::MaxDepthExceeded`] cannot satisfy it.
+fn assert_junos_swap_error(section: &str, key: &str, error: &TreeError) {
+    let TreeError::InvalidRegex(message) = error else {
+        panic!("{section}/{key}: expected the Junos swap error, got {error}");
+    };
+    assert!(
+        message.starts_with("child.text='") && message.ends_with(JUNOS_SWAP_ERROR_SUFFIX),
+        "{section}/{key}: expected the Junos swap error, got {message}"
+    );
+}
+
+/// Fails if a withdrawn case remediates again, so the table cannot rot.
+fn assert_withdrawn_table_exhausted(section: &str, observed: &BTreeSet<&str>) {
+    for (_, key) in WITHDRAWN_NATIVE_CASES
+        .iter()
+        .filter(|(candidate_section, _)| *candidate_section == section)
+    {
+        assert!(
+            observed.contains(key),
+            "{section}/{key}: listed as withdrawn but no longer fails; \
+re-assert its remediation and drop it from WITHDRAWN_NATIVE_CASES"
+        );
+    }
 }
 
 fn corpus() -> Map<String, Value> {
@@ -257,6 +375,7 @@ fn xml_cases_match_recorded_expectations() {
 fn netconf_cases_match_recorded_expectations() {
     let corpus = corpus();
     let cases = corpus["netconf"].as_object().expect("netconf section");
+    let mut withdrawn_observed = BTreeSet::new();
     for (key, expected) in cases {
         let case = parse_key(key);
         let driver = Driver::for_platform(case.platform);
@@ -269,7 +388,18 @@ fn netconf_cases_match_recorded_expectations() {
         .expect("running parses");
         let target = from_xml(driver, source_of(&corpus, "xml", key, "target"), keys)
             .expect("target parses");
-        let remediation = running.config_to_get_to(&target).expect("diff");
+        let remediation = match running.config_to_get_to(&target) {
+            Ok(remediation) => remediation,
+            Err(error) => {
+                assert!(
+                    is_withdrawn_native_case("netconf", key),
+                    "netconf/{key}: case must still remediate: {error}"
+                );
+                assert_junos_swap_error("netconf", key, &error);
+                withdrawn_observed.insert(key.as_str());
+                continue;
+            }
+        };
 
         assert_eq!(
             simple(&remediation),
@@ -289,12 +419,15 @@ fn netconf_cases_match_recorded_expectations() {
             |text| Value::String(text.clone()),
         );
     }
+
+    assert_withdrawn_table_exhausted("netconf", &withdrawn_observed);
 }
 
 #[test]
 fn gnmi_cases_match_recorded_expectations() {
     let corpus = corpus();
     let cases = corpus["gnmi"].as_object().expect("gnmi section");
+    let mut withdrawn_observed = BTreeSet::new();
     for (key, expected) in cases {
         let case = parse_key(key);
         let driver = Driver::for_platform(case.platform);
@@ -307,7 +440,18 @@ fn gnmi_cases_match_recorded_expectations() {
         .expect("running parses");
         let target = from_json(driver, source_of(&corpus, "json", key, "target"), keys)
             .expect("target parses");
-        let remediation = running.config_to_get_to(&target).expect("diff");
+        let remediation = match running.config_to_get_to(&target) {
+            Ok(remediation) => remediation,
+            Err(error) => {
+                assert!(
+                    is_withdrawn_native_case("gnmi", key),
+                    "gnmi/{key}: case must still remediate: {error}"
+                );
+                assert_junos_swap_error("gnmi", key, &error);
+                withdrawn_observed.insert(key.as_str());
+                continue;
+            }
+        };
 
         assert_eq!(
             simple(&remediation),
@@ -327,6 +471,8 @@ fn gnmi_cases_match_recorded_expectations() {
             |result| sorted(&gnmi_value(result)),
         );
     }
+
+    assert_withdrawn_table_exhausted("gnmi", &withdrawn_observed);
 }
 
 #[test]

@@ -3,7 +3,7 @@
 
 Install a non-editable wheel, mypy, pyright and typing_extensions in a venv, then
 run ``python scripts/check_wheel_typing.py --python /venv/bin/python``.
-Fixtures and strict Python 3.10 checker configurations are copied outside the
+Fixtures and strict Python 3.11 checker configurations are copied outside the
 checkout. Neither checker receives a stub path or a source search path.
 """
 
@@ -172,7 +172,7 @@ def check_consumer(python: Path, workspace: Path, fixtures: Path) -> tuple[str, 
     (workspace / "mypy.ini").write_text(
         "[mypy]\n"
         "strict = True\n"
-        "python_version = 3.10\n"
+        "python_version = 3.11\n"
         "show_error_codes = True\n"
         "pretty = False\n"
         "show_column_numbers = False\n"
@@ -184,7 +184,7 @@ def check_consumer(python: Path, workspace: Path, fixtures: Path) -> tuple[str, 
         json.dumps(
             {
                 "typeCheckingMode": "strict",
-                "pythonVersion": "3.10",
+                "pythonVersion": "3.11",
                 "autoSearchPaths": False,
                 "extraPaths": [],
                 "useLibraryCodeForTypes": False,

@@ -1,4 +1,4 @@
-"""A Python 3.10 consumer using only the installed wheel's shipped types."""
+"""A Python 3.11 consumer using only the installed wheel's shipped types."""
 
 from ipaddress import IPv4Address, IPv4Interface
 

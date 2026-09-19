@@ -9,7 +9,7 @@ extension with `uv run --no-sync maturin develop --release --locked` first.
 Use `--no-sync` afterward: automatic synchronization can replace the fresh
 extension with an older cached wheel. Rebuild after `uv sync` or Rust edits;
 otherwise Python tests can exercise the old binary. Source builds need
-Python 3.10+, a linker, and Rust meeting the MSRV in `Cargo.toml`.
+Python 3.11+, a linker, and Rust meeting the MSRV in `Cargo.toml`.
 
 ```bash
 # Python lint + test suite (native gates are separate)

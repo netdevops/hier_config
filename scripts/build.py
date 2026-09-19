@@ -40,6 +40,7 @@ def lint(*, fix: bool = False) -> None:
             _stubtest_command(),
             _check_stub_types_command(),
             _check_formats_corpus_command(),
+            _check_pyo3_advisories_command(),
         ),
     )
 
@@ -63,6 +64,7 @@ def lint_and_test(*, fix: bool = False) -> None:
             _stubtest_command(),
             _check_stub_types_command(),
             _check_formats_corpus_command(),
+            _check_pyo3_advisories_command(),
         ),
     )
 
@@ -134,6 +136,10 @@ def check_displacement_markers() -> None:
 
 def _check_displacement_markers_command() -> str:
     return f"{sys.executable} scripts/check_displacement_markers.py"
+
+
+def _check_pyo3_advisories_command() -> str:
+    return f"{sys.executable} scripts/check_pyo3_advisories.py"
 
 
 @app.command()
@@ -214,7 +220,7 @@ def _check_formats_corpus_command() -> str:
 
 
 @app.command()
-def rust_coverage(*, fail_under: int = 47) -> None:
+def rust_coverage(*, fail_under: int = 90) -> None:
     """Run cargo-llvm-cov on hier_config_core with a line coverage floor."""
     _run(
         f"cargo llvm-cov --locked --package hier_config_core --fail-under-lines={fail_under}"

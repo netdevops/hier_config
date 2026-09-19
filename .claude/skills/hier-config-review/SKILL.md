@@ -38,7 +38,7 @@ cargo test --locked --workspace --all-features
 cargo llvm-cov --locked --package hier_config_core --fail-under-lines 47
 ```
 
-Source builds require Python 3.10+, a linker, and Rust meeting `Cargo.toml`'s
+Source builds require Python 3.11+, a linker, and Rust meeting `Cargo.toml`'s
 MSRV (currently 1.98). Rebuild after Rust edits. Python coverage has a 95% floor;
 the separate Rust-core gate currently has a 47% floor. Never lower either gate.
 The Rust rewrite ships in v4 in this repository; do not propose v5 or a separate
@@ -49,7 +49,7 @@ Also run the docs build — CI runs it unconditionally on every push/PR, not jus
 uv run --no-sync mkdocs build --strict
 ```
 
-Remember CI's test matrix covers Python 3.10–3.14: flag syntax or stdlib usage newer than 3.10 even if local checks pass.
+Remember CI's test matrix covers Python 3.11–3.14: flag syntax or stdlib usage newer than 3.11 even if local checks pass.
 
 ## Step 3: Review by Category
 

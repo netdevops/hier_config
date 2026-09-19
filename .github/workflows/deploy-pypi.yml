@@ -20,7 +20,7 @@ jobs:
     - uses: actions/checkout@v6
     - uses: actions/setup-python@v6
       with:
-        python-version: "3.10"
+        python-version: "3.11"
     - name: Build wheels
       uses: PyO3/maturin-action@v1
       with:
@@ -41,7 +41,7 @@ jobs:
         include:
         - os: windows-latest
           target: x64
-          python-version: "3.10"
+          python-version: "3.11"
         - os: windows-11-arm
           target: aarch64-pc-windows-msvc
           python-version: "3.11"
@@ -90,7 +90,7 @@ jobs:
     - uses: actions/checkout@v6
     - uses: actions/setup-python@v6
       with:
-        python-version: "3.10"
+        python-version: "3.11"
     - name: Build wheels
       uses: PyO3/maturin-action@v1
       with:
@@ -130,7 +130,7 @@ jobs:
         path: dist
     - uses: actions/setup-python@v6
       with:
-        python-version: "3.10"
+        python-version: "3.11"
     - name: Smoke-test the built wheel
       # Install and import the wheel before publishing so packaging-only defects
       # (missing py.typed/.pyi package data, abi3 tag mismatch, wrong module-name,

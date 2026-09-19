@@ -39,15 +39,38 @@ def get_hconfig_view(config: HConfig) -> HConfigViewBase:
     raise DriverNotFoundError(message)
 
 
-def _run_post_load_callbacks(config: HConfig, driver: HConfigDriverBase) -> None:
+def _core_runs_post_load(driver: HConfigDriverBase) -> bool:
+    """Report whether the core may apply its built-in post-load callbacks.
+
+    The core runs its callbacks inside the parse, before any Python callback
+    gets a turn, so it may only do so when that matches the order the driver
+    declared: every core-owned callback has to precede every callback the core
+    does not implement. A custom driver that inserts its own callback ahead of
+    a stock one would otherwise see it run last, changing the result (#302), so
+    the core's pass is suppressed and the whole list runs here in order.
+    """
+    seen_python_callback = False
+    for callback in driver.rules.post_load_callbacks:
+        if runs_in_core(callback, driver.platform):
+            if seen_python_callback:
+                return False
+        else:
+            seen_python_callback = True
+    return True
+
+
+def _run_post_load_callbacks(
+    config: HConfig, driver: HConfigDriverBase, *, core_ran: bool
+) -> None:
     """Apply the driver's post-load callbacks that the Rust core did not.
 
     Built-in drivers list their stock callbacks so they stay discoverable and
-    reusable (#286), but the core already applied them while parsing, so those
-    are skipped here rather than run a second time.
+    reusable (#286). When `core_ran` those were already applied while parsing,
+    so they are skipped rather than run a second time; otherwise the full list
+    runs here to preserve the declared order.
     """
     for callback in driver.rules.post_load_callbacks:
-        if runs_in_core(callback, driver.platform):
+        if core_ran and runs_in_core(callback, driver.platform):
             continue
         callback(config)
 
@@ -79,6 +102,39 @@ def _reject_structured_format(config_text: str) -> None:
         raise InvalidConfigError(message)
 
 
+def _read_structured_prefix(config_path: Path) -> tuple[str, str | None]:
+    """Read the leading bytes, plus the remainder only for JSON-looking text."""
+    with config_path.open(encoding="utf-8") as handle:
+        prefix = handle.read(64)
+        rest = handle.read() if prefix.lstrip().startswith(("{", "[")) else None
+    return prefix, rest
+
+
+def _reject_structured_file(config_path: Path) -> str | None:
+    """Apply the structured-format guard to a file path (#232).
+
+    Only the leading bytes are read so ordinary CLI text keeps the native file
+    loader's fast path. A leading `{`/`[` is the one case that needs the whole
+    document to decide, so the text read for that check is returned and the
+    caller parses it directly instead of reading the file a second time.
+    """
+    try:
+        prefix, rest = _read_structured_prefix(config_path)
+    except (OSError, UnicodeDecodeError):
+        # Let the native loader raise for an unreadable or non-UTF-8 file so
+        # the error matches the one an unguarded load would have produced.
+        return None
+
+    if prefix.lstrip().startswith("<"):
+        _reject_structured_format(prefix)
+    if rest is None:
+        return None
+
+    config_text = prefix + rest
+    _reject_structured_format(config_text)
+    return config_text
+
+
 def _new_config(driver: HConfigDriverBase) -> HConfig:
     """Construct an ``HConfig`` and claim it as its tree's canonical root.
 
@@ -104,25 +160,31 @@ def hconfig_from_text(
     core did not already apply are run here.
     """
     config = _new_config(resolve_driver(platform_or_driver))
+    core_ran = _core_runs_post_load(config.driver)
 
     if isinstance(config_raw, Path):
-        config._load_file_native(str(config_raw), True)  # ruff: ignore[private-member-access, boolean-positional-value-in-call]
+        if (config_text := _reject_structured_file(config_raw)) is None:
+            config._load_file_native(str(config_raw), core_ran)  # ruff: ignore[private-member-access]
+        else:
+            _load_from_string_lines(config, config_text, run_post_load=core_ran)
     else:
         _reject_structured_format(config_raw)
-        _load_from_string_lines(config, config_raw)
+        _load_from_string_lines(config, config_raw, run_post_load=core_ran)
 
-    _run_post_load_callbacks(config, config.driver)
+    _run_post_load_callbacks(config, config.driver, core_ran=core_ran)
 
     return config
 
 
-def _load_from_string_lines(config: HConfig, config_text: str) -> None:
+def _load_from_string_lines(
+    config: HConfig, config_text: str, *, run_post_load: bool = True
+) -> None:
     """Parse `config_text` into `config` using the Rust core's text loader.
 
     Kept as a private seam so callers (and tests) can drive parsing on an
     already-constructed tree without going through `hconfig_from_text`.
     """
-    config._load_native(config_text, True)  # ruff: ignore[private-member-access, boolean-positional-value-in-call]
+    config._load_native(config_text, run_post_load)  # ruff: ignore[private-member-access]
 
 
 def hconfig_from_dump(
@@ -132,11 +194,13 @@ def hconfig_from_dump(
 
     Rebuilding the tree from the flat, depth-annotated dump lines happens in
     the Rust core so the parent lookup stays O(1) per line.
+
+    Post-load callbacks are deliberately not run here: a dump already holds the
+    tree *after* those callbacks ran, so replaying them would re-expand or
+    re-append lines they had already produced. Unpickling takes this same path.
     """
-    driver = resolve_driver(platform_or_driver)
-    config = _new_config(driver)
+    config = _new_config(resolve_driver(platform_or_driver))
     config._load_from_dump_native(dump.lines)  # ruff: ignore[private-member-access]
-    _run_post_load_callbacks(config, driver)
     return config
 
 
@@ -152,13 +216,14 @@ def hconfig_from_lines(
     """
     driver = resolve_driver(platform_or_driver)
     config = _new_config(driver)
+    core_ran = _core_runs_post_load(driver)
     if isinstance(lines, str):
         _reject_structured_format(lines)
         lines = lines.splitlines()
 
-    config._load_fast_native(list(lines), True)  # ruff: ignore[private-member-access, boolean-positional-value-in-call]
+    config._load_fast_native(list(lines), core_ran)  # ruff: ignore[private-member-access]
 
-    _run_post_load_callbacks(config, driver)
+    _run_post_load_callbacks(config, driver, core_ran=core_ran)
 
     return config
 

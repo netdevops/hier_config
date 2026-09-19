@@ -47,7 +47,9 @@ pub fn fixup_xr_comments(tree: &mut Tree) {
             }
             let text = &tree.arena[sibling_id].text;
             if text.starts_with('!') {
-                let comment_text = text.trim_start_matches('!').trim_start();
+                // Strip a single leading '!' only: the real-world `!! IOS XR
+                // Configuration 7.x` header must keep its second bang, matching v3.
+                let comment_text = text.strip_prefix('!').unwrap_or(text).trim_start();
                 if !comment_text.is_empty() {
                     comment_buffer.push(comment_text.to_string());
                 }

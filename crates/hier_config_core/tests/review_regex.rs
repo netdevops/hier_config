@@ -223,7 +223,9 @@ fn negation_regex_sub_replaces_all_occurrences_like_python() {
 
 #[test]
 fn capture_producing_rules_reject_unsupported_patterns_explicitly() {
-    for pattern in [r"foo(?=bar)", r"foobar\Z", "("] {
+    // `\Z` is deliberately absent: Python's end-of-string anchor is now
+    // translated to `\z` before compiling, so it must succeed.
+    for pattern in [r"foo(?=bar)", "("] {
         let mut driver = Driver::default();
         assert!(
             driver

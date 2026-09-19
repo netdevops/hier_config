@@ -112,13 +112,18 @@ impl PyHConfigChildren {
     /// Return key in self.
     fn __contains__(
         &self,
-        #[gen_stub(override_type(type_repr="str", imports=()))] text: &str,
+        #[gen_stub(override_type(type_repr="object", imports=()))] key: &Bound<'_, PyAny>,
     ) -> PyResult<bool> {
+        // v3 compared against a `dict` keyed by text, so a non-string operand
+        // simply missed instead of raising.
+        let Ok(text) = key.extract::<String>() else {
+            return Ok(false);
+        };
         let tree = self.read_tree()?;
         Ok(tree
             .arena
             .get(self.parent_id)
-            .is_some_and(|n| n.children.contains(text)))
+            .is_some_and(|n| n.children.contains(text.as_str())))
     }
 
     #[gen_stub(skip)]
@@ -296,11 +301,17 @@ impl PyHConfigChildren {
     }
 
     #[gen_stub(override_return_type(type_repr="HConfigChild", imports=()))]
+    #[pyo3(signature = (child, update_mapping = true))]
     pub fn append(
         &self,
         py: Python<'_>,
         #[gen_stub(override_type(type_repr="HConfigChild", imports=()))] child: &Bound<'_, PyAny>,
+        // v3 exposed this to skip maintaining the separate text->child mapping.
+        // The native arena keeps that index inside the tree, so it can never be
+        // left stale and the flag is accepted purely for source compatibility.
+        #[gen_stub(override_type(type_repr="bool", imports=()))] update_mapping: bool,
     ) -> PyResult<Py<PyAny>> {
+        let _ = update_mapping;
         let (child_node_id, other_tree) =
             if let Ok(c) = child.extract::<PyRef<'_, PyHConfigChild>>() {
                 let base = c.as_ref();
@@ -422,7 +433,7 @@ impl PyHConfigChildren {
     ) -> PyResult<()> {
         self.ensure_live()?;
         for child in children.try_iter()? {
-            self.append(py, &child?)?;
+            self.append(py, &child?, true)?;
         }
         Ok(())
     }

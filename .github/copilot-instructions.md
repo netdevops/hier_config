@@ -16,7 +16,7 @@ facades, not alternate implementations. PyYAML is optional via `[yaml]`.
 ## Build & Test
 
 Use uv for Python dependencies and maturin for builds. Source development
-requires Python 3.10+, a linker, and Rust meeting `Cargo.toml`'s MSRV (1.98).
+requires Python 3.11+, a linker, and Rust meeting `Cargo.toml`'s MSRV (1.98).
 Rebuild after Rust changes:
 
 ```bash
@@ -31,7 +31,7 @@ cargo test --locked --workspace --all-features
 cargo llvm-cov --locked --package hier_config_core --fail-under-lines 90
 ```
 
-CI also runs the test step across Python 3.10–3.14 (code must stay 3.10-compatible) and builds docs with `mkdocs build --strict` on every push/PR.
+CI also runs the test step across Python 3.11–3.14 (code must stay 3.11-compatible) and builds docs with `mkdocs build --strict` on every push/PR.
 
 Use `--no-sync` after a manual maturin rebuild: automatic uv synchronization
 can replace the fresh extension with a cached wheel. Rebuild after any later

@@ -14,7 +14,7 @@ if TYPE_CHECKING:
 
 @pytest.mark.parametrize("version", (metadata.version("hier-config"), "0.0.0"))
 def test_installed_wheel_version_matches_artifact(tmp_path: Path, version: str) -> None:
-    wheel = tmp_path / f"hier_config-{version}-cp310-abi3-any.whl"
+    wheel = tmp_path / f"hier_config-{version}-cp311-abi3-any.whl"
     with ZipFile(wheel, "w") as archive:
         archive.writestr(
             f"hier_config-{version}.dist-info/METADATA",

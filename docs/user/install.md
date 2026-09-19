@@ -2,10 +2,10 @@
 
 This page covers installing hier_config from PyPI or from source. It applies to anyone using the library.
 
-> hier_config requires Python 3.10 or later.
+> hier_config requires Python 3.11 or later.
 
 Version 4 ships the Rust rewrite in **this repository and this Python package**.
-There is no pure-Python fallback. Published `abi3` wheels support CPython 3.10+
+There is no pure-Python fallback. Published `abi3` wheels support CPython 3.11+
 on Linux glibc/musl (x86_64, aarch64), macOS (x86_64, aarch64), and Windows
 (x64). Windows ARM64 wheels require CPython 3.11+.
 Installing a compatible wheel does not require Rust.
@@ -33,7 +33,7 @@ pip install hier-config==<version>
 ## Install from source
 
 An sdist install (`pip install --no-binary hier-config hier-config`), a checkout,
-or a platform without a compatible wheel requires Python 3.10+, a C/C++ linker,
+or a platform without a compatible wheel requires Python 3.11+, a C/C++ linker,
 and a Rust toolchain meeting `workspace.package.rust-version` in `Cargo.toml`
 (currently **Rust 1.98**). Install Rust with [rustup](https://rustup.rs/).
 The build backend is [maturin](https://www.maturin.rs/), not Poetry.

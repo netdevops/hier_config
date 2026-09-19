@@ -1,3 +1,5 @@
+import pytest
+
 from hier_config import HConfig
 from hier_config.child import HConfigChild
 from hier_config.models import Platform
@@ -20,12 +22,17 @@ def test_negation_set_to_delete() -> None:
     assert child.negate().text == "delete vlans test_vlan vlan-id 100"
 
 
-def test_negation_without_a_prefix_is_a_no_op() -> None:
-    """Text carrying neither prefix has nothing to swap."""
+def test_negation_without_a_prefix_is_an_error() -> None:
+    """Text carrying neither prefix cannot be negated."""
     root = HConfig.from_text(Platform.JUNIPER_JUNOS)
     child = HConfigChild(root, "vlans test_vlan vlan-id 100")
 
-    assert child.negate().text == "vlans test_vlan vlan-id 100"
+    with pytest.raises(ValueError, match="did not start with") as excinfo:
+        child.negate()
+
+    message = str(excinfo.value)
+    assert "delete " in message
+    assert "set " in message
 
 
 def test_prefixes() -> None:

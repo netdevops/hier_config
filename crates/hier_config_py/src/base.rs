@@ -3,13 +3,27 @@
 use std::collections::BTreeSet;
 use std::sync::Arc;
 
+use hier_config_core::models::Instance;
 use hier_config_core::{MatchRule, NodeId, StringPattern, TextStyle};
 use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyFrozenSet, PyString, PyTuple};
+use pyo3::types::{PyDict, PyFrozenSet, PyList, PyString, PyTuple};
 
 use crate::errors::to_py_err;
 use crate::tree::{PyRwLockExt, SharedTree, ensure_live};
+
+/// Collects an iterable string attribute, ignoring anything that is not a string.
+fn collect_str_attr(item: &Bound<'_, PyAny>, name: &str) -> BTreeSet<String> {
+    let mut out = BTreeSet::new();
+    if let Ok(attr) = item.getattr(name) {
+        for value in attr.try_iter().into_iter().flatten().flatten() {
+            if let Ok(s) = value.extract::<String>() {
+                out.insert(s);
+            }
+        }
+    }
+    out
+}
 
 /// Wraps an already-materialized batch of handles in an immutable Python sequence.
 ///
@@ -55,6 +69,61 @@ impl PyHConfigBase {
 
     pub(crate) fn ensure_live(&self) -> PyResult<()> {
         drop(self.read_tree()?);
+        Ok(())
+    }
+
+    /// Copies Python-supplied `instances` into the native tree before rendering.
+    ///
+    /// Only the subtree actually being rendered is visited, and every Python
+    /// call is made with no lock held: arbitrary Python code runs during
+    /// `getattr`, and if it reads back from the tree while the tree write lock
+    /// were held the call would deadlock.
+    pub(crate) fn sync_instances(&self, py: Python<'_>) -> PyResult<()> {
+        // Fast path: nothing has ever set `instances`, which is the common case.
+        let handles: Vec<(NodeId, Py<PyList>)> = {
+            let data_map = self.tree.node_data.read_py()?;
+            if data_map.is_empty() {
+                return Ok(());
+            }
+            let scope: Vec<NodeId> = {
+                let tree = self.read_tree()?;
+                std::iter::once(self.node_id)
+                    .chain(tree.all_children(self.node_id))
+                    .collect()
+            };
+            scope
+                .into_iter()
+                .filter_map(|nid| {
+                    data_map
+                        .get(&nid)
+                        .and_then(|d| d.instances.as_ref())
+                        .map(|list| (nid, list.clone_ref(py)))
+                })
+                .collect()
+        };
+        if handles.is_empty() {
+            return Ok(());
+        }
+
+        // No locks are held here, so Python properties may read the tree freely.
+        let mut converted: Vec<(NodeId, Vec<Instance>)> = Vec::with_capacity(handles.len());
+        for (nid, list) in handles {
+            let mut instances = Vec::new();
+            for item in list.bind(py).iter() {
+                let id: u64 = item.getattr("id").and_then(|v| v.extract()).unwrap_or(0);
+                let comments = collect_str_attr(&item, "comments");
+                let tags = collect_str_attr(&item, "tags");
+                instances.push(Instance { id, comments, tags });
+            }
+            converted.push((nid, instances));
+        }
+
+        let mut tree = self.write_tree()?;
+        for (nid, instances) in converted {
+            if let Some(node) = tree.arena.get_mut(nid) {
+                *node.instances_mut() = instances;
+            }
+        }
         Ok(())
     }
 
@@ -233,52 +302,7 @@ impl PyHConfigBase {
         #[gen_stub(override_type(type_repr="str | None", imports=()))] tag: Option<&str>,
     ) -> PyResult<String> {
         self.ensure_live()?;
-        // Sync any comments and instances from node_data into the Rust tree
-        {
-            let data_map = self.tree.node_data.read_py()?;
-            let mut tree = self.write_tree()?;
-            for (nid, pdata) in data_map.iter() {
-                if let Some(node) = tree.arena.get_mut(*nid) {
-                    if let Some(comments) = &pdata.comments {
-                        for item in comments.bind(py).iter() {
-                            if let Ok(c_str) = item.extract::<String>() {
-                                node.comments_mut().insert(c_str);
-                            }
-                        }
-                    }
-                    let Some(instances) = &pdata.instances else {
-                        continue;
-                    };
-                    let list_bound = instances.bind(py);
-                    node.instances_mut().clear();
-                    for item in list_bound.iter() {
-                        let id: u64 = item.getattr("id").and_then(|v| v.extract()).unwrap_or(0);
-                        let mut inst_comments = BTreeSet::new();
-                        if let Ok(c_attr) = item.getattr("comments") {
-                            for c in c_attr.try_iter().into_iter().flatten().flatten() {
-                                if let Ok(s) = c.extract::<String>() {
-                                    inst_comments.insert(s);
-                                }
-                            }
-                        }
-                        let mut inst_tags = BTreeSet::new();
-                        if let Ok(t_attr) = item.getattr("tags") {
-                            for t in t_attr.try_iter().into_iter().flatten().flatten() {
-                                if let Ok(s) = t.extract::<String>() {
-                                    inst_tags.insert(s);
-                                }
-                            }
-                        }
-                        node.instances_mut()
-                            .push(hier_config_core::models::Instance {
-                                id,
-                                comments: inst_comments,
-                                tags: inst_tags,
-                            });
-                    }
-                }
-            }
-        }
+        self.sync_instances(py)?;
         let parsed_style = match style {
             Some("merged") => TextStyle::Merged,
             Some("with_comments") => TextStyle::WithComments,
@@ -695,8 +719,11 @@ impl PyHConfigBase {
     #[gen_stub(override_return_type(type_repr="collections.abc.Iterable[str]", imports=("collections.abc")))]
     pub fn lines(
         &self,
+        py: Python<'_>,
         #[gen_stub(override_type(type_repr="bool", imports=()))] sectional_exiting: bool,
     ) -> PyResult<Vec<String>> {
+        // Sectional-exit rules may have been reassigned since the parse.
+        self.tree.sync_rules_if_stale(py)?;
         let tree = self.read_tree()?;
         Ok(tree.lines(self.node_id, sectional_exiting))
     }
@@ -708,6 +735,7 @@ impl PyHConfigBase {
         py: Python<'_>,
         #[gen_stub(override_type(type_repr="bool", imports=()))] sectional_exiting: bool,
     ) -> PyResult<Py<PyTuple>> {
+        self.tree.sync_rules_if_stale(py)?;
         let tree = self.read_tree()?;
         let lines = tree.lines(self.node_id, sectional_exiting);
         let tuple = PyTuple::new(py, lines)?;

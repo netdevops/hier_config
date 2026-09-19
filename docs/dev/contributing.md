@@ -19,7 +19,7 @@ Dependencies are locked in `uv.lock`, and CI installs with `uv sync --locked`.
 If you change dependencies, use `uv add` / `uv add --dev` (or run `uv lock`
 after editing `pyproject.toml`) and commit the updated `uv.lock`.
 
-Python 3.10+, a linker, and Rust meeting the MSRV in `Cargo.toml` (currently
+Python 3.11+, a linker, and Rust meeting the MSRV in `Cargo.toml` (currently
 1.98) are required. This is the v4 Rust rewrite in the existing repository,
 not a separate package. maturin builds the PyO3 extension; rebuild after Rust
 changes so tests do not exercise an older installed binary.

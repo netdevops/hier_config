@@ -2,10 +2,11 @@ use hier_config_core::models::IdempotentCommandsRule;
 use hier_config_core::{Driver, MatchRule, Platform, parse_tree};
 
 #[test]
-fn junos_native_negation_fallback_is_permissive_but_swap_is_strict() {
-    // upstream/next@0866dc2 juniper_junos/driver.py:swap_negation raises
-    // ValueError without a set/delete prefix. The native-v1 structured-format
-    // snapshots deliberately preserve a permissive compute_negation fallback.
+fn junos_negation_fallback_propagates_the_swap_error() {
+    // SF-5: upstream/next@0866dc2 juniper_junos/driver.py:swap_negation raises
+    // ValueError without a set/delete prefix. The negation fallback must
+    // surface that error instead of emitting the command verbatim as its own
+    // negation, which would push a wrong command to the device.
     for rules in [serde_json::json!({}), serde_json::json!({"negation": []})] {
         let driver = Driver {
             rules: serde_json::from_value(rules).unwrap(),
@@ -16,14 +17,18 @@ fn junos_native_negation_fallback_is_permissive_but_swap_is_strict() {
             "system host-name router",
             "setting hostname",
             "delete",
+            "deactivate interfaces ge-0/0/1",
             "@b \"two\"",
             "vlans 20",
         ] {
-            let error = driver.try_swap_negation(text).unwrap_err();
-            assert!(error.contains("did not start with"), "{error}");
-            assert_eq!(
-                driver.try_compute_negation(text, |_| false),
-                Ok(text.to_owned())
+            let swap_error = driver.try_swap_negation(text).unwrap_err();
+            assert!(swap_error.contains("did not start with"), "{swap_error}");
+            let negation_error = driver
+                .try_compute_negation(text, |_| false)
+                .expect_err("unswappable JunOS text must not negate to itself");
+            assert!(
+                negation_error.contains("did not start with"),
+                "{negation_error}"
             );
         }
         assert_eq!(
@@ -38,7 +43,9 @@ fn junos_native_negation_fallback_is_permissive_but_swap_is_strict() {
 }
 
 #[test]
-fn junos_native_remediation_preserves_unflattened_command_fallback() {
+fn junos_unflattened_command_negation_errors_instead_of_emitting_itself() {
+    // SF-5: an unflattened JunOS command has no set/delete prefix to swap, so
+    // remediation must error rather than emit the command as its own negation.
     let mut running = parse_tree(Driver::for_platform(Platform::JuniperJunos), "").unwrap();
     let node = running
         .add_child(running.root, "system host-name router", false, false)
@@ -50,17 +57,8 @@ fn junos_native_remediation_preserves_unflattened_command_fallback() {
             .try_swap_negation("system host-name router")
             .is_err()
     );
-    assert_eq!(
-        running.try_compute_negation(node).unwrap(),
-        "system host-name router"
-    );
-    assert_eq!(
-        running
-            .config_to_get_to(&intended)
-            .unwrap()
-            .dump_simple(false),
-        ["system host-name router"]
-    );
+    assert!(running.try_compute_negation(node).is_err());
+    assert!(running.config_to_get_to(&intended).is_err());
     assert_eq!(running.dump_simple(false), ["system host-name router"]);
 }
 

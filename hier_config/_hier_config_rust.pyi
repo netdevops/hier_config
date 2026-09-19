@@ -26,6 +26,7 @@ __all__ = [
     "HConfigView",
     "HierConfigError",
     "InvalidConfigError",
+    "NodeComments",
     "WorkflowRemediation",
     "__version__",
     "config_preprocessor",
@@ -466,7 +467,7 @@ class HConfigChildren:
         r"""
         Return len(self).
         """
-    def __contains__(self, text: str, /) -> bool:
+    def __contains__(self, key: object, /) -> bool:
         r"""
         Return key in self.
         """
@@ -475,7 +476,9 @@ class HConfigChildren:
         Set self[key] to value.
         """
     def index(self, child: HConfigChild) -> int: ...
-    def append(self, child: HConfigChild) -> HConfigChild: ...
+    def append(
+        self, child: HConfigChild, update_mapping: bool = True
+    ) -> HConfigChild: ...
     def clear(self) -> None:
         r"""
         Delete all children.
@@ -616,6 +619,111 @@ class HierConfigError(builtins.Exception):
     Base exception for hierarchical configuration errors.
     """
 
+@typing.final
+class NodeComments:
+    r"""
+    A mutable view over the comments attached to one configuration node.
+    """
+    def __len__(self) -> builtins.int: ...
+    def __contains__(self, item: builtins.object, /) -> builtins.bool: ...
+    def __iter__(self) -> collections.abc.Iterator[builtins.str]: ...
+    def __eq__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __ne__(self, other: builtins.object, /) -> builtins.bool: ...
+    def __lt__(
+        self, other: collections.abc.Set[builtins.object], /
+    ) -> builtins.bool: ...
+    def __le__(
+        self, other: collections.abc.Set[builtins.object], /
+    ) -> builtins.bool: ...
+    def __gt__(
+        self, other: collections.abc.Set[builtins.object], /
+    ) -> builtins.bool: ...
+    def __ge__(
+        self, other: collections.abc.Set[builtins.object], /
+    ) -> builtins.bool: ...
+    def add(self, item: builtins.str) -> None:
+        r"""
+        Add an element to the node's comments.
+        """
+    def discard(self, item: builtins.object) -> None:
+        r"""
+        Remove an element if present.
+        """
+    def remove(self, item: builtins.object) -> None:
+        r"""
+        Remove an element, raising `KeyError` when it is absent.
+        """
+    def clear(self) -> None:
+        r"""
+        Remove every comment from the node.
+        """
+    def pop(self) -> builtins.str:
+        r"""
+        Remove and return an arbitrary comment.
+        """
+    def update(self, *others: collections.abc.Iterable[builtins.str]) -> None:
+        r"""
+        Add every element of each iterable in `others`.
+        """
+    def copy(self) -> builtins.set[builtins.str]:
+        r"""
+        Return a plain `set` copy of the node's comments.
+        """
+    def __or__(
+        self, other: collections.abc.Set[builtins.str], /
+    ) -> builtins.set[builtins.str]: ...
+    def __ror__(
+        self, other: collections.abc.Set[builtins.str], /
+    ) -> builtins.set[builtins.str]: ...
+    def __and__(
+        self, other: collections.abc.Set[builtins.object], /
+    ) -> builtins.set[builtins.str]: ...
+    def __rand__(
+        self, other: collections.abc.Set[builtins.object], /
+    ) -> builtins.set[builtins.str]: ...
+    def __sub__(
+        self, other: collections.abc.Set[builtins.str], /
+    ) -> builtins.set[builtins.str]: ...
+    def __rsub__(
+        self, other: collections.abc.Set[builtins.str], /
+    ) -> builtins.set[builtins.str]: ...
+    def __xor__(
+        self, other: collections.abc.Set[builtins.str], /
+    ) -> builtins.set[builtins.str]: ...
+    def __rxor__(
+        self, other: collections.abc.Set[builtins.str], /
+    ) -> builtins.set[builtins.str]: ...
+    def __ior__(
+        self, other: collections.abc.Set[builtins.str], /
+    ) -> typing_extensions.Self: ...
+    def __isub__(
+        self, other: collections.abc.Set[builtins.object], /
+    ) -> typing_extensions.Self: ...
+    def __iand__(
+        self, other: collections.abc.Set[builtins.object], /
+    ) -> typing_extensions.Self: ...
+    def union(
+        self, *others: collections.abc.Iterable[builtins.str]
+    ) -> builtins.set[builtins.str]: ...
+    def intersection(
+        self, *others: collections.abc.Iterable[builtins.object]
+    ) -> builtins.set[builtins.str]: ...
+    def difference(
+        self, *others: collections.abc.Iterable[builtins.object]
+    ) -> builtins.set[builtins.str]: ...
+    def symmetric_difference(
+        self, other: collections.abc.Iterable[builtins.str]
+    ) -> builtins.set[builtins.str]: ...
+    def issubset(
+        self, other: collections.abc.Iterable[builtins.object]
+    ) -> builtins.bool: ...
+    def issuperset(
+        self, other: collections.abc.Iterable[builtins.object]
+    ) -> builtins.bool: ...
+    def isdisjoint(
+        self, other: collections.abc.Iterable[builtins.object]
+    ) -> builtins.bool: ...
+
 class WorkflowRemediation:
     r"""
     Native implementation of remediation and rollback workflow.
@@ -677,6 +785,8 @@ class WorkflowRemediation:
         generated_config: HConfig,
         plugins: collections.abc.Iterable[collections.abc.Callable[[HConfig], None]]
         | None = None,
+        *args: builtins.object,
+        **kwargs: builtins.object,
     ) -> typing_extensions.Self: ...
     def __init__(
         self,
@@ -684,6 +794,8 @@ class WorkflowRemediation:
         generated_config: HConfig,
         plugins: collections.abc.Iterable[collections.abc.Callable[[HConfig], None]]
         | None = None,
+        *args: builtins.object,
+        **kwargs: builtins.object,
     ) -> None: ...
     @classmethod
     def from_strings(
@@ -795,10 +907,16 @@ class HConfig(HConfigBase):
     @property
     def is_branch(self) -> builtins.bool: ...
     def __new__(
-        cls, driver: hier_config.platforms.driver_base.HConfigDriverBase
+        cls,
+        driver: hier_config.platforms.driver_base.HConfigDriverBase,
+        *args: builtins.object,
+        **kwargs: builtins.object,
     ) -> typing_extensions.Self: ...
     def __init__(
-        self, driver: hier_config.platforms.driver_base.HConfigDriverBase
+        self,
+        driver: hier_config.platforms.driver_base.HConfigDriverBase,
+        *args: builtins.object,
+        **kwargs: builtins.object,
     ) -> None: ...
     def instantiate_child(self, text: str) -> HConfigChild: ...
     def merge(self, other: HConfig | collections.abc.Iterable[HConfig]) -> HConfig:
@@ -1007,7 +1125,9 @@ class HConfig(HConfigBase):
     ) -> tuple[
         collections.abc.Callable[..., HConfig],
         tuple[
-            hier_config.platforms.driver_base.HConfigDriverBase, hier_config.models.Dump
+            hier_config.platforms.driver_base.HConfigDriverBase,
+            hier_config.models.Dump,
+            list[tuple[int, object, object, int]],
         ],
     ]: ...
     def __eq__(self, other: object, /) -> bool:
@@ -1065,7 +1185,7 @@ class HConfigChild(HConfigBase):
     @new_in_config.setter
     def new_in_config(self, value: bool) -> None: ...
     @property
-    def comments(self) -> set[str]: ...
+    def comments(self) -> NodeComments: ...
     @comments.setter
     def comments(self, value: collections.abc.Iterable[str]) -> None: ...
     @property

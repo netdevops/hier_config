@@ -403,7 +403,7 @@ impl Driver {
         }
 
         // 4. swap negation
-        Ok(self.swap_negation(text))
+        self.try_swap_negation(text)
     }
 
     /// Resolves negation against the unified rule list.
@@ -442,7 +442,7 @@ impl Driver {
             }
         }
 
-        Ok(self.swap_negation(text))
+        self.try_swap_negation(text)
     }
 
     /// Resolves a [`NegationDefaultWithRule`]'s replacement command.
@@ -492,6 +492,18 @@ impl Driver {
         for exit_rule in &self.rules.sectional_exiting {
             if is_lineage_match(&exit_rule.match_rules) {
                 if !exit_rule.exit_text.is_empty() {
+                    // Python applies the Huawei VRP `exit` -> `quit` mapping in
+                    // `HuaweiVrpDriver.sectional_exit` *after* the rule lookup has
+                    // returned, so a rule that explicitly declares the generic
+                    // default still renders as the platform token. Route the literal
+                    // through the platform default to keep that parity; this is a
+                    // no-op for every platform except Huawei VRP. Compare against
+                    // `"exit"` exactly, matching Python's plain `==`.
+                    if exit_rule.exit_text == "exit" {
+                        return Some(
+                            crate::platforms::default_sectional_exit(self.platform).to_string(),
+                        );
+                    }
                     return Some(exit_rule.exit_text.clone());
                 }
                 return None;

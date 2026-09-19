@@ -11,6 +11,7 @@
 pub(crate) mod base;
 pub(crate) mod child;
 pub(crate) mod children;
+pub(crate) mod comments;
 pub(crate) mod errors;
 pub(crate) mod formats;
 pub(crate) mod root;
@@ -173,6 +174,7 @@ fn _hier_config_rust(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyHConfig>()?;
     m.add_class::<PyHConfigChildren>()?;
     m.add_class::<PyHConfigChildrenIter>()?;
+    m.add_class::<comments::PyNodeComments>()?;
     m.add_class::<workflow::PyWorkflowRemediation>()?;
     view::register(m)?;
     Ok(())

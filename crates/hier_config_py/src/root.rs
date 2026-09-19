@@ -8,6 +8,7 @@ use hier_config_core::{Platform, Tree};
 use pyo3::IntoPyObjectExt;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyFrozenSet, PyList, PySet, PyString, PyTuple, PyType};
+use pyo3::{PyTraverseError, PyVisit};
 
 use crate::base::PyHConfigBase;
 use crate::errors::to_py_err;
@@ -84,12 +85,17 @@ impl PyHConfig {
             return Ok(Platform::Generic);
         }
         // Platform is a str enum, so both enum members and explicit string
-        // selectors follow the same parsing path.
-        let value = selector.extract::<String>(py).map_err(|_| {
-            pyo3::exceptions::PyValueError::new_err(
-                "driver.platform must be a Platform, a platform string, or None",
-            )
-        })?;
+        // selectors follow the same parsing path. A non-string selector is
+        // rejected rather than coerced: `test_review_handles.py` pins that bad
+        // platform metadata must not silently fall back to Generic. Drivers
+        // that carry no platform (including test doubles) must say so with
+        // `platform = None`, which is handled above.
+        let Ok(value) = selector.extract::<String>(py) else {
+            return Err(pyo3::exceptions::PyValueError::new_err(format!(
+                "driver.platform must be a string or None, got {}",
+                selector.bind(py).get_type().name()?
+            )));
+        };
         value.parse::<Platform>().map_err(|_| {
             pyo3::exceptions::PyValueError::new_err(format!(
                 "unsupported driver.platform: {value:?}"
@@ -195,7 +201,11 @@ pub(crate) fn create_py_hconfig(
     let root_id = tree.root;
     let shared_tree = Arc::new(SharedTree::new(tree, platform));
     shared_tree.set_driver(driver_obj.clone_ref(py))?;
-    shared_tree.sync_rules(py)?;
+    // A test double (`MagicMock(spec=HConfigDriverBase)`) exposes only the
+    // attributes declared on the class, so `driver.rules` may be missing
+    // entirely. The stale check tolerates that and leaves the platform
+    // defaults in place instead of failing construction.
+    shared_tree.sync_rules_if_stale(py)?;
     let hconfig = Py::new(
         py,
         (
@@ -206,9 +216,7 @@ pub(crate) fn create_py_hconfig(
             },
         ),
     )?;
-    let mut handle = shared_tree.root_handle.write_py()?;
-    *handle = Some(hconfig.clone_ref(py).into_any());
-    drop(handle);
+    shared_tree.set_root_handle(hconfig.bind(py).as_any())?;
     Ok(hconfig)
 }
 
@@ -217,18 +225,31 @@ pub(crate) fn create_py_hconfig(
 impl PyHConfig {
     #[new]
     #[gen_stub(override_return_type(type_repr="typing_extensions.Self", imports=("typing_extensions")))]
-    #[pyo3(signature = (driver))]
+    #[pyo3(signature = (driver, *args, **kwargs))]
     fn new(
         py: Python<'_>,
         #[gen_stub(override_type(type_repr="hier_config.platforms.driver_base.HConfigDriverBase", imports=("hier_config.platforms.driver_base")))]
         driver: Py<PyAny>,
+        // A subclass may declare its own `__init__(self, driver, label)`. The
+        // native `__new__` runs first and with the same arguments, so a rigid
+        // signature would reject the subclass outright. Extra arguments belong
+        // to the subclass and are ignored here.
+        #[gen_stub(override_type(type_repr="builtins.object", imports=("builtins")))] args: &Bound<
+            '_,
+            PyTuple,
+        >,
+        #[gen_stub(override_type(type_repr="builtins.object", imports=("builtins")))]
+        kwargs: Option<&Bound<'_, PyDict>>,
     ) -> PyResult<(Self, PyHConfigBase)> {
+        let _ = (args, kwargs);
         let platform = Self::parse_platform(py, &driver)?;
         let tree = Tree::for_platform(platform);
         let root_id = tree.root;
         let shared_tree = Arc::new(SharedTree::new(tree, platform));
         shared_tree.set_driver(driver.clone_ref(py))?;
-        shared_tree.sync_rules(py)?;
+        // See `create_py_hconfig`: a driver without a `rules` attribute keeps
+        // the platform defaults rather than aborting construction.
+        shared_tree.sync_rules_if_stale(py)?;
 
         Ok((
             Self { driver_obj: driver },
@@ -239,17 +260,44 @@ impl PyHConfig {
         ))
     }
 
-    #[pyo3(signature = (driver))]
+    #[pyo3(signature = (driver, *args, **kwargs))]
     #[gen_stub(override_return_type(type_repr="None", imports=()))]
     fn __init__(
         slf: &Bound<'_, Self>,
         #[gen_stub(override_type(type_repr="hier_config.platforms.driver_base.HConfigDriverBase", imports=("hier_config.platforms.driver_base")))]
         driver: &Bound<'_, PyAny>,
+        #[gen_stub(override_type(type_repr="builtins.object", imports=("builtins")))] args: &Bound<
+            '_,
+            PyTuple,
+        >,
+        #[gen_stub(override_type(type_repr="builtins.object", imports=("builtins")))]
+        kwargs: Option<&Bound<'_, PyDict>>,
     ) -> PyResult<()> {
-        let _ = driver;
+        let _ = (driver, args, kwargs);
         let base_ref = slf.extract::<PyRef<'_, PyHConfigBase>>()?;
-        *base_ref.tree.root_handle.write_py()? = Some(slf.clone().unbind().into_any());
+        base_ref.tree.set_root_handle(slf.as_any())?;
         Ok(())
+    }
+
+    /// Lets `CPython`'s cycle collector see the Python objects this config owns.
+    ///
+    /// The tree itself is reachable only through a Rust `Arc`, which the
+    /// collector cannot traverse, so anything Python-owned that could close a
+    /// cycle has to be reported here.
+    #[gen_stub(skip)]
+    fn __traverse__(&self, visit: PyVisit<'_>) -> Result<(), PyTraverseError> {
+        visit.call(&self.driver_obj)
+    }
+
+    /// Breaks any cycle the collector found.
+    ///
+    /// The driver is the only strong Python reference held; the tree's own
+    /// handles are weak, so dropping this one is enough.
+    #[gen_stub(skip)]
+    fn __clear__(&mut self) {
+        Python::attach(|py| {
+            self.driver_obj = py.None();
+        });
     }
 
     #[getter]
@@ -265,15 +313,13 @@ impl PyHConfig {
     pub fn root(slf: PyRef<'_, Self>) -> PyResult<Py<PyAny>> {
         let py = slf.py();
         let tree = Arc::clone(&slf.as_ref().tree);
-        {
-            let handle = tree.root_handle.read_py()?;
-            if let Some(ref h) = *handle {
-                return Ok(h.clone_ref(py));
-            }
+        if let Some(handle) = tree.root_handle(py)? {
+            return Ok(handle);
         }
+        // The recorded handle is weak, so it is gone whenever no caller holds
+        // the config. `slf` is that config, so re-record it rather than failing.
         let obj = slf.into_py_any(py)?;
-        let mut handle = tree.root_handle.write_py()?;
-        *handle = Some(obj.clone_ref(py));
+        tree.set_root_handle(obj.bind(py))?;
         Ok(obj)
     }
 
@@ -785,9 +831,7 @@ impl PyHConfig {
                 },
             ),
         )?;
-        let mut handle = shared_tree.root_handle.write_py()?;
-        *handle = Some(hconfig.clone_ref(py).into_any());
-        drop(handle);
+        shared_tree.set_root_handle(hconfig.bind(py).as_any())?;
 
         let wrap = |ids: &[hier_config_core::NodeId]| -> PyResult<Vec<Py<PyAny>>> {
             ids.iter()
@@ -834,9 +878,7 @@ impl PyHConfig {
                 },
             ),
         )?;
-        let mut handle = shared_tree.root_handle.write_py()?;
-        *handle = Some(hconfig.clone_ref(py).into_any());
-        drop(handle);
+        shared_tree.set_root_handle(hconfig.bind(py).as_any())?;
         Ok(hconfig.into_any())
     }
 
@@ -925,6 +967,8 @@ impl PyHConfig {
     /// Sets self.order integer on all children.
     pub fn set_order_weight(slf: PyRef<'_, Self>) -> PyResult<PyRef<'_, Self>> {
         let base = slf.as_ref();
+        // Ordering rules may have been reassigned since the parse; honor them.
+        base.tree.sync_rules_if_stale(slf.py())?;
         {
             let mut tree = base.write_tree()?;
             tree.set_order_weight();
@@ -1095,7 +1139,6 @@ impl PyHConfig {
         // then pay five attribute round-trips on each of them.
         let ordered: Vec<DumpRow> = {
             let tree = base.read_tree()?;
-            let node_data = base.tree.node_data.read_py()?;
             // Every node under the root becomes one row, so the arena's own length is
             // an upper bound on the row count. Calling `all_children` purely to size
             // this would walk the whole tree an extra time and allocate a `Vec` to
@@ -1107,29 +1150,21 @@ impl PyHConfig {
             let empty_set: Py<PyAny> = PyFrozenSet::empty(py)?.into_any().unbind();
             for node_id in tree.all_children_sorted(base.node_id) {
                 let node = &tree.arena[node_id];
-                let tags = if node.tags().is_empty() {
+                // v3 dumped the recursive union of a node's own tags with its
+                // descendants', which is what `Tree::tags` computes.
+                let node_tags = tree.tags(node_id);
+                let tags = if node_tags.is_empty() {
                     empty_set.clone_ref(py)
                 } else {
-                    PyFrozenSet::new(py, node.tags().iter())?
-                        .into_any()
-                        .unbind()
+                    PyFrozenSet::new(py, node_tags.iter())?.into_any().unbind()
                 };
 
-                // Comments live in two places: the Rust node and, once Python has
-                // mutated them, the per-node Python set. Union both.
-                let py_comments = node_data.get(&node_id).and_then(|d| d.comments.as_ref());
-                let comments = match py_comments {
-                    Some(py_comments) => {
-                        let merged = PySet::new(py, node.comments().iter())?;
-                        for item in py_comments.bind(py).iter() {
-                            merged.add(item)?;
-                        }
-                        PyFrozenSet::new(py, merged.iter())?.into_any().unbind()
-                    }
-                    None if node.comments().is_empty() => empty_set.clone_ref(py),
-                    None => PyFrozenSet::new(py, node.comments().iter())?
+                let comments = if node.comments().is_empty() {
+                    empty_set.clone_ref(py)
+                } else {
+                    PyFrozenSet::new(py, node.comments().iter())?
                         .into_any()
-                        .unbind(),
+                        .unbind()
                 };
 
                 rows.push((
@@ -1149,10 +1184,7 @@ impl PyHConfig {
         // already the correct type because it came from the tree's own typed state.
         let builtins = py.import("builtins")?;
         let object_new = builtins.getattr("object")?.getattr("__new__")?;
-        let line_fields_set = PyFrozenSet::new(
-            py,
-            ["depth", "text", "tags", "comments", "new_in_config"].iter(),
-        )?;
+        let line_field_names = ["depth", "text", "tags", "comments", "new_in_config"];
         let none = py.None().into_bound(py);
 
         // Hoist everything that is identical on every line: the attribute names,
@@ -1195,7 +1227,13 @@ impl PyHConfig {
 
             let line = generic_new(line_type)?;
             generic_setattr(&line, &n_dict, fields.as_any())?;
-            generic_setattr(&line, &n_fields_set, line_fields_set.as_any())?;
+            // pydantic's `model_copy(update=...)` calls `.update()` on this, so it
+            // has to be a fresh mutable set rather than a shared frozenset.
+            generic_setattr(
+                &line,
+                &n_fields_set,
+                PySet::new(py, line_field_names.iter())?.as_any(),
+            )?;
             generic_setattr(&line, &n_extra, &none)?;
             generic_setattr(&line, &n_private, &none)?;
             lines.push(line);
@@ -1208,7 +1246,7 @@ impl PyHConfig {
         generic_setattr(
             &dump_obj,
             &n_fields_set,
-            PyFrozenSet::new(py, ["lines"].iter())?.as_any(),
+            PySet::new(py, ["lines"].iter())?.as_any(),
         )?;
         generic_setattr(&dump_obj, &n_extra, &none)?;
         generic_setattr(&dump_obj, &n_private, &none)?;
@@ -1243,7 +1281,6 @@ impl PyHConfig {
                         nid,
                         NodePyData {
                             facts: nd.facts.as_ref().map(|v| v.clone_ref(py)),
-                            comments: nd.comments.as_ref().map(|v| v.clone_ref(py)),
                             instances: nd.instances.as_ref().map(|v| v.clone_ref(py)),
                         },
                     )
@@ -1264,7 +1301,7 @@ impl PyHConfig {
                 },
             ),
         )?;
-        *new_shared_tree.root_handle.write_py()? = Some(new_conf.clone_ref(py).into_any());
+        new_shared_tree.set_root_handle(new_conf.bind(py).as_any())?;
         // Register the shell before traversing facts so back-references resolve to
         // this object, and carry the caller's memo through every recursive copy.
         memo.set_item(slf.as_ptr() as usize, new_conf.bind(py))?;
@@ -1274,9 +1311,6 @@ impl PyHConfig {
             if let Some(facts) = nd.facts {
                 copied.facts = Some(deepcopy.call1((facts, memo))?.extract()?);
             }
-            if let Some(comments) = nd.comments {
-                copied.comments = Some(deepcopy.call1((comments, memo))?.extract()?);
-            }
             if let Some(instances) = nd.instances {
                 copied.instances = Some(deepcopy.call1((instances, memo))?.extract()?);
             }
@@ -1285,14 +1319,45 @@ impl PyHConfig {
         Ok(new_conf)
     }
 
-    #[gen_stub(override_return_type(type_repr="tuple[collections.abc.Callable[..., HConfig], tuple[hier_config.platforms.driver_base.HConfigDriverBase, hier_config.models.Dump]]", imports=("collections.abc", "hier_config.platforms.driver_base", "hier_config.models")))]
+    #[gen_stub(override_return_type(type_repr="tuple[collections.abc.Callable[..., HConfig], tuple[hier_config.platforms.driver_base.HConfigDriverBase, hier_config.models.Dump, list[tuple[int, object, object, int]]]]", imports=("collections.abc", "hier_config.platforms.driver_base", "hier_config.models")))]
     pub fn __reduce__(slf: PyRef<'_, Self>) -> PyResult<Py<PyAny>> {
         let py = slf.py();
-        let constructors = py.import("hier_config.constructors")?;
-        let func = constructors.getattr("get_hconfig_from_dump")?;
         let driver = slf.driver_obj.clone_ref(py);
+        let base = slf.as_ref();
+
+        // `Dump` carries only depth/text/tags/comments/new_in_config, so anything
+        // else that lives on a node has to travel alongside it. Rows are keyed by
+        // position in `all_children_sorted`, which is exactly the order the dump
+        // lines are written in and the order the rebuild walks them back.
+        let extras = PyList::empty(py);
+        {
+            let node_data = base.tree.node_data.read_py()?;
+            let tree = base.read_tree()?;
+            for (index, node_id) in tree
+                .all_children_sorted(base.node_id)
+                .into_iter()
+                .enumerate()
+            {
+                let order_weight = tree.arena.get(node_id).map_or(0, |n| n.order_weight);
+                let data = node_data.get(&node_id);
+                let facts = data.and_then(|d| d.facts.as_ref());
+                let instances = data.and_then(|d| d.instances.as_ref());
+                if order_weight == 0 && facts.is_none() && instances.is_none() {
+                    continue;
+                }
+                extras.append((
+                    index,
+                    facts.map_or_else(|| py.None(), |f| f.clone_ref(py).into_any()),
+                    instances.map_or_else(|| py.None(), |i| i.clone_ref(py).into_any()),
+                    order_weight,
+                ))?;
+            }
+        }
+
         let dump = Self::dump(slf)?;
-        let args = PyTuple::new(py, vec![driver, dump])?;
+        let cls = py.get_type::<Self>();
+        let func = cls.getattr("_rebuild")?;
+        let args = PyTuple::new(py, vec![driver, dump, extras.into_any().unbind()])?;
         Ok(
             PyTuple::new(py, vec![func.into_any().unbind(), args.into_any().unbind()])?
                 .into_any()
@@ -1318,7 +1383,7 @@ impl PyHConfig {
         // subtree, so walking every descendant here would emit nested lines
         // twice. ``lines`` skips the root's own text and exit, making it
         // exactly equivalent.
-        Ok(slf.as_ref().lines(true)?.join("\n"))
+        Ok(slf.as_ref().lines(slf.py(), true)?.join("\n"))
     }
 
     #[gen_stub(override_return_type(type_repr="bool", imports=()))]
@@ -1364,5 +1429,61 @@ impl PyHConfig {
         let children = base.get_children_object(py)?;
         let h = children.bind(py).hash()?;
         Ok(h)
+    }
+
+    #[gen_stub(skip)]
+    /// Rebuilds a pickled configuration: the dump restores the tree, then the
+    /// extras restore the per-node state a `Dump` cannot carry.
+    #[staticmethod]
+    fn _rebuild(
+        py: Python<'_>,
+        driver: Py<PyAny>,
+        dump: Py<PyAny>,
+        extras: &Bound<'_, PyList>,
+    ) -> PyResult<Py<Self>> {
+        let constructors = py.import("hier_config.constructors")?;
+        let config: Py<Self> = constructors
+            .getattr("hconfig_from_dump")?
+            .call1((driver, dump))?
+            .extract()?;
+
+        if extras.is_empty() {
+            return Ok(config);
+        }
+
+        let bound = config.bind(py);
+        let borrowed = bound.borrow();
+        let base = borrowed.as_ref();
+        let by_index: Vec<_> = {
+            let tree = base.read_tree()?;
+            tree.all_children_sorted(base.node_id)
+        };
+
+        for row in extras.iter() {
+            let (index, facts, instances, order_weight): (usize, Py<PyAny>, Py<PyAny>, i32) =
+                row.extract()?;
+            let Some(&node_id) = by_index.get(index) else {
+                continue;
+            };
+            if order_weight != 0 {
+                let mut tree = base.tree.write_node(node_id)?;
+                if let Some(node) = tree.arena.get_mut(node_id) {
+                    node.order_weight = order_weight;
+                }
+            }
+            if facts.is_none(py) && instances.is_none(py) {
+                continue;
+            }
+            let mut data = base.tree.node_data.write_py()?;
+            let entry = data.entry(node_id).or_default();
+            if !facts.is_none(py) {
+                entry.facts = Some(facts.extract(py)?);
+            }
+            if !instances.is_none(py) {
+                entry.instances = Some(instances.extract(py)?);
+            }
+        }
+        drop(borrowed);
+        Ok(config)
     }
 }

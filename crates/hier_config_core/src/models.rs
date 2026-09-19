@@ -40,13 +40,27 @@ impl StringPattern {
 }
 
 fn matches_regex(pattern: &str, text: &str) -> bool {
-    if let Some(re) = crate::regex_cache::regex(pattern) {
-        re.is_match(text)
-    } else if let Some(re) = crate::regex_cache::fancy(pattern) {
-        re.is_match(text).unwrap_or(false)
-    } else {
-        false
+    match crate::regex_cache::MatchRegex::cached(pattern) {
+        Ok(re) => re.is_match(text).unwrap_or_else(|error| {
+            // A bounded-backtracking failure is not a match, but swallowing it
+            // silently hides a broken rule; surface it on stderr like the other
+            // best-effort paths in this crate.
+            log_regex_failure(&error);
+            false
+        }),
+        Err(error) => {
+            log_regex_failure(&error);
+            false
+        }
     }
+}
+
+/// Reports a regex that could not be compiled or evaluated.
+///
+/// `matches_regex` is used from boolean rule-matching contexts whose signatures
+/// cannot carry a `Result`, so the failure is reported here instead of vanishing.
+fn log_regex_failure(error: &str) {
+    eprintln!("hier_config: {error}");
 }
 
 impl From<&str> for StringPattern {

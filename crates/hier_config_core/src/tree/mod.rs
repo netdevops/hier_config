@@ -19,6 +19,7 @@ pub enum TreeError {
     InvalidParent(NodeId),
     UnterminatedBanner(String),
     InvalidRegex(String),
+    MaxDepthExceeded(usize),
 }
 
 impl std::fmt::Display for TreeError {
@@ -29,6 +30,11 @@ impl std::fmt::Display for TreeError {
             Self::NodeNotFound(id) => write!(f, "Node not found: {id:?}"),
             Self::InvalidParent(id) => write!(f, "Invalid parent: {id:?}"),
             Self::InvalidRegex(message) => write!(f, "Invalid regex rule: {message}"),
+            Self::MaxDepthExceeded(limit) => write!(
+                f,
+                "Maximum configuration depth of {limit} exceeded; the configuration \
+is nested too deeply to process"
+            ),
             Self::UnterminatedBanner(text) => write!(
                 f,
                 "Unterminated banner: we are still in a banner for some reason at \
@@ -40,6 +46,46 @@ their delimiter or by a '!' line."
 }
 
 impl std::error::Error for TreeError {}
+
+/// Maximum depth a configuration tree may reach, counting the root as depth 0.
+///
+/// Several traversals over the tree (XML serialization, remediation, dumping) are
+/// written recursively, so an arbitrarily deep tree overflows the thread stack and
+/// kills the process with SIGSEGV rather than raising something a caller can catch.
+/// Real configurations nest a handful of levels; a few pathological platform rules
+/// (`indent_adjust`, e.g. Huawei `rsa peer-public-key`) can add one level per line,
+/// so a hostile or corrupt input can nest without bound. 1,000 is far above any
+/// genuine configuration yet leaves ample headroom under the 8 MiB default stack
+/// for those recursive walks, turning the crash into a [`TreeError::MaxDepthExceeded`].
+pub const MAX_TREE_DEPTH: usize = 1_000;
+
+/// Substitutes `{name}` in a reference pattern and unescapes literal `{{`/`}}`.
+///
+/// Done in a single left-to-right pass so that a doubled placeholder such as
+/// `{{name}}` collapses to the literal text `{name}` instead of being mangled by
+/// substituting the inner `{name}` first.
+fn expand_reference_re(reference_re: &str, escaped_name: &str) -> String {
+    let mut out = String::with_capacity(reference_re.len() + escaped_name.len());
+    let mut rest = reference_re;
+    while !rest.is_empty() {
+        if let Some(tail) = rest.strip_prefix("{{") {
+            out.push('{');
+            rest = tail;
+        } else if let Some(tail) = rest.strip_prefix("}}") {
+            out.push('}');
+            rest = tail;
+        } else if let Some(tail) = rest.strip_prefix("{name}") {
+            out.push_str(escaped_name);
+            rest = tail;
+        } else {
+            let mut chars = rest.chars();
+            let character = chars.next().expect("rest is non-empty");
+            out.push(character);
+            rest = chars.as_str();
+        }
+    }
+    out
+}
 
 /// An arena-backed hierarchical configuration tree.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -182,6 +228,29 @@ impl Tree {
         count
     }
 
+    /// Returns `true` when `node_id` is at least `limit` levels below the root.
+    ///
+    /// Walks at most `limit` links so the check stays cheap on shallow trees and
+    /// bounded on pathological ones.
+    fn depth_at_least(&self, node_id: NodeId, limit: usize) -> bool {
+        if limit == 0 {
+            return true;
+        }
+        let mut seen = 0;
+        let mut curr = Some(node_id);
+        while let Some(id) = curr {
+            if id == self.root {
+                return false;
+            }
+            seen += 1;
+            if seen >= limit {
+                return true;
+            }
+            curr = self.arena.get(id).and_then(|node| node.parent);
+        }
+        false
+    }
+
     /// Yields ancestor `NodeId`s starting from the top-level child down to `node_id`.
     pub fn lineage(&self, node_id: NodeId) -> Vec<NodeId> {
         if node_id == self.root || !self.arena.contains(node_id) {
@@ -253,6 +322,13 @@ impl Tree {
 
         if !self.arena.contains(parent_id) {
             return Err(TreeError::InvalidParent(parent_id));
+        }
+
+        // Central depth guard: every node in the tree is created here, so bounding
+        // depth once keeps the recursive traversals (XML, remediation, dumping)
+        // from overflowing the stack. See `MAX_TREE_DEPTH`.
+        if self.depth_at_least(parent_id, MAX_TREE_DEPTH) {
+            return Err(TreeError::MaxDepthExceeded(MAX_TREE_DEPTH));
         }
 
         if check_if_present && let Some(existing_id) = self.arena[parent_id].children.get(trimmed) {
@@ -1062,7 +1138,7 @@ impl Tree {
     ) -> Result<bool, TreeError> {
         let escaped = regex::escape(name);
         for loc in locations {
-            let pattern = loc.reference_re.replace("{name}", &escaped);
+            let pattern = expand_reference_re(&loc.reference_re, &escaped);
             // The object name is interpolated into the pattern, so each distinct name
             // yields a unique pattern that would never be a cache hit. Routing these
             // through the shared cache would evict reusable patterns, so compile

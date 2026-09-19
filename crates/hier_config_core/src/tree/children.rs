@@ -1,11 +1,18 @@
 use crate::arena::{Arena, NodeId};
 use crate::tree::node::Node;
-use rustc_hash::FxHashMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::sync::Arc;
 
 /// Text-keyed index from a child's text to the *first* child that carries it.
-type Mapping = FxHashMap<Arc<str>, NodeId>;
+///
+/// This deliberately uses `std::collections::HashMap` and its randomly seeded
+/// `RandomState` rather than the faster `FxHashMap` used elsewhere in the crate:
+/// the keys here are raw configuration lines, which are attacker-controlled. Fx's
+/// hasher is fixed and unseeded, so a crafted configuration could force every line
+/// into one bucket and degrade insertion to O(n^2). Maps keyed by internal
+/// integers/`NodeId`s are not reachable this way and keep using `FxHashMap`.
+type Mapping = HashMap<Arc<str>, NodeId>;
 
 /// Ordered collection of child `NodeId`s with fast text-keyed lookup.
 ///

@@ -219,17 +219,19 @@ def test_callbacks_registered_through_instantiate_rules_override() -> None:
     assert config.dump_simple() == ("hostname sw1", "from-subclass")
 
 
-def test_callbacks_run_on_the_empty_config_for_get_hconfig_from_dump() -> None:
-    """``get_hconfig_from_dump`` runs callbacks over the reconstructed tree.
+def test_callbacks_do_not_run_for_get_hconfig_from_dump() -> None:
+    """``get_hconfig_from_dump`` rebuilds a tree verbatim, without callbacks.
 
-    Callbacks exist to normalize parsed configuration, so they must observe the
-    dumped lines rather than the empty tree the constructor starts from.
+    A dump is an already-normalized serialization, so replaying post-load
+    callbacks over it would re-normalize data that was faithfully round-tripped
+    and silently corrupt the reconstructed tree.
     """
     driver = _driver()
     observed: list[tuple[str, ...]] = []
 
     def _callback(config: HConfig) -> None:
         observed.append(config.dump_simple())
+        config.add_child("added-by-callback")
 
     driver.rules.post_load_callbacks.append(_callback)
     dump = Dump(
@@ -245,8 +247,26 @@ def test_callbacks_run_on_the_empty_config_for_get_hconfig_from_dump() -> None:
     )
     config = get_hconfig_from_dump(driver, dump)
 
-    assert observed == [("hostname sw1",)]
+    assert not observed
     assert config.dump_simple() == ("hostname sw1",)
+
+
+def test_get_hconfig_from_dump_round_trips_callback_mutated_config() -> None:
+    """A parsed config survives a dump round-trip unchanged.
+
+    The IOS driver rewrites ACL lines during post-load. Replaying those
+    callbacks on the reconstructed tree would apply the rewrite a second time,
+    so the round-trip is the regression guard for that.
+    """
+    driver = get_hconfig_driver(Platform.CISCO_IOS)
+    original = get_hconfig(
+        driver,
+        "ip access-list extended TEST\n  permit ip any any\n",
+    )
+
+    restored = get_hconfig_from_dump(driver, original.dump())
+
+    assert restored.dump_simple() == original.dump_simple()
 
 
 def test_custom_callback_can_delete_children() -> None:

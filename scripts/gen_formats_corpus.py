@@ -74,6 +74,83 @@ NATIVE_PROVENANCE: dict[str, object] = {
     "reason": "The pure-Python driver cannot remediate unflattened format trees",
 }
 DERIVED_SECTIONS = ("json", "xml", "netconf", "gnmi")
+
+# Tail of the Junos swap error. The doubled space is real: ``negation_prefix``
+# is ``"delete "`` and ``declaration_prefix`` is ``"set "``.
+JUNOS_SWAP_ERROR_SUFFIX = "did not start with delete  or set ."
+
+# Native-only cases whose recorded remediation the Junos negation fix withdrew.
+#
+# Junos negation of a line starting with neither ``set `` nor ``delete ``
+# raises in the pure-Python baseline, which draws no distinction between CLI
+# text and structured-format element names. The permissive fallback removed
+# from the native driver emitted the line as its own negation instead, which
+# is wrong on the wire: it told the device to set the value it should remove.
+#
+# ``native-v1.json`` is frozen parity-free evidence and is never regenerated,
+# so these keys stay in the snapshot and are withdrawn at comparison time.
+# The list is asserted to be exhaustive: a case that starts remediating again,
+# or one that fails any other way, fails the check rather than passing quietly.
+# It mirrors ``WITHDRAWN_NATIVE_CASES`` in
+# ``crates/hier_config_core/tests/formats_corpus.rs``.
+WITHDRAWN_NATIVE_CASES: frozenset[tuple[str, str]] = frozenset(
+    (
+        ("netconf", "attrs|JUNIPER_JUNOS|('id',)"),
+        ("netconf", "attrs|JUNIPER_JUNOS|('name', 'id')"),
+        ("netconf", "attrs|JUNIPER_JUNOS|('name', 'id', 'key')"),
+        ("netconf", "attrs|JUNIPER_JUNOS|None"),
+        ("netconf", "escapes|JUNIPER_JUNOS|('id',)"),
+        ("netconf", "escapes|JUNIPER_JUNOS|('name', 'id')"),
+        ("netconf", "escapes|JUNIPER_JUNOS|('name', 'id', 'key')"),
+        ("netconf", "escapes|JUNIPER_JUNOS|None"),
+        ("netconf", "mixed-text|JUNIPER_JUNOS|('id',)"),
+        ("netconf", "mixed-text|JUNIPER_JUNOS|('name', 'id')"),
+        ("netconf", "mixed-text|JUNIPER_JUNOS|('name', 'id', 'key')"),
+        ("netconf", "mixed-text|JUNIPER_JUNOS|None"),
+        ("netconf", "nested|JUNIPER_JUNOS|('id',)"),
+        ("netconf", "nested|JUNIPER_JUNOS|('name', 'id')"),
+        ("netconf", "nested|JUNIPER_JUNOS|('name', 'id', 'key')"),
+        ("netconf", "nested|JUNIPER_JUNOS|None"),
+        ("netconf", "repeated|JUNIPER_JUNOS|('name', 'id')"),
+        ("netconf", "repeated|JUNIPER_JUNOS|('name', 'id', 'key')"),
+        ("netconf", "repeated|JUNIPER_JUNOS|None"),
+        ("netconf", "simple|JUNIPER_JUNOS|('id',)"),
+        ("netconf", "simple|JUNIPER_JUNOS|('name', 'id')"),
+        ("netconf", "simple|JUNIPER_JUNOS|('name', 'id', 'key')"),
+        ("netconf", "simple|JUNIPER_JUNOS|None"),
+        ("netconf", "single-keyed|JUNIPER_JUNOS|('id',)"),
+        ("netconf", "single-keyed|JUNIPER_JUNOS|('name', 'id')"),
+        ("netconf", "single-keyed|JUNIPER_JUNOS|('name', 'id', 'key')"),
+        ("netconf", "single-keyed|JUNIPER_JUNOS|None"),
+        ("gnmi", "id-keyed|JUNIPER_JUNOS|('id',)"),
+        ("gnmi", "id-keyed|JUNIPER_JUNOS|('name', 'id')"),
+        ("gnmi", "id-keyed|JUNIPER_JUNOS|('name', 'id', 'key')"),
+        ("gnmi", "id-keyed|JUNIPER_JUNOS|None"),
+        ("gnmi", "keyed-list|JUNIPER_JUNOS|('name', 'id')"),
+        ("gnmi", "keyed-list|JUNIPER_JUNOS|('name', 'id', 'key')"),
+        ("gnmi", "keyed-list|JUNIPER_JUNOS|None"),
+        ("gnmi", "nested|JUNIPER_JUNOS|('id',)"),
+        ("gnmi", "nested|JUNIPER_JUNOS|('name', 'id')"),
+        ("gnmi", "nested|JUNIPER_JUNOS|('name', 'id', 'key')"),
+        ("gnmi", "nested|JUNIPER_JUNOS|None"),
+        ("gnmi", "scalar-list|JUNIPER_JUNOS|('id',)"),
+        ("gnmi", "scalar-list|JUNIPER_JUNOS|('name', 'id')"),
+        ("gnmi", "scalar-list|JUNIPER_JUNOS|('name', 'id', 'key')"),
+        ("gnmi", "scalar-list|JUNIPER_JUNOS|None"),
+        ("gnmi", "scalars|JUNIPER_JUNOS|('id',)"),
+        ("gnmi", "scalars|JUNIPER_JUNOS|('name', 'id')"),
+        ("gnmi", "scalars|JUNIPER_JUNOS|('name', 'id', 'key')"),
+        ("gnmi", "scalars|JUNIPER_JUNOS|None"),
+        ("gnmi", "special-chars|JUNIPER_JUNOS|('id',)"),
+        ("gnmi", "special-chars|JUNIPER_JUNOS|('name', 'id')"),
+        ("gnmi", "special-chars|JUNIPER_JUNOS|('name', 'id', 'key')"),
+        ("gnmi", "special-chars|JUNIPER_JUNOS|None"),
+        ("gnmi", "unicode|JUNIPER_JUNOS|('id',)"),
+        ("gnmi", "unicode|JUNIPER_JUNOS|('name', 'id')"),
+        ("gnmi", "unicode|JUNIPER_JUNOS|('name', 'id', 'key')"),
+        ("gnmi", "unicode|JUNIPER_JUNOS|None"),
+    )
+)
 KEY_SETS: tuple[tuple[str, ...] | None, ...] = (
     None,
     ("name", "id"),
@@ -177,6 +254,23 @@ def _case_key(name: str, platform: Platform, keys: tuple[str, ...] | None) -> st
     return f"{name}|{platform.name}|{keys!r}"
 
 
+def _remediate(running: HConfig, target: HConfig, platform: Platform) -> HConfig | None:
+    """Remediate, withdrawing the cases the Junos negation fix stopped emitting.
+
+    Returns ``None`` only for the Junos swap error on ``JUNIPER_JUNOS``. Any
+    other ``ValueError``, and the same error on any other platform, propagates
+    so an unrelated regression cannot masquerade as a withdrawn case.
+    """
+    try:
+        return running.config_to_get_to(target)
+    except ValueError as error:
+        if platform is not Platform.JUNIPER_JUNOS or not str(error).endswith(
+            JUNOS_SWAP_ERROR_SUFFIX
+        ):
+            raise
+        return None
+
+
 def _json_case(
     platform: Platform,
     keys: tuple[str, ...] | None,
@@ -200,7 +294,9 @@ def _json_case(
         target = hconfig_from_json(platform, target_source, list_keys=keys)
     except HierConfigError:
         return parsed, None
-    remediation = running.config_to_get_to(target)
+    remediation = _remediate(running, target, platform)
+    if remediation is None:
+        return parsed, None
     return parsed, {
         "remediation": list(remediation.dump_simple()),
         "no_running": cap(lambda: _gnmi(remediation, None, keys)),
@@ -230,7 +326,9 @@ def _xml_case(
         target = hconfig_from_xml(platform, target_source, list_keys=keys)
     except HierConfigError:
         return parsed, None
-    remediation = running.config_to_get_to(target)
+    remediation = _remediate(running, target, platform)
+    if remediation is None:
+        return parsed, None
     return parsed, {
         "remediation": list(remediation.dump_simple()),
         "no_running": cap(lambda: hconfig_to_netconf_xml(remediation, list_keys=keys)),
@@ -325,6 +423,7 @@ def check_snapshot(
     path: Path,
     actual: dict[str, dict[str, object]],
     provenance: dict[str, object],
+    withdrawn: frozenset[tuple[str, str]] = frozenset(),
 ) -> bool:
     """Compare without rewriting a snapshot or trusting its provenance blindly."""
     expected = TypeAdapter(dict[str, dict[str, object]]).validate_json(
@@ -333,12 +432,50 @@ def check_snapshot(
     if expected.pop("_provenance", None) != provenance:
         sys.stderr.write(f"{path}: missing or unexpected frozen provenance\n")
         return False
+    if not _withdraw(path, expected, actual, withdrawn):
+        return False
     if normalize_outcomes(expected) != normalize_outcomes(actual):
         sys.stderr.write(
             f"{path}: implementation differs from frozen expectations; "
             "investigate the behavior, do not regenerate from the failing backend\n"
         )
         return False
+    return True
+
+
+def _withdraw(
+    path: Path,
+    expected: dict[str, dict[str, object]],
+    actual: dict[str, dict[str, object]],
+    withdrawn: frozenset[tuple[str, str]],
+) -> bool:
+    """Drop withdrawn keys from a frozen snapshot, asserting the list is exact.
+
+    The frozen snapshot is never regenerated, so cases the implementation
+    deliberately stopped emitting are removed here instead. Requiring the
+    observed gap to equal ``withdrawn`` exactly means a case that starts
+    emitting again, or any other case that disappears, still fails.
+    """
+    missing = frozenset(
+        (section, key)
+        for section, cases in expected.items()
+        for key in cases
+        if key not in actual.get(section, {})
+    )
+    if missing != withdrawn:
+        for section, key in sorted(withdrawn - missing):
+            sys.stderr.write(
+                f"{path}: {section}/{key} is listed as withdrawn but was emitted; "
+                "remove it from the withdrawn list if the behavior is intended\n"
+            )
+        for section, key in sorted(missing - withdrawn):
+            sys.stderr.write(
+                f"{path}: {section}/{key} vanished from the implementation and is "
+                "not a known withdrawal; investigate the behavior\n"
+            )
+        return False
+    for section, key in withdrawn:
+        del expected[section][key]
     return True
 
 
@@ -365,6 +502,7 @@ def main() -> int:
             NATIVE_CORPUS,
             {section: native[section] for section in DERIVED_SECTIONS},
             NATIVE_PROVENANCE,
+            WITHDRAWN_NATIVE_CASES,
         )
         return 0 if parity_matches and native_matches else 1
 

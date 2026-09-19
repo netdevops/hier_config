@@ -5,8 +5,9 @@ use std::sync::{Arc, OnceLock};
 
 use hier_config_core::models::{Platform, TagRule};
 use hier_config_core::tree::Tree;
+use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
-use pyo3::types::{PyTuple, PyType};
+use pyo3::types::{PyDict, PyTuple, PyType};
 
 use crate::base::{PyHConfigBase, extract_strings, parse_match_rules_seq};
 use crate::errors::to_py_err;
@@ -58,7 +59,7 @@ fn parse_platform_arg(platform_val: &Bound<'_, PyAny>) -> PyResult<Platform> {
             pyo3::exceptions::PyValueError::new_err(format!("unknown platform '{s}': {e}"))
         });
     }
-    Err(pyo3::exceptions::PyTypeError::new_err(
+    Err(PyTypeError::new_err(
         "expected Platform enum or str for platform",
     ))
 }
@@ -76,6 +77,32 @@ fn incompatible_driver_error(py: Python<'_>, message: &str) -> PyErr {
         ),
         Err(err) => err,
     }
+}
+
+/// Validates the `plugins` argument and materialises it as a tuple.
+fn collect_plugins(py: Python<'_>, plugins: Option<&Bound<'_, PyAny>>) -> PyResult<Py<PyTuple>> {
+    let Some(obj) = plugins.filter(|obj| !obj.is_none()) else {
+        return Ok(PyTuple::empty(py).unbind());
+    };
+    let iter = obj.try_iter().map_err(|_| {
+        PyTypeError::new_err(format!(
+            "plugins must be an iterable of callables, got {}",
+            obj.get_type()
+                .name()
+                .map_or_else(|_| "<unknown>".to_string(), |name| name.to_string())
+        ))
+    })?;
+    let mut collected = Vec::new();
+    for item in iter {
+        let item = item?;
+        if !item.is_callable() {
+            return Err(PyTypeError::new_err(
+                "plugins must be an iterable of callables",
+            ));
+        }
+        collected.push(item);
+    }
+    Ok(PyTuple::new(py, collected)?.unbind())
 }
 
 /// Native implementation of remediation and rollback workflow.
@@ -136,11 +163,15 @@ pub struct PyWorkflowRemediation {
 #[pyo3_stub_gen::derive::gen_stub_pymethods]
 #[pymethods]
 impl PyWorkflowRemediation {
+    // `#[classmethod]` is what makes PyO3 hand the actual subtype to `__new__`
+    // (see `FnType::FnNewClass`). It must precede `#[new]` so the stub
+    // generator still records this as the `__new__` constructor.
+    #[classmethod]
     #[new]
     #[gen_stub(override_return_type(type_repr="typing_extensions.Self", imports=("typing_extensions")))]
-    #[pyo3(signature = (running_config, generated_config, plugins = None))]
+    #[pyo3(signature = (running_config, generated_config, plugins = None, *args, **kwargs))]
     fn new(
-        py: Python<'_>,
+        cls: &Bound<'_, PyType>,
         #[gen_stub(override_type(type_repr="HConfig", imports=()))] running_config: &Bound<
             '_,
             PyAny,
@@ -151,7 +182,17 @@ impl PyWorkflowRemediation {
         >,
         #[gen_stub(override_type(type_repr="collections.abc.Iterable[collections.abc.Callable[[HConfig], None]] | None", imports=("collections.abc")))]
         plugins: Option<&Bound<'_, PyAny>>,
+        // Subclasses are free to declare extra `__init__` parameters; the native
+        // `__new__` runs first, so it has to tolerate them.
+        #[gen_stub(override_type(type_repr="builtins.object", imports=("builtins")))] args: &Bound<
+            '_,
+            PyTuple,
+        >,
+        #[gen_stub(override_type(type_repr="builtins.object", imports=("builtins")))]
+        kwargs: Option<&Bound<'_, PyDict>>,
     ) -> PyResult<Self> {
+        let _ = (args, kwargs);
+        let py = cls.py();
         let running: Py<PyHConfig> = running_config.extract()?;
         let generated: Py<PyHConfig> = generated_config.extract()?;
 
@@ -166,15 +207,19 @@ impl PyWorkflowRemediation {
             ));
         }
 
-        let plugins = match plugins {
-            Some(obj) => {
-                let mut collected = Vec::new();
-                for item in obj.try_iter()? {
-                    collected.push(item?);
+        // The base class keeps the `plugins` contract strict. A proper subclass
+        // may repurpose the third positional parameter for its own `__init__`
+        // signature (PyO3 forwards the full original argument tuple to
+        // `__new__`), so an unusable value there is ignored the same way the
+        // trailing `*args` are, rather than raising.
+        let plugins = match collect_plugins(py, plugins) {
+            Ok(plugins) => plugins,
+            Err(err) => {
+                if cls.is(PyType::new::<Self>(py)) {
+                    return Err(err);
                 }
-                PyTuple::new(py, collected)?.unbind()
+                PyTuple::empty(py).unbind()
             }
-            None => PyTuple::empty(py).unbind(),
         };
 
         Ok(Self {
@@ -186,7 +231,7 @@ impl PyWorkflowRemediation {
         })
     }
 
-    #[pyo3(signature = (running_config, generated_config, plugins = None))]
+    #[pyo3(signature = (running_config, generated_config, plugins = None, *args, **kwargs))]
     #[allow(
         clippy::missing_const_for_fn,
         clippy::unnecessary_wraps,
@@ -205,8 +250,14 @@ impl PyWorkflowRemediation {
         >,
         #[gen_stub(override_type(type_repr="collections.abc.Iterable[collections.abc.Callable[[HConfig], None]] | None", imports=("collections.abc")))]
         plugins: Option<&Bound<'_, PyAny>>,
+        #[gen_stub(override_type(type_repr="builtins.object", imports=("builtins")))] args: &Bound<
+            '_,
+            PyTuple,
+        >,
+        #[gen_stub(override_type(type_repr="builtins.object", imports=("builtins")))]
+        kwargs: Option<&Bound<'_, PyDict>>,
     ) -> PyResult<()> {
-        let _ = (slf, running_config, generated_config, plugins);
+        let _ = (slf, running_config, generated_config, plugins, args, kwargs);
         Ok(())
     }
 
@@ -508,5 +559,28 @@ impl PyWorkflowRemediation {
         exclude_tags: Option<&Bound<'_, PyAny>>,
     ) -> PyResult<String> {
         self.rollback_text(py, include_tags, exclude_tags)
+    }
+
+    #[gen_stub(skip)]
+    /// Pickles the workflow through its own constructor arguments, so the two
+    /// configurations keep the pickling behaviour they define themselves.
+    fn __reduce__(slf: &Bound<'_, Self>) -> PyResult<Py<PyAny>> {
+        let py = slf.py();
+        let borrowed = slf.borrow();
+        let args = PyTuple::new(
+            py,
+            vec![
+                borrowed.running_config.clone_ref(py).into_any(),
+                borrowed.generated_config.clone_ref(py).into_any(),
+                borrowed.plugins.clone_ref(py).into_any(),
+            ],
+        )?;
+        drop(borrowed);
+        let cls = slf.get_type();
+        Ok(
+            PyTuple::new(py, vec![cls.into_any().unbind(), args.into_any().unbind()])?
+                .into_any()
+                .unbind(),
+        )
     }
 }

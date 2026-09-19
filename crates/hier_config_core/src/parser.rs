@@ -285,8 +285,71 @@ fn is_already_normalized(rest: &[u8]) -> bool {
     !prev_space
 }
 
+/// Byte length of the leading whitespace run in `line`.
+///
+/// Both loaders derive a line's indentation from this, so tab-, NBSP- or
+/// U+2028-indented lines nest identically no matter which parser ran. Counting
+/// bytes (not characters) keeps the result usable as a slice index and matches the
+/// number of spaces `normalize_whitespace` re-emits.
+pub(crate) fn leading_whitespace_len(line: &str) -> usize {
+    line.len() - line.trim_start().len()
+}
+
+/// Returns `true` for the characters Python's `str.splitlines()` treats as line
+/// boundaries but `str::lines()` ignores.
+const fn is_line_boundary(character: char) -> bool {
+    matches!(
+        character,
+        '\n' | '\r'
+            | '\u{0b}'
+            | '\u{0c}'
+            | '\u{1c}'
+            | '\u{1d}'
+            | '\u{1e}'
+            | '\u{85}'
+            | '\u{2028}'
+            | '\u{2029}'
+    )
+}
+
+/// Iterator returned by [`splitlines`].
+#[derive(Debug, Clone)]
+pub struct SplitLines<'a> {
+    rest: Option<&'a str>,
+}
+
+impl<'a> Iterator for SplitLines<'a> {
+    type Item = &'a str;
+
+    fn next(&mut self) -> Option<&'a str> {
+        let rest = self.rest?;
+        let Some((index, character)) = rest.char_indices().find(|(_, c)| is_line_boundary(*c))
+        else {
+            self.rest = None;
+            return (!rest.is_empty()).then_some(rest);
+        };
+        let line = &rest[..index];
+        let mut next_start = index + character.len_utf8();
+        if character == '\r' && rest[next_start..].starts_with('\n') {
+            next_start += 1;
+        }
+        self.rest = Some(&rest[next_start..]);
+        Some(line)
+    }
+}
+
+/// Splits `text` into lines the way Python's `str.splitlines()` does.
+///
+/// `str::lines()` only breaks on `\n` and `\r\n`; the v3 Python implementation also
+/// breaks on a lone `\r`, the vertical tab/form feed family and the Unicode
+/// NEL/LS/PS separators, so a config using any of them must not collapse into one
+/// giant line here.
+pub const fn splitlines(text: &str) -> SplitLines<'_> {
+    SplitLines { rest: Some(text) }
+}
+
 fn normalize_whitespace<'a>(raw_line: &'a str, buffer: &'a mut String) -> &'a str {
-    let leading_spaces = raw_line.len() - raw_line.trim_start_matches(' ').len();
+    let leading_spaces = leading_whitespace_len(raw_line);
     if is_already_normalized(&raw_line.as_bytes()[leading_spaces..]) {
         raw_line
     } else {
@@ -479,9 +542,9 @@ pub fn parse_into_tree(tree: &mut Tree, config_raw: &str) -> Result<(), TreeErro
 
     // Most lines become a node, so sizing the arena up front avoids repeatedly
     // reallocating and copying the node table while parsing a large configuration.
-    tree.arena.reserve(config_text.lines().count());
+    tree.arena.reserve(splitlines(&config_text).count());
 
-    for raw_line in config_text.lines() {
+    for raw_line in splitlines(&config_text) {
         if state.banner.in_banner {
             state.handle_banner_continuation(tree, raw_line)?;
             continue;
@@ -498,8 +561,7 @@ pub fn parse_into_tree(tree: &mut Tree, config_raw: &str) -> Result<(), TreeErro
             continue;
         }
 
-        let actual_indent =
-            line_trimmed_right.len() - line_trimmed_right.trim_start_matches(' ').len();
+        let actual_indent = leading_whitespace_len(line_trimmed_right);
         let this_indent = i32::try_from(actual_indent).unwrap_or(i32::MAX) + state.indent.adjust;
         let line_content = line_trimmed_right.trim_start();
 
@@ -561,8 +623,7 @@ pub fn load_fast(tree: &mut Tree, lines: &[&str], run_post_load: bool) -> Result
             continue;
         }
 
-        let indent =
-            i32::try_from(processed_line.len() - processed_trimmed.len()).unwrap_or(i32::MAX);
+        let indent = i32::try_from(leading_whitespace_len(&processed_line)).unwrap_or(i32::MAX);
 
         // Mirrors the full parser: lines that already have single-space separators and
         // no trailing whitespace — nearly all of them — are borrowed as-is instead of

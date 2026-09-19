@@ -375,6 +375,33 @@ fn escape_attribute(out: &mut String, text: &str) {
     }
 }
 
+/// Handles an `Event::Start`, enforcing the document-element and nesting-depth
+/// invariants before pushing the new element onto `stack`.
+fn push_start(
+    stack: &mut Vec<Element>,
+    root: Option<&Element>,
+    start: &quick_xml::events::BytesStart<'_>,
+    resolver: &NamespaceResolver,
+) -> Result<(), FormatError> {
+    if stack.is_empty() && root.is_some() {
+        return Err(FormatError::Invalid(
+            "The config is not valid XML: junk after document element".to_owned(),
+        ));
+    }
+    // Bound nesting before the element tree is built: both the recursive walk in
+    // `element_into` and `Element`'s recursive drop glue overflow the stack
+    // (SIGSEGV) on deeply nested documents.
+    if stack.len() >= crate::tree::MAX_TREE_DEPTH {
+        return Err(FormatError::Invalid(format!(
+            "The config is not valid XML: nesting exceeds the maximum \
+supported depth of {}",
+            crate::tree::MAX_TREE_DEPTH
+        )));
+    }
+    stack.push(open(start, resolver)?);
+    Ok(())
+}
+
 fn parse(source: &str) -> Result<Element, FormatError> {
     let mut reader = quick_xml::NsReader::from_str(source);
     reader.config_mut().trim_text(false);
@@ -387,12 +414,7 @@ fn parse(source: &str) -> Result<Element, FormatError> {
         })?;
         match event {
             Event::Start(start) => {
-                if stack.is_empty() && root.is_some() {
-                    return Err(FormatError::Invalid(
-                        "The config is not valid XML: junk after document element".to_owned(),
-                    ));
-                }
-                stack.push(open(&start, reader.resolver())?);
+                push_start(&mut stack, root.as_ref(), &start, reader.resolver())?;
             }
             Event::Empty(start) => {
                 let element = open(&start, reader.resolver())?;

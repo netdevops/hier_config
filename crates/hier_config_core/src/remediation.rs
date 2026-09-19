@@ -99,10 +99,12 @@ impl<'a> RemediationContext<'a> {
                 continue;
             }
 
+            // v3 adds the child under its *original* text and negates it in
+            // place, so the duplicate check keys on the pre-negation text.
+            let self_text = self_text.to_string();
             let negated_text = self.source.try_compute_negation(self_child_id)?;
-            let negated_id = self
-                .delta
-                .add_child(delta_node, &negated_text, false, false)?;
+            let negated_id = self.delta.add_child(delta_node, &self_text, true, false)?;
+            self.delta.set_text(negated_id, &negated_text);
 
             let child_count = self.source.arena[self_child_id].children.len();
             if child_count > 0 {
@@ -139,6 +141,9 @@ impl<'a> RemediationContext<'a> {
                 }
 
                 // Create temporary child in delta to collect subtree changes
+                // v3 uses `instantiate_child` + `children.append` here, which
+                // performs no duplicate check: the temporary subtree may share
+                // its text with a negation already emitted by `compute_left`.
                 let subtree_id = self
                     .delta
                     .add_child(delta_node, target_text, false, false)?;
@@ -185,6 +190,10 @@ impl<'a> RemediationContext<'a> {
     ) -> Result<(), TreeError> {
         if !children_equal(self.source, source_child_id, self.target, target_child_id) {
             let self_text = &self.source.arena[source_child_id].text;
+            // An empty source section carries nothing to drop, so skip the
+            // negation and only re-create it. Negating here would emit a
+            // spurious `no <section>` for a section that holds no lines.
+            let negate = negate && !self.source.arena[source_child_id].children.is_empty();
 
             if negate {
                 let new_neg_text = self.source.try_compute_negation(source_child_id)?;

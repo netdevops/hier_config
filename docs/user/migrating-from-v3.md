@@ -222,7 +222,7 @@ These are covered in full by
 [Rust core behavior changes](rust-core-changes.md); the summary is here so you
 know whether that page applies to you:
 
-- **hier_config ships as a compiled wheel.** Wheels cover CPython 3.10-3.14 on
+- **hier_config ships as a compiled wheel.** Wheels cover CPython 3.11-3.14 on
   Linux, macOS, and Windows; anything else builds from source and needs a Rust
   toolchain.
 - **Five driver override hooks are rejected.** `idempotent_for()`,

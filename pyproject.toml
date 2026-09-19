@@ -39,7 +39,7 @@ build-backend = "maturin"
 name = "hier-config"
 description = "A network configuration query and comparison library, used to build remediation configurations."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = "MIT"
 license-files = ["LICENSE"]
 authors = [
@@ -54,7 +54,6 @@ classifiers = [
     "Intended Audience :: System Administrators",
     "Intended Audience :: Telecommunications Industry",
     "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -150,7 +149,7 @@ plugins = [
 
 [tool.ruff]
 line-length = 88
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.format]
 docstring-code-format = true
@@ -168,6 +167,11 @@ ignore = [
     "EXE002",  # DO NOT REMOVE: The file is executable but no shebang is present
     "ISC001",  # DO NOT REMOVE: The following rule may cause conflicts when used with the formatter
     "PLR2004",  # Magic value used in comparison
+    # UP042 (replace-str-enum): `class Platform(str, Enum)` is deliberate.
+    # Switching to `StrEnum` changes `str(Platform.CISCO_IOS)` from
+    # "Platform.CISCO_IOS" to "cisco_ios", an observable behavior change on a
+    # public, v3-compatible enum.
+    "UP042",  # Class inherits from both `str` and `enum.Enum`
     # The below checks should eventually be enabled
     "D100",  # Missing docstring in public module
     "D102",  # Missing docstring in public method

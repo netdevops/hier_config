@@ -42,12 +42,30 @@ def test_full_text_sub_uses_python_replacement_templates() -> None:
     assert HConfig.from_text(driver, "port 42").to_lines() == ("port 42_suffix $port",)
 
 
-@pytest.mark.parametrize("pattern", ("(", r"foo(?=bar)", r"foobar\Z"))
+@pytest.mark.parametrize("pattern", ("(", r"foo(?=bar)"))
 def test_unsupported_substitution_regex_is_an_explicit_error(pattern: str) -> None:
     driver = HConfigDriverGeneric()
     driver.rules.per_line_sub.append(PerLineSubRule(search=pattern, replace="changed"))
     with pytest.raises(ValueError, match="regex"):
         HConfig.from_lines(driver, ("foobar",))
+
+
+def test_python_end_of_string_anchor_is_supported() -> None:
+    r"""Python's `\Z` anchor is translated to the Rust `\z` equivalent."""
+    driver = HConfigDriverGeneric()
+    driver.rules.per_line_sub.append(
+        PerLineSubRule(search=r"bar\Z", replace="baz"),
+    )
+    assert HConfig.from_lines(driver, ("foobar",)).to_lines() == ("foobaz",)
+
+
+def test_escaped_literal_capital_z_is_not_an_anchor() -> None:
+    r"""A literal `\\Z` stays a literal backslash followed by `Z`."""
+    driver = HConfigDriverGeneric()
+    driver.rules.per_line_sub.append(
+        PerLineSubRule(search=r"foo\\Z", replace="changed"),
+    )
+    assert HConfig.from_lines(driver, ("foo\\Z",)).to_lines() == ("changed",)
 
 
 def test_unified_replace_overrides_legacy_rule_and_round_trips() -> None:

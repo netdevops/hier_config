@@ -15,7 +15,7 @@ https://docs.astral.sh/uv/getting-started/installation/
 
 Set up your environment:
 
-Install Python 3.10+ and Rust meeting `workspace.package.rust-version` in
+Install Python 3.11+ and Rust meeting `workspace.package.rust-version` in
 `Cargo.toml` (currently 1.98), including a working C/C++ linker. The v4 engine
 is Rust with PyO3 bindings; source development has no pure-Python fallback.
 uv manages Python dependencies; maturin builds the extension.

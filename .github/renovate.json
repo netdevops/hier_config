@@ -15,7 +15,7 @@
   "timezone": "Etc/UTC",
   "packageRules": [
     {
-      "description": "Don't bump the python constraint; project supports 3.10+ across all matrix versions",
+      "description": "Don't bump the python constraint; project supports 3.11+ across all matrix versions",
       "matchManagers": ["pep621"],
       "matchPackageNames": ["python"],
       "enabled": false

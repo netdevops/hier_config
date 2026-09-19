@@ -63,7 +63,7 @@ def undeclared_imports() -> list[str]:
         # hide the rest; the cost is irrelevant next to importing the package.
         try:
             importlib.import_module(module.name)
-        except Exception as exc:  # ruff:ignore[blind-except, try-except-in-loop] # pylint: disable=broad-exception-caught
+        except Exception as exc:  # ruff:ignore[blind-except] # pylint: disable=broad-exception-caught
             failures.append(f"  {module.name}: {exc!r}")
     return failures
 

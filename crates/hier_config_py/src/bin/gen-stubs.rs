@@ -140,19 +140,34 @@ fn order_classes_by_dependency(source: &str) -> String {
 ///
 /// pyo3-stub-gen renders them as ordinary positional-or-keyword parameters, so
 /// the generated stub disagrees with the runtime until the marker is added.
+/// This covers the comparison and subscription slots as well as the binary and
+/// in-place number slots (`nb_or`, `nb_inplace_and`, and friends) that back the
+/// set operators on `NodeComments`; `PyO3` rejects `#[pyo3(signature = ...)]` on
+/// every one of them, so the marker cannot be declared at the definition site.
 /// `__init__` and `__new__` are deliberately absent: `PyO3` accepts keywords for
 /// those, so they are not positional-only.
 const POSITIONAL_ONLY_SLOTS: &[&str] = &[
+    "__and__",
     "__contains__",
     "__delitem__",
     "__eq__",
     "__ge__",
     "__getitem__",
     "__gt__",
+    "__iand__",
+    "__ior__",
+    "__isub__",
     "__le__",
     "__lt__",
     "__ne__",
+    "__or__",
+    "__rand__",
+    "__ror__",
+    "__rsub__",
+    "__rxor__",
     "__setitem__",
+    "__sub__",
+    "__xor__",
 ];
 
 /// Close the paren opened at `open`, returning the index of its match.

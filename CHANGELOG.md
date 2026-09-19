@@ -30,10 +30,22 @@ v4 design decisions, for the record:
 
 ### Added
 
+- `NodeComments`, a public set-like view over one node's comments, returned by
+  `HConfigChild.comments`. It exposes the full mutable-set API (`add`,
+  `discard`, `remove`, `pop`, `update`, `clear`, `copy`, the algebra operators
+  and their in-place forms, and the subset/superset/disjoint predicates). (#302)
+- `HConfigChildren.append()` accepts `update_mapping` (default `True`) so a
+  caller performing a bulk load can defer the per-append mapping refresh. (#302)
+
 - Native behavioral coverage for platform/interface views, tree mutations,
   remediation, workflow caching and structured-format edge cases; enforce
   a 90% Rust-core line coverage floor in CI after the rewrite. (#302)
 
+- `scripts/check_pyo3_advisories.py`, wired into `lint` and `lint-and-test`,
+  guards the RUSTSEC-2026-0176 sequence-iterator advisory. It replaces four
+  `clippy.toml` `disallowed-methods` entries that could never fire: Clippy
+  matches those paths only for inherent associated functions, and `.iter().nth()`
+  on a `PyList`/`PyTuple` dispatches through `Iterator`. (#302)
 - Lint gates for generated/native stub freshness, `mypy.stubtest`, observed
   return types, and formats-corpus drift. Audited allowlists cover native
   signatures and unobserved return values; stale exemptions fail checks. (#302)
@@ -216,6 +228,46 @@ v4 design decisions, for the record:
 
 ### Changed
 
+- `HConfigChild.comments` is now a live view over the node's comments rather
+  than a detached copy. Mutating the returned object — `child.comments.add(…)`
+  — now updates the configuration, where previously the change was silently
+  discarded. Code that relied on the copy semantics should take an explicit
+  snapshot with `set(child.comments)`. (#302)
+- `HConfig` and `WorkflowRemediation` accept and ignore extra positional and
+  keyword arguments in their native constructors. A subclass declaring its own
+  `__init__` with additional parameters previously raised `TypeError`, because
+  the native `__new__` runs first and received the subclass's arguments. (#302)
+- `HConfigChildren.__contains__` returns `False` for a non-`str` operand
+  instead of raising `TypeError`, matching how the built-in containers behave
+  and how the v3 pure-Python implementation behaved. (#302)
+- `HConfig.__reduce__` now carries per-node `facts`, `instances` and
+  `order_weight` alongside the driver and dump, so a round-trip through
+  `pickle`/`copy` preserves state that the dump alone does not capture. The
+  tuple's payload shape has changed; anything that unpacked it directly must be
+  updated. `HConfigChild` and `WorkflowRemediation` are now picklable too, which
+  they previously were not. (#302)
+- `HConfig.dump()` reports the recursive union of a node's tags, so a tag set on
+  a section now appears on the dumped lines beneath it. Previously only tags
+  applied directly to a line were emitted. (#302)
+
+- Junos negation of a line that starts with neither `set ` nor `delete ` now
+  raises instead of emitting the line as its own negation, restoring parity with
+  the v3 pure-Python driver; this withdraws 54 native-only netconf/gnmi
+  remediation cases whose recorded output omitted `nc:operation="delete"` (#302)
+- Post-load callbacks now always run in the order the driver declared them. The
+  Rust core applies its built-in callbacks during the parse, so a custom driver
+  that inserted a callback *ahead* of a stock one saw it run last. The core's
+  pass is now suppressed whenever the declared order would not be preserved,
+  and the whole list runs in Python instead. Appending to the stock list — the
+  usual case — still takes the core's fast path. (#302)
+- `DuplicateChildError`'s message now renders the duplicate path as a JSON-style
+  list instead of a Python tuple repr, because the message comes from the Rust
+  core's `Display` implementation: `Found a duplicate section: ["hostname r1"]`
+  rather than `Found a duplicate section: ('hostname r1',)`. Code that matches
+  on the message text needs updating; the leading text is unchanged. (#302)
+- `HConfig.from_xml()` accepts only `str`. Passing `bytes` now raises
+  `TypeError` instead of being decoded, so decode XML read in binary mode
+  before handing it to the constructor. (#302)
 - Generate one packaged native type stub from current PyO3 binding metadata
   and documentation instead of recovering signatures from the v3.7 Git
   baseline. Remove duplicate facade/native stubs and repository-only stub
@@ -345,6 +397,11 @@ v4 design decisions, for the record:
 
 ### Removed
 
+- Support for Python 3.10, which reaches end of life in October 2026. The
+  minimum supported version is now Python 3.11: `requires-python` is
+  `>=3.11`, the `abi3` wheel baseline moved from `abi3-py310` to
+  `abi3-py311`, ruff targets `py311`, and the CI matrix covers
+  CPython 3.11-3.14. (#302)
 - `HConfigDriverBase.idempotent_for()`, `negate_with()`, `sectional_exit()`,
   and `swap_negation()` plus their private helpers. Defining these overrides
   raises `TypeError`; use rule data and prefixes instead. There is no
@@ -375,6 +432,22 @@ the three v3 negation rule models and their `HConfigDriverRules` fields,
 
 ### Fixed
 
+- `HConfig` no longer holds a strong reference back to itself through its child
+  nodes, so a discarded configuration is reclaimed by reference counting instead
+  of waiting for the cyclic garbage collector. The back-reference is now a weak
+  reference, and `HConfig` participates in GC traversal. (#302)
+- Parsing a configuration nested more deeply than the tree's depth limit now
+  raises `RecursionError` instead of exhausting the stack. The same limit guards
+  the XML reader. (#302)
+
+- A sectional-exiting rule that explicitly declares `exit_text = "exit"` now
+  resolves through the platform's default exit token instead of being emitted
+  verbatim, so Huawei VRP renders `quit`. This matches v3, which applies the
+  Huawei mapping after the rule lookup returns. Other platforms and any other
+  `exit_text`, including the empty string, are unchanged. (#302)
+- `module_numbers` now includes module `0`, so an IOS `GigabitEthernet0/0`
+  reports `[0]` where it previously reported `[]`. Interfaces on a device's
+  first module are no longer silently dropped from the module list. (#302)
 - Unblock CI: allow the permissive `CC0-1.0` and `Unicode-DFS-2016` licences
   and ignore the six unmaintained `unic-*` RustSec advisories, all of which
   reach us only through `pyo3-stub-gen`'s build-time `rustpython-parser` and

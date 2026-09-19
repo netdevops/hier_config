@@ -1,3 +1,4 @@
+use crate::arena::NodeId;
 use crate::platforms::PlatformOps;
 use crate::platforms::functions::{MAX_RANGE_SPAN, MAX_RANGE_TOTAL};
 use crate::platforms::post_load_enabled;
@@ -193,51 +194,46 @@ fn fixup_hp_procurve_vlan(tree: &mut Tree) {
             }
             let vlan_num = words[1];
 
-            // untagged
-            let sub_children = tree.arena[vlan_id].children.as_slice().to_vec();
-            for sub_id in sub_children {
-                if !tree.arena.contains(sub_id) {
+            // v3 handles the first `untagged`, then the first `tagged`, then the
+            // `no untagged` line -- in that fixed order regardless of the order the
+            // children appear in. Iterating every matching child instead would emit
+            // the generated `interface ...` sections in a different order.
+            for (prefix, keyword) in [("untagged ", "untagged"), ("tagged ", "tagged")] {
+                let Some(sub_id) = first_child_starting_with(tree, vlan_id, prefix) else {
+                    continue;
+                };
+                let text = Arc::<str>::clone(&tree.arena[sub_id].text);
+                let sub_words: Vec<&str> = text.split_whitespace().collect();
+                if sub_words.len() < 2 {
                     continue;
                 }
-                let text = Arc::<str>::clone(&tree.arena[sub_id].text);
-                if text.starts_with("untagged ") {
-                    let u_words: Vec<&str> = text.split_whitespace().collect();
-                    if u_words.len() >= 2
-                        && let Ok(mut ifaces) = hp_procurve_expand_range(u_words[1])
-                    {
-                        ifaces.sort();
-                        for iface in ifaces {
-                            let _ = tree.add_children_deep(
-                                tree.root,
-                                &[
-                                    &format!("interface {iface}"),
-                                    &format!("untagged vlan {vlan_num}"),
-                                ],
-                            );
-                        }
-                        tree.delete_child(sub_id);
+                // v3's expansion yields nothing for a reversed range (an empty
+                // Python `range`), so the original line is still dropped.
+                if let Ok(mut ifaces) = hp_procurve_expand_range(sub_words[1]) {
+                    ifaces.sort();
+                    for iface in ifaces {
+                        let _ = tree.add_children_deep(
+                            tree.root,
+                            &[
+                                &format!("interface {iface}"),
+                                &format!("{keyword} vlan {vlan_num}"),
+                            ],
+                        );
                     }
-                } else if text.starts_with("tagged ") {
-                    let t_words: Vec<&str> = text.split_whitespace().collect();
-                    if t_words.len() >= 2
-                        && let Ok(mut ifaces) = hp_procurve_expand_range(t_words[1])
-                    {
-                        ifaces.sort();
-                        for iface in ifaces {
-                            let _ = tree.add_children_deep(
-                                tree.root,
-                                &[
-                                    &format!("interface {iface}"),
-                                    &format!("tagged vlan {vlan_num}"),
-                                ],
-                            );
-                        }
-                        tree.delete_child(sub_id);
-                    }
-                } else if text.starts_with("no untagged ") {
-                    tree.delete_child(sub_id);
                 }
+                tree.delete_child(sub_id);
+            }
+
+            if let Some(sub_id) = first_child_starting_with(tree, vlan_id, "no untagged ") {
+                tree.delete_child(sub_id);
             }
         }
     }
+}
+
+fn first_child_starting_with(tree: &Tree, parent_id: NodeId, prefix: &str) -> Option<NodeId> {
+    tree.arena[parent_id]
+        .children
+        .iter()
+        .find(|id| tree.arena[*id].text.starts_with(prefix))
 }

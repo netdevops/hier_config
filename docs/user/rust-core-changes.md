@@ -14,8 +14,8 @@ work required by the native implementation.
 ## Installation and packaging
 
 The build backend is maturin. `Cargo.toml` supplies the package version.
-Compatible CPython 3.10+ `abi3` wheels need no Rust toolchain; sdist and checkout
-builds require Python 3.10+, a linker, and the Rust MSRV in `Cargo.toml`
+Compatible CPython 3.11+ `abi3` wheels need no Rust toolchain; sdist and checkout
+builds require Python 3.11+, a linker, and the Rust MSRV in `Cargo.toml`
 (currently 1.98). There is no pure-Python fallback.
 See [Installation](install.md) for wheel targets and source-build commands.
 
@@ -305,6 +305,9 @@ view ops or use a separate application-owned wrapper over `HConfig`.
 | `InterfaceDuplex.value` | `"1"`, `"2"`, `"3"` | `"auto"`, `"full"`, `"half"` |
 | IOS/AOS-CX `nac_max_dot1x_clients`, `nac_max_mab_clients` | `NotImplementedError` | `None` |
 | EOS/NX-OS/XR `module_number` | `AttributeError` | `None` |
+| `module_numbers` for module `0` (IOS `GigabitEthernet0/0`) | `[]` | `[0]` |
+| `DuplicateChildError` message path | `('hostname r1',)` | `["hostname r1"]` |
+| `HConfig.from_xml(bytes)` | parsed | `TypeError` |
 | ProCurve `bundle_member_interfaces` on non-trunk interfaces | `ValueError` | `()` |
 | IOS speed configured as `auto` | `ValueError` | `None` |
 | IOS unrecognized `authentication host-mode` | `ValueError` | `None` |
@@ -315,6 +318,21 @@ Treat an unknown NAC mode as absent/unsupported; inspect the original config if
 your application must distinguish an unknown token from a missing command.
 Replace exception-based tests of unsupported properties with explicit
 `None`/empty-value checks. ProCurve `speed` still returns `None`.
+
+### Object protocol and pickling
+
+| Behavior | Before | v4 |
+| --- | --- | --- |
+| `HConfigChild.comments` | snapshot `set` copy | live `NodeComments` view writing through to the tree |
+| `HConfigBase.__contains__(non_str)` | `TypeError` | `False` |
+| `dump()` per-line tags | tags on that node only | recursive union of the node and its descendants |
+| `HConfig.__reduce__` | pickled internal state | `(HConfig._rebuild, (driver, dump, extras))` |
+| Tree depth beyond `MAX_TREE_DEPTH` | native abort | `RecursionError` |
+| Subclassing `HConfig`/`WorkflowRemediation` with extra `__init__` arguments | `TypeError` | accepted and ignored by the native constructor |
+
+Mutating `comments` now mutates the config. Copy it explicitly
+(`set(child.comments)`) where a detached snapshot is required. Pickles written
+by v3 do not load in v4; re-serialize from a live config.
 
 ## Correctness changes and parity
 
@@ -351,8 +369,9 @@ complementary checks; see [Testing](../dev/testing.md).
 5. Review traversal return types, wrapper identity, collection equality, and
    any code retaining handles after deletion.
 6. Replace workflow input reassignment with a new workflow.
-7. Audit custom views and serialized duplex/NAC values.
-8. Compare real remediation/rollback output against upstream as well as running
+7. Audit `comments` mutation, stored pickles, and subclass constructors.
+8. Audit custom views and serialized duplex/NAC values.
+9. Compare real remediation/rollback output against upstream as well as running
    application tests.
 
 See [Performance & Benchmarks](../dev/benchmarks.md) for recorded measurements,

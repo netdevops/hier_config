@@ -13,6 +13,34 @@ use std::sync::{Arc, OnceLock, RwLock};
 type Cache<T> = RwLock<HashMap<Box<str>, Option<Arc<T>>>>;
 const CACHE_CAPACITY: usize = 512;
 
+/// Translates Python-only regex syntax the Rust engines reject.
+///
+/// Python spells the end-of-string anchor `\Z`; both `regex` and `fancy-regex`
+/// spell it `\z`. Without this a pattern such as `^foo \S+\Z` fails to compile and
+/// silently matches nothing. Only a genuine escape is rewritten: in `\\Z` the
+/// backslash is itself escaped, so the `Z` is a literal and must be left alone.
+fn translate_python_syntax(pattern: &str) -> std::borrow::Cow<'_, str> {
+    if !pattern.contains(r"\Z") {
+        return std::borrow::Cow::Borrowed(pattern);
+    }
+    let mut out = String::with_capacity(pattern.len());
+    let mut pending_backslashes = 0usize;
+    for character in pattern.chars() {
+        if character == '\\' {
+            pending_backslashes += 1;
+            out.push('\\');
+            continue;
+        }
+        if character == 'Z' && pending_backslashes % 2 == 1 {
+            out.push('z');
+        } else {
+            out.push(character);
+        }
+        pending_backslashes = 0;
+    }
+    std::borrow::Cow::Owned(out)
+}
+
 fn lookup<T, F>(cache: &Cache<T>, pattern: &str, compile: F) -> Option<Arc<T>>
 where
     F: FnOnce(&str) -> Option<T>,
@@ -40,7 +68,9 @@ where
 pub fn regex(pattern: &str) -> Option<Arc<regex::Regex>> {
     static CACHE: OnceLock<Cache<regex::Regex>> = OnceLock::new();
     let cache = CACHE.get_or_init(|| RwLock::new(HashMap::new()));
-    lookup(cache, pattern, |p| regex::Regex::new(p).ok())
+    lookup(cache, pattern, |p| {
+        regex::Regex::new(&translate_python_syntax(p)).ok()
+    })
 }
 
 /// Compiles a rule pattern, rejecting syntax that the linear-time engine cannot
@@ -212,7 +242,7 @@ const fn replacement_literal_escape(escaped: char) -> Option<char> {
 /// bound on attacker-controlled input. Compile such a pattern once here, outside
 /// any per-node loop, so this stays off the hot path.
 pub fn compile_uncached(pattern: &str) -> Option<regex::Regex> {
-    regex::Regex::new(pattern).ok()
+    regex::Regex::new(&translate_python_syntax(pattern)).ok()
 }
 
 /// Returns a compiled [`regex::RegexSet`] for `patterns`, or `None` when any is invalid.
@@ -250,7 +280,7 @@ pub fn fancy(pattern: &str) -> Option<Arc<fancy_regex::Regex>> {
     static CACHE: OnceLock<Cache<fancy_regex::Regex>> = OnceLock::new();
     let cache = CACHE.get_or_init(|| RwLock::new(HashMap::new()));
     lookup(cache, pattern, |p| {
-        fancy_regex::RegexBuilder::new(p)
+        fancy_regex::RegexBuilder::new(&translate_python_syntax(p))
             .backtrack_limit(BACKTRACK_LIMIT)
             .build()
             .ok()

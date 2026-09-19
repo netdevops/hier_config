@@ -5,7 +5,7 @@ use std::sync::Arc;
 use pyo3::IntoPyObjectExt;
 use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyFrozenSet, PyList, PySet};
+use pyo3::types::{PyDict, PyFrozenSet, PyList, PyTuple};
 
 use crate::base::PyHConfigBase;
 use crate::errors::to_py_err;
@@ -45,7 +45,10 @@ impl PyHConfigChild {
 
         let child_id = {
             let mut tree = shared_tree.write_node(parent_node_id)?;
-            tree.add_child(parent_node_id, text.trim(), false, true)
+            // `check_if_present = true` so constructing a child whose text already
+            // exists under the parent returns that node instead of appending a
+            // duplicate line, matching v3.
+            tree.add_child(parent_node_id, text.trim(), true, true)
                 .map_err(to_py_err)?
         };
 
@@ -104,33 +107,7 @@ impl PyHConfigChild {
                 pid == tree_read.root
             };
             if is_root {
-                {
-                    let handle = base.tree.root_handle.read_py()?;
-                    if let Some(ref root_ref) = *handle {
-                        return Ok(root_ref.clone_ref(py));
-                    }
-                }
-                let driver = if let Some(ref drv) = *base.tree.driver_obj.read_py()? {
-                    drv.clone_ref(py)
-                } else {
-                    PyHConfig::get_default_driver(py, base.tree.platform)?
-                };
-                let root_id = base.read_tree()?.root;
-                let hconfig = Py::new(
-                    py,
-                    (
-                        PyHConfig {
-                            driver_obj: driver.clone_ref(py),
-                        },
-                        PyHConfigBase {
-                            tree: Arc::clone(&base.tree),
-                            node_id: root_id,
-                        },
-                    ),
-                )?;
-                let obj = hconfig.into_any();
-                *base.tree.root_handle.write_py()? = Some(obj.clone_ref(py));
-                return Ok(obj);
+                return Self::root_object(py, &base.tree);
             }
             let parent_child = SharedTree::get_or_create_child(&base.tree, py, pid, None)?;
             Ok(parent_child.into_any())
@@ -155,33 +132,7 @@ impl PyHConfigChild {
         let py = slf.py();
         let base = slf.as_ref();
         base.ensure_live()?;
-        {
-            let handle = base.tree.root_handle.read_py()?;
-            if let Some(ref root_ref) = *handle {
-                return Ok(root_ref.clone_ref(py));
-            }
-        }
-        let driver = if let Some(ref drv) = *base.tree.driver_obj.read_py()? {
-            drv.clone_ref(py)
-        } else {
-            PyHConfig::get_default_driver(py, base.tree.platform)?
-        };
-        let root_id = base.read_tree()?.root;
-        let hconfig = Py::new(
-            py,
-            (
-                PyHConfig {
-                    driver_obj: driver.clone_ref(py),
-                },
-                PyHConfigBase {
-                    tree: Arc::clone(&base.tree),
-                    node_id: root_id,
-                },
-            ),
-        )?;
-        let obj = hconfig.into_any();
-        *base.tree.root_handle.write_py()? = Some(obj.clone_ref(py));
-        Ok(obj)
+        Self::root_object(py, &base.tree)
     }
 
     #[gen_stub(override_return_type(type_repr="HConfigChild", imports=()))]
@@ -293,6 +244,7 @@ impl PyHConfigChild {
     #[gen_stub(override_return_type(type_repr="str | None", imports=()))]
     pub fn sectional_exit(slf: PyRef<'_, Self>) -> PyResult<Option<String>> {
         let base = slf.as_ref();
+        base.tree.sync_rules_if_stale(slf.py())?;
         let tree = base.read_tree()?;
         Ok(tree.sectional_exit(base.node_id))
     }
@@ -301,6 +253,7 @@ impl PyHConfigChild {
     #[gen_stub(override_return_type(type_repr="bool", imports=()))]
     pub fn sectional_exit_text_parent_level(slf: PyRef<'_, Self>) -> PyResult<bool> {
         let base = slf.as_ref();
+        base.tree.sync_rules_if_stale(slf.py())?;
         let tree = base.read_tree()?;
         Ok(tree.sectional_exit_text_parent_level(base.node_id))
     }
@@ -375,11 +328,15 @@ impl PyHConfigChild {
     }
 
     #[getter]
-    #[gen_stub(override_return_type(type_repr="set[str]", imports=()))]
+    #[gen_stub(override_return_type(type_repr="NodeComments", imports=()))]
     pub fn comments(slf: PyRef<'_, Self>) -> PyResult<Py<PyAny>> {
         let py = slf.py();
         let base = slf.as_ref();
-        Ok(base.tree.get_node_comments(py, base.node_id)?.into_any())
+        base.ensure_live()?;
+        Ok(SharedTree::node_comments(&base.tree, base.node_id)?
+            .into_pyobject(py)?
+            .into_any()
+            .unbind())
     }
 
     #[setter]
@@ -388,15 +345,13 @@ impl PyHConfigChild {
         #[gen_stub(override_type(type_repr="collections.abc.Iterable[str]", imports=("collections.abc")))]
         val: &Bound<'_, PyAny>,
     ) -> PyResult<()> {
-        let py = slf.py();
         let base = slf.as_ref();
-        let items: Vec<Bound<'_, PyAny>> = val.try_iter()?.collect::<PyResult<Vec<_>>>()?;
-        let set_obj = PySet::new(py, &items)?;
-        let _tree = base.read_tree()?;
-        let mut data = base.tree.node_data.write_py()?;
-        let entry = data.entry(base.node_id).or_default();
-        entry.comments = Some(set_obj.unbind());
-        Ok(())
+        base.ensure_live()?;
+        crate::comments::PyNodeComments::replace(
+            &base.tree,
+            base.node_id,
+            crate::comments::extract_str_iter(val)?,
+        )
     }
 
     #[getter]
@@ -452,10 +407,14 @@ impl PyHConfigChild {
     #[gen_stub(override_return_type(type_repr="hier_config.models.Instance", imports=("hier_config.models")))]
     pub fn instance(slf: PyRef<'_, Self>) -> PyResult<Py<PyAny>> {
         let py = slf.py();
-        let comments = slf
-            .as_ref()
-            .tree
-            .get_node_comments(py, slf.as_ref().node_id)?;
+        let comments: Vec<String> = {
+            let base = slf.as_ref();
+            let tree = base.read_tree()?;
+            tree.arena
+                .get(base.node_id)
+                .map(|n| n.comments().iter().cloned().collect())
+                .unwrap_or_default()
+        };
         let tags = slf.as_ref().tags(py)?;
         let root_obj = Self::root(slf)?;
         let id_val = root_obj.bind(py).as_ptr() as usize;
@@ -463,7 +422,7 @@ impl PyHConfigChild {
         let instance_cls = models.getattr("Instance")?;
         let kwargs = PyDict::new(py);
         kwargs.set_item("id", id_val)?;
-        kwargs.set_item("comments", PyFrozenSet::new(py, comments.bind(py))?)?;
+        kwargs.set_item("comments", PyFrozenSet::new(py, comments.iter())?)?;
         kwargs.set_item("tags", tags)?;
         let inst = instance_cls.call((), Some(&kwargs))?;
         Ok(inst.unbind())
@@ -810,7 +769,7 @@ impl PyHConfigChild {
 
     fn __str__(slf: PyRef<'_, Self>) -> PyResult<String> {
         let base = slf.as_ref();
-        Ok(base.lines(true)?.join("\n"))
+        Ok(base.lines(slf.py(), true)?.join("\n"))
     }
 
     #[gen_stub(override_return_type(type_repr="bool", imports=()))]
@@ -905,5 +864,98 @@ impl PyHConfigChild {
         let mut isize_bytes = [0u8; size_of::<isize>()];
         isize_bytes.copy_from_slice(&bytes[..size_of::<isize>()]);
         Ok(isize::from_ne_bytes(isize_bytes))
+    }
+    /// Pickles a child as its root configuration plus the child-index path that
+    /// locates it, so the whole tree survives the round trip exactly once.
+    #[gen_stub(skip)]
+    fn __reduce__(slf: PyRef<'_, Self>) -> PyResult<Py<PyAny>> {
+        let py = slf.py();
+        let base = slf.as_ref();
+        base.ensure_live()?;
+
+        let path = {
+            let tree = base.read_tree()?;
+            let mut path = Vec::new();
+            let mut current = base.node_id;
+            while let Some(parent) = tree.arena.get(current).and_then(|n| n.parent) {
+                let index = tree
+                    .arena
+                    .get(parent)
+                    .and_then(|n| n.children.index_of(current))
+                    .ok_or_else(|| {
+                        pyo3::exceptions::PyValueError::new_err(
+                            "configuration node is detached from its parent",
+                        )
+                    })?;
+                path.push(index);
+                current = parent;
+            }
+            path.reverse();
+            path
+        };
+
+        let root = Self::root_object(py, &base.tree)?;
+        let cls = py.get_type::<Self>();
+        let func = cls.getattr("_rebuild")?;
+        let args = PyTuple::new(py, vec![root, PyList::new(py, &path)?.into_any().unbind()])?;
+        Ok(
+            PyTuple::new(py, vec![func.unbind(), args.into_any().unbind()])?
+                .into_any()
+                .unbind(),
+        )
+    }
+
+    /// Rebuilds a pickled child by walking `path` down from the restored root.
+    #[staticmethod]
+    #[gen_stub(skip)]
+    fn _rebuild(py: Python<'_>, root: &Bound<'_, PyAny>, path: Vec<usize>) -> PyResult<Py<PyAny>> {
+        let base = root.extract::<PyRef<'_, PyHConfigBase>>()?;
+        let mut node_id = base.node_id;
+        {
+            let tree = base.read_tree()?;
+            for index in path {
+                node_id = tree
+                    .arena
+                    .get(node_id)
+                    .and_then(|n| n.children.as_slice().get(index).copied())
+                    .ok_or_else(|| {
+                        pyo3::exceptions::PyValueError::new_err(
+                            "pickled child path does not resolve in the restored configuration",
+                        )
+                    })?;
+            }
+        }
+        let tree = Arc::clone(&base.tree);
+        drop(base);
+        Ok(SharedTree::get_or_create_child(&tree, py, node_id, None)?.into_any())
+    }
+}
+
+impl PyHConfigChild {
+    /// Returns the tree's `HConfig`, upgrading the weak handle when it is still
+    /// alive and otherwise building (and re-recording) a fresh one.
+    pub(crate) fn root_object(py: Python<'_>, tree: &Arc<SharedTree>) -> PyResult<Py<PyAny>> {
+        if let Some(existing) = tree.root_handle(py)? {
+            return Ok(existing);
+        }
+        let driver = if let Some(ref drv) = *tree.driver_obj.read_py()? {
+            drv.clone_ref(py)
+        } else {
+            PyHConfig::get_default_driver(py, tree.platform)?
+        };
+        let root_id = tree.tree.read_py()?.root;
+        let hconfig = Py::new(
+            py,
+            (
+                PyHConfig { driver_obj: driver },
+                PyHConfigBase {
+                    tree: Arc::clone(tree),
+                    node_id: root_id,
+                },
+            ),
+        )?;
+        let obj = hconfig.into_any();
+        tree.set_root_handle(obj.bind(py))?;
+        Ok(obj)
     }
 }

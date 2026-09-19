@@ -19,7 +19,7 @@ views; PyO3 exposes them through thin Python facades. PyYAML is optional via
 ## Build & Test Commands
 
 Use **uv** for Python dependencies and **maturin** for extension builds.
-Source builds require Python 3.10+, a linker, and Rust meeting the MSRV in
+Source builds require Python 3.11+, a linker, and Rust meeting the MSRV in
 `Cargo.toml` (currently 1.98). Before Python checks, and after Rust edits:
 
 ```bash
@@ -67,7 +67,7 @@ cargo llvm-cov --locked --package hier_config_core --fail-under-lines 90
 
 CI facts that matter for changes:
 
-- **Python matrix**: CI tests on Python 3.10–3.14 and ruff targets `py310` — write 3.10-compatible syntax even though your local interpreter may be newer.
+- **Python matrix**: CI tests on Python 3.11–3.14 and ruff targets `py311` — write 3.11-compatible syntax even though your local interpreter may be newer.
 - **Docs job**: CI builds docs with `mkdocs build --strict` on every push/PR using `docs/requirements.txt` (pip, not uv). Adding an mkdocs plugin requires updating **both** `pyproject.toml` and `docs/requirements.txt`.
 - **Lockfiles**: dependency changes must update `uv.lock` and/or `Cargo.lock`. Use `uv add` / `uv add --dev` (or `uv lock` after editing `pyproject.toml`); native gates use `--locked`.
 

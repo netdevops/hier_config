@@ -51,10 +51,10 @@ distribution. Verify the prepared version matches the intended release line.
 The workflow's wheel jobs cover Linux glibc and musl (x86_64/aarch64),
 macOS (x86_64/aarch64), and Windows (x64/ARM64), using CPython `abi3`.
 The musl target is `musllinux_1_2`. Windows ARM64 builds on `windows-11-arm`
-with Python 3.11; the other wheels use a Python 3.10 baseline. Confirm these
+with Python 3.11; the other wheels use a Python 3.11 baseline. Confirm these
 jobs on their actual runners; local macOS checks do not verify those artifacts.
 
-Source builds require Python 3.10+, a linker and Rust meeting
+Source builds require Python 3.11+, a linker and Rust meeting
 `workspace.package.rust-version` in `Cargo.toml` (currently 1.98).
 CI must build the sdist with its included lockfile, not just build a wheel
 from the checkout. A release smoke test must install the exact artifact path:

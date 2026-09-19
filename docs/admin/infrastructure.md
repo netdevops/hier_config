@@ -16,7 +16,7 @@ This page is for project maintainers and describes the repository's automation.
 - **python-lint**: builds the release extension, then invokes the canonical
   `scripts/build.py lint` (Python linters/type checkers plus stub freshness,
   signature/return-type, corpus and displacement checks).
-- **python-tests**: CPython 3.10–3.14 tests against the compiled extension,
+- **python-tests**: CPython 3.11–3.14 tests against the compiled extension,
   with Python coverage enforced at 95% on the default interpreter. Python
   coverage is not a measurement of native code.
 - **packaging**: builds wheels and an sdist, rebuilds the sdist with its
@@ -60,7 +60,7 @@ uv run --no-sync maturin develop --release --locked
 uv run --no-sync mkdocs serve
 ```
 
-Checkout builds require Python 3.10+, a linker and the Rust MSRV declared in
+Checkout builds require Python 3.11+, a linker and the Rust MSRV declared in
 `Cargo.toml` (currently 1.98). Rebuild the extension after native code changes.
 The docs-only CI/RTD path uses committed source/stubs and
 `docs/requirements.txt`, rather than installing a development checkout.
