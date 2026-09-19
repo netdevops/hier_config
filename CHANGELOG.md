@@ -248,7 +248,9 @@ v4 design decisions, for the record:
   they previously were not. (#302)
 - `HConfig.dump()` reports the recursive union of a node's tags, so a tag set on
   a section now appears on the dumped lines beneath it. Previously only tags
-  applied directly to a line were emitted. (#302)
+  applied directly to a line were emitted. Each emitted `DumpLine` has an isolated,
+  mutable `__pydantic_fields_set__` to support `model_copy(update=...)` in
+  Pydantic v2. (#302)
 
 - Junos negation of a line that starts with neither `set ` nor `delete ` now
   raises instead of emitting the line as its own negation, restoring parity with

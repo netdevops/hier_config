@@ -55,7 +55,7 @@ MAX_COST_UNITS = {
     "parse": 0.27,
     "fast_load": 0.24,
     "deepcopy": 0.03,
-    "dump": 0.37,
+    "dump": 0.45,
     "iteration": 0.06,
     "remediation": 0.19,
 }
