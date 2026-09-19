@@ -1199,6 +1199,7 @@ impl PyHConfig {
         let k_tags = PyString::intern(py, "tags");
         let k_comments = PyString::intern(py, "comments");
         let k_new_in_config = PyString::intern(py, "new_in_config");
+        let k_copy = PyString::intern(py, "copy");
         let py_false = false.into_pyobject(py)?.to_owned().into_any();
         let py_true = true.into_pyobject(py)?.to_owned().into_any();
 
@@ -1211,6 +1212,7 @@ impl PyHConfig {
         template.set_item(&k_tags, &none)?;
         template.set_item(&k_comments, &none)?;
         template.set_item(&k_new_in_config, &py_false)?;
+        let template_fields_set = PySet::new(py, line_field_names.iter())?;
 
         let line_type = dump_line_cls.cast::<PyType>()?;
         let mut lines = Vec::with_capacity(ordered.len());
@@ -1229,10 +1231,11 @@ impl PyHConfig {
             generic_setattr(&line, &n_dict, fields.as_any())?;
             // pydantic's `model_copy(update=...)` calls `.update()` on this, so it
             // has to be a fresh mutable set rather than a shared frozenset.
+            // Copying a pre-allocated template set avoids string hashing overhead.
             generic_setattr(
                 &line,
                 &n_fields_set,
-                PySet::new(py, line_field_names.iter())?.as_any(),
+                template_fields_set.call_method0(&k_copy)?.as_any(),
             )?;
             generic_setattr(&line, &n_extra, &none)?;
             generic_setattr(&line, &n_private, &none)?;
