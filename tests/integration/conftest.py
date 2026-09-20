@@ -22,7 +22,6 @@ def _fixture_file_read(filename: str) -> str:
     )
 
 
-# Ruckus/Brocade FastIron fixtures
 @pytest.fixture(scope="module")
 def fastiron_running_config() -> str:
     """Load the FastIron switch running config fixture."""

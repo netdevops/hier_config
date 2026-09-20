@@ -51,16 +51,17 @@ def _normalize_vlan_headers(config: HConfig) -> None:
     child keeps the section identity stable across a rename while leaving the
     rename itself a single remediation line. The child is a global command, so
     it applies correctly from inside the VLAN context where it is emitted.
+
+    A config that also selects the VLAN bare somewhere else -- a template that
+    emits `vlan 101` and `vlan 101 name USERS by port` as separate blocks --
+    merges into the one section, rather than leaving two siblings for one VLAN
+    that then diff against each other.
     """
     for vlan in tuple(config.get_children(re_search=r"^vlan \d+\s+\S")):
         words = vlan.text.split()
         header = f"{words[0]} {words[1]}"
 
         if existing := config.get_child(equals=header):
-            # A config that already selects the VLAN bare somewhere else --
-            # a template emitting `vlan 101` and `vlan 101 name USERS by port`
-            # as separate blocks, say -- would otherwise leave two sibling
-            # sections for one VLAN and diff them against each other.
             existing.add_child(vlan.text, return_if_present=True)
             for child in vlan.children:
                 existing.add_deep_copy_of(child, merged=True)
@@ -169,6 +170,53 @@ class HConfigDriverRuckusFastIron(HConfigDriverBase):
 
     @staticmethod
     def _instantiate_rules() -> HConfigDriverRules:
+        """Return the rule set for FastIron 08.0.30.
+
+        Each ordering weight encodes a dependency the device enforces:
+
+        * `no interface ethernet 1/1/1` clears the interface block
+          (`port-name`, `port security`, `trust`, `dual-mode`) and the port
+          then leaves `show running-config`, because FastIron omits default
+          interfaces. VLAN membership lives in the `vlan` blocks and is not
+          affected. Resets run first, so one cannot clobber interface settings
+          applied earlier in the same push.
+        * A deployed LAG refuses a membership or primary-port change, so an
+          un-deploy/re-deploy pair wraps everything else in the section.
+          hier_config cannot invent the pair when `deploy` is unchanged on both
+          sides. See the LAG note in the class docstring.
+        * Inside a LAG, members are added, the primary moves onto one of them,
+          and the old members are dropped last. A primary port cannot be
+          removed until it is demoted.
+        * A port leaves its old untagged VLAN before it joins a new one.
+          Otherwise the device answers "port ethe 1/1/1 are not member of
+          default vlan".
+        * A `mac filter-group` binding is removed before the filter it names,
+          and a `mac filter` is created before the interfaces that bind it.
+          FastIron guards the filter from both sides: it refuses a binding to a
+          filter that does not exist ("filter 32 is not configured in the
+          global table") and refuses to delete a filter that is still bound.
+        * An ACL sorts the other way, ahead of the interfaces that bind it, so
+          a new ACL exists before an `ip access-group` names it. The negation
+          stays ahead of the body, so a rebuild re-creates the ACL rather than
+          deletes it. The trade-off is that an ACL under deletion goes before
+          the interface unbinds it, which leaves a dangling `ip access-group`
+          for the rest of the push. FastIron permits that, unlike `mac filter`,
+          and an unfiltered interface is the worse outcome.
+        * `no vlan` runs last, because it also removes every port membership in
+          that VLAN.
+
+        The other rules record these platform facts:
+
+        * A `show run` captured over SSH keeps the prompt echo, which the last
+          `per_line_sub` rule strips.
+        * The normalised VLAN header child is idempotent on every `vlan <id>`
+          line, not only the named form. An unnamed VLAN normalises to a
+          `vlan 20 by port` child, and `no vlan 20 by port` is a global command
+          that deletes the VLAN and every port in it.
+        * A LAG member description is keyed by the member port.
+        * An IPv4 ACL has no sequence numbers on 08.0.30 and accepts appends
+          only, so a changed body is rebuilt to keep the entry order.
+        """
         return HConfigDriverRules(
             indentation=1,
             per_line_sub=[
@@ -177,7 +225,6 @@ class HConfigDriverRuckusFastIron(HConfigDriverBase):
                 PerLineSubRule(search=r"^\s*!.*", replace=""),
                 PerLineSubRule(search=r"^ver \S+\s*$", replace=""),
                 PerLineSubRule(search=r"^end\s*$", replace=""),
-                # `show run` captured over SSH keeps the prompt echo
                 PerLineSubRule(search=r"^\S*#.*", replace=""),
             ],
             negation=[
@@ -197,12 +244,6 @@ class HConfigDriverRuckusFastIron(HConfigDriverBase):
                 ),
             ],
             idempotent_commands=[
-                # The normalised VLAN header line -- one per VLAN, last one
-                # wins. This has to match every `vlan <id> ...` child, not just
-                # the named form: an unnamed VLAN normalises to a `vlan 20 by
-                # port` child, and naming it would otherwise negate that line.
-                # `no vlan 20 by port` is a global command that deletes the
-                # VLAN and every port in it.
                 IdempotentCommandsRule(
                     match_rules=(
                         MatchRule(startswith="vlan "),
@@ -283,7 +324,6 @@ class HConfigDriverRuckusFastIron(HConfigDriverBase):
                         MatchRule(startswith="primary-port "),
                     ),
                 ),
-                # a LAG member description is keyed by the member port
                 IdempotentCommandsRule(
                     match_rules=(
                         MatchRule(startswith="lag "),
@@ -292,28 +332,15 @@ class HConfigDriverRuckusFastIron(HConfigDriverBase):
                 ),
             ],
             sectional_overwrite=[
-                # no sequence numbers on 08.0.30: entries can only be appended,
-                # so a changed ACL body has to be rebuilt to preserve order
                 SectionalOverwriteRule(
                     match_rules=(MatchRule(startswith="ip access-list "),),
                 ),
             ],
             ordering=[
-                # `no interface ethernet 1/1/1` clears the interface block --
-                # port-name, port security, trust, dual-mode -- and the port
-                # then vanishes from `show running-config` because FastIron
-                # omits default interfaces. VLAN membership is unaffected: it
-                # lives in the `vlan` blocks. Run resets first so one cannot
-                # clobber interface settings applied earlier in the same push.
                 OrderingRule(
                     match_rules=(MatchRule(startswith="no interface ethernet "),),
                     weight=-30,
                 ),
-                # A deployed LAG rejects membership and primary-port changes,
-                # so if an un-deploy/re-deploy pair is present it has to wrap
-                # everything else in the section. hier_config cannot invent the
-                # pair when `deploy` is unchanged on both sides -- see the LAG
-                # note in docs/user/drivers.md.
                 OrderingRule(
                     match_rules=(
                         MatchRule(startswith="lag "),
@@ -328,9 +355,6 @@ class HConfigDriverRuckusFastIron(HConfigDriverBase):
                     ),
                     weight=50,
                 ),
-                # Inside a LAG: add members, then move the primary onto one of
-                # them, then drop the old members. A primary port cannot be
-                # removed, so it has to be demoted first.
                 OrderingRule(
                     match_rules=(
                         MatchRule(startswith="lag "),
@@ -352,9 +376,6 @@ class HConfigDriverRuckusFastIron(HConfigDriverBase):
                     ),
                     weight=-20,
                 ),
-                # A port must leave its old untagged VLAN before it can join a
-                # new one, otherwise the device answers
-                # "port ethe 1/1/1 are not member of default vlan".
                 OrderingRule(
                     match_rules=(
                         MatchRule(startswith="vlan "),
@@ -362,10 +383,6 @@ class HConfigDriverRuckusFastIron(HConfigDriverBase):
                     ),
                     weight=-20,
                 ),
-                # A `mac filter-group` binding must be removed before the
-                # filter it points at: FastIron refuses to delete a filter
-                # that is still bound. ACLs sort the other way -- see the
-                # trade-off note on the `ip access-list` weights below.
                 OrderingRule(
                     match_rules=(
                         MatchRule(startswith="interface "),
@@ -384,27 +401,10 @@ class HConfigDriverRuckusFastIron(HConfigDriverBase):
                     match_rules=(MatchRule(startswith="no mac filter "),),
                     weight=20,
                 ),
-                # A filter has to exist before an interface names it:
-                # `mac filter-group 32` against an undefined filter is refused
-                # outright ("filter 32 is not configured in the global table").
-                # Without this rule the order would ride on whichever line the
-                # intended config happens to declare first.
                 OrderingRule(
                     match_rules=(MatchRule(startswith="mac filter "),),
                     weight=-25,
                 ),
-                # ACLs go first, ahead of the interfaces that bind them, so a
-                # newly created ACL exists before an `ip access-group` points at
-                # it. An interface fails open while its ACL is missing, so the
-                # alternative would leave the interface unfiltered for the rest
-                # of the push. The negation stays ahead of the body so that a
-                # rebuild re-creates the ACL instead of deleting it.
-                #
-                # The trade-off: an ACL that is being deleted is removed before
-                # the interface unbinds it, leaving a dangling `ip access-group`
-                # for the rest of the push. That is transient and self-resolving
-                # -- unlike `mac filter`, FastIron does not refuse the removal --
-                # whereas an unfiltered interface is not.
                 OrderingRule(
                     match_rules=(MatchRule(startswith="no ip access-list "),),
                     weight=-30,
@@ -413,8 +413,6 @@ class HConfigDriverRuckusFastIron(HConfigDriverBase):
                     match_rules=(MatchRule(startswith="ip access-list "),),
                     weight=-25,
                 ),
-                # Removing a VLAN also removes every port membership in it, so
-                # do it after the memberships have been moved elsewhere.
                 OrderingRule(
                     match_rules=(MatchRule(re_search=r"^no vlan \d+$"),),
                     weight=10,

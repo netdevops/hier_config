@@ -14,9 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # The review agent runs `uv run …`, which re-locks and re-syncs by
-      # default. Keep it frozen so the job cannot rewrite `uv.lock`. uv
-      # rejects UV_FROZEN and UV_LOCKED together, so this is the only one
-      # set here; build-and-test.yml asserts the lock is current.
+      # default. Keep it frozen so the job cannot rewrite `uv.lock`.
       UV_FROZEN: "1"
     # Secrets, including CLAUDE_CODE_OAUTH_TOKEN, are unavailable to fork
     # pull requests.
