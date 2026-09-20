@@ -84,7 +84,7 @@ Three-layer design — full detail in [docs/dev/architecture.md](docs/dev/archit
 - **Driver** (`platforms/`): each platform subclasses `HConfigDriverBase` and overrides `_instantiate_rules()` returning `HConfigDriverRules` — typed, frozen Pydantic rule models matched against config lineage via `MatchRule` tuples. Drivers register in `registry.py` (`get_hconfig_driver()`, `register_driver()`, `unregister_driver()`, `get_registered_platforms()`) and expose their config view via the `view_class` attribute. Registry keys are canonicalized to uppercase platform names (`Platform.X.name`); string lookups are case-insensitive (#284/#295).
 - **Workflow** (`workflows.py`, `reporting.py`): `WorkflowRemediation` exposes `remediation_config` / `rollback_config` plus structured renderings `remediation_netconf_xml()` / `remediation_json()`; `RemediationReporter` aggregates changes across devices.
 
-Supported platforms (`Platform` enum in `models.py`): ARISTA_EOS, ARUBA_AOSCX, CISCO_IOS, CISCO_NXOS, CISCO_XR, FORTINET_FORTIOS, GENERIC, HP_COMWARE5, HP_PROCURVE, HUAWEI_VRP, JUNIPER_JUNOS, NOKIA_SRL, VYOS.
+Supported platforms (`Platform` enum in `models.py`): ARISTA_EOS, ARUBA_AOSCX, CISCO_IOS, CISCO_NXOS, CISCO_XR, FORTINET_FORTIOS, GENERIC, HP_COMWARE5, HP_PROCURVE, HUAWEI_VRP, JUNIPER_JUNOS, NOKIA_SRL, RUCKUS_FASTIRON, VYOS.
 
 ## Hard Rules
 

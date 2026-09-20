@@ -49,6 +49,7 @@ hier_config.models.Platform.HP_PROCURVE
 hier_config.models.Platform.HUAWEI_VRP
 hier_config.models.Platform.JUNIPER_JUNOS
 hier_config.models.Platform.NOKIA_SRL
+hier_config.models.Platform.RUCKUS_FASTIRON
 hier_config.models.Platform.VYOS
 hier_config.models.Platform.__new__
 hier_config.models.ReferenceLocation.__init__

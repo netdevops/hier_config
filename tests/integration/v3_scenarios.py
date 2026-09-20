@@ -41,6 +41,28 @@ from hier_config.utils import (
     load_hconfig_v2_tags,
 )
 
+V3_PLATFORM_NAMES = (
+    "ARISTA_EOS",
+    "ARUBA_AOSCX",
+    "CISCO_IOS",
+    "CISCO_NXOS",
+    "CISCO_XR",
+    "FORTINET_FORTIOS",
+    "GENERIC",
+    "HP_COMWARE5",
+    "HP_PROCURVE",
+    "HUAWEI_VRP",
+    "JUNIPER_JUNOS",
+    "NOKIA_SRL",
+    "VYOS",
+)
+"""Every Platform member v3 declares.
+
+The list is frozen, not derived from the Platform enum. A platform that v4 adds
+later has no v3 counterpart to compare against, so it stays out of scope here.
+"""
+
+
 #: v2-style options, shaped like a golden config
 #: ``RemediationSetting.remediation_options`` value.
 REMEDIATION_OPTIONS: dict[str, Any] = {
@@ -220,8 +242,8 @@ def other_v3_names(actual: str, intended: str) -> dict[str, str]:
         "tags_while_set": tags_while_set,
         "tags_after_remove": ",".join(sorted(config.tags)),
         "v3_platform_to_v2_os": ",".join(
-            f"{p.name}={hconfig_v3_platform_v2_os_mapper(p)}"
-            for p in sorted(Platform, key=lambda p: p.name)
+            f"{name}={hconfig_v3_platform_v2_os_mapper(Platform[name])}"
+            for name in V3_PLATFORM_NAMES
         ),
     }
 

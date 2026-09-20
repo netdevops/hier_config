@@ -22,6 +22,30 @@ def _fixture_file_read(filename: str) -> str:
     )
 
 
+@pytest.fixture(scope="module")
+def fastiron_running_config() -> str:
+    """Load the FastIron switch running config fixture."""
+    return _fixture_file_read("fastiron_running.conf")
+
+
+@pytest.fixture(scope="module")
+def fastiron_generated_config() -> str:
+    """Load the FastIron switch generated config fixture."""
+    return _fixture_file_read("fastiron_generated.conf")
+
+
+@pytest.fixture(scope="module")
+def fastiron_l3_running_config() -> str:
+    """Load the FastIron router running config fixture."""
+    return _fixture_file_read("fastiron_l3_running.conf")
+
+
+@pytest.fixture(scope="module")
+def fastiron_l3_generated_config() -> str:
+    """Load the FastIron router generated config fixture."""
+    return _fixture_file_read("fastiron_l3_generated.conf")
+
+
 # Aruba AOS-CX fixtures
 @pytest.fixture(scope="module")
 def aruba_aoscx_running_config() -> str:

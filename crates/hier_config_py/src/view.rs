@@ -159,6 +159,7 @@ const fn platform_name(platform: Platform) -> &'static str {
         Platform::HuaweiVrp => "HUAWEI_VRP",
         Platform::JuniperJunos => "JUNIPER_JUNOS",
         Platform::NokiaSrl => "NOKIA_SRL",
+        Platform::RuckusFastiron => "RUCKUS_FASTIRON",
         Platform::Vyos => "VYOS",
     }
 }

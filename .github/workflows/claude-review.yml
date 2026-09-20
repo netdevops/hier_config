@@ -57,13 +57,14 @@ jobs:
     - uses: Swatinem/rust-cache@v2
 
     # The skill's gates import `hier_config`, which has no pure-Python
-    # fallback, so the extension has to be built here.
+    # fallback, so the extension has to be built here. maturin installs the
+    # project dependencies itself, and `--uv` makes it use uv for that. Its
+    # default installer is the pip inside `.venv`, which `python -m venv`
+    # seeds too old to accept the PEP 735 `--group` flag maturin passes.
     - name: Install dependencies and build extension
-      env:
-        UV_LOCKED: "1"
       run: |
         uv sync
-        uv run maturin develop --release --locked
+        uv run maturin develop --release --locked --uv
 
     - name: Install the docs dependencies
       run: uv pip install -r docs/requirements.txt

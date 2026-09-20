@@ -11,6 +11,7 @@ pub mod hp_procurve;
 pub mod huawei_vrp;
 pub mod juniper_junos;
 pub mod nokia_srl;
+pub mod ruckus_fastiron;
 pub mod vyos;
 
 use std::borrow::Cow;
@@ -77,6 +78,7 @@ pub fn platform_ops(platform: Platform) -> &'static dyn PlatformOps {
         Platform::HuaweiVrp => &huawei_vrp::OPS,
         Platform::JuniperJunos => &juniper_junos::OPS,
         Platform::NokiaSrl => &nokia_srl::OPS,
+        Platform::RuckusFastiron => &ruckus_fastiron::OPS,
         Platform::Vyos => &vyos::OPS,
     }
 }

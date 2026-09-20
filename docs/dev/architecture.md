@@ -195,6 +195,7 @@ Built-in drivers are registered at import time in a module-level registry keyed 
 | `HUAWEI_VRP` | `HConfigDriverHuaweiVrp` | `platforms/huawei_vrp/driver.py` |
 | `JUNIPER_JUNOS` | `HConfigDriverJuniperJUNOS` | `platforms/juniper_junos/driver.py` |
 | `NOKIA_SRL` | `HConfigDriverNokiaSRL` | `platforms/nokia_srl/driver.py` |
+| `RUCKUS_FASTIRON` | `HConfigDriverRuckusFastIron` | `platforms/ruckus_fastiron/driver.py` |
 | `VYOS` | `HConfigDriverVYOS` | `platforms/vyos/driver.py` |
 
 See [Supported Platforms](../admin/platforms.md) for behavior details and [Creating a Platform Driver](creating-drivers.md) for building new ones.

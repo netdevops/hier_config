@@ -1,0 +1,5 @@
+{
+  "platform": "RUCKUS_FASTIRON",
+  "description": "An IPv4 ACL has no sequence numbers, so a changed body is rebuilt ahead of the interface that binds it",
+  "assert_rollback": false
+}
