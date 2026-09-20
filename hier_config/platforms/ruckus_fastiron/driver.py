@@ -8,8 +8,8 @@ from typing import TYPE_CHECKING
 from hier_config.models import (
     IdempotentCommandsRule,
     MatchRule,
-    NegationDefaultWithRule,
-    NegationSubRule,
+    NegationRule,
+    NegationStrategy,
     OrderingRule,
     PerLineSubRule,
     SectionalOverwriteRule,
@@ -180,18 +180,17 @@ class HConfigDriverRuckusFastIron(HConfigDriverBase):
                 # `show run` captured over SSH keeps the prompt echo
                 PerLineSubRule(search=r"^\S*#.*", replace=""),
             ],
-            negate_with=[
-                NegationDefaultWithRule(
+            negation=[
+                NegationRule(
+                    strategy=NegationStrategy.REPLACE,
                     match_rules=(
                         MatchRule(startswith="interface "),
                         MatchRule(startswith="port-name "),
                     ),
                     use="no port-name",
                 ),
-            ],
-            negation_sub=[
-                # `no lag "CORE_UPLINK"` -- drop `static id 10`
-                NegationSubRule(
+                NegationRule(
+                    strategy=NegationStrategy.REGEX_SUB,
                     match_rules=(MatchRule(startswith="lag "),),
                     search=r'^no (lag (?:"[^"]*"|\S+)).*$',
                     replace=r"no \1",
