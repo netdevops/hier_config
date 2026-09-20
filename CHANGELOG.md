@@ -121,6 +121,8 @@ v4 design decisions, for the record:
 - `HConfig.future(..., prune_empty_branches=True)` removes sections that a
   change emptied out — matching devices that prune empty stanzas on commit —
   while keeping sections that were already empty (#269).
+- Ruckus/Brocade FastIron (ICX) platform driver
+  (`Platform.RUCKUS_FASTIRON`), targeting FastIron 08.0.30 (#303).
 - `.github/workflows/claude-review.yml`: a GitHub Actions workflow that runs
   the in-repo `hier-config-review` skill against every pull request through
   `anthropics/claude-code-action` and posts the findings as a PR comment. The

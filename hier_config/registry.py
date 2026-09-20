@@ -27,6 +27,9 @@ from hier_config.platforms.hp_procurve.driver import HConfigDriverHPProcurve
 from hier_config.platforms.huawei_vrp.driver import HConfigDriverHuaweiVrp
 from hier_config.platforms.juniper_junos.driver import HConfigDriverJuniperJUNOS
 from hier_config.platforms.nokia_srl.driver import HConfigDriverNokiaSRL
+from hier_config.platforms.ruckus_fastiron.driver import (
+    HConfigDriverRuckusFastIron,
+)
 from hier_config.platforms.vyos.driver import HConfigDriverVYOS
 
 _BUILTIN_DRIVERS: dict[str, type[HConfigDriverBase]] = {
@@ -42,6 +45,7 @@ _BUILTIN_DRIVERS: dict[str, type[HConfigDriverBase]] = {
     Platform.HUAWEI_VRP.name: HConfigDriverHuaweiVrp,
     Platform.JUNIPER_JUNOS.name: HConfigDriverJuniperJUNOS,
     Platform.NOKIA_SRL.name: HConfigDriverNokiaSRL,
+    Platform.RUCKUS_FASTIRON.name: HConfigDriverRuckusFastIron,
     Platform.VYOS.name: HConfigDriverVYOS,
 }
 

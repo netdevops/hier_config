@@ -17,6 +17,7 @@ In addition to the Cisco-style syntax, hier_config offers experimental support f
 
 - [x] Juniper JunOS
 - [x] Nokia SRL (Service Router Linux)
+- [x] Ruckus/Brocade FastIron (ICX)
 - [x] VyOS
 
 Newer drivers start life as **experimental** until they have seen wider production use — currently Aruba AOS-CX joins the list above in that status. See [Supported Platforms](https://hier-config.readthedocs.io/en/latest/admin/platforms/) for the authoritative per-platform status.
