@@ -23,6 +23,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Ruckus/Brocade FastIron (ICX) platform driver
+  (`Platform.RUCKUS_FASTIRON`), targeting FastIron 08.0.30 (#303).
 - `.github/workflows/claude-review.yml`: a GitHub Actions workflow that runs
   the in-repo `hier-config-review` skill against every pull request through
   `anthropics/claude-code-action` and posts the findings as a PR comment. The

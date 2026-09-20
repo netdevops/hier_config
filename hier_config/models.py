@@ -199,6 +199,7 @@ class Platform(str, Enum):
     HUAWEI_VRP = auto()
     JUNIPER_JUNOS = auto()
     NOKIA_SRL = auto()
+    RUCKUS_FASTIRON = auto()
     VYOS = auto()
 
 

@@ -31,6 +31,7 @@
 | Aruba AOS-CX | `Platform.ARUBA_AOSCX` | Experimental |
 | Juniper JunOS | `Platform.JUNIPER_JUNOS` | Experimental |
 | Nokia SRL | `Platform.NOKIA_SRL` | Experimental |
+| Ruckus/Brocade FastIron (ICX) | `Platform.RUCKUS_FASTIRON` | Experimental |
 | VyOS | `Platform.VYOS` | Experimental |
 | Generic | `Platform.GENERIC` | Base for custom drivers |
 
