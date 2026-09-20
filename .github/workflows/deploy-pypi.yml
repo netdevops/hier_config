@@ -12,10 +12,26 @@ permissions:
 
 jobs:
   linux:
-    runs-on: ubuntu-latest
+    # aarch64 builds on a native arm64 runner, not by cross-compilation from
+    # x64. maturin-action picks the container from the host architecture: an x64
+    # host cross-compiles in `rust-cross/manylinux2014-cross:aarch64`, whose
+    # toolchain is GCC 4.8.5. `libmimalloc-sys` passes `-Wno-error=date-time`
+    # unconditionally, and GCC only knows `-Wdate-time` from 4.9, so that image
+    # cannot build the wheel. An arm64 host uses `pypa/manylinux2014_aarch64`
+    # (GCC 10) instead. This keeps the glibc 2.17 floor, which `manylinux: 2_28`
+    # would raise to 2.28 and drop CentOS 7 and Amazon Linux 2.
+    #
+    # fail-fast is off so one broken target reports its own result instead of
+    # cancelling the others and hiding whether they work.
+    runs-on: ${{ matrix.runner }}
     strategy:
+      fail-fast: false
       matrix:
-        target: [x86_64, aarch64]
+        include:
+        - target: x86_64
+          runner: ubuntu-latest
+        - target: aarch64
+          runner: ubuntu-24.04-arm
     steps:
     - uses: actions/checkout@v6
     - uses: actions/setup-python@v6
@@ -29,7 +45,7 @@ jobs:
         sccache: 'true'
         manylinux: auto
     - name: Upload wheels
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: wheels-linux-${{ matrix.target }}
         path: dist
@@ -37,6 +53,7 @@ jobs:
   windows:
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         include:
         - os: windows-latest
@@ -57,7 +74,7 @@ jobs:
         args: --release --locked --out dist --find-interpreter
         sccache: 'true'
     - name: Upload wheels
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: wheels-windows-${{ matrix.target }}
         path: dist
@@ -65,6 +82,7 @@ jobs:
   musllinux:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         target: [x86_64-unknown-linux-musl, aarch64-unknown-linux-musl]
     steps:
@@ -76,7 +94,7 @@ jobs:
         args: --release --locked --out dist --find-interpreter
         manylinux: musllinux_1_2
         sccache: 'true'
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       with:
         name: wheels-musllinux-${{ matrix.target }}
         path: dist
@@ -84,6 +102,7 @@ jobs:
   macos:
     runs-on: macos-latest
     strategy:
+      fail-fast: false
       matrix:
         target: [x86_64, aarch64]
     steps:
@@ -98,7 +117,7 @@ jobs:
         args: --release --locked --out dist --find-interpreter
         sccache: 'true'
     - name: Upload wheels
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: wheels-macos-${{ matrix.target }}
         path: dist
@@ -113,7 +132,7 @@ jobs:
         command: sdist
         args: --out dist
     - name: Upload sdist
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: wheels-sdist
         path: dist
@@ -123,7 +142,7 @@ jobs:
     needs: [linux, musllinux, windows, macos, sdist]
     steps:
     - uses: actions/checkout@v6
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v8
       with:
         pattern: wheels-*
         merge-multiple: true
