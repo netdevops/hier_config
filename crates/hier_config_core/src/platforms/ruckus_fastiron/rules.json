@@ -1,0 +1,364 @@
+{
+  "platform": "ruckus_fastiron",
+  "negation_prefix": "no ",
+  "rules": {
+    "idempotent_commands": [
+      {
+        "match_rules": [
+          {
+            "startswith": "vlan "
+          },
+          {
+            "re_search": "^vlan \\d+"
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "hostname "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "ip default-gateway "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "console timeout "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "telnet timeout "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "errdisable recovery interval "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "logging buffered "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "clock timezone "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface "
+          },
+          {
+            "startswith": "port-name "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface "
+          },
+          {
+            "startswith": "speed-duplex "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface "
+          },
+          {
+            "startswith": "voice-vlan "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface "
+          },
+          {
+            "re_search": "^ip helper-address (\\d+) "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface "
+          },
+          {
+            "startswith": "port security"
+          },
+          {
+            "startswith": "maximum "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface "
+          },
+          {
+            "startswith": "port security"
+          },
+          {
+            "startswith": "violation "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface "
+          },
+          {
+            "startswith": "port security"
+          },
+          {
+            "startswith": "age "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "lag "
+          },
+          {
+            "startswith": "primary-port "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "lag "
+          },
+          {
+            "re_search": "^port-name .+ (ethernet \\S+)$"
+          }
+        ]
+      }
+    ],
+    "indentation": 1,
+    "negation": [
+      {
+        "match_rules": [
+          {
+            "startswith": "interface "
+          },
+          {
+            "startswith": "port-name "
+          }
+        ],
+        "strategy": "replace",
+        "use": "no port-name"
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "lag "
+          }
+        ],
+        "strategy": "regex_sub",
+        "search": "^no (lag (?:\"[^\"]*\"|\\S+)).*$",
+        "replace": "no \\1"
+      }
+    ],
+    "ordering": [
+      {
+        "match_rules": [
+          {
+            "startswith": "no interface ethernet "
+          }
+        ],
+        "weight": -30
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "lag "
+          },
+          {
+            "equals": "no deploy"
+          }
+        ],
+        "weight": -50
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "lag "
+          },
+          {
+            "equals": "deploy"
+          }
+        ],
+        "weight": 50
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "lag "
+          },
+          {
+            "startswith": "ports ethernet "
+          }
+        ],
+        "weight": -40
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "lag "
+          },
+          {
+            "startswith": "primary-port "
+          }
+        ],
+        "weight": -30
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "lag "
+          },
+          {
+            "startswith": "no ports ethernet "
+          }
+        ],
+        "weight": -20
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "vlan "
+          },
+          {
+            "startswith": "no untagged "
+          }
+        ],
+        "weight": -20
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface "
+          },
+          {
+            "startswith": "no mac filter-group "
+          }
+        ],
+        "weight": -20
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface "
+          },
+          {
+            "startswith": "no ip access-group "
+          }
+        ],
+        "weight": -20
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "no mac filter "
+          }
+        ],
+        "weight": 20
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "mac filter "
+          }
+        ],
+        "weight": -25
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "no ip access-list "
+          }
+        ],
+        "weight": -30
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "ip access-list "
+          }
+        ],
+        "weight": -25
+      },
+      {
+        "match_rules": [
+          {
+            "re_search": "^no vlan \\d+$"
+          }
+        ],
+        "weight": 10
+      }
+    ],
+    "per_line_sub": [
+      {
+        "search": "^Current configuration:.*",
+        "replace": ""
+      },
+      {
+        "search": "^Building configuration.*",
+        "replace": ""
+      },
+      {
+        "search": "^\\s*!.*",
+        "replace": ""
+      },
+      {
+        "search": "^ver \\S+\\s*$",
+        "replace": ""
+      },
+      {
+        "search": "^end\\s*$",
+        "replace": ""
+      },
+      {
+        "search": "^\\S*#.*",
+        "replace": ""
+      }
+    ],
+    "sectional_overwrite": [
+      {
+        "match_rules": [
+          {
+            "startswith": "ip access-list "
+          }
+        ]
+      }
+    ]
+  }
+}

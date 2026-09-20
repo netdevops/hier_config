@@ -391,11 +391,12 @@ pub enum Platform {
     HuaweiVrp,
     JuniperJunos,
     NokiaSrl,
+    RuckusFastiron,
     Vyos,
 }
 
 impl Platform {
-    pub const ALL: [Self; 13] = [
+    pub const ALL: [Self; 14] = [
         Self::AristaEos,
         Self::ArubaAoscx,
         Self::CiscoIos,
@@ -408,6 +409,7 @@ impl Platform {
         Self::HuaweiVrp,
         Self::JuniperJunos,
         Self::NokiaSrl,
+        Self::RuckusFastiron,
         Self::Vyos,
     ];
 
@@ -428,6 +430,7 @@ impl Platform {
             | Self::HuaweiVrp
             | Self::JuniperJunos
             | Self::NokiaSrl
+            | Self::RuckusFastiron
             | Self::Vyos => {}
         }
     }
@@ -446,6 +449,7 @@ impl Platform {
             Self::HuaweiVrp => "huawei_vrp",
             Self::JuniperJunos => "juniper_junos",
             Self::NokiaSrl => "nokia_srl",
+            Self::RuckusFastiron => "ruckus_fastiron",
             Self::Vyos => "vyos",
         }
     }
@@ -462,6 +466,13 @@ const _: () = Platform::assert_all_is_exhaustive(Platform::Generic);
 impl std::str::FromStr for Platform {
     type Err = String;
 
+    /// Parses a platform name, an alias, or a Python enum value.
+    ///
+    /// The numeric aliases are the values of `hier_config.models.Platform`,
+    /// which uses `auto()` and therefore numbers its members by position. The
+    /// Python bindings hand this method a member's value, so a platform added
+    /// to the middle of that enum renumbers every member after it. Keep the
+    /// numbers here in the same order as the Python enum.
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let normalized = s.trim().to_lowercase().replace('-', "_");
         match normalized.as_str() {
@@ -477,7 +488,8 @@ impl std::str::FromStr for Platform {
             "10" | "huawei_vrp" | "vrp" => Ok(Self::HuaweiVrp),
             "11" | "juniper_junos" | "junos" => Ok(Self::JuniperJunos),
             "12" | "nokia_srl" | "srl" => Ok(Self::NokiaSrl),
-            "13" | "vyos" => Ok(Self::Vyos),
+            "13" | "ruckus_fastiron" | "fastiron" | "icx" => Ok(Self::RuckusFastiron),
+            "14" | "vyos" => Ok(Self::Vyos),
             other => Err(format!("Unknown platform: {other}")),
         }
     }

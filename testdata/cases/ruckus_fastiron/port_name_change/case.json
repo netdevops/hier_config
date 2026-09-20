@@ -1,0 +1,5 @@
+{
+  "platform": "RUCKUS_FASTIRON",
+  "description": "port-name is idempotent, so a rename emits one line and no negation",
+  "assert_rollback": true
+}

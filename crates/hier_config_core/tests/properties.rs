@@ -189,6 +189,7 @@ fn arb_platform() -> impl Strategy<Value = Platform> {
         Just(Platform::HuaweiVrp),
         Just(Platform::JuniperJunos),
         Just(Platform::NokiaSrl),
+        Just(Platform::RuckusFastiron),
         Just(Platform::Vyos),
     ]
 }

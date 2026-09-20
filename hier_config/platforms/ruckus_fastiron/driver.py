@@ -5,16 +5,12 @@ from __future__ import annotations
 from logging import getLogger
 from typing import TYPE_CHECKING
 
-from hier_config.models import (
-    IdempotentCommandsRule,
-    MatchRule,
-    NegationRule,
-    NegationStrategy,
-    OrderingRule,
-    PerLineSubRule,
-    SectionalOverwriteRule,
+from hier_config.models import Platform
+from hier_config.platforms.driver_base import (
+    HConfigDriverBase,
+    HConfigDriverRules,
+    load_platform_rules,
 )
-from hier_config.platforms.driver_base import HConfigDriverBase, HConfigDriverRules
 from hier_config.platforms.ruckus_fastiron.functions import fastiron_expand_ports
 
 if TYPE_CHECKING:
@@ -168,9 +164,16 @@ class HConfigDriverRuckusFastIron(HConfigDriverBase):
     Platform enum: ``Platform.RUCKUS_FASTIRON``.
     """
 
+    platform = Platform.RUCKUS_FASTIRON
+
     @staticmethod
     def _instantiate_rules() -> HConfigDriverRules:
-        """Return the rule set for FastIron 08.0.30.
+        """Load the canonical rules and attach this platform's post-load callbacks.
+
+        The rules come from the JSON the Rust core embeds, so Python and
+        Rust cannot drift apart. The callbacks stay here because the core
+        does not own them; `hier_config.constructors` runs them after the
+        parse. The rules target FastIron 08.0.30.
 
         Each ordering weight encodes a dependency the device enforces:
 
@@ -217,207 +220,8 @@ class HConfigDriverRuckusFastIron(HConfigDriverBase):
         * An IPv4 ACL has no sequence numbers on 08.0.30 and accepts appends
           only, so a changed body is rebuilt to keep the entry order.
         """
-        return HConfigDriverRules(
-            indentation=1,
-            per_line_sub=[
-                PerLineSubRule(search=r"^Current configuration:.*", replace=""),
-                PerLineSubRule(search=r"^Building configuration.*", replace=""),
-                PerLineSubRule(search=r"^\s*!.*", replace=""),
-                PerLineSubRule(search=r"^ver \S+\s*$", replace=""),
-                PerLineSubRule(search=r"^end\s*$", replace=""),
-                PerLineSubRule(search=r"^\S*#.*", replace=""),
-            ],
-            negation=[
-                NegationRule(
-                    strategy=NegationStrategy.REPLACE,
-                    match_rules=(
-                        MatchRule(startswith="interface "),
-                        MatchRule(startswith="port-name "),
-                    ),
-                    use="no port-name",
-                ),
-                NegationRule(
-                    strategy=NegationStrategy.REGEX_SUB,
-                    match_rules=(MatchRule(startswith="lag "),),
-                    search=r'^no (lag (?:"[^"]*"|\S+)).*$',
-                    replace=r"no \1",
-                ),
-            ],
-            idempotent_commands=[
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith="vlan "),
-                        MatchRule(re_search=r"^vlan \d+"),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(MatchRule(startswith="hostname "),)
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(MatchRule(startswith="ip default-gateway "),),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(MatchRule(startswith="console timeout "),),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(MatchRule(startswith="telnet timeout "),),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith="errdisable recovery interval "),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(MatchRule(startswith="logging buffered "),),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(MatchRule(startswith="clock timezone "),),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith="interface "),
-                        MatchRule(startswith="port-name "),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith="interface "),
-                        MatchRule(startswith="speed-duplex "),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith="interface "),
-                        MatchRule(startswith="voice-vlan "),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith="interface "),
-                        MatchRule(re_search=r"^ip helper-address (\d+) "),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith="interface "),
-                        MatchRule(startswith="port security"),
-                        MatchRule(startswith="maximum "),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith="interface "),
-                        MatchRule(startswith="port security"),
-                        MatchRule(startswith="violation "),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith="interface "),
-                        MatchRule(startswith="port security"),
-                        MatchRule(startswith="age "),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith="lag "),
-                        MatchRule(startswith="primary-port "),
-                    ),
-                ),
-                IdempotentCommandsRule(
-                    match_rules=(
-                        MatchRule(startswith="lag "),
-                        MatchRule(re_search=r"^port-name .+ (ethernet \S+)$"),
-                    ),
-                ),
-            ],
-            sectional_overwrite=[
-                SectionalOverwriteRule(
-                    match_rules=(MatchRule(startswith="ip access-list "),),
-                ),
-            ],
-            ordering=[
-                OrderingRule(
-                    match_rules=(MatchRule(startswith="no interface ethernet "),),
-                    weight=-30,
-                ),
-                OrderingRule(
-                    match_rules=(
-                        MatchRule(startswith="lag "),
-                        MatchRule(equals="no deploy"),
-                    ),
-                    weight=-50,
-                ),
-                OrderingRule(
-                    match_rules=(
-                        MatchRule(startswith="lag "),
-                        MatchRule(equals="deploy"),
-                    ),
-                    weight=50,
-                ),
-                OrderingRule(
-                    match_rules=(
-                        MatchRule(startswith="lag "),
-                        MatchRule(startswith="ports ethernet "),
-                    ),
-                    weight=-40,
-                ),
-                OrderingRule(
-                    match_rules=(
-                        MatchRule(startswith="lag "),
-                        MatchRule(startswith="primary-port "),
-                    ),
-                    weight=-30,
-                ),
-                OrderingRule(
-                    match_rules=(
-                        MatchRule(startswith="lag "),
-                        MatchRule(startswith="no ports ethernet "),
-                    ),
-                    weight=-20,
-                ),
-                OrderingRule(
-                    match_rules=(
-                        MatchRule(startswith="vlan "),
-                        MatchRule(startswith="no untagged "),
-                    ),
-                    weight=-20,
-                ),
-                OrderingRule(
-                    match_rules=(
-                        MatchRule(startswith="interface "),
-                        MatchRule(startswith="no mac filter-group "),
-                    ),
-                    weight=-20,
-                ),
-                OrderingRule(
-                    match_rules=(
-                        MatchRule(startswith="interface "),
-                        MatchRule(startswith="no ip access-group "),
-                    ),
-                    weight=-20,
-                ),
-                OrderingRule(
-                    match_rules=(MatchRule(startswith="no mac filter "),),
-                    weight=20,
-                ),
-                OrderingRule(
-                    match_rules=(MatchRule(startswith="mac filter "),),
-                    weight=-25,
-                ),
-                OrderingRule(
-                    match_rules=(MatchRule(startswith="no ip access-list "),),
-                    weight=-30,
-                ),
-                OrderingRule(
-                    match_rules=(MatchRule(startswith="ip access-list "),),
-                    weight=-25,
-                ),
-                OrderingRule(
-                    match_rules=(MatchRule(re_search=r"^no vlan \d+$"),),
-                    weight=10,
-                ),
-            ],
+        return load_platform_rules(
+            Platform.RUCKUS_FASTIRON,
             post_load_callbacks=[
                 _remove_stack_config,
                 _normalize_vlan_headers,

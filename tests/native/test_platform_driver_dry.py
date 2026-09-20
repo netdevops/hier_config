@@ -11,8 +11,8 @@ from hier_config.platforms.driver_base import (
 )
 
 
-def test_all_13_platforms_load_rules_via_rust_and_python() -> None:
-    """Verify all 13 platform drivers can load rules matching their canonical JSON definitions."""
+def test_all_14_platforms_load_rules_via_rust_and_python() -> None:
+    """Verify all 14 platform drivers can load rules matching their canonical JSON definitions."""
     for platform in Platform:
         driver = get_hconfig_driver(platform)
         rules = driver.rules

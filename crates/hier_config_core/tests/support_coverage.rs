@@ -220,14 +220,17 @@ fn platform_names_and_aliases_normalize_to_the_correct_driver() {
         ("vrp", Platform::HuaweiVrp, "huawei_vrp"),
         ("JUNOS", Platform::JuniperJunos, "juniper_junos"),
         ("srl", Platform::NokiaSrl, "nokia_srl"),
-        ("13", Platform::Vyos, "vyos"),
+        ("13", Platform::RuckusFastiron, "ruckus_fastiron"),
+        ("ICX", Platform::RuckusFastiron, "ruckus_fastiron"),
+        ("fastiron", Platform::RuckusFastiron, "ruckus_fastiron"),
+        ("14", Platform::Vyos, "vyos"),
     ] {
         let platform = Platform::from_str(input).unwrap();
         assert_eq!(platform, expected);
         assert_eq!(platform.as_str(), canonical);
         assert_eq!(Tree::for_platform(platform).driver.platform, expected);
     }
-    for invalid in ["", "0", "14", "nonexistent", "AOSC X"] {
+    for invalid in ["", "0", "15", "nonexistent", "AOSC X"] {
         assert!(
             Platform::from_str(invalid)
                 .unwrap_err()
