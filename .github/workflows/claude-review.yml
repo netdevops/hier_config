@@ -14,7 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # The review agent runs `uv run …`, which re-locks and re-syncs by
-      # default. Keep it frozen so the job cannot rewrite `uv.lock`.
+      # default. Keep it frozen so the job cannot rewrite `uv.lock`. uv
+      # rejects UV_FROZEN and UV_LOCKED together, so this is the only one
+      # set here; build-and-test.yml asserts the lock is current.
       UV_FROZEN: "1"
     # Secrets, including CLAUDE_CODE_OAUTH_TOKEN, are unavailable to fork
     # pull requests.
@@ -59,8 +61,6 @@ jobs:
     # The skill's gates import `hier_config`, which has no pure-Python
     # fallback, so the extension has to be built here.
     - name: Install dependencies and build extension
-      env:
-        UV_LOCKED: "1"
       run: |
         uv sync
         uv run maturin develop --release --locked
