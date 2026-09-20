@@ -1,46 +1,11 @@
-[project]
-name = "hier-config"
-version = "4.0.0b3"
-description = "A network configuration query and comparison library, used to build remediation configurations."
-readme = "README.md"
-license = "MIT"
-license-files = ["LICENSE"]
-authors = [
-    { name = "Andrew Edwards", email = "edwards.andrew@heb.com" },
-    { name = "James Williams", email = "james.williams@networktocode.com" },
-    { name = "Jan Brooks", email = "jan.brooks@rackspace.com" },
-]
-requires-python = ">=3.10.0,<4.0"
-classifiers = [
-    "Development Status :: 5 - Production/Stable",
-    "Intended Audience :: Developers",
-    "Intended Audience :: Information Technology",
-    "Intended Audience :: System Administrators",
-    "Intended Audience :: Telecommunications Industry",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
-    "Programming Language :: Python :: 3.14",
-    "Natural Language :: English",
-    "Topic :: Software Development :: Libraries :: Python Modules",
-    "Topic :: System :: Networking",
-]
-dependencies = [
-    "pydantic>=2.9,<3.0",
-]
-
-[build-system]
-requires = ["uv_build>=0.11.11,<0.12.0"]
-build-backend = "uv_build"
-
-[tool.uv.build-backend]
-module-root = "."
-
+# Dev tooling, PEP 735. Standard and tool-agnostic: `pip install --group dev`
+# and `uv sync --group dev` both read it. Deliberately unpinned -- the linters
+# are expected to float so new rules surface here rather than in a consumer's CI.
+# Docs tools are also listed in `docs/requirements.txt` for Read the Docs.
 [dependency-groups]
 dev = [
     "flynt",
+    "maturin>=1.10",
     "mkdocs",
     "mkdocs-include-markdown-plugin",
     "mkdocs-redirects",
@@ -53,15 +18,84 @@ dev = [
     "pytest-cov",
     "pytest-profiling",
     "pytest-xdist",
+    "pyyaml>=6,<7",
     "ruff",
     "typer",
     "types-pyyaml",
     "yamllint",
 ]
 
+[build-system]
+# Modern maturin enables PyO3 extension linking without a Cargo feature, keeping
+# ordinary Cargo executables and all-features tests linked to Python correctly.
+requires = ["maturin>=1.10,<2.0"]
+build-backend = "maturin"
+
+# PEP 621 metadata. maturin is the build backend and reads *this* table.
+# Without this, the wheel shipped with `Requires-Dist: None` and no description,
+# classifiers, license, or requires-python, so `pip install hier-config` produced a
+# package that raised `ModuleNotFoundError: pydantic` on import.
+[project]
+name = "hier-config"
+description = "A network configuration query and comparison library, used to build remediation configurations."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [
+    { name = "Andrew Edwards", email = "edwards.andrew@heb.com" },
+    { name = "James Williams", email = "james.williams@networktocode.com" },
+    { name = "Jan Brooks", email = "jan.brooks@rackspace.com" },
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
+    "Intended Audience :: Telecommunications Industry",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Natural Language :: English",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Networking",
+]
+# YAML file loaders lazily import PyYAML, available through the optional extra.
+dependencies = ["pydantic>=2.9,<3"]
+# Sourced from `[workspace.package] version` in Cargo.toml so the Rust crate and the
+# Python distribution cannot drift apart.
+dynamic = ["version"]
+
+[project.optional-dependencies]
+yaml = ["pyyaml>=6,<7"]
+
+[project.urls]
+Homepage = "https://github.com/netdevops/hier_config"
+Repository = "https://github.com/netdevops/hier_config"
+
+[tool.maturin]
+manifest-path = "crates/hier_config_py/Cargo.toml"
+python-source = "."
+python-packages = ["hier_config", "_hier_config_rust"]
+module-name = "hier_config._hier_config_rust"
+
+
 
 [tool.pyright]
 typeCheckingMode = "strict"
+venvPath = "."
+venv = ".venv"
+
+
+[tool.pylint.main]
+# Astroid does not prefer .pyi files over ABI-tagged extension binaries.
+# Resolve native imports from the canonical declarations, not C descriptors.
+init-hook = """
+from astroid import MANAGER
+MANAGER.ast_from_file("hier_config/_hier_config_rust.pyi", modname="hier_config._hier_config_rust", source=True)
+"""
 
 
 [tool.pylint.message_control]
@@ -112,9 +146,10 @@ plugins = [
 ]
 
 
+
 [tool.ruff]
 line-length = 88
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.format]
 docstring-code-format = true
@@ -132,6 +167,11 @@ ignore = [
     "EXE002",  # DO NOT REMOVE: The file is executable but no shebang is present
     "ISC001",  # DO NOT REMOVE: The following rule may cause conflicts when used with the formatter
     "PLR2004",  # Magic value used in comparison
+    # UP042 (replace-str-enum): `class Platform(str, Enum)` is deliberate.
+    # Switching to `StrEnum` changes `str(Platform.CISCO_IOS)` from
+    # "Platform.CISCO_IOS" to "cisco_ios", an observable behavior change on a
+    # public, v3-compatible enum.
+    "UP042",  # Class inherits from both `str` and `enum.Enum`
     # The below checks should eventually be enabled
     "D100",  # Missing docstring in public module
     "D102",  # Missing docstring in public method
@@ -154,15 +194,49 @@ parametrize-values-type = "tuple"
 [tool.ruff.lint.per-file-ignores]
 "**/tests/*" = ["PLC2701", "S101"]
 "tests/benchmarks/test_benchmarks.py" = ["T201", "PLR6301", "PERF401"]
+# The perf gate shells out so each measurement gets a cold interpreter, keeping
+# import-time and cache-warming costs out of the timings. The command is built
+# from `sys.executable` and a literal script, never from user input.
+"tests/benchmarks/test_perf_regression.py" = ["S404", "S603", "T201"]
+# These modules exist solely to re-export the compiled extension under the
+# public `hier_config` namespace. `_hier_config_rust` is deliberately
+# underscore-prefixed -- it is an implementation detail that callers should
+# reach through `hier_config`, not import directly -- so importing it by name
+# is exactly what these shims are for.
+"hier_config/base.py" = ["PLC2701"]
+"hier_config/child.py" = ["PLC2701"]
+"hier_config/children.py" = ["PLC2701"]
+"hier_config/exceptions.py" = ["PLC2701"]
+"hier_config/formats.py" = ["PLC2701"]
+# B024: `HConfigDriverBase` stays an `ABC` for backward compatibility with
+# downstream `isinstance` checks and custom subclasses. v4 gave
+# `_instantiate_rules` a concrete default (platforms declare rules in Rust), so
+# no abstract member remains -- but dropping `ABC` would be a silent API break.
+"hier_config/platforms/driver_base.py" = ["PLC2701", "B024"]
+# `view_base.py` keeps `HConfigViewBase`/`ConfigViewInterfaceBase` as `ABC`s for
+# backward compatibility with downstream `isinstance` checks and custom
+# subclasses, even where a method has become a concrete delegation.
+"hier_config/platforms/view_base.py" = ["PLC2701", "B024"]
 # HConfig's classmethod constructors and WorkflowRemediation's format
 # renderers defer their loader imports to call time to avoid circular
 # imports and keep `import hier_config` light.
-"hier_config/root.py" = ["PLC0415"]
-"hier_config/workflows.py" = ["PLC0415"]
+"hier_config/root.py" = ["PLC2701", "PLC0415"]
+"hier_config/workflows.py" = ["PLC2701", "PLC0415"]
+# The generated native stub is also mkdocstrings' documented API source.
+# Preserve binding docstrings verbatim instead of applying Python prose rules.
+"hier_config/_hier_config_rust.pyi" = ["PYI021", "D"]
+# Lint gate, not shipped library code. It imports `hier_config` and the
+# compiled extension inside functions because the module has to be importable
+# to report a *missing* build rather than dying at import time (PLC0415), it
+# prints its findings (T201), and `check_value` is a single flat dispatch over
+# annotation forms -- one return per form is clearer than nesting them to fit a
+# return-count budget (PLR0911).
+"scripts/check_stub_types.py" = ["PLC0415", "PLR0911", "T201", "INP001"]
 
 [tool.pytest.ini_options]
 markers = [
     "benchmark: performance benchmark tests (deselect with '-m \"not benchmark\"')",
     "v3_differential: compare against a live hier-config v3 install (select with '-m v3_differential')",
+    "displaced_by: superseded by Rust-native coverage; see scripts/check_displacement_markers.py",
 ]
 addopts = "-m 'not benchmark and not v3_differential'"

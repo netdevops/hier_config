@@ -1,6 +1,6 @@
 # Code Style & Standards
 
-All standards below are enforced by `uv run ./scripts/build.py lint`, which runs ruff (format + check), mypy, pyright, pylint, yamllint, and flynt in parallel. CI fails if any tool reports an issue.
+All standards below are enforced by `uv run --no-sync ./scripts/build.py lint`, which runs ruff (format + check), mypy, pyright, pylint, yamllint, and flynt in parallel. CI fails if any tool reports an issue.
 
 ## Lint & Type Checking Stack
 
@@ -24,7 +24,7 @@ The authoritative rule configuration lives in `pyproject.toml`. Do not add suppr
 
 ## General Conventions
 
-- Python 3.10+ (`target-version = "py310"`); CI tests 3.10 through 3.14.
+- Python 3.11+ (`target-version = "py311"`); CI tests 3.11 through 3.14.
 - Full type annotations everywhere, including tests.
 - Docstrings required for new public classes, methods, and functions; use raw strings (`r"""..."""`) when they contain backslashes.
 - Runtime dependencies are deliberately minimal (`pydantic` only) — do not add runtime dependencies without prior discussion in an issue.

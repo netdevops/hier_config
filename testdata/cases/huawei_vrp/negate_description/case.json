@@ -1,0 +1,5 @@
+{
+  "platform": "HUAWEI_VRP",
+  "description": "Test negate description for Huawei VRP interface",
+  "assert_rollback": true
+}

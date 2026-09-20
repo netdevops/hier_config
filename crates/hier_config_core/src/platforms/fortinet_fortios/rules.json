@@ -1,0 +1,47 @@
+{
+  "platform": "fortinet_fortios",
+  "negation_prefix": "unset ",
+  "declaration_prefix": "set ",
+  "rules": {
+    "parent_allows_duplicate_child": [
+      {
+        "match_rules": [
+          {
+            "startswith": "config"
+          }
+        ]
+      }
+    ],
+    "per_line_sub": [
+      {
+        "search": "^end$",
+        "replace": " end"
+      },
+      {
+        "search": "^next$",
+        "replace": "  next"
+      }
+    ],
+    "sectional_exiting": [
+      {
+        "match_rules": [
+          {
+            "startswith": "config "
+          }
+        ],
+        "exit_text": "end"
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "config "
+          },
+          {
+            "startswith": "edit "
+          }
+        ],
+        "exit_text": "next"
+      }
+    ]
+  }
+}

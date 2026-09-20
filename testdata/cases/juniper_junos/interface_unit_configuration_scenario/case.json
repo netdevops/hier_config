@@ -1,0 +1,5 @@
+{
+  "platform": "JUNIPER_JUNOS",
+  "description": "Configuring interface unit parameters on Juniper JUNOS",
+  "assert_rollback": false
+}

@@ -1,0 +1,16 @@
+identity: True
+setattr: AttributeError (has __slots__)
+facts: hello_facts
+deepcopy: OK len=2
+pickle: OK len=2
+subclass: OK CustomChild
+tags_type: frozenset
+tags_contain: True
+comments_mutation: True
+children_type: HConfigChildren
+has_dict: False
+hc_is_child: False
+hc_is_base: True
+child_is_base: True
+child_repr: HConfigChild(HConfig, interface GigabitEthernet0/1)
+hc_repr: HConfig(driver=HConfigDriverCiscoIOS, lines=('interface GigabitEthernet0/1', '  ip address 10.0.0.1 255.255.255.0'))

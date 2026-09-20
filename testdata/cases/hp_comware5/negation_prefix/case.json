@@ -1,0 +1,5 @@
+{
+  "platform": "HP_COMWARE5",
+  "description": "HP Comware 5 uses 'undo ' as its negation prefix for trunk permit vlan",
+  "assert_rollback": true
+}

@@ -1,0 +1,5 @@
+{
+  "platform": "CISCO_IOS",
+  "description": "Overlapping collapsed list (vlan 10,10-12) de-duplicates and splits cleanly without negation",
+  "assert_rollback": true
+}

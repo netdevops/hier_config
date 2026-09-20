@@ -1,0 +1,216 @@
+{
+  "platform": "aruba_aoscx",
+  "negation_prefix": "no ",
+  "rules": {
+    "idempotent_commands": [
+      {
+        "match_rules": [
+          {
+            "startswith": "hostname "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "vlan "
+          },
+          {
+            "startswith": "name "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface "
+          },
+          {
+            "startswith": "description "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface "
+          },
+          {
+            "startswith": "ip address "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface "
+          },
+          {
+            "startswith": "vlan access "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface "
+          },
+          {
+            "startswith": "vlan trunk native "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface "
+          },
+          {
+            "startswith": "vrf attach "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface "
+          },
+          {
+            "startswith": "mtu "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface "
+          },
+          {
+            "startswith": "speed "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "interface "
+          },
+          {
+            "startswith": "flow-control "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp "
+          },
+          {
+            "startswith": "bgp router-id "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp "
+          },
+          {
+            "re_search": "neighbor \\S+ description "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "router ospf "
+          },
+          {
+            "startswith": "router-id "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "snmp-server location "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "snmp-server contact "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "logging "
+          }
+        ]
+      },
+      {
+        "match_rules": [
+          {
+            "startswith": "ntp vrf "
+          }
+        ]
+      }
+    ],
+    "ordering": [
+      {
+        "match_rules": [
+          {
+            "startswith": "vlan "
+          }
+        ],
+        "weight": -10
+      }
+    ],
+    "per_line_sub": [
+      {
+        "search": "^\\S+(?:\\([^)]+\\))?#.*",
+        "replace": ""
+      },
+      {
+        "search": "^Current configuration.*",
+        "replace": ""
+      },
+      {
+        "search": "^!.*",
+        "replace": ""
+      },
+      {
+        "search": "^#.*",
+        "replace": ""
+      },
+      {
+        "search": "^end$",
+        "replace": ""
+      },
+      {
+        "search": "^\\s*exit$",
+        "replace": ""
+      },
+      {
+        "search": "^\\s*exit-address-family$",
+        "replace": ""
+      }
+    ],
+    "sectional_exiting": [
+      {
+        "match_rules": [
+          {
+            "startswith": "router bgp"
+          },
+          {
+            "startswith": "address-family"
+          }
+        ],
+        "exit_text": "exit-address-family"
+      }
+    ]
+  }
+}

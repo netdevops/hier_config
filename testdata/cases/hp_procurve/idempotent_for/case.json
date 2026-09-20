@@ -1,0 +1,5 @@
+{
+  "platform": "HP_PROCURVE",
+  "description": "Test idempotent_for for AAA port-access commands",
+  "assert_rollback": true
+}

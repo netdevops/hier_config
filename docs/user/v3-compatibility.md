@@ -1,8 +1,11 @@
 # v3 API Compatibility
 
-Every v3 name that v4 renamed or removed still works in v4. The old names raise no
-`DeprecationWarning`, and they are supported permanently. v3 code runs on v4
-unchanged.
+The v3 names **listed on this page** remain supported permanently, without a
+`DeprecationWarning`. This is an explicit compatibility surface, not a promise
+that all v3 helpers, return types, or object protocols are unchanged.
+The v4 Rust rewrite has additional breaks, including `all_children()` →
+`descendants()`, removed construction/algorithm helpers, and native view
+contracts. Read [Rust core behavior changes](rust-core-changes.md) before upgrading.
 
 Each old name is a thin wrapper that calls its v4 counterpart, so the two spellings
 can never drift apart. A committed recording of the v3 output
@@ -10,7 +13,7 @@ can never drift apart. A committed recording of the v3 output
 
 If you are writing new code, prefer the v4 names in
 [Migrating from v3](migrating-from-v3.md). They are the ones the documentation and
-examples use. Nothing forces you to change existing code.
+examples use. Existing calls to the aliases listed below need not be renamed.
 
 ## Supported v3 names
 

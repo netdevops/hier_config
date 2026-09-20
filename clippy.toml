@@ -1,0 +1,18 @@
+# Maximum cognitive complexity floor for functions in the workspace.
+cognitive-complexity-threshold = 15
+
+# Enforce the justification behind the `deny.toml` ignores of RUSTSEC-2026-0176
+# and RUSTSEC-2026-0177: that assertion ("we call none of
+# `PyCFunction::new_closure`, `PyList`/`PyTuple` `nth`/`nth_back`") is only true
+# for as long as nothing reintroduces one of these calls.
+#
+# Only the RUSTSEC-2026-0177 half is expressible here. `PyCFunction::new_closure`
+# is an inherent associated function, so `disallowed_methods` resolves and matches
+# it. The RUSTSEC-2026-0176 half is not: `.nth(n)`/`.nth_back(n)`/`.skip(n)` on a
+# `PyList`/`PyTuple` iterator dispatch through `Iterator`/`DoubleEndedIterator`,
+# and `disallowed_methods` cannot match a trait-dispatched call. Rules naming those
+# methods resolve to nothing and silently never fire, so they are not written here.
+# `scripts/check_pyo3_advisories.py` guards that half instead.
+[[disallowed-methods]]
+path = "pyo3::types::PyCFunction::new_closure"
+reason = "RUSTSEC-2026-0177: missing Sync bound on the closure; ignored in deny.toml on the basis that we never call it."

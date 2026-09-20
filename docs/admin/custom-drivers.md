@@ -62,6 +62,35 @@ class MyNOSDriver(HConfigDriverBase):
 
 An empty `HConfigDriverRules()` is also valid — that gives you the same behavior as the `GENERIC` platform (Cisco-style syntax, no special rules), which you can then extend.
 
+### Native platform selection
+
+Rules and native vendor operations are separate. The public class attribute
+`platform: ClassVar[Platform]` selects a built-in native implementation.
+Subclassing a built-in driver inherits that selector; a direct
+`HConfigDriverBase` subclass without one uses Generic operations.
+Registering a name or returning another platform's rules does **not** select
+that platform's preprocessing, post-load fixups, or views.
+
+```python
+from typing import ClassVar
+
+from hier_config import Platform
+from hier_config.platforms.driver_base import load_platform_rules
+
+
+class CustomIOS(HConfigDriverBase):
+    platform: ClassVar[Platform] = Platform.CISCO_IOS
+
+    @staticmethod
+    def _instantiate_rules() -> HConfigDriverRules:
+        return load_platform_rules(Platform.CISCO_IOS)
+```
+
+Keep the selector unset for a new Generic-based rule-only platform. Select an
+existing vendor only when those imperative native behaviors are appropriate.
+Invalid explicit selectors raise `ValueError`; class names do not supply
+fallback vendor selection.
+
 Optionally override the negation or declaration prefixes:
 
 ```python
@@ -151,24 +180,46 @@ workflow = WorkflowRemediation(running, generated)
 
 ## Config views for custom drivers
 
-If the driver class sets a `view_class`, `get_hconfig_view()` resolves the view automatically for the registered platform:
+A subclass of a built-in driver can customize its device-level view through
+`view_class`. Inherit the built-in platform selector and view constructor:
 
 ```python
-from hier_config import get_hconfig_view
+from hier_config import HConfig, get_hconfig_view
+from hier_config.platforms.cisco_ios.driver import HConfigDriverCiscoIOS
+from hier_config.platforms.cisco_ios.view import HConfigViewCiscoIOS
 
 
-class MyNOSDriver(HConfigDriverBase):
-    view_class = MyNOSConfigView  # a HConfigViewBase subclass
-    ...
+class CustomIOSView(HConfigViewCiscoIOS):
+    @property
+    def hostname_upper(self) -> str:
+        return (self.hostname or "").upper()
 
 
-view = get_hconfig_view(HConfig.from_text("MY_NOS", config_text))
+class CustomIOSDriver(HConfigDriverCiscoIOS):
+    view_class = CustomIOSView
+
+
+view = get_hconfig_view(
+    HConfig.from_text(CustomIOSDriver(), "hostname edge-router")
+)
+assert isinstance(view, CustomIOSView)
+assert view.hostname_upper == "EDGE-ROUTER"
 ```
 
-See [Creating a Platform Driver](../dev/creating-drivers.md#adding-a-config-view) for how to implement the view class itself.
+This does not enable views for a new Generic-based platform. A driver must
+select an existing platform with native view operations; assigning `view_class`
+alone is insufficient. For a new platform, contribute native view operations
+or use an application-owned wrapper rather than a native view subclass.
+
+Per-interface view classes cannot be directly constructed, including Python
+subclasses that supply only `__init__`; obtain instances from the device view.
+Capability marker `isinstance()` checks remain supported, but the old mixin
+`issubclass()` relationships do not. See the
+[native view migration contract](../user/rust-core-changes.md#native-config-views)
+and [Creating a Platform Driver](../dev/creating-drivers.md#adding-a-config-view).
 
 ## Next steps
 
-- [Creating a Platform Driver](../dev/creating-drivers.md) — the full driver anatomy: preprocessors, imperative overrides, views.
+- [Creating a Platform Driver](../dev/creating-drivers.md) — rules, native platform selection, explicit preprocessing, callbacks, and views.
 - [Customizing Driver Rules](customizing-rules.md) — extend a built-in driver instead of writing one from scratch.
 - [Loading Rules from Files](rules-from-files.md) — keep rule definitions in YAML.

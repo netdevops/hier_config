@@ -103,7 +103,7 @@ remediation = wfr.remediation_config.get_child(equals="ip access-list extended T
 acl = custom_remediation.get_child(equals="ip access-list extended TEST")
 acl.add_child("1 permit ip any any")  # Temporary allow-all
 
-for line in remediation.all_children():
+for line in remediation.descendants():
     if line.text.startswith("no "):
         # Adjust invalid sequence negation
         parts = line.text.split()
@@ -182,7 +182,7 @@ class ForbidShutdownPlugin(RemediationPlugin):
         return "Removes interface shutdown commands to avoid accidental outages."
 
     def transform(self, remediation: HConfig) -> None:
-        for child in tuple(remediation.all_children()):
+        for child in tuple(remediation.descendants()):
             if child.text == "shutdown":
                 child.delete()
 

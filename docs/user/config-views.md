@@ -2,13 +2,14 @@
 
 This page covers config views — a typed, Pythonic layer for extracting structured data (hostnames, interfaces, VLANs, IP addresses) from a parsed configuration without writing regex. Use it when you need to *read* facts out of a config rather than remediate it.
 
-A config view wraps an `HConfig` tree and exposes Python properties in a platform-independent way: the framework combines abstract base classes (`HConfigViewBase`, `ConfigViewInterfaceBase`) with platform-specific implementations (e.g. `HConfigViewCiscoIOS`, `ConfigViewInterfaceCiscoIOS`) so the same code works across vendors.
+A config view wraps an `HConfig` tree and exposes Python properties in a platform-independent way: `HConfigView` and `ConfigViewInterface` present the same property set on every platform, with the per-platform parsing supplied by the Rust core, so the same code works across vendors. The platform-specific names (e.g. `HConfigViewCiscoIOS`, `ConfigViewInterfaceCiscoIOS`) remain available for type narrowing.
 
 ## Why use config views?
 
 1. **Vendor abstraction:** devices from different vendors have varied configuration formats; views standardize access across platforms.
 2. **Simplified interface:** structured properties instead of hand-rolled text parsing.
-3. **Extensibility:** support new platforms by implementing platform-specific subclasses.
+3. **Extensibility:** customize a supported platform's device view with a Python
+   subclass; new platform behavior requires native view operations.
 4. **Error reduction:** parsing logic is encapsulated and tested once.
 
 ## Getting a view
@@ -38,7 +39,7 @@ Platforms without a view raise `DriverNotFoundError`. Views are currently provid
 
 ## The capability mixin model
 
-`ConfigViewInterfaceBase` carries only the core interface properties that every platform supports. Optional capabilities are modeled as mixins that a platform view inherits *only when it genuinely supports them*:
+`ConfigViewInterface` exposes the union of all interface properties, but a platform only *supports* a subset of them. Optional capabilities are modeled as marker classes that a view matches *only when the platform genuinely supports them*:
 
 - `InterfaceBundleViewMixin` — bundle / port-channel properties (`bundle_id`, `bundle_name`, `bundle_member_interfaces`, `is_bundle`).
 - `InterfaceVlanViewMixin` — 802.1Q VLAN properties (`native_vlan`, `tagged_vlans`, `tagged_all`, `dot1q_mode`).
@@ -55,7 +56,19 @@ for interface_view in config_view.interface_views:
         print(interface_view.name, interface_view.native_vlan)
 ```
 
-Current platform capabilities: Cisco IOS, HP ProCurve, and Aruba AOS-CX inherit all four mixins; Arista EOS, Cisco NX-OS, and Cisco IOS XR inherit the bundle and VLAN mixins.
+Current platform capabilities: Cisco IOS, HP ProCurve, and Aruba AOS-CX match
+all four markers; Arista EOS, Cisco NX-OS, and Cisco IOS XR match the bundle
+and VLAN markers. These are runtime `isinstance()` matches, not inherited
+`issubclass()` relationships. Do not use mixin multiple inheritance to add
+native capabilities.
+
+Device-level subclasses of built-in views remain supported via a driver's
+`view_class`, with the inherited `HConfig` constructor. Generic configs lack
+native view operations: assigning a custom view class does not add them.
+Interface views and their Python subclasses cannot be directly constructed;
+retrieve them from a supported device view instead. See
+[custom-driver examples](../admin/custom-drivers.md#config-views-for-custom-drivers)
+and the [migration details](rust-core-changes.md#native-config-views).
 
 ## Device-level view properties
 
@@ -79,7 +92,7 @@ Current platform capabilities: Cisco IOS, HP ProCurve, and Aruba AOS-CX inherit 
 
 ## Interface view properties
 
-### Core properties (`ConfigViewInterfaceBase` — all platforms)
+### Core properties (`ConfigViewInterface` — all platforms)
 
 | **Property** | **Type** | **Description** |
 |--------------|----------|-----------------|

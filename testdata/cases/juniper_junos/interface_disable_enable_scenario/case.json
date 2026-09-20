@@ -1,0 +1,5 @@
+{
+  "platform": "JUNIPER_JUNOS",
+  "description": "Disabling and enabling an interface on Juniper JUNOS",
+  "assert_rollback": false
+}

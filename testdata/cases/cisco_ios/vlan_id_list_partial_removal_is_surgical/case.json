@@ -1,0 +1,5 @@
+{
+  "platform": "CISCO_IOS",
+  "description": "Removing only some VLANs from a collapsed list negates just those ids",
+  "assert_rollback": true
+}

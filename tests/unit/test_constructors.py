@@ -1,4 +1,10 @@
-"""Tests for hier_config/constructors.py."""
+"""Tests for hier_config/constructors.py.
+
+Indent-adjustment and banner-delimiter detection are implemented in the Rust
+core, so their unit coverage lives in ``crates/hier_config_core/src/parser.rs``
+(``test_adjust_indent`` and ``test_is_end_of_banner``). The banner behaviour
+tests below still exercise those paths through the public loader.
+"""
 
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -10,8 +16,6 @@ from hier_config import (
     get_hconfig_view,
 )
 from hier_config.constructors import (
-    _adjust_indent,  # pyright: ignore[reportPrivateUsage]
-    _config_from_string_lines_end_of_banner_test,  # pyright: ignore[reportPrivateUsage]
     _load_from_string_lines,  # pyright: ignore[reportPrivateUsage]
 )
 from hier_config.exceptions import DriverNotFoundError, InvalidConfigError
@@ -73,7 +77,7 @@ def test_get_hconfig_view_inherited_by_driver_subclass() -> None:
 def test_get_hconfig_view_custom_driver_view_class() -> None:
     """A user-defined driver can supply its own view via view_class (#187, #229)."""
 
-    class CustomView(HConfigViewCiscoIOS):
+    class CustomView(HConfigViewCiscoIOS):  # pylint: disable=too-few-public-methods
         """User-defined view."""
 
     class CustomDriver(HConfigDriverCiscoIOS):
@@ -162,53 +166,6 @@ def test_get_hconfig_fast_load_with_string_conversion() -> None:
     hostname_child = result.get_child(startswith="hostname")
     assert hostname_child is not None
     assert len(result.children) > 0
-
-
-def test_adjust_indent_with_indent_adjust_values() -> None:
-    """Test _adjust_indent with indent_adjust values (lines 206-207)."""
-    driver = get_hconfig_driver(Platform.CISCO_IOS)
-
-    line = "policy-map test"
-    indent_adjust = 0
-    end_indent_adjust: list[str] = []
-
-    result = _adjust_indent(driver, line, indent_adjust, end_indent_adjust)
-    assert isinstance(result, tuple)
-    assert len(result) == 2
-    new_indent, new_end = result
-    assert isinstance(new_indent, int)
-    assert isinstance(new_end, list)
-
-
-def test_banner_end_detection_with_delimiter() -> None:
-    """Test banner end detection with delimiter (lines 216-220)."""
-    line = "^C"
-    result = _config_from_string_lines_end_of_banner_test(
-        line, frozenset({"EOF", "%", "!"}), ["^C"]
-    )
-    assert result is True
-
-    line = "%"
-    result = _config_from_string_lines_end_of_banner_test(
-        line, frozenset({"EOF", "%", "!"}), []
-    )
-    assert result is True
-
-    line = "!"
-    result = _config_from_string_lines_end_of_banner_test(
-        line, frozenset({"EOF", "%", "!"}), []
-    )
-    assert result is True
-
-    line = "This is banner text^C"
-    result = _config_from_string_lines_end_of_banner_test(
-        line, frozenset({"EOF"}), ["^C"]
-    )
-    assert result is True
-
-    line = "This is just regular text"
-    result = _config_from_string_lines_end_of_banner_test(line, frozenset({"EOF"}), [])
-    assert result is False
 
 
 def test_load_from_string_lines_with_banner_start() -> None:
@@ -312,22 +269,6 @@ interface GigabitEthernet0/0
     assert banner_found
 
 
-def test_indent_adjust_with_multiple_adjustments() -> None:
-    """Test indent adjustment with multiple active adjustments (lines 206-207)."""
-    driver = get_hconfig_driver(Platform.CISCO_IOS)
-
-    line = "class test-class"
-    indent_adjust = 1
-    end_indent_adjust = ["!"]
-
-    result = _adjust_indent(driver, line, indent_adjust, end_indent_adjust)
-    assert isinstance(result, tuple)
-    assert len(result) == 2
-    new_indent, new_end = result
-    assert isinstance(new_indent, int)
-    assert isinstance(new_end, list)
-
-
 def test_get_hconfig_from_dump_parent_depth_traversal() -> None:
     """Test parent depth calculation during dump loading (line 116)."""
     config = """hostname router1
@@ -383,15 +324,6 @@ Unauthorized access prohibited
             assert "!" in child.text
             break
     assert banner_found
-
-
-def test_adjust_indent_with_no_active_adjustments() -> None:
-    """Test _adjust_indent when no adjustments are active (lines 206-207)."""
-    driver = get_hconfig_driver(Platform.CISCO_IOS)
-
-    line = "description test"
-    result = _adjust_indent(driver, line, 0, [])
-    assert result == (0, [])
 
 
 def test_banner_with_aruba_switch_quote_delimiter() -> None:
@@ -476,3 +408,53 @@ def test_json_via_from_lines_str_raises() -> None:
     json_text = '{"system": {"config": {"hostname": "r1"}}}'
     with pytest.raises(InvalidConfigError, match="appears to be JSON"):
         HConfig.from_lines(Platform.CISCO_IOS, json_text)
+
+
+def test_xml_file_path_raises_invalid_config_error(tmp_path: Path) -> None:
+    """A Path to an XML document gets the same guard as an XML string (#302)."""
+    config_path = tmp_path / "config.xml"
+    config_path.write_text(
+        '<?xml version="1.0"?><config><system><name>r1</name></system></config>',
+        encoding="utf-8",
+    )
+    with pytest.raises(InvalidConfigError, match="appears to be XML"):
+        HConfig.from_text(Platform.CISCO_IOS, config_path)
+
+
+def test_json_file_path_raises_invalid_config_error(tmp_path: Path) -> None:
+    """A Path to a JSON document gets the same guard as a JSON string (#302)."""
+    config_path = tmp_path / "config.json"
+    config_path.write_text(
+        '{"system": {"config": {"hostname": "r1"}}}', encoding="utf-8"
+    )
+    with pytest.raises(InvalidConfigError, match="appears to be JSON"):
+        HConfig.from_text(Platform.CISCO_IOS, config_path)
+
+
+def test_curly_brace_config_file_path_still_parses(tmp_path: Path) -> None:
+    """A curly-brace CLI config file is not misdetected as JSON (#302)."""
+    config_path = tmp_path / "config.conf"
+    config_path.write_text("system {\n    host-name r1;\n}\n", encoding="utf-8")
+    config = HConfig.from_text(Platform.JUNIPER_JUNOS, config_path)
+    assert config.get_child(equals="set system host-name r1") is not None
+
+
+def test_dump_round_trip_is_idempotent_for_collapsed_vlan_list() -> None:
+    """A dump holds the post-callback tree, so reloading must not re-run them (#302).
+
+    ``split_vlan_id_lists`` is not idempotent in placement: re-running it on an
+    already-split tree (or on one it splits a second time) reorders the VLAN
+    headers to the end of the config, so a dump round-trip that replayed the
+    post-load callbacks would not reproduce the config it serialized.
+    """
+    config = HConfig.from_text(
+        Platform.CISCO_IOS,
+        "vlan 10,20\nhostname router1\ninterface Vlan10\n description users\n",
+    )
+    original = tuple(child.text for child in config.all_children())
+
+    restored = HConfig.from_dump(Platform.CISCO_IOS, config.dump())
+    assert tuple(child.text for child in restored.all_children()) == original
+
+    again = HConfig.from_dump(Platform.CISCO_IOS, restored.dump())
+    assert tuple(child.text for child in again.all_children()) == original

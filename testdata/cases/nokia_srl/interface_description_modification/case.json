@@ -1,0 +1,5 @@
+{
+  "platform": "NOKIA_SRL",
+  "description": "Test modifying interface description",
+  "assert_rollback": false
+}

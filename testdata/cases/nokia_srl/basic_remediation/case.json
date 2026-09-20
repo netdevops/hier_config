@@ -1,0 +1,5 @@
+{
+  "platform": "NOKIA_SRL",
+  "description": "Test basic Nokia SRL set/delete commands",
+  "assert_rollback": false
+}

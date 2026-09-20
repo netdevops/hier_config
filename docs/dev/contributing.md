@@ -10,7 +10,8 @@ The project uses **uv** (not pip) for dependency management:
 # Fork on GitHub, then:
 git clone git@github.com:YOUR-USERNAME/hier_config.git
 cd hier_config
-uv sync
+uv sync --locked --extra yaml
+uv run --no-sync maturin develop --release --locked
 git checkout -b YOUR-BRANCH
 ```
 
@@ -18,35 +19,39 @@ Dependencies are locked in `uv.lock`, and CI installs with `uv sync --locked`.
 If you change dependencies, use `uv add` / `uv add --dev` (or run `uv lock`
 after editing `pyproject.toml`) and commit the updated `uv.lock`.
 
-Python 3.10+ is required.
+Python 3.11+, a linker, and Rust meeting the MSRV in `Cargo.toml` (currently
+1.98) are required. This is the v4 Rust rewrite in the existing repository,
+not a separate package. maturin builds the PyO3 extension; rebuild after Rust
+changes so tests do not exercise an older installed binary.
+Rust dependencies are locked in `Cargo.lock`.
 
 ## Build and test commands
 
-The single command that runs everything CI runs:
+Python lint and test commands (native and packaging jobs run separately in CI):
 
 ```bash
 # Full lint + test suite
-uv run ./scripts/build.py lint-and-test
+uv run --no-sync ./scripts/build.py lint-and-test
 
 # Lint only (ruff, mypy, pyright, pylint, yamllint, flynt — run in parallel)
-uv run ./scripts/build.py lint
+uv run --no-sync ./scripts/build.py lint
 
 # Tests only (95% coverage required)
-uv run ./scripts/build.py pytest --coverage
+uv run --no-sync ./scripts/build.py pytest --coverage
 
 # Auto-fix formatting
-uv run ruff format hier_config tests scripts
+uv run --no-sync ruff format hier_config tests scripts
 ```
 
 Useful pytest invocations:
 
 ```bash
 # Run a single test
-uv run pytest tests/unit/platforms/test_cisco_xr.py::test_name -v
+uv run --no-sync pytest tests/unit/platforms/test_cisco_xr.py::test_name -v
 
 # Run only unit tests / integration tests
-uv run pytest tests/unit/ -v
-uv run pytest tests/integration/ -v
+uv run --no-sync pytest tests/unit/ -v
+uv run --no-sync pytest tests/integration/ -v
 ```
 
 ## Test-driven development
@@ -65,9 +70,15 @@ Tests mirror the source structure and are split into categories:
 
 - **`tests/unit/`** — unit tests for individual classes and functions (tree layer, constructors, workflows, reporting, per-platform driver behavior under `platforms/`, config views under `platforms/views/`).
 - **`tests/integration/`** — driver remediation scenarios (running config → generated config → remediation), cross-platform remediation/future/difference tests, and roundtrip workflow validation.
-- **`tests/benchmarks/`** — performance benchmarks, skipped by default (run with `uv run pytest -m benchmark -v -s`).
+- **`tests/benchmarks/`** — performance benchmarks, skipped by default (run with `uv run --no-sync pytest -m benchmark -v -s`).
 
 Coverage must stay at or above **95%**.
+
+Also run `cargo fmt --check`,
+`cargo clippy --locked --all-targets --all-features -- -D warnings`,
+`cargo test --locked --workspace --all-features`, and
+`cargo llvm-cov --locked --package hier_config_core --fail-under-lines 90`.
+See [Testing](testing.md) for native, parity, and shared-corpus coverage.
 
 ## Code quality expectations
 
@@ -91,11 +102,11 @@ Update `CHANGELOG.md` under the `## [Unreleased]` section with every PR, using t
 
 | Change type | Location |
 |-------------|----------|
-| New platform support | `hier_config/platforms/<name>/driver.py` (subclass `HConfigDriverBase`) |
-| New rule type | `hier_config/models.py` (new `BaseModel` subclass) + `hier_config/platforms/driver_base.py` (`HConfigDriverRules` field) |
+| New platform support | Native platform operations/rules in `crates/hier_config_core/src/platforms/`, Python driver facade, enums, registry |
+| New rule type | Python model/container plus Rust rule decoding and evaluation |
 | New utility function | `hier_config/utils.py` |
-| New view property | `hier_config/platforms/view_base.py` (abstract) + each platform's `view.py` |
-| Core tree algorithm | `hier_config/tree_algorithms.py` (comparison algorithms) or `hier_config/base.py` / `hier_config/root.py` (tree structure) |
+| New view property | `crates/hier_config_core/src/view/`, PyO3 view bindings, and stubs |
+| Core tree algorithm | `crates/hier_config_core/src/`; Python files are thin facades |
 
 Read the [Architecture](architecture.md) page before making structural changes.
 

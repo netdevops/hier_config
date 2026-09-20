@@ -1,0 +1,5 @@
+{
+  "platform": "ARUBA_AOSCX",
+  "description": "EVPN section adds and negates individual VLANs leaving unchanged children",
+  "assert_rollback": true
+}

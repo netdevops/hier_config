@@ -7,12 +7,19 @@ drivers, remediation) are unchanged.
 !!! note "The renames are optional"
     Every v3 name below still works in v4, permanently and with no
     `DeprecationWarning`. See [v3 API Compatibility](v3-compatibility.md). Your v3
-    code runs on v4 unchanged; adopt the v4 names when it suits you.
+    calls to those aliases need not be renamed; adopt the v4 names when it suits you.
 
-    Three v4 changes are **not** covered by that compatibility surface, so review
+    Earlier v4 changes are **not** covered by that compatibility surface, so review
     them before you upgrade: the `depth` property, the new exception types, and the
     completed EOS/NX-OS/XR views. They are in
-    [Behavior changes to review](#behavior-changes-to-review).
+    [Behavior changes to review](#behavior-changes-to-review). The Rust rewrite
+    adds further required migrations, including `all_children()` →
+    `descendants()`, removed helpers, and native view contracts.
+
+v4 also replaces the engine underneath those concepts with a Rust core. That
+brings its own, separate set of behavior changes — driver hooks, packaging,
+handle identity, traversal return types. This page is the prerequisite; read
+[Rust core behavior changes](rust-core-changes.md) next.
 
 If you are new to hier_config, skip this page and start with
 [Getting Started](getting-started.md).
@@ -142,11 +149,11 @@ except HierConfigError as exc:
 
 ## Config views
 
-`ConfigViewInterfaceBase` no longer declares every property abstract with
-per-platform `NotImplementedError` stubs. Core properties (`name`,
-`description`, `enabled`, `ipv4_interfaces`, ...) are always available;
-optional capabilities live on mixins, and you check support with
-`isinstance()` instead of catching `NotImplementedError`:
+The view layer is implemented in Rust and exposed through PyO3;
+`hier_config.platforms.*.view` re-exports the native classes. Core properties
+(`name`, `description`, `enabled`, `ipv4_interfaces`, ...) are always
+available; optional capabilities are advertised by capability markers, and you
+check support with `isinstance()` instead of catching `NotImplementedError`:
 
 ```python
 # v3
@@ -162,7 +169,9 @@ if isinstance(interface_view, InterfaceVlanViewMixin):
     vlans = interface_view.tagged_vlans
 ```
 
-See [Config Views](config-views.md) for the mixin catalog.
+See [Config Views](config-views.md) for the capability catalog and
+[Rust core behavior changes](rust-core-changes.md) for the property categories
+that now return `None` instead of raising.
 
 ## Behavior changes to review
 
@@ -190,6 +199,13 @@ value. These four apply even to code that keeps the v3 spellings:
 These were never candidates for name-alias coverage. They are improvements to
 how v4 works, listed here so an upgrade does not surprise you:
 
+- **`len(config)` counts all recursive descendants** — `len(config)` returns the
+  total count of all descendant nodes in the tree, not just direct children. In
+  v3, `len(config)` was implemented as `len(tuple(self.all_children()))`, which
+  materialized a temporary tuple of every node in memory. In v4, `len(config)`
+  counts descendants directly without allocation: it is an $O(1)$ query on the
+  root configuration and zero-allocation on subtrees. If you need only the count
+  of direct/top-level children, use `len(config.children)`.
 - **`future()` negation resolution** — negations that match an existing line
   (exactly or by shorthand prefix) now remove it instead of surviving as a
   literal `no ...` child; see
@@ -199,6 +215,42 @@ how v4 works, listed here so an upgrade does not surprise you:
   constructor function; v4 registers them with
   [`register_driver()`](../admin/custom-drivers.md), which also makes them
   work with every constructor and carries their config view via `view_class`.
+
+### Changes that come from the Rust core
+
+These are covered in full by
+[Rust core behavior changes](rust-core-changes.md); the summary is here so you
+know whether that page applies to you:
+
+- **hier_config ships as a compiled wheel.** Wheels cover CPython 3.11-3.14 on
+  Linux, macOS, and Windows; anything else builds from source and needs a Rust
+  toolchain.
+- **Five driver override hooks are rejected.** `idempotent_for()`,
+  `negate_with()`, `sectional_exit()`, and `swap_negation()` no longer exist on
+  `HConfigDriverBase`, and defining any of them on a subclass raises
+  `TypeError`. The core decides all four behaviors from the driver's rules and
+  its `declaration_prefix`/`negation_prefix`, so there is no opt-out.
+  Custom `config_preprocessor()` overrides also raise `TypeError`: call a
+  standalone preprocessing function explicitly before `HConfig.from_text()`.
+  Stock built-in preprocessor helpers remain callable, but are not dispatched
+  as Python overrides. **Audit every `HConfigDriverBase` subclass before upgrading.**
+- **`_instantiate_rules()` is no longer abstract.** Its default raises
+  `NotImplementedError` when initialization requests rules rather than an ABC
+  rejecting the subclass with `TypeError`.
+- **`from_dump()` runs remediation-transform callbacks after the load
+  completes**, not incrementally, so a callback sees the finished tree.
+- **`all_children()` is renamed to `descendants()`**, without an alias.
+  Review [traversal return contracts](rust-core-changes.md#traversal-return-types)
+  before using `next()` or generator-specific operations.
+- **Helper construction and native view contracts change.** Migrate direct
+  `HConfigChildren()` / `HConfigChild.instantiate_child()` calls, the six removed
+  `tree_algorithms` functions, reassignment of workflow inputs, and serialized
+  duplex values; see the [complete API migration](rust-core-changes.md#python-api-migration).
+- **`len(config)` is zero-allocation and O(1) on root**, counting descendants via
+  `node_count()` instead of materializing a full tuple of every node.
+- **Handles from different bulk traversals are no longer the same object.**
+  `==`, `hash()`, set and dict membership, and mutation visibility are all
+  unchanged; only `is` and `id()` differ.
 
 ## New in v4 (worth adopting)
 
@@ -225,8 +277,10 @@ Not required for migration, but these are the headline additions:
 
 ## Next steps
 
-- [v3 API Compatibility](v3-compatibility.md) — the full list of v3 names that
-  keep working in v4, and the two limits.
+- [Rust core behavior changes](rust-core-changes.md) — the engine-level
+  differences, including the driver-hook audit.
+- [v3 API Compatibility](v3-compatibility.md) — the explicit list of v3 names
+  retained in v4 and the limits of that commitment.
 - [Getting Started](getting-started.md) — the v4 workflow end to end.
 - [Customizing Driver Rules](../admin/customizing-rules.md) — if you carried
   v3 driver customizations.

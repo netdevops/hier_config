@@ -1,0 +1,547 @@
+//! `PyHConfigChildren` container mimicking Python's `HConfigChildren`.
+
+use std::sync::Arc;
+
+use hier_config_core::NodeId;
+use pyo3::IntoPyObjectExt;
+use pyo3::exceptions::{PyIndexError, PyKeyError, PyTypeError, PyValueError};
+use pyo3::prelude::*;
+use pyo3::types::{PyList, PySlice};
+
+use crate::base::PyHConfigBase;
+use crate::child::PyHConfigChild;
+use crate::tree::{SharedTree, ensure_live};
+
+/// Ordered collection of `HConfigChild` objects with fast text-keyed look-up.
+///
+/// The native arena preserves sibling order and indexes children by text.
+/// When duplicate child text is allowed by the driver, text-keyed retrieval
+/// returns the first occurrence while iteration preserves all entries.
+#[pyo3_stub_gen::derive::gen_stub_pyclass]
+#[pyclass(module = "hier_config._hier_config_rust", name = "HConfigChildren")]
+#[derive(Debug)]
+pub struct PyHConfigChildren {
+    pub tree: Arc<SharedTree>,
+    pub parent_id: NodeId,
+}
+
+// PyO3 accepts one dynamic argument; the Python result depends on its kind.
+pyo3_stub_gen::inventory::submit! {
+    pyo3_stub_gen::derive::gen_methods_from_python! {
+        r#"
+        import typing
+        import hier_config._typing
+
+        class PyHConfigChildren:
+            @typing.overload
+            def __getitem__(self, item: int | str, /) -> HConfigChild:
+                """Return the child at an index or text key."""
+            @typing.overload
+            def __getitem__(self, item: slice, /) -> list[HConfigChild]:
+                """Return children selected by a slice, preserving order."""
+            @typing.overload
+            def get(self, key: str, default: None = None) -> HConfigChild | None:
+                """Look up a child by text, returning None when absent."""
+            @typing.overload
+            def get(self, key: str, default: hier_config._typing.DefaultT) -> HConfigChild | hier_config._typing.DefaultT:
+                """Look up a child by text, preserving the type of the supplied default."""
+        "#
+    }
+}
+
+/// Iterate native child handles in sibling order.
+#[pyo3_stub_gen::derive::gen_stub_pyclass]
+#[pyclass(module = "hier_config._hier_config_rust", name = "HConfigChildrenIter")]
+#[derive(Debug)]
+pub struct PyHConfigChildrenIter {
+    pub tree: Arc<SharedTree>,
+    pub child_ids: Vec<NodeId>,
+    pub index: usize,
+}
+
+impl PyHConfigChildren {
+    fn read_tree(&self) -> PyResult<std::sync::RwLockReadGuard<'_, hier_config_core::Tree>> {
+        self.tree.read_node(self.parent_id)
+    }
+
+    fn write_tree(&self) -> PyResult<std::sync::RwLockWriteGuard<'_, hier_config_core::Tree>> {
+        self.tree.write_node(self.parent_id)
+    }
+
+    fn ensure_live(&self) -> PyResult<()> {
+        drop(self.read_tree()?);
+        Ok(())
+    }
+}
+
+#[pyo3_stub_gen::derive::gen_stub_pymethods]
+#[pymethods]
+impl PyHConfigChildrenIter {
+    #[gen_stub(override_return_type(type_repr="HConfigChildrenIter", imports=()))]
+    const fn __iter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    #[gen_stub(override_return_type(type_repr="HConfigChild", imports=()))]
+    fn __next__(mut slf: PyRefMut<'_, Self>, py: Python<'_>) -> PyResult<Option<Py<PyAny>>> {
+        if slf.index < slf.child_ids.len() {
+            let id = slf.child_ids[slf.index];
+            slf.index += 1;
+            let child = SharedTree::get_or_create_child(&slf.tree, py, id, None)?;
+            Ok(Some(child.into_any()))
+        } else {
+            Ok(None)
+        }
+    }
+}
+
+#[pyo3_stub_gen::derive::gen_stub_pymethods]
+#[pymethods]
+impl PyHConfigChildren {
+    #[gen_stub(override_return_type(type_repr="int", imports=()))]
+    /// Return len(self).
+    fn __len__(&self) -> PyResult<usize> {
+        let tree = self.read_tree()?;
+        Ok(tree
+            .arena
+            .get(self.parent_id)
+            .map_or(0, |n| n.children.len()))
+    }
+
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
+    /// Return key in self.
+    fn __contains__(
+        &self,
+        #[gen_stub(override_type(type_repr="object", imports=()))] key: &Bound<'_, PyAny>,
+    ) -> PyResult<bool> {
+        // v3 compared against a `dict` keyed by text, so a non-string operand
+        // simply missed instead of raising.
+        let Ok(text) = key.extract::<String>() else {
+            return Ok(false);
+        };
+        let tree = self.read_tree()?;
+        Ok(tree
+            .arena
+            .get(self.parent_id)
+            .is_some_and(|n| n.children.contains(text.as_str())))
+    }
+
+    #[gen_stub(skip)]
+    /// Return self[key].
+    fn __getitem__(
+        &self,
+        py: Python<'_>,
+        #[gen_stub(override_type(type_repr="int | str", imports=()))] item: &Bound<'_, PyAny>,
+    ) -> PyResult<Py<PyAny>> {
+        let tree = self.read_tree()?;
+        let Some(parent_node) = tree.arena.get(self.parent_id) else {
+            if item.extract::<isize>().is_ok() || item.cast::<PySlice>().is_ok() {
+                return Err(PyIndexError::new_err("list index out of range"));
+            }
+            if let Ok(key) = item.extract::<String>() {
+                return Err(PyKeyError::new_err(key));
+            }
+            return Err(PyTypeError::new_err(
+                "indices must be integers, slices, or strings",
+            ));
+        };
+        let children = parent_node.children.clone();
+        drop(tree);
+
+        if let Ok(idx) = item.extract::<isize>() {
+            let len = isize::try_from(children.len())
+                .map_err(|_| PyIndexError::new_err("list index out of range"))?;
+            let actual_idx = if idx < 0 { idx + len } else { idx };
+            let Ok(actual_idx) = usize::try_from(actual_idx) else {
+                return Err(PyIndexError::new_err("list index out of range"));
+            };
+            let Some(child_id) = children.get_index(actual_idx) else {
+                return Err(PyIndexError::new_err("list index out of range"));
+            };
+            let child = SharedTree::get_or_create_child(&self.tree, py, child_id, None)?;
+            return Ok(child.into_any());
+        }
+
+        if let Ok(slice) = item.cast::<PySlice>() {
+            let indices = slice.indices(
+                isize::try_from(children.len())
+                    .map_err(|_| PyIndexError::new_err("list index out of range"))?,
+            )?;
+            let list = PyList::empty(py);
+            let mut i = indices.start;
+            let step = indices.step;
+            let end = indices.stop;
+            if step != 0 {
+                while (step > 0 && i < end) || (step < 0 && i > end) {
+                    let Ok(pos) = usize::try_from(i) else { break };
+                    let Some(child_id) = children.get_index(pos) else {
+                        break;
+                    };
+                    let child = SharedTree::get_or_create_child(&self.tree, py, child_id, None)?;
+                    list.append(child)?;
+                    i += step;
+                }
+            }
+            return Ok(list.into_any().unbind());
+        }
+
+        if let Ok(key) = item.extract::<String>() {
+            let Some(child_id) = children.get(&key) else {
+                return Err(PyKeyError::new_err(key));
+            };
+            let child = SharedTree::get_or_create_child(&self.tree, py, child_id, None)?;
+            return Ok(child.into_any());
+        }
+
+        Err(PyTypeError::new_err(
+            "indices must be integers, slices, or strings",
+        ))
+    }
+
+    #[gen_stub(override_return_type(type_repr="None", imports=()))]
+    /// Set self[key] to value.
+    fn __setitem__(
+        &self,
+        #[gen_stub(override_type(type_repr="int", imports=()))] item: isize,
+        #[gen_stub(override_type(type_repr="HConfigChild", imports=()))] value: &Bound<'_, PyAny>,
+    ) -> PyResult<()> {
+        let (new_child_id, other_tree) = if let Ok(c) = value.extract::<PyRef<'_, PyHConfigChild>>()
+        {
+            let base = c.as_ref();
+            (base.node_id, Arc::clone(&base.tree))
+        } else if let Ok(b) = value.extract::<PyRef<'_, PyHConfigBase>>() {
+            (b.node_id, Arc::clone(&b.tree))
+        } else {
+            return Err(PyTypeError::new_err("value must be an HConfigChild"));
+        };
+
+        let len = {
+            let tree = self.read_tree()?;
+            let parent_node = tree
+                .arena
+                .get(self.parent_id)
+                .ok_or_else(|| PyIndexError::new_err("list index out of range"))?;
+            isize::try_from(parent_node.children.len())
+                .map_err(|_| PyIndexError::new_err("list index out of range"))?
+        };
+
+        let actual_idx = if item < 0 { item + len } else { item };
+        if actual_idx >= len {
+            return Err(PyIndexError::new_err("list index out of range"));
+        }
+        let Ok(actual_idx) = usize::try_from(actual_idx) else {
+            return Err(PyIndexError::new_err("list index out of range"));
+        };
+
+        if Arc::ptr_eq(&self.tree, &other_tree) {
+            let mut tree = self.write_tree()?;
+            ensure_live(&tree, new_child_id)?;
+            tree.set_child_at(self.parent_id, actual_idx, new_child_id)
+                .map_err(crate::errors::to_py_err)?;
+        } else {
+            let mut my_tree = self.write_tree()?;
+            let src_tree = other_tree.read_node(new_child_id)?;
+            let copied_id = my_tree
+                .add_deep_copy_of(self.parent_id, &src_tree, new_child_id, false)
+                .map_err(crate::errors::to_py_err)?;
+            my_tree
+                .set_child_at(self.parent_id, actual_idx, copied_id)
+                .map_err(crate::errors::to_py_err)?;
+        }
+
+        Ok(())
+    }
+
+    #[pyo3(signature = (key, default = None))]
+    #[gen_stub(skip)]
+    pub fn get(
+        &self,
+        py: Python<'_>,
+        #[gen_stub(override_type(type_repr="str", imports=()))] key: &str,
+        #[gen_stub(override_type(type_repr="_D | None", imports=()))] default: Option<Py<PyAny>>,
+    ) -> PyResult<Py<PyAny>> {
+        let tree = self.read_tree()?;
+        if let Some(parent_node) = tree.arena.get(self.parent_id)
+            && let Some(child_id) = parent_node.children.get(key)
+        {
+            drop(tree);
+            let child = SharedTree::get_or_create_child(&self.tree, py, child_id, None)?;
+            return Ok(child.into_any());
+        }
+        Ok(default.unwrap_or_else(|| py.None()))
+    }
+
+    #[gen_stub(override_return_type(type_repr="int", imports=()))]
+    pub fn index(
+        &self,
+        #[gen_stub(override_type(type_repr="HConfigChild", imports=()))] child: &Bound<'_, PyAny>,
+    ) -> PyResult<usize> {
+        self.ensure_live()?;
+        if let Ok(base) = child.extract::<PyRef<'_, PyHConfigBase>>() {
+            base.ensure_live()?;
+            if !Arc::ptr_eq(&self.tree, &base.tree) {
+                return Err(PyValueError::new_err("item not found in children"));
+            }
+        }
+        let child_node_id = if let Ok(c) = child.extract::<PyRef<'_, PyHConfigChild>>() {
+            c.as_ref().node_id
+        } else if let Ok(b) = child.extract::<PyRef<'_, PyHConfigBase>>() {
+            b.node_id
+        } else {
+            return Err(PyValueError::new_err("item not found in children"));
+        };
+        let tree = self.read_tree()?;
+        let Some(parent_node) = tree.arena.get(self.parent_id) else {
+            return Err(PyValueError::new_err("item not found in children"));
+        };
+        parent_node
+            .children
+            .index_of(child_node_id)
+            .ok_or_else(|| PyValueError::new_err("item not found in children"))
+    }
+
+    #[gen_stub(override_return_type(type_repr="HConfigChild", imports=()))]
+    #[pyo3(signature = (child, update_mapping = true))]
+    pub fn append(
+        &self,
+        py: Python<'_>,
+        #[gen_stub(override_type(type_repr="HConfigChild", imports=()))] child: &Bound<'_, PyAny>,
+        // v3 exposed this to skip maintaining the separate text->child mapping.
+        // The native arena keeps that index inside the tree, so it can never be
+        // left stale and the flag is accepted purely for source compatibility.
+        #[gen_stub(override_type(type_repr="bool", imports=()))] update_mapping: bool,
+    ) -> PyResult<Py<PyAny>> {
+        let _ = update_mapping;
+        let (child_node_id, other_tree) =
+            if let Ok(c) = child.extract::<PyRef<'_, PyHConfigChild>>() {
+                let base = c.as_ref();
+                (base.node_id, Arc::clone(&base.tree))
+            } else if let Ok(b) = child.extract::<PyRef<'_, PyHConfigBase>>() {
+                (b.node_id, Arc::clone(&b.tree))
+            } else {
+                return Err(PyTypeError::new_err("child must be an HConfigChild"));
+            };
+
+        let new_child_id = if Arc::ptr_eq(&self.tree, &other_tree) {
+            let mut tree = self.write_tree()?;
+            ensure_live(&tree, child_node_id)?;
+            tree.move_child(child_node_id, self.parent_id)
+                .map_err(crate::errors::to_py_err)?;
+            child_node_id
+        } else {
+            let mut my_tree = self.write_tree()?;
+            let src_tree = other_tree.read_node(child_node_id)?;
+            my_tree
+                .add_deep_copy_of(self.parent_id, &src_tree, child_node_id, false)
+                .map_err(crate::errors::to_py_err)?
+        };
+
+        let res = SharedTree::get_or_create_child(&self.tree, py, new_child_id, None)?;
+        Ok(res.into_any())
+    }
+
+    #[gen_stub(override_return_type(type_repr="None", imports=()))]
+    /// Delete all children.
+    pub fn clear(&self) -> PyResult<()> {
+        let to_remove: Vec<NodeId> = {
+            let tree = self.read_tree()?;
+            tree.arena
+                .get(self.parent_id)
+                .map_or_else(Vec::new, |n| n.children.iter().collect())
+        };
+        {
+            let mut tree = self.write_tree()?;
+            for id in &to_remove {
+                tree.delete_child(*id);
+            }
+        }
+        for id in to_remove {
+            self.tree.clear_node_cache(id)?;
+        }
+        Ok(())
+    }
+
+    #[gen_stub(override_return_type(type_repr="None", imports=()))]
+    /// Delete a child from self._data and self._mapping.
+    pub fn delete(
+        &self,
+        #[gen_stub(override_type(type_repr="HConfigChild | str", imports=()))]
+        child_or_text: &Bound<'_, PyAny>,
+    ) -> PyResult<()> {
+        self.ensure_live()?;
+        if let Ok(base) = child_or_text.extract::<PyRef<'_, PyHConfigBase>>() {
+            base.ensure_live()?;
+            if !Arc::ptr_eq(&self.tree, &base.tree) {
+                return Err(PyValueError::new_err(
+                    "child belongs to another configuration",
+                ));
+            }
+        }
+        if let Ok(text) = child_or_text.extract::<String>() {
+            let child_id = {
+                let tree = self.read_tree()?;
+                tree.arena
+                    .get(self.parent_id)
+                    .and_then(|n| n.children.get(&text))
+            };
+            if let Some(id) = child_id {
+                let mut tree = self.write_tree()?;
+                tree.delete_child(id);
+                self.tree.clear_node_cache(id)?;
+            }
+        } else if let Ok(child_base) = child_or_text.extract::<PyRef<'_, PyHConfigChild>>() {
+            let child_node_id = child_base.as_ref().node_id;
+            let is_child = {
+                let tree = self.read_tree()?;
+                tree.arena
+                    .get(self.parent_id)
+                    .is_some_and(|n| n.children.index_of(child_node_id).is_some())
+            };
+            if is_child {
+                let mut tree = self.write_tree()?;
+                tree.delete_child(child_node_id);
+                self.tree.clear_node_cache(child_node_id)?;
+            }
+        } else if let Ok(child_base) = child_or_text.extract::<PyRef<'_, PyHConfigBase>>() {
+            let child_node_id = child_base.node_id;
+            let is_child = {
+                let tree = self.read_tree()?;
+                tree.arena
+                    .get(self.parent_id)
+                    .is_some_and(|n| n.children.index_of(child_node_id).is_some())
+            };
+            if is_child {
+                let mut tree = self.write_tree()?;
+                tree.delete_child(child_node_id);
+                self.tree.clear_node_cache(child_node_id)?;
+            }
+        } else {
+            return Err(PyTypeError::new_err(
+                "delete argument must be HConfigChild or str",
+            ));
+        }
+        Ok(())
+    }
+
+    #[gen_stub(override_return_type(type_repr="None", imports=()))]
+    /// Add child instances of `HConfigChild`.
+    pub fn extend(
+        &self,
+        py: Python<'_>,
+        #[gen_stub(override_type(type_repr="collections.abc.Iterable[HConfigChild]", imports=("collections.abc")))]
+        children: &Bound<'_, PyAny>,
+    ) -> PyResult<()> {
+        self.ensure_live()?;
+        for child in children.try_iter()? {
+            self.append(py, &child?, true)?;
+        }
+        Ok(())
+    }
+
+    #[gen_stub(override_return_type(type_repr="None", imports=()))]
+    /// Rebuild self._mapping.
+    pub fn rebuild_mapping(&self) -> PyResult<()> {
+        let mut tree = self.write_tree()?;
+        tree.rebuild_children_mapping(self.parent_id);
+        Ok(())
+    }
+
+    #[gen_stub(override_return_type(type_repr="collections.abc.Iterator[HConfigChild]", imports=("collections.abc")))]
+    /// Implement iter(self).
+    fn __iter__(&self) -> PyResult<PyHConfigChildrenIter> {
+        let tree = self.read_tree()?;
+        let child_ids = tree
+            .arena
+            .get(self.parent_id)
+            .map_or_else(Vec::new, |n| n.children.as_slice().to_vec());
+        Ok(PyHConfigChildrenIter {
+            tree: Arc::clone(&self.tree),
+            child_ids,
+            index: 0,
+        })
+    }
+
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
+    /// Return self==value.
+    fn __eq__(
+        &self,
+        py: Python<'_>,
+        #[gen_stub(override_type(type_repr="object", imports=()))] other: &Bound<'_, PyAny>,
+    ) -> PyResult<Py<PyAny>> {
+        self.ensure_live()?;
+        if let Ok(other_children) = other.extract::<PyRef<'_, Self>>() {
+            let my_tree = self.read_tree()?;
+            let other_tree = other_children.read_tree()?;
+            let my_items = my_tree
+                .arena
+                .get(self.parent_id)
+                .map_or(&[][..], |n| n.children.as_slice());
+            let other_items = other_tree
+                .arena
+                .get(other_children.parent_id)
+                .map_or(&[][..], |n| n.children.as_slice());
+            if my_items.len() != other_items.len() {
+                return false.into_py_any(py);
+            }
+            if my_items.is_empty() {
+                return true.into_py_any(py);
+            }
+            for (&a, &b) in my_items.iter().zip(other_items.iter()) {
+                let text_a = my_tree.arena.get(a).map(|n| &n.text);
+                let text_b = other_tree.arena.get(b).map(|n| &n.text);
+                if text_a != text_b {
+                    return false.into_py_any(py);
+                }
+            }
+            return true.into_py_any(py);
+        }
+        Ok(py.NotImplemented())
+    }
+
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
+    fn __ne__(
+        &self,
+        py: Python<'_>,
+        #[gen_stub(override_type(type_repr="object", imports=()))] other: &Bound<'_, PyAny>,
+    ) -> PyResult<Py<PyAny>> {
+        self.ensure_live()?;
+        if let Ok(_other_children) = other.extract::<PyRef<'_, Self>>() {
+            let eq_obj = self.__eq__(py, other)?;
+            let eq: bool = eq_obj.extract(py)?;
+            return (!eq).into_py_any(py);
+        }
+        Ok(py.NotImplemented())
+    }
+
+    #[gen_stub(override_return_type(type_repr="int", imports=()))]
+    /// Return hash(self).
+    fn __hash__(&self) -> PyResult<isize> {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+
+        let mut hasher = DefaultHasher::new();
+        let tree = self.read_tree()?;
+        if let Some(parent_node) = tree.arena.get(self.parent_id) {
+            for &c in parent_node.children.as_slice() {
+                if let Some(c_node) = tree.arena.get(c) {
+                    c_node.text.hash(&mut hasher);
+                }
+            }
+        }
+        // Python's __hash__ contract is a machine-word-sized int; truncating the
+        // 64-bit hash to isize is the intended behaviour, exactly as CPython does.
+        let bytes = hasher.finish().to_ne_bytes();
+        let mut isize_bytes = [0u8; size_of::<isize>()];
+        isize_bytes.copy_from_slice(&bytes[..size_of::<isize>()]);
+        Ok(isize::from_ne_bytes(isize_bytes))
+    }
+
+    fn __repr__(&self) -> PyResult<String> {
+        let tree = self.read_tree()?;
+        let len = tree
+            .arena
+            .get(self.parent_id)
+            .map_or(0, |n| n.children.len());
+        Ok(format!("<HConfigChildren len={len}>"))
+    }
+}

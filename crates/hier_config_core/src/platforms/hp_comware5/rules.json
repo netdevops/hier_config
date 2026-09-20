@@ -1,0 +1,5 @@
+{
+  "platform": "hp_comware5",
+  "negation_prefix": "undo ",
+  "rules": {}
+}

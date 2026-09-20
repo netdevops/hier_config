@@ -1,0 +1,5 @@
+{
+  "platform": "NOKIA_SRL",
+  "description": "Test building configuration from empty state",
+  "assert_rollback": false
+}

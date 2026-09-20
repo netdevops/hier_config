@@ -1,0 +1,5 @@
+{
+  "platform": "FORTINET_FORTIOS",
+  "description": "Convert deleted set commands to unset commands using sectional exiting",
+  "assert_rollback": false
+}

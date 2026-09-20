@@ -2,7 +2,6 @@ from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Any
 
-import yaml
 from pydantic import TypeAdapter
 
 from hier_config import Platform, get_hconfig_driver
@@ -66,6 +65,21 @@ def read_text_from_file(file_path: str) -> str:
     return Path(file_path).read_text(encoding="utf-8")
 
 
+def _read_yaml(file_path: str) -> object:
+    """Load YAML only when a file-based loader needs the optional dependency."""
+    try:
+        import yaml  # ruff: ignore[import-outside-top-level] - optional dependency, not needed by dict loaders
+    except ModuleNotFoundError as error:
+        if error.name != "yaml":
+            raise
+        message = (
+            "YAML file loading requires PyYAML. Install 'hier-config[yaml]' "
+            "to use the YAML loaders."
+        )
+        raise ImportError(message) from error
+    return yaml.safe_load(read_text_from_file(file_path))
+
+
 def load_hier_config_tags(tags_file: str) -> tuple[TagRule, ...]:
     """Loads and validates Hier Config tags from a YAML file.
 
@@ -76,7 +90,7 @@ def load_hier_config_tags(tags_file: str) -> tuple[TagRule, ...]:
         Tuple[TagRule, ...]: A tuple of validated TagRule objects.
 
     """
-    tags_data = yaml.safe_load(read_text_from_file(file_path=tags_file))
+    tags_data = _read_yaml(tags_file)
     return TypeAdapter(tuple[TagRule, ...]).validate_python(tags_data)
 
 
@@ -184,12 +198,11 @@ def load_driver_rules(
         HConfigDriverBase: A driver instance with the loaded rules.
 
     """
-    if isinstance(options, str):
-        options = yaml.safe_load(read_text_from_file(file_path=options))
-
-    if not isinstance(options, dict):
+    loaded_options = _read_yaml(options) if isinstance(options, str) else options
+    if not isinstance(loaded_options, dict):
         msg = "options must be a dictionary or a valid file path."
         raise TypeError(msg)
+    options = TypeAdapter(dict[str, object]).validate_python(loaded_options)
 
     driver = get_hconfig_driver(platform)
 
@@ -224,8 +237,14 @@ def load_driver_rules(
     for key, rule_class, append_to in simple_rules:
         _process_simple_rules(options, key, rule_class, append_to)
 
-    for rule in options.get("negation_default_when", ()):
-        match_rules = _collect_match_rules(rule.get("lineage", []))
+    for rule in TypeAdapter(list[dict[str, object]]).validate_python(
+        options.get("negation_default_when", ())
+    ):
+        match_rules = _collect_match_rules(
+            TypeAdapter(list[dict[str, object]]).validate_python(
+                rule.get("lineage", [])
+            )
+        )
         driver.rules.negation.append(
             NegationRule(match_rules=match_rules, strategy=NegationStrategy.DEFAULT),
         )
@@ -251,19 +270,20 @@ def load_tag_rules(
         A tuple of TagRule objects.
 
     """
-    if isinstance(tags, str):
-        tags = yaml.safe_load(read_text_from_file(file_path=tags))
-
-    if not isinstance(tags, list):
+    loaded_tags = _read_yaml(tags) if isinstance(tags, str) else tags
+    if not isinstance(loaded_tags, list):
         msg = "tags must be a list of dictionaries or a valid file path."
         raise TypeError(msg)
+    tags = TypeAdapter(list[dict[str, object]]).validate_python(loaded_tags)
 
     result: list[TagRule] = []
 
     for tag in tags:
         if "lineage" in tag and "add_tags" in tag:
-            lineage_rules = tag["lineage"]
-            tag_name = tag["add_tags"]
+            lineage_rules = TypeAdapter(list[dict[str, object]]).validate_python(
+                tag["lineage"]
+            )
+            tag_name = TypeAdapter(str).validate_python(tag["add_tags"])
 
             match_rules = _collect_match_rules(lineage_rules)
 
@@ -354,9 +374,7 @@ def load_hconfig_v2_options_from_file(
     options_file: str, platform: Platform
 ) -> HConfigDriverBase:
     """v3 helper. Reads the YAML file, then calls `load_driver_rules()`."""
-    return load_driver_rules(
-        yaml.safe_load(read_text_from_file(file_path=options_file)), platform
-    )
+    return load_driver_rules(options_file, platform)
 
 
 def load_hconfig_v2_tags(

@@ -15,11 +15,21 @@ https://docs.astral.sh/uv/getting-started/installation/
 
 Set up your environment:
 
-```
+Install Python 3.11+ and Rust meeting `workspace.package.rust-version` in
+`Cargo.toml` (currently 1.98), including a working C/C++ linker. The v4 engine
+is Rust with PyO3 bindings; source development has no pure-Python fallback.
+uv manages Python dependencies; maturin builds the extension.
+
+```bash
 cd hier_config
-uv sync
+uv sync --locked --extra yaml
+uv run --no-sync maturin develop --release --locked
 ```
 
+Rebuild after Rust changes before running Python checks. `--no-sync` prevents
+uv from replacing the rebuilt extension with an older cached wheel; rebuild
+again after any subsequent `uv sync`. Commit both
+`uv.lock` and `Cargo.lock` when their dependency manifests change.
 Create a branch from the right base: v4 features and breaking changes branch from **`next`**; v3.x maintenance fixes branch from **`master`**.
 
 ```
@@ -32,13 +42,13 @@ Open your pull request against the same branch you based on (`next` for v4 work)
 Make sure linters, type-checkers, and tests pass:
 
 ```
-uv run python scripts/build.py lint-and-test
+uv run --no-sync python scripts/build.py lint-and-test
 ```
 
 Make your change. Add tests for your change. Make the linters, type-checkers, and tests pass:
 
 ```
-uv run python scripts/build.py lint-and-test
+uv run --no-sync python scripts/build.py lint-and-test
 ```
 
 Push to your fork and submit a pull request.
@@ -59,33 +69,47 @@ Some things that will increase the chance that your pull request is accepted:
 Run the full test suite:
 
 ```bash
-uv run pytest
+uv run --no-sync pytest
 ```
 
 Run a single test file:
 
 ```bash
-uv run pytest tests/integration/test_cisco_ios.py
+uv run --no-sync pytest tests/integration/test_cisco_ios.py
 ```
 
 Stop on the first failure:
 
 ```bash
-uv run pytest -x
+uv run --no-sync pytest -x
 ```
 
 Run tests in parallel (requires `pytest-xdist`):
 
 ```bash
-uv run pytest -n auto
+uv run --no-sync pytest -n auto
 ```
 
 Run with coverage:
 
 ```bash
-uv run pytest --cov=hier_config
+uv run --no-sync ./scripts/build.py pytest --coverage
 ```
 
+The Python coverage floor remains **95%**; moving implementation into Rust is
+not permission to lower quality gates. Python coverage does not measure native
+code. Run the native gates as well:
+
+```bash
+cargo fmt --check
+cargo clippy --locked --all-targets --all-features -- -D warnings
+cargo test --locked --workspace --all-features
+cargo llvm-cov --locked --package hier_config_core --fail-under-lines 90
+```
+
+Use `tests/native/` for Python/native-boundary contracts, `tests/parity/` for
+upstream behavior comparisons, and `testdata/cases/` for shared Rust/Python
+round-trip scenarios. See [Testing](docs/dev/testing.md) for corpus maintenance.
 ---
 
 ## Running Linters Individually
@@ -93,20 +117,20 @@ uv run pytest --cov=hier_config
 The build script runs all of these over `hier_config`, `tests`, and `scripts`:
 
 ```bash
-uv run ruff check .                  # style + lint
-uv run ruff format --check .         # formatting (no changes)
-uv run mypy hier_config/ tests/ scripts/     # type checking
-uv run pyright hier_config/ tests/ scripts/  # additional type checking
-uv run pylint hier_config/ tests/ scripts/   # extended lint rules
-uv run yamllint .                    # YAML files
-uv run flynt -d -tc -f hier_config tests scripts  # f-string conversion check
+uv run --no-sync ruff check .                  # style + lint
+uv run --no-sync ruff format --check .         # formatting (no changes)
+uv run --no-sync mypy hier_config/ tests/ scripts/     # type checking
+uv run --no-sync pyright hier_config/ tests/ scripts/  # additional type checking
+uv run --no-sync pylint hier_config/ tests/ scripts/   # extended lint rules
+uv run --no-sync yamllint .                    # YAML files
+uv run --no-sync flynt -d -tc -f hier_config tests scripts  # f-string conversion check
 ```
 
 To auto-fix ruff issues:
 
 ```bash
-uv run ruff check --fix .
-uv run ruff format .
+uv run --no-sync ruff check --fix .
+uv run --no-sync ruff format .
 ```
 
 ---
@@ -134,7 +158,7 @@ NegationDefaultWithRule model so that the behaviour is preserved.
 
 - **Tests required** — all new behaviour must be covered by tests: unit tests in
   `tests/unit/`, end-to-end driver scenarios in `tests/integration/test_<platform>.py`.
-- **Linting must pass** — `uv run python scripts/build.py lint-and-test` must exit 0.
+- **Linting must pass** — `uv run --no-sync python scripts/build.py lint-and-test` must exit 0.
 - **Changelog entry required** — every PR adds an entry to `CHANGELOG.md` under
   `## [Unreleased]` (Keep a Changelog categories, with a `(#NNN)` reference).
 - **Docstrings for new public API** — any new public class, method, or function
@@ -150,11 +174,11 @@ Where do changes belong?
 
 | Change type | Location |
 |-------------|----------|
-| New platform support | `hier_config/platforms/<name>/driver.py` (subclass `HConfigDriverBase`) |
-| New rule type | `hier_config/models.py` (new `BaseModel` subclass) + `hier_config/platforms/driver_base.py` (`HConfigDriverRules` field) |
+| New platform support | `crates/hier_config_core/src/platforms/` (native operations/rules), Python driver facade, enums and registry |
+| New rule type | Python rule model/container plus Rust rule decoding and evaluation |
 | New utility function | `hier_config/utils.py` |
-| New view property | `hier_config/platforms/view_base.py` (abstract) + the `view.py` of each platform that ships a view (currently 6 of 13 platforms) |
-| Core tree algorithm | `hier_config/base.py` (shared) or `hier_config/root.py` (`HConfig`-only) |
+| New view property | `crates/hier_config_core/src/view/`, `crates/hier_config_py/src/view.rs`, and type stubs; Python view files are facades |
+| Core tree algorithm | `crates/hier_config_core/src/`; expose Python contracts in `crates/hier_config_py/src/` |
 
 Read the [Architecture Overview](docs/dev/architecture.md) before making structural changes.
 
@@ -174,5 +198,5 @@ Read the [Architecture Overview](docs/dev/architecture.md) before making structu
 
 **PyCharm**
 
-- Enable the **mypy** plugin (Settings → Plugins → mypy) and point it at `uv run mypy`.
+- Enable the **mypy** plugin (Settings → Plugins → mypy) and point it at `uv run --no-sync mypy`.
 - Configure ruff as an external tool for on-save formatting.

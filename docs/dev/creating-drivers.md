@@ -1,6 +1,6 @@
 # Creating a Platform Driver
 
-This page is the full deep dive into building a platform driver: the anatomy of `HConfigDriverBase`, declaring rules, negation and declaration prefixes, config preprocessors, config views with the mixin model, and wiring everything into the registry. For a quick registration-focused overview, start with [Custom Drivers and Registration](../admin/custom-drivers.md).
+This page is the full deep dive into building a platform driver: the anatomy of `HConfigDriverBase`, declaring rules, negation and declaration prefixes, config preprocessors, native config views, and wiring everything into the registry. For a quick registration-focused overview, start with [Custom Drivers and Registration](../admin/custom-drivers.md).
 
 ## Anatomy of `HConfigDriverBase`
 
@@ -12,13 +12,12 @@ Every driver subclasses `HConfigDriverBase` (`hier_config/platforms/driver_base.
 
 **Optional overrides:**
 
+- `platform: ClassVar[Platform]` — selects native vendor operations. Inherited
+  from a built-in driver; unset (`None`) uses Generic native operations. Rule
+  contents and registry names do not infer a vendor implementation.
 - `negation_prefix` (property) — the string prepended to negate a command. Default `"no "`.
 - `declaration_prefix` (property) — the string prepended to positive commands on set-style platforms. Default `""`.
-- `config_preprocessor(config_text)` — static method transforming raw text before parsing (e.g. flattening JunOS curly-brace config into `set` commands).
-- `negate_with(config)` — return a fixed replacement negation string for a child. The default implementation reads REPLACE-strategy rules from `rules.negation`; override for imperative negation logic.
-- `swap_negation(child)` — toggle the negation of a child's text. The default adds/strips `negation_prefix`.
-- `idempotent_for(config, other_children)` — find the child that an idempotent command overwrites. The default derives a structural idempotency key from the lineage and match rules.
-- `view_class` (class attribute) — the `HConfigViewBase` subclass instantiated by `get_hconfig_view()`. `None` (default) means the platform has no config view.
+- `view_class` (class attribute) — the `HConfigView` subclass instantiated by `get_hconfig_view()`. `None` (default) means the platform has no config view.
 
 The simplest possible driver is the generic one:
 
@@ -119,18 +118,27 @@ Real-world reference points:
 | HP Comware5 / Huawei VRP | `""` | `"undo "` |
 | JunOS / VyOS / Nokia SRL | `"set "` | `"delete "` |
 
-## Step 3: Add a config preprocessor (if needed)
+## Step 3: Preprocess custom text explicitly (if needed)
 
-If the platform's native rendering is not indentation-hierarchical CLI text, transform it before parsing. The set-style drivers use this to flatten hierarchical output:
+If a custom platform's rendering is not indentation-hierarchical CLI text,
+transform it before calling the constructor. Do not define
+`config_preprocessor()` on a custom driver: `__init_subclass__` rejects it
+with `TypeError`.
 
 ```python
-    @staticmethod
-    def config_preprocessor(config_text: str) -> str:
-        """Convert the platform's native rendering into parseable lines."""
-        return convert_to_set_commands(config_text)
+def preprocess_config(config_text: str) -> str:
+    """Convert the platform's rendering into parseable lines."""
+    return convert_to_set_commands(config_text)
+
+
+config = HConfig.from_text(CustomHConfigDriver(), preprocess_config(raw_text))
 ```
 
-The preprocessor runs inside `HConfig.from_text()` after full-text substitutions and before tree construction.
+Explicit preprocessing now precedes the constructor's full-text substitutions;
+review transformations that previously depended on the opposite order.
+Built-in set-style preprocessing runs in Rust, selected by `platform`.
+Stock `core_owned` preprocessor methods remain callable helpers; the marker
+does not arrange dispatch to arbitrary Python overrides.
 
 ## Step 4: Add imperative callbacks (if needed)
 
@@ -170,103 +178,108 @@ print(workflow.remediation_config)
 
 Alternatively, skip registration and pass an instance directly: `HConfig.from_text(CustomHConfigDriver(), config_text)`.
 
-## Key methods in `HConfigDriverBase`
+## Behavior the core owns
 
-The rule-checking methods the tree calls during remediation:
+Negation, idempotency, and sectional exiting are resolved entirely inside the
+Rust core from the driver's *rule data* — there are no `negate_with()`,
+`swap_negation()`, `idempotent_for()`, or `sectional_exit()` methods to
+override, and defining one on a subclass raises `TypeError`. Shape these
+behaviors through `rules.negation`, `rules.negate_with`,
+`rules.idempotent_commands`, and `rules.sectional_exiting` instead.
 
-```python
-def idempotent_for(
-    self,
-    config: HConfigChild,
-    other_children: Iterable[HConfigChild],
-) -> HConfigChild | None:
-    """Return the child that `config` idempotently overwrites, if any."""
+Custom `config_preprocessor()` is the fifth removed override hook; use the
+explicit preprocessing step above, not a driver override.
 
-def negate_with(self, config: HConfigChild) -> str | None:
-    """Return a fixed replacement negation string for `config`, if any."""
-
-def swap_negation(self, child: HConfigChild) -> HConfigChild:
-    """Toggle the negation of `child.text`."""
-
-def sectional_exit(self, config: HConfigChild) -> str | None:
-    """Return the exit token to render at the end of a section."""
-```
-
-Idempotency matching is structural: `idempotent_for` builds an *idempotency key* from the child's lineage and the rule's match criteria (prefix matched, regex capture groups, ...), so two commands are only considered interchangeable when their structural identities agree. Craft your `MatchRule`s to capture the identifying parts of a command (e.g. `re_search=r"^neighbor (\S+) description"`).
+Idempotency matching is structural: the core builds an *idempotency key* from the child's lineage and the rule's match criteria (prefix matched, regex capture groups, ...), so two commands are only considered interchangeable when their structural identities agree. Craft your `MatchRule`s to capture the identifying parts of a command (e.g. `re_search=r"^neighbor (\S+) description"`).
 
 ## Adding a config view
 
-To give the platform a typed [config view](../user/config-views.md), implement the two view classes and point the driver at them.
+Built-in config views are implemented in Rust. Adding built-in platform behavior
+means writing native ops and exposing them through the Python facade and stubs.
+For Python-only extensions, consult the
+[native view migration contract](../user/rust-core-changes.md#native-config-views)
+before porting a v3 view subclass or capability mixin.
 
-**1. Interface view** — subclass the capability mixins the platform genuinely supports (each mixin already subclasses `ConfigViewInterfaceBase`, so listing the base explicitly is redundant — the in-tree views don't):
+**1. Native ops** — implement `InterfaceOps` and `ConfigOps` in
+`crates/hier_config_core/src/view/platforms/<name>.rs`. Every trait method has a
+default body, so override only what the platform does differently. Capabilities
+are declared by `bundle_prefix()`, `supports_vlan()`, `supports_nac()`, and
+`supports_physical()`.
+
+```rust
+pub struct CustomInterfaceOps;
+
+impl InterfaceOps for CustomInterfaceOps {
+    fn supports_vlan(&self) -> bool {
+        true
+    }
+
+    fn bundle_prefix(&self) -> Option<&'static str> {
+        Some("port-channel")
+    }
+}
+
+pub static INTERFACE_OPS: CustomInterfaceOps = CustomInterfaceOps;
+```
+
+Register the platform in `view_ops_for_platform`
+(`crates/hier_config_core/src/view/platforms/mod.rs`). That match is exhaustive
+on `Platform`, so a new enum variant will not compile until you either supply
+hooks or explicitly record the platform as view-less.
+
+**2. Python facade** — add `hier_config/platforms/<name>/view.py` following the
+in-tree template. The interface class is a marker whose `isinstance` behavior is
+driven by the native platform tag; the device class is a plain subclass that
+`get_hconfig_view()` instantiates:
 
 ```python
+from hier_config.models import Platform
 from hier_config.platforms.view_base import (
-    InterfaceBundleViewMixin,
-    InterfaceVlanViewMixin,
+    ConfigViewInterface,
+    HConfigView,
+    ViewMarkerMeta,
 )
 
 
 class ConfigViewInterfaceCustomNOS(
-    InterfaceBundleViewMixin,
-    InterfaceVlanViewMixin,
+    ConfigViewInterface,
+    metaclass=ViewMarkerMeta,
 ):
-    """Typed view over one `interface ...` block."""
+    """Marker for `isinstance` narrowing; behavior lives in Rust."""
 
-    # Implement the abstract properties, e.g.:
-    @property
-    def ipv4_interfaces(self):
-        for child in self.config.get_children(startswith="ip address "):
-            ...
+    view_platform = Platform.CUSTOM_NOS
 
-    @property
-    def vrf(self) -> str:
-        ...
 
-    # ...plus the abstract members required by each inherited mixin.
+class HConfigViewCustomNOS(HConfigView):
+    """Device-level view for CustomNOS."""
 ```
 
-Inheriting a mixin is a contract: `isinstance(view, InterfaceVlanViewMixin)` tells users the capability exists, so only inherit mixins whose properties the platform can actually populate.
-
-**2. Device view** — subclass `HConfigViewBase` and implement its abstract members (`hostname`, `interface_views`, `interfaces`, `ipv4_default_gw`; `dot1q_mode_from_vlans` is a concrete static helper you can call, not implement):
+**3. Wire it up** — point the driver at the device view:
 
 ```python
-from hier_config.platforms.view_base import HConfigViewBase
+from typing import ClassVar
+
+from hier_config import Platform
 
 
-class HConfigViewCustomNOS(HConfigViewBase):
-    @property
-    def interfaces(self):
-        return self.config.get_children(startswith="interface ")
-
-    @property
-    def interface_views(self):
-        for interface in self.interfaces:
-            yield ConfigViewInterfaceCustomNOS(interface)
-
-    @property
-    def hostname(self) -> str | None:
-        if child := self.config.get_child(startswith="hostname "):
-            return child.text.split()[1].lower()
-        return None
-
-    # ...remaining abstract members
-```
-
-**3. Declare it on the driver:**
-
-```python
-class CustomHConfigDriver(HConfigDriverBase):
+class HConfigDriverCustomNOS(HConfigDriverBase):
+    platform: ClassVar[Platform] = Platform.CUSTOM_NOS
     view_class = HConfigViewCustomNOS
-    ...
 ```
 
-`get_hconfig_view(config)` now resolves the view automatically for the registered platform.
+Declaring a capability is a contract: `isinstance(view, InterfaceVlanViewMixin)`
+tells users the capability exists, so only enable `supports_vlan()` and friends
+when the platform can actually populate those properties.
+
+Platforms without native ops deliberately have no config view; `view_class`
+stays `None` and `get_hconfig_view()` raises.
 
 ## Contributing the driver upstream
 
 Built-in drivers live in `hier_config/platforms/<name>/driver.py` and are wired into:
 
+- native `Platform` mapping, `PlatformOps`, and canonical rules under
+  `crates/hier_config_core/src/platforms/`,
 - the `Platform` enum in `hier_config/models.py`,
 - the `_BUILTIN_DRIVERS` mapping in `hier_config/registry.py`,
 - unit tests under `tests/unit/platforms/` and integration tests under `tests/integration/`.

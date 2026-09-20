@@ -35,6 +35,7 @@ plugins:
         user/junos-style-syntax-remediation.md: user/set-style-platforms.md
         user/config-view.md: user/config-views.md
         user/api-reference.md: dev/api-reference.md
+        user/migration-v3-to-v4.md: user/rust-core-changes.md
         user/glossary.md: glossary.md
         dev/extending.md: dev/creating-drivers.md
 
@@ -44,6 +45,7 @@ nav:
       - Installation: user/install.md
       - Getting Started: user/getting-started.md
       - Migrating from v3: user/migrating-from-v3.md
+      - Rust Core Behavior Changes: user/rust-core-changes.md
       - v3 API Compatibility: user/v3-compatibility.md
       - Loading Configurations: user/loading-configs.md
       - Remediation Workflows: user/remediation-workflows.md
@@ -66,6 +68,8 @@ nav:
       - Code Style & Standards: dev/code-style.md
       - Contributing: dev/contributing.md
       - API Reference: dev/api-reference.md
+      - Performance & Benchmarks: dev/benchmarks.md
+      - Performance Roadmap: dev/performance-roadmap.md
   - Maintainer Guide:
       - Releases: admin/releases.md
       - CI & Infrastructure: admin/infrastructure.md

@@ -8,7 +8,7 @@ body to stdout so the workflow can reuse it as the draft release notes.
 from __future__ import annotations
 
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 UNRELEASED_HEADING = "## [Unreleased]"
@@ -43,7 +43,7 @@ def rotate(changelog_path: Path, version: str, date: str) -> str:
 def main() -> None:
     if len(sys.argv) != 2:
         sys.exit(f"usage: {sys.argv[0]} <version>")
-    date = datetime.now(tz=timezone.utc).date().isoformat()
+    date = datetime.now(tz=UTC).date().isoformat()
     try:
         notes = rotate(Path("CHANGELOG.md"), sys.argv[1], date)
     except (OSError, ValueError) as exc:

@@ -16,9 +16,13 @@ v4 design decisions, for the record:
   `WorkflowRemediation` remains the recommended workflow API and already
   validates driver compatibility (`IncompatibleDriverError`).
 - Drivers remain declaratively-configured with sanctioned imperative
-  extension points (#222): #220 removed the negation-related override needs;
-  `idempotent_for()`, `negate_with()`, and `config_preprocessor()` stay
-  overridable for logic that rules cannot express.
+  extension points (#222): #220 removed the negation-related override needs.
+  The Rust core now resolves
+  `idempotent_for()`, `negate_with()`, `sectional_exit()`, and
+  `swap_negation()` itself, so those four hooks no longer exist on
+  `HConfigDriverBase` and defining one raises `TypeError`. Custom
+  `config_preprocessor()` is the fifth rejected override: preprocess text
+  explicitly before construction. Stock built-in helpers stay callable. (#302)
 - Config trees stay mutable (#224): full immutability would break the
   callback/plugin mutation model for marginal benefit. The remediation
   algorithms are guaranteed (and now tested) not to mutate their input
@@ -26,8 +30,50 @@ v4 design decisions, for the record:
 
 ### Added
 
-- Permanent v3 API compatibility (#300). Every v3 name that v4 renamed or
-  removed is restored as a thin delegation to its v4 counterpart, with no
+- `NodeComments`, a public set-like view over one node's comments, returned by
+  `HConfigChild.comments`. It exposes the full mutable-set API (`add`,
+  `discard`, `remove`, `pop`, `update`, `clear`, `copy`, the algebra operators
+  and their in-place forms, and the subset/superset/disjoint predicates). (#302)
+- `HConfigChildren.append()` accepts `update_mapping` (default `True`) so a
+  caller performing a bulk load can defer the per-append mapping refresh. (#302)
+
+- Native behavioral coverage for platform/interface views, tree mutations,
+  remediation, workflow caching and structured-format edge cases; enforce
+  a 90% Rust-core line coverage floor in CI after the rewrite. (#302)
+
+- `scripts/check_pyo3_advisories.py`, wired into `lint` and `lint-and-test`,
+  guards the RUSTSEC-2026-0176 sequence-iterator advisory. It replaces four
+  `clippy.toml` `disallowed-methods` entries that could never fire: Clippy
+  matches those paths only for inherent associated functions, and `.iter().nth()`
+  on a `PyList`/`PyTuple` dispatches through `Iterator`. (#302)
+- Lint gates for generated/native stub freshness, `mypy.stubtest`, observed
+  return types, and formats-corpus drift. Audited allowlists cover native
+  signatures and unobserved return values; stale exemptions fail checks. (#302)
+
+- Workspace Rust formatting, strict Clippy, documentation, MSRV, coverage and
+  dependency-policy checks alongside Python gates. (#302)
+- Rust core. Parsing, the tree, post-load fixups, and the remediation engine
+  are implemented in Rust (`crates/`) and exposed through PyO3 as the
+  `_hier_config_rust` extension. There is no pure-Python fallback, so
+  hier_config now ships as a compiled wheel rather than a pure-Python one.
+  Wheels are published for Linux (x86_64, aarch64), macOS, and Windows on
+  CPython 3.10-3.14; other targets build from source and need a Rust
+  toolchain. Behavior is covered by a shared JSON case corpus under
+  `testdata/cases/` that both the Rust and Python suites execute. Cases preserve
+  source-specific rule overrides and constructor selection. See
+  [Rust core behavior changes](docs/user/rust-core-changes.md) for the full
+  list of differences and
+  [Performance & Benchmarks](docs/dev/benchmarks.md) for measurements. (#302)
+- Standalone Rust constructors and views for Arista EOS, Aruba AOS-CX,
+  Cisco IOS, Cisco NX-OS, Cisco XR and HP ProCurve. Python views now wrap this
+  same implementation; the former `testdata/views/` dual-implementation corpus
+  was removed, while native and Python boundary tests remain. (#302)
+- `core_owned` marks stock preprocessor helpers and built-in post-load
+  callbacks already implemented natively. It prevents duplicate callback work,
+  but does not dispatch arbitrary Python hooks. (#302)
+
+- Permanent v3 API compatibility (#300). The following v3 names are restored
+  as thin delegations to their v4 counterparts, with no
   `DeprecationWarning` and no planned removal: the `get_hconfig*()`
   constructors, `config_to_get_to()`, `dump_simple()`, `cisco_style_text()`,
   `tags_add()`/`tags_remove()`, `use_default_for_negation()`,
@@ -182,18 +228,114 @@ v4 design decisions, for the record:
 
 ### Changed
 
-- Migrated packaging, dependency management, and build backend from Poetry to
-  uv. Package metadata uses PEP 621 `[project]`, development dependencies use
-  PEP 735 `[dependency-groups]`, and the build backend is `uv_build`. Lockfile
-  migrated from `poetry.lock` to `uv.lock`. GitHub Actions workflows now use
-  `astral-sh/setup-uv@v7` with `uv sync` and native `uv build` / `uv publish`,
-  and `setup-uv` manages the Python version for each matrix leg.
-  Package metadata now carries the
-  README as its long description and an SPDX `License-Expression: MIT` (the
-  OSI license classifier is gone, as PEP 639 requires); `LICENSE` is shipped
-  in the sdist and wheel via `license-files`, so the setuptools-only
-  `MANIFEST.in` was removed. The unmaintained `pytest-runner` dev dependency
-  was dropped. (#301)
+- `HConfigChild.comments` is now a live view over the node's comments rather
+  than a detached copy. Mutating the returned object — `child.comments.add(…)`
+  — now updates the configuration, where previously the change was silently
+  discarded. Code that relied on the copy semantics should take an explicit
+  snapshot with `set(child.comments)`. (#302)
+- `HConfig` and `WorkflowRemediation` accept and ignore extra positional and
+  keyword arguments in their native constructors. A subclass declaring its own
+  `__init__` with additional parameters previously raised `TypeError`, because
+  the native `__new__` runs first and received the subclass's arguments. (#302)
+- `HConfigChildren.__contains__` returns `False` for a non-`str` operand
+  instead of raising `TypeError`, matching how the built-in containers behave
+  and how the v3 pure-Python implementation behaved. (#302)
+- `HConfig.__reduce__` now carries per-node `facts`, `instances` and
+  `order_weight` alongside the driver and dump, so a round-trip through
+  `pickle`/`copy` preserves state that the dump alone does not capture. The
+  tuple's payload shape has changed; anything that unpacked it directly must be
+  updated. `HConfigChild` and `WorkflowRemediation` are now picklable too, which
+  they previously were not. (#302)
+- `HConfig.dump()` reports the recursive union of a node's tags, so a tag set on
+  a section now appears on the dumped lines beneath it. Previously only tags
+  applied directly to a line were emitted. Each emitted `DumpLine` has an isolated,
+  mutable `__pydantic_fields_set__` to support `model_copy(update=...)` in
+  Pydantic v2. (#302)
+
+- Junos negation of a line that starts with neither `set ` nor `delete ` now
+  raises instead of emitting the line as its own negation, restoring parity with
+  the v3 pure-Python driver; this withdraws 54 native-only netconf/gnmi
+  remediation cases whose recorded output omitted `nc:operation="delete"` (#302)
+- Post-load callbacks now always run in the order the driver declared them. The
+  Rust core applies its built-in callbacks during the parse, so a custom driver
+  that inserted a callback *ahead* of a stock one saw it run last. The core's
+  pass is now suppressed whenever the declared order would not be preserved,
+  and the whole list runs in Python instead. Appending to the stock list — the
+  usual case — still takes the core's fast path. (#302)
+- `DuplicateChildError`'s message now renders the duplicate path as a JSON-style
+  list instead of a Python tuple repr, because the message comes from the Rust
+  core's `Display` implementation: `Found a duplicate section: ["hostname r1"]`
+  rather than `Found a duplicate section: ('hostname r1',)`. Code that matches
+  on the message text needs updating; the leading text is unchanged. (#302)
+- `HConfig.from_xml()` accepts only `str`. Passing `bytes` now raises
+  `TypeError` instead of being decoded, so decode XML read in binary mode
+  before handing it to the constructor. (#302)
+- Generate one packaged native type stub from current PyO3 binding metadata
+  and documentation instead of recovering signatures from the v3.7 Git
+  baseline. Remove duplicate facade/native stubs and repository-only stub
+  search paths; preserve public Python re-exports and legacy native imports.
+  Validate wheel-installed types with positive and negative consumer checks.
+  The generated stub orders classes so every base precedes its subclasses,
+  and marks C-slot parameters positional-only, so astroid-backed and
+  signature-based checkers analyze it correctly. (#302)
+
+- Regex compatibility is context-dependent: capture-producing rule patterns
+  reject syntax outside the Rust `regex` subset with contextual errors;
+  matching-only rules retain bounded richer-pattern fallback. Python
+  replacement-template support is not complete Python pattern parity. (#302)
+- Native config views replace the Python view implementation. Existing class
+  names and `HConfigViewBase` / `ConfigViewInterfaceBase` aliases remain;
+  capability `isinstance()` checks use native data rather than Python mixin
+  implementations. Built-in device-view subclass customization remains
+  supported; Generic custom views, direct interface-view/subclass construction,
+  and former capability-mixin `issubclass()` relationships are not. (#302)
+- **Breaking view values:** IOS/AOS-CX NAC client limits and EOS/NX-OS/XR
+  module numbers return `None` instead of raising; ProCurve non-trunk bundle
+  members return `()`; IOS automatic speed returns `None`.
+  `InterfaceDuplex.value` is `"auto"`/`"full"`/`"half"` rather than numeric
+  strings. Unknown IOS NAC host modes return `None`. Migrate exception handlers
+  and serialized values. (#302)
+- Structured JSON/XML ingestion/rendering and NETCONF/gNMI output now execute
+  in `hier_config_core::formats`, shared with standalone Rust and guarded by
+  independent IOS/EOS format references and native Junos regression snapshots.
+  `InvalidConfigError` is native but retains its
+  documented import from `hier_config.exceptions`. (#302)
+- `WorkflowRemediation` lazily caches remediation and rollback natively.
+  Its input properties are read-only; construct a new workflow to replace
+  inputs. Config trees themselves remain mutable. (#302)
+- Native parser/diff contexts, transactional constructors, platform-local
+  `PlatformOps`, stack-based traversals and root node counts replace Python
+  internals. `len(config)` counts descendants without creating Python handles;
+  merge, tag filtering, and structured workflows work in standalone Rust. (#302)
+- `platform: ClassVar[Platform]` selects native operations for custom drivers;
+  drivers without a selector use Generic operations. Python rule data,
+  prefixes and callbacks remain extension points; custom preprocessing must
+  happen explicitly before `HConfig.from_text()`. Invalid explicit selectors
+  raise `ValueError`, rather than selecting a vendor from a class name. (#302)
+- PyYAML is optional via `hier-config[yaml]`. The only required Python runtime
+  dependency is pydantic; YAML calls without the extra raise an actionable
+  `ImportError`, while rule dictionaries and ordinary config parsing work. (#302)
+- Migrated packaging and dependency management from Poetry to uv, and build
+  backend to maturin for native PyO3 extension compilation. Package metadata
+  uses PEP 621 `[project]`, development dependencies use PEP 735
+  `[dependency-groups]`, and the build backend is `maturin`. Lockfiles are
+  `uv.lock` and `Cargo.lock`; `poetry.lock` was removed. GitHub Actions
+  build native artifacts with maturin-action.
+  Package metadata carries the README as its long description and an SPDX
+  `License-Expression: MIT` (`license-files = ["LICENSE"]`); the setuptools-only
+  `MANIFEST.in` was removed, and the unmaintained `pytest-runner` dev dependency
+  was dropped. Contributors need a Rust toolchain and must compile via
+  `uv run --no-sync maturin develop --release --locked` before running
+  Python tests, using `uv run --no-sync` afterward to avoid replacing the fresh
+  extension with a cached wheel. The uv migration originated upstream (#301); native
+  packaging and release-artifact updates ship with this rewrite. (#302)
+- Bulk traversals use native-backed handles rather than interned Python
+  objects. Audit `is`/`id()` assumptions and method-specific iterable/iterator
+  contracts; see the [migration guide](docs/user/rust-core-changes.md). (#302)
+- `HConfig.from_dump()` runs a driver's remediation-transform callbacks after
+  the tree is fully built rather than incrementally during the load, so a
+  callback observes the complete config. Callbacks that relied on seeing a
+  partially-loaded tree will behave differently. (#302)
 - Restructured the documentation into User, Administrator, and Developer
   guides (`docs/user/`, `docs/admin/`, `docs/dev/`) with a rewritten landing
   page, new pages for loading configurations and remediation workflows, and
@@ -257,7 +399,31 @@ v4 design decisions, for the record:
 
 ### Removed
 
-Nothing. Every name previously listed here — `get_hconfig()`,
+- Support for Python 3.10, which reaches end of life in October 2026. The
+  minimum supported version is now Python 3.11: `requires-python` is
+  `>=3.11`, the `abi3` wheel baseline moved from `abi3-py310` to
+  `abi3-py311`, ruff targets `py311`, and the CI matrix covers
+  CPython 3.11-3.14. (#302)
+- `HConfigDriverBase.idempotent_for()`, `negate_with()`, `sectional_exit()`,
+  and `swap_negation()` plus their private helpers. Defining these overrides
+  raises `TypeError`; use rule data and prefixes instead. There is no
+  `core_owned` escape hatch for these four hooks. (#302)
+- Custom `config_preprocessor()` driver overrides, the fifth removed hook,
+  now raise `TypeError` in `__init_subclass__` rather than being silently
+  ignored. Move preprocessing to an explicit call before `HConfig.from_text()`;
+  this runs before constructor substitutions. Marked stock built-in methods
+  remain callable helpers, not override dispatch points. (#302)
+- `HConfigBase.all_children()` (renamed to `descendants()` without an alias),
+  direct `HConfigChildren()` construction, `HConfigChild.instantiate_child()`,
+  and the six `tree_algorithms` functions. Use parent `add_child()`/`children`
+  and the public `HConfig` algorithms; see the
+  [migration table](docs/user/rust-core-changes.md#descendants-and-removed-helpers). (#302)
+- The Python config-text loader. `HConfig.from_text()` and `from_lines()` now
+  parse in the core; the Python parsing path they replaced is gone. This is
+  internal, but a subclass that overrode a loader helper no longer has an
+  effect. (#302)
+
+Every name previously listed under this heading — `get_hconfig()`,
 `get_hconfig_fast_load()`, `get_hconfig_from_dump()`,
 `get_hconfig_fast_generic_load()`, `HConfigChild.use_default_for_negation()`,
 the three v3 negation rule models and their `HConfigDriverRules` fields,
@@ -268,6 +434,74 @@ the three v3 negation rule models and their `HConfigDriverRules` fields,
 
 ### Fixed
 
+- `HConfig` no longer holds a strong reference back to itself through its child
+  nodes, so a discarded configuration is reclaimed by reference counting instead
+  of waiting for the cyclic garbage collector. The back-reference is now a weak
+  reference, and `HConfig` participates in GC traversal. (#302)
+- Parsing a configuration nested more deeply than the tree's depth limit now
+  raises `RecursionError` instead of exhausting the stack. The same limit guards
+  the XML reader. (#302)
+
+- A sectional-exiting rule that explicitly declares `exit_text = "exit"` now
+  resolves through the platform's default exit token instead of being emitted
+  verbatim, so Huawei VRP renders `quit`. This matches v3, which applies the
+  Huawei mapping after the rule lookup returns. Other platforms and any other
+  `exit_text`, including the empty string, are unchanged. (#302)
+- `module_numbers` now includes module `0`, so an IOS `GigabitEthernet0/0`
+  reports `[0]` where it previously reported `[]`. Interfaces on a device's
+  first module are no longer silently dropped from the module list. (#302)
+- Unblock CI: allow the permissive `CC0-1.0` and `Unicode-DFS-2016` licences
+  and ignore the six unmaintained `unic-*` RustSec advisories, all of which
+  reach us only through `pyo3-stub-gen`'s build-time `rustpython-parser` and
+  never ship in the wheel; disable the uv cache in the `python-tests` jobs,
+  which install with pip and so never populate it. (#302)
+- Stop stub generation and its tests from requiring git history, so
+  `pytest tests/` passes in the shallow clones used by the `python-tests`
+  CI jobs. (#302)
+- Preserve optional regex capture positions in idempotency keys and ignore
+  nonsemantic child bookkeeping when deciding whether a sectional overwrite is
+  needed, matching the original Python remediation behavior. (#302)
+- Preserve arena handle generations when clearing trees, count only reachable
+  descendants, restore indexed child-replacement semantics, and reject invalid
+  move/copy/replacement handles before mutating the tree. Tag filtering retains
+  custom drivers; unused-object discovery scopes names per rule and reports
+  missing named regex captures instead of silently hiding objects. (#302)
+- Restore native view parity for separator whitespace in interface descriptions,
+  VLAN names and SNMP locations, and prevent VLAN zero from implying access mode
+  or entering the inferred VLAN inventory. (#302)
+- Restore Python structured-format parity after the Rust rewrite: empty
+  `list_keys` uses the default identity keys, malformed XML outside the document
+  element is rejected, and XML/NETCONF rendering preserves element and attribute
+  namespaces instead of emitting invalid Clark-notation tags. (#302)
+- Native substitutions preserve Python replacement escapes and capture
+  references; negation `REGEX_SUB` replaces all matches. Regex caches are
+  bounded and regex-set cache keys no longer collide. Fallible Rust `try_*`
+  APIs expose invalid dynamic-rule errors without convenience-wrapper panics. (#302)
+- Format-reference provenance now separates fingerprinted pure-Python
+  IOS/EOS/error expectations from frozen native Junos regression snapshots.
+  Drift checks preserve both sets without silently regenerating the oracle
+  from the implementation under test. (#302)
+- Corpus provenance for NX-OS console negation and XR template indentation:
+  carry NX-OS's original injected negation rules, both cases' lines-loader
+  selection, and exact source-test references in metadata. Expected outputs
+  are unchanged; this corrects setup rather than redefining stock platform
+  behavior or declaring intentional divergences. (#302)
+- Restored iterator contracts for `get_children()`, `get_children_deep()`,
+  `lineage()`, `path`, and `unified_diff()`; sorted traversals retain tuples.
+  Deleted node methods/properties and child containers raise catchable
+  `ValueError`. String `remove_tags()` raises `KeyError` on a missing leaf tag
+  (possibly after earlier mutations); iterable input ignores absent tags. (#302)
+- Retained native interface views raise `ValueError` on node-backed
+  access after deletion, instead of native panics or empty values. (#302)
+- `deepcopy()` releases native locks before Python metadata hooks and uses
+  the memo dictionary to preserve cycles and shared references. (#302)
+- JSON/XML duplicate list identities raise `DuplicateChildError` without
+  flattening it into `InvalidConfigError` at the Python boundary. (#302)
+- Native keyword signatures match the stubs (`tag` and `match_rules`), and
+  the `poe` annotation includes `None`. Published wheels include synchronized
+  native `.pyi` metadata for IDEs and type checkers. (#302)
+- `future()` falls back to the source platform's idempotency rules when a
+  change tree is Generic, preventing duplicate valued commands. (#302)
 - Documentation gap sweep: repaired doc examples that no longer ran or showed
   wrong output (getting-started fixture path, tags filtering, the custom ACL
   remediation `delete()` idiom, config-view and hierarchical-JunOS outputs);
