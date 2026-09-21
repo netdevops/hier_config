@@ -436,6 +436,11 @@ the three v3 negation rule models and their `HConfigDriverRules` fields,
 
 ### Fixed
 
+- The release workflow now builds the Linux aarch64 wheel on a native arm64
+  runner. Cross-compilation used an image whose toolchain is GCC 4.8.5, which
+  cannot compile the bundled mimalloc allocator, so the v4.0.0b4 release
+  published no artifacts at all. (#307)
+
 - `HConfig` no longer holds a strong reference back to itself through its child
   nodes, so a discarded configuration is reclaimed by reference counting instead
   of waiting for the cyclic garbage collector. The back-reference is now a weak

@@ -262,6 +262,38 @@ jobs:
         .wheel-env/bin/python -m pip install mypy pyright typing_extensions
         python scripts/check_wheel_typing.py --python .wheel-env/bin/python
 
+  manylinux-wheels:
+    # Builds the release wheels with the same toolchain `deploy-pypi.yml` uses.
+    # The `packaging` job above builds with the runner's own compiler, so it
+    # never enters a manylinux container. Without this job the manylinux
+    # toolchain first runs at release time, which is how the GCC 4.8.5 break in
+    # the aarch64 cross image reached the v4.0.0b4 release instead of the PR.
+    #
+    # Keep the matrix, the runners and the maturin-action inputs equal to the
+    # `linux` job in `deploy-pypi.yml`. A difference here makes the guard lie.
+    runs-on: ${{ matrix.runner }}
+    needs: [rust-tests]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - target: x86_64
+          runner: ubuntu-latest
+        - target: aarch64
+          runner: ubuntu-24.04-arm
+    steps:
+    - uses: actions/checkout@v6
+    - uses: actions/setup-python@v6
+      with:
+        python-version: "3.11"
+    - name: Build manylinux wheels
+      uses: PyO3/maturin-action@v1
+      with:
+        target: ${{ matrix.target }}
+        args: --release --locked --out dist --find-interpreter
+        sccache: 'true'
+        manylinux: auto
+
   performance-gate:
     # Guards against silent performance regressions. Divides each operation by a
     # pure-Python calibration workload timed on the same machine in the same
