@@ -3,9 +3,9 @@
 The v3 names **listed on this page** remain supported permanently, without a
 `DeprecationWarning`. This is an explicit compatibility surface, not a promise
 that all v3 helpers, return types, or object protocols are unchanged.
-The v4 Rust rewrite has additional breaks, including `all_children()` →
-`descendants()`, removed construction/algorithm helpers, and native view
-contracts. Read [Rust core behavior changes](rust-core-changes.md) before upgrading.
+The v4 Rust rewrite has additional breaks, including removed
+construction/algorithm helpers and native view contracts. Read
+[Rust core behavior changes](rust-core-changes.md) before upgrading.
 
 Each old name is a thin wrapper that calls its v4 counterpart, so the two spellings
 can never drift apart. A committed recording of the v3 output

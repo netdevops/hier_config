@@ -93,7 +93,7 @@ It does **not** break attribute reads, `config.dump()`, or `get_hconfig_from_dum
 
 Reading one attribute from every node costs one Python-level call per node, and every traversal constructs one `HConfigChild` per node whether or not the caller reads anything from it. A method returning parallel lists (or a single list of tuples) for a whole subtree would amortise the boundary crossing across the entire tree instead of paying it per node per attribute — and would skip wrapper construction entirely.
 
-This is the natural escape hatch for callers who currently write `[c.text for c in config.descendants()]`.
+This is the natural escape hatch for callers who currently write `[c.text for c in config.all_children()]`.
 
 ### Why this is what remains in `iteration`
 

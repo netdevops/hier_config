@@ -20,7 +20,7 @@ builds require Python 3.11+, a linker, and the Rust MSRV in `Cargo.toml`
 See [Installation](install.md) for wheel targets and source-build commands.
 
 `pydantic` is the only required Python runtime dependency. YAML file helpers
-require `pip install --pre 'hier-config[yaml]'`. Importing the library and
+require `pip install 'hier-config[yaml]'`. Importing the library and
 loading rule dictionaries do not require PyYAML; YAML calls without it raise
 an `ImportError` with installation instructions.
 
@@ -170,16 +170,9 @@ instead of silently selecting stock rules.
 
 ## Python API migration
 
-### Descendants and removed helpers
+### Removed helpers
 
-`all_children()` was renamed to **`descendants()`**, with no `all_children`
-alias. Update recursive walks:
-
-```python
-for child in config.descendants():
-    print(child.text)
-```
-
+`all_children()` keeps its v3 name and still walks every descendant of a node.
 `config.children` still means direct children. `len(config)` counts all
 descendants; `len(config.children)` counts only direct children.
 
@@ -226,8 +219,8 @@ wrappers for the same node; do not use `is` or `id()` to compare those wrappers.
 Single-node lookups and view-backed node access retain interning.
 
 ```python
-a = next(iter(config.descendants()))
-b = next(iter(config.descendants()))
+a = next(iter(config.all_children()))
+b = next(iter(config.all_children()))
 a == b  # node comparison, not Python wrapper identity
 ```
 
@@ -364,7 +357,7 @@ complementary checks; see [Testing](../dev/testing.md).
 
 1. Pin `<4` until this migration has been reviewed; opt into v4 deliberately.
 2. Provision a compatible wheel or source-build toolchain, and `[yaml]` if needed.
-3. Replace `all_children()` and removed constructors/algorithm helpers.
+3. Replace the removed constructors and algorithm helpers.
 4. Audit every custom driver, its platform selector, and the five removed hooks.
 5. Review traversal return types, wrapper identity, collection equality, and
    any code retaining handles after deletion.
