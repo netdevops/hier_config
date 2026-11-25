@@ -30,6 +30,9 @@ v4 design decisions, for the record:
 
 ### Added
 
+- `HConfigChild` now supports `<=`, `>` and `>=`. They compare `order_weight`, the
+  same as `<`. Before, `<=` and `>=` raised `TypeError`. (#311)
+
 - `NodeComments`, a public set-like view over one node's comments, returned by
   `HConfigChild.comments`. It exposes the full mutable-set API (`add`,
   `discard`, `remove`, `pop`, `update`, `clear`, `copy`, the algebra operators
@@ -440,6 +443,10 @@ the three v3 negation rule models and their `HConfigDriverRules` fields,
   runner. Cross-compilation used an image whose toolchain is GCC 4.8.5, which
   cannot compile the bundled mimalloc allocator, so the v4.0.0b4 release
   published no artifacts at all. (#307)
+
+- Two CI checks no longer fail at random. `test_add_shallow_copy_of` keeps its
+  source root alive. The performance gate times fast operations in batches, and
+  its ceilings come from 10 runs on the current CI runners. (#311)
 
 - `HConfig` no longer holds a strong reference back to itself through its child
   nodes, so a discarded configuration is reclaimed by reference counting instead
