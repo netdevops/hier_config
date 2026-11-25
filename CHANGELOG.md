@@ -441,6 +441,10 @@ the three v3 negation rule models and their `HConfigDriverRules` fields,
   cannot compile the bundled mimalloc allocator, so the v4.0.0b4 release
   published no artifacts at all. (#307)
 
+- Two CI checks no longer fail at random. `test_add_shallow_copy_of` keeps its
+  source root alive, and the performance gate times fast operations in batches
+  over three alternating rounds. The cost ceilings do not change. (#311)
+
 - `HConfig` no longer holds a strong reference back to itself through its child
   nodes, so a discarded configuration is reclaimed by reference counting instead
   of waiting for the cyclic garbage collector. The back-reference is now a weak
