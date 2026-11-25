@@ -1,0 +1,5 @@
+{
+  "platform": "NOKIA_SRL",
+  "description": "Test routing-policy configuration changes",
+  "assert_rollback": false
+}

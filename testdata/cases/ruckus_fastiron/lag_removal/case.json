@@ -1,0 +1,5 @@
+{
+  "platform": "RUCKUS_FASTIRON",
+  "description": "A LAG is negated down to its name, because the member syntax is not valid on the negation",
+  "assert_rollback": false
+}

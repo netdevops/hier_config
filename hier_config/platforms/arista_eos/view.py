@@ -1,194 +1,33 @@
-from collections.abc import Iterable
-from ipaddress import IPv4Address, IPv4Interface
+"""Arista EOS configuration views.
 
-from hier_config.child import HConfigChild
-from hier_config.platforms.models import (
-    InterfaceDot1qMode,
-    InterfaceDuplex,
-    NACHostMode,
-    StackMember,
-    Vlan,
-)
+The view implementation lives in the Rust core; these classes are the
+platform-specific names the public API has always exposed. ``HConfigViewAristaEOS``
+is a real subclass, so ``driver.view_class`` construction is unchanged.
+``ConfigViewInterfaceAristaEOS`` is a marker: the native view is platform-aware, so
+``isinstance`` is resolved from the view's ``platform`` attribute.
+"""
+
+# Marker and alias classes carry no methods of their own; every property is
+# inherited from the native view.
+# pylint: disable=too-few-public-methods
+
+from __future__ import annotations
+
+from hier_config.models import Platform
 from hier_config.platforms.view_base import (
-    ConfigViewInterfaceBase,
-    HConfigViewBase,
+    ConfigViewInterface,
+    HConfigView,
+    ViewMarkerMeta,
 )
 
-
-class ConfigViewInterfaceAristaEOS(ConfigViewInterfaceBase):  # ruff:ignore[too-many-public-methods]
-    """Interface config view for Arista EOS."""
-
-    @property
-    def bundle_id(self) -> str | None:
-        raise NotImplementedError
-
-    @property
-    def bundle_member_interfaces(self) -> Iterable[str]:
-        raise NotImplementedError
-
-    @property
-    def bundle_name(self) -> str | None:
-        raise NotImplementedError
-
-    @property
-    def description(self) -> str:
-        raise NotImplementedError
-
-    @property
-    def duplex(self) -> InterfaceDuplex:
-        raise NotImplementedError
-
-    @property
-    def enabled(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def has_nac(self) -> bool:
-        """Determine if the interface has NAC configured."""
-        raise NotImplementedError
-
-    @property
-    def ipv4_interfaces(self) -> Iterable[IPv4Interface]:
-        raise NotImplementedError
-
-    @property
-    def is_bundle(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def is_loopback(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def is_subinterface(self) -> bool:
-        return "." in self.name
-
-    @property
-    def is_svi(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def module_number(self) -> int | None:
-        raise NotImplementedError
-
-    @property
-    def nac_control_direction_in(self) -> bool:
-        """Determine if the interface has NAC control direction in configured."""
-        raise NotImplementedError
-
-    @property
-    def nac_host_mode(self) -> NACHostMode | None:
-        """Determine the NAC host mode."""
-        raise NotImplementedError
-
-    @property
-    def nac_mab_first(self) -> bool:
-        """Determine if the interface has NAC configured for MAB first."""
-        raise NotImplementedError
-
-    @property
-    def nac_max_dot1x_clients(self) -> int:
-        """Determine the max dot1x clients."""
-        raise NotImplementedError
-
-    @property
-    def nac_max_mab_clients(self) -> int:
-        """Determine the max mab clients."""
-        raise NotImplementedError
-
-    @property
-    def name(self) -> str:
-        raise NotImplementedError
-
-    @property
-    def native_vlan(self) -> int | None:
-        raise NotImplementedError
-
-    @property
-    def number(self) -> str:
-        raise NotImplementedError
-
-    @property
-    def parent_name(self) -> str | None:
-        raise NotImplementedError
-
-    @property
-    def poe(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def port_number(self) -> int:
-        return int(self.name.split("/")[-1].split(".")[0])
-
-    @property
-    def speed(self) -> tuple[int, ...] | None:
-        raise NotImplementedError
-
-    @property
-    def subinterface_number(self) -> int | None:
-        raise NotImplementedError
-
-    @property
-    def tagged_all(self) -> bool:
-        raise NotImplementedError
-
-    @property
-    def tagged_vlans(self) -> tuple[int, ...]:
-        raise NotImplementedError
-
-    @property
-    def vrf(self) -> str:
-        raise NotImplementedError
-
-    @property
-    def _bundle_prefix(self) -> str:
-        raise NotImplementedError
+__all__ = ("ConfigViewInterfaceAristaEOS", "HConfigViewAristaEOS")
 
 
-class HConfigViewAristaEOS(HConfigViewBase):
-    """Full-tree config view for Arista EOS."""
+class ConfigViewInterfaceAristaEOS(ConfigViewInterface, metaclass=ViewMarkerMeta):
+    """A single Arista EOS interface."""
 
-    def dot1q_mode_from_vlans(
-        self,
-        untagged_vlan: int | None = None,
-        tagged_vlans: tuple[int, ...] = (),
-        *,
-        tagged_all: bool = False,
-    ) -> InterfaceDot1qMode | None:
-        raise NotImplementedError
+    view_platform = Platform.ARISTA_EOS
 
-    @property
-    def hostname(self) -> str | None:
-        if child := self.config.get_child(startswith="hostname "):
-            return child.text.split()[1].lower()
-        return None
 
-    @property
-    def interface_names_mentioned(self) -> frozenset[str]:
-        """A set with all the interface names mentioned in the config."""
-        raise NotImplementedError
-
-    @property
-    def interface_views(self) -> Iterable[ConfigViewInterfaceAristaEOS]:
-        for interface in self.interfaces:
-            yield ConfigViewInterfaceAristaEOS(interface)
-
-    @property
-    def interfaces(self) -> Iterable[HConfigChild]:
-        return self.config.get_children(startswith="interface ")
-
-    @property
-    def ipv4_default_gw(self) -> IPv4Address | None:
-        raise NotImplementedError
-
-    @property
-    def location(self) -> str:
-        raise NotImplementedError
-
-    @property
-    def stack_members(self) -> Iterable[StackMember]:
-        raise NotImplementedError
-
-    @property
-    def vlans(self) -> Iterable[Vlan]:
-        raise NotImplementedError
+class HConfigViewAristaEOS(HConfigView):
+    """A Arista EOS device configuration."""

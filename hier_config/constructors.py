@@ -1,319 +1,266 @@
 from contextlib import suppress
-from itertools import islice
+from json import JSONDecodeError, loads
 from logging import getLogger
 from pathlib import Path
-from re import search, sub
 
-from hier_config.platforms.driver_base import HConfigDriverBase
+from hier_config.platforms.driver_base import HConfigDriverBase, runs_in_core
 
-from .child import HConfigChild
+from .exceptions import DriverNotFoundError, InvalidConfigError
 from .models import Dump, Platform
-from .platforms.arista_eos.driver import HConfigDriverAristaEOS
-from .platforms.arista_eos.view import HConfigViewAristaEOS
-from .platforms.aruba_aoscx.driver import HConfigDriverArubaAOSCX
-from .platforms.aruba_aoscx.view import HConfigViewArubaAOSCX
-from .platforms.cisco_ios.driver import HConfigDriverCiscoIOS
-from .platforms.cisco_ios.view import HConfigViewCiscoIOS
-from .platforms.cisco_nxos.driver import HConfigDriverCiscoNXOS
-from .platforms.cisco_nxos.view import HConfigViewCiscoNXOS
-from .platforms.cisco_xr.driver import HConfigDriverCiscoIOSXR
-from .platforms.cisco_xr.view import HConfigViewCiscoIOSXR
-from .platforms.fortinet_fortios.driver import HConfigDriverFortinetFortiOS
-from .platforms.generic.driver import HConfigDriverGeneric
-from .platforms.hp_comware5.driver import HConfigDriverHPComware5
-from .platforms.hp_procurve.driver import HConfigDriverHPProcurve
-from .platforms.hp_procurve.view import HConfigViewHPProcurve
-from .platforms.huawei_vrp.driver import HConfigDriverHuaweiVrp
-from .platforms.juniper_junos.driver import HConfigDriverJuniperJUNOS
-from .platforms.nokia_srl.driver import HConfigDriverNokiaSRL
-from .platforms.ruckus_fastiron.driver import HConfigDriverRuckusFastIron
 from .platforms.view_base import HConfigViewBase
-from .platforms.vyos.driver import HConfigDriverVYOS
+from .registry import get_hconfig_driver, resolve_driver
 from .root import HConfig
 
 logger = getLogger(__name__)
 
-
-def get_hconfig_driver(platform: Platform) -> HConfigDriverBase:
-    """Create base options on an OS level."""
-    platform_drivers: dict[Platform, type[HConfigDriverBase]] = {
-        Platform.ARISTA_EOS: HConfigDriverAristaEOS,
-        Platform.ARUBA_AOSCX: HConfigDriverArubaAOSCX,
-        Platform.CISCO_IOS: HConfigDriverCiscoIOS,
-        Platform.CISCO_NXOS: HConfigDriverCiscoNXOS,
-        Platform.CISCO_XR: HConfigDriverCiscoIOSXR,
-        Platform.FORTINET_FORTIOS: HConfigDriverFortinetFortiOS,
-        Platform.GENERIC: HConfigDriverGeneric,
-        Platform.HP_PROCURVE: HConfigDriverHPProcurve,
-        Platform.HP_COMWARE5: HConfigDriverHPComware5,
-        Platform.HUAWEI_VRP: HConfigDriverHuaweiVrp,
-        Platform.JUNIPER_JUNOS: HConfigDriverJuniperJUNOS,
-        Platform.NOKIA_SRL: HConfigDriverNokiaSRL,
-        Platform.RUCKUS_FASTIRON: HConfigDriverRuckusFastIron,
-        Platform.VYOS: HConfigDriverVYOS,
-    }
-    driver_cls = platform_drivers.get(platform)
-
-    if driver_cls is None:
-        message = f"Unsupported platform: {platform}"
-        raise ValueError(message)
-
-    return driver_cls()
+__all__ = (
+    "get_hconfig",
+    "get_hconfig_driver",
+    "get_hconfig_fast_generic_load",
+    "get_hconfig_fast_load",
+    "get_hconfig_from_dump",
+    "get_hconfig_view",
+    "hconfig_from_dump",
+    "hconfig_from_lines",
+    "hconfig_from_text",
+)
 
 
 def get_hconfig_view(config: HConfig) -> HConfigViewBase:
-    """Instantiates the appropriate HConfigView.
+    """Instantiates the HConfigView declared by the config's driver.
 
-    If you implement your own HConfigView, you will likely need to create a function like this one locally.
+    Drivers declare their view via the `view_class` attribute, so a custom
+    driver can register its own view by setting `view_class` on the subclass.
     """
-    driver = config.driver
-    if isinstance(driver, HConfigDriverAristaEOS):
-        return HConfigViewAristaEOS(config)
-    if isinstance(driver, HConfigDriverArubaAOSCX):
-        return HConfigViewArubaAOSCX(config)
-    if isinstance(driver, HConfigDriverCiscoIOS):
-        return HConfigViewCiscoIOS(config)
-    if isinstance(driver, HConfigDriverCiscoNXOS):
-        return HConfigViewCiscoNXOS(config)
-    if isinstance(driver, HConfigDriverCiscoIOSXR):
-        return HConfigViewCiscoIOSXR(config)
-    if isinstance(driver, HConfigDriverHPProcurve):
-        return HConfigViewHPProcurve(config)
+    if view_class := config.driver.view_class:
+        return view_class(config)
 
-    message = f"Unsupported platform: {config.driver.__class__.__name__}"
-    raise ValueError(message)
+    message = f"No view registered for driver: {config.driver.__class__.__name__}"
+    raise DriverNotFoundError(message)
+
+
+def _core_runs_post_load(driver: HConfigDriverBase) -> bool:
+    """Report whether the core may apply its built-in post-load callbacks.
+
+    The core runs its callbacks inside the parse, before any Python callback
+    gets a turn, so it may only do so when that matches the order the driver
+    declared: every core-owned callback has to precede every callback the core
+    does not implement. A custom driver that inserts its own callback ahead of
+    a stock one would otherwise see it run last, changing the result (#302), so
+    the core's pass is suppressed and the whole list runs here in order.
+    """
+    seen_python_callback = False
+    for callback in driver.rules.post_load_callbacks:
+        if runs_in_core(callback, driver.platform):
+            if seen_python_callback:
+                return False
+        else:
+            seen_python_callback = True
+    return True
+
+
+def _run_post_load_callbacks(
+    config: HConfig, driver: HConfigDriverBase, *, core_ran: bool
+) -> None:
+    """Apply the driver's post-load callbacks that the Rust core did not.
+
+    Built-in drivers list their stock callbacks so they stay discoverable and
+    reusable (#286). When `core_ran` those were already applied while parsing,
+    so they are skipped rather than run a second time; otherwise the full list
+    runs here to preserve the declared order.
+    """
+    for callback in driver.rules.post_load_callbacks:
+        if core_ran and runs_in_core(callback, driver.platform):
+            continue
+        callback(config)
+
+
+def _detect_structured_format(config_text: str) -> str | None:
+    """Detect structured config formats that the text parser cannot ingest (#232).
+
+    Guards the raw-text entry points (from_text() and the str form of
+    from_lines()); pre-split lines are assumed to be CLI text.
+    """
+    prefix = config_text[:64].lstrip()
+    if prefix.startswith("<"):
+        return "XML"
+    if prefix.startswith(("{", "[")):
+        with suppress(JSONDecodeError):
+            loads(config_text)
+            return "JSON"
+    return None
+
+
+def _reject_structured_format(config_text: str) -> None:
+    if detected := _detect_structured_format(config_text):
+        message = (
+            f"The config appears to be {detected}. Use HConfig.from_xml() or"
+            " HConfig.from_json() for structured formats, or convert to the"
+            " platform's indented CLI text (set-style configs are supported"
+            " natively by the Juniper JunOS, VyOS, and Nokia SRL drivers)."
+        )
+        raise InvalidConfigError(message)
+
+
+def _read_structured_prefix(config_path: Path) -> tuple[str, str | None]:
+    """Read the leading bytes, plus the remainder only for JSON-looking text."""
+    with config_path.open(encoding="utf-8") as handle:
+        prefix = handle.read(64)
+        rest = handle.read() if prefix.lstrip().startswith(("{", "[")) else None
+    return prefix, rest
+
+
+def _reject_structured_file(config_path: Path) -> str | None:
+    """Apply the structured-format guard to a file path (#232).
+
+    Only the leading bytes are read so ordinary CLI text keeps the native file
+    loader's fast path. A leading `{`/`[` is the one case that needs the whole
+    document to decide, so the text read for that check is returned and the
+    caller parses it directly instead of reading the file a second time.
+    """
+    try:
+        prefix, rest = _read_structured_prefix(config_path)
+    except (OSError, UnicodeDecodeError):
+        # Let the native loader raise for an unreadable or non-UTF-8 file so
+        # the error matches the one an unguarded load would have produced.
+        return None
+
+    if prefix.lstrip().startswith("<"):
+        _reject_structured_format(prefix)
+    if rest is None:
+        return None
+
+    config_text = prefix + rest
+    _reject_structured_format(config_text)
+    return config_text
+
+
+def _new_config(driver: HConfigDriverBase) -> HConfig:
+    """Construct an ``HConfig`` and claim it as its tree's canonical root.
+
+    PyO3 exposes ``__init__`` as an ordinary method rather than the ``tp_init``
+    slot, so the native constructor cannot register the object it just built.
+    Reading ``root`` once here does that registration, guaranteeing that
+    ``child.root is config`` for every config the library hands out.
+    """
+    config = HConfig(driver)
+    _ = config.root
+    return config
+
+
+def hconfig_from_text(
+    platform_or_driver: Platform | str | HConfigDriverBase,
+    config_raw: Path | str = "",
+) -> HConfig:
+    """Create an HConfig from raw configuration text (or a Path to it).
+
+    Parsing runs in the Rust core, which applies the driver's full-text and
+    per-line substitutions, the config preprocessor, banner handling, indent
+    analysis, and sectional-exit stripping in a single pass. Only callbacks the
+    core did not already apply are run here.
+    """
+    config = _new_config(resolve_driver(platform_or_driver))
+    core_ran = _core_runs_post_load(config.driver)
+
+    if isinstance(config_raw, Path):
+        if (config_text := _reject_structured_file(config_raw)) is None:
+            config._load_file_native(str(config_raw), core_ran)  # ruff: ignore[private-member-access]
+        else:
+            _load_from_string_lines(config, config_text, run_post_load=core_ran)
+    else:
+        _reject_structured_format(config_raw)
+        _load_from_string_lines(config, config_raw, run_post_load=core_ran)
+
+    _run_post_load_callbacks(config, config.driver, core_ran=core_ran)
+
+    return config
+
+
+def _load_from_string_lines(
+    config: HConfig, config_text: str, *, run_post_load: bool = True
+) -> None:
+    """Parse `config_text` into `config` using the Rust core's text loader.
+
+    Kept as a private seam so callers (and tests) can drive parsing on an
+    already-constructed tree without going through `hconfig_from_text`.
+    """
+    config._load_native(config_text, run_post_load)  # ruff: ignore[private-member-access]
+
+
+def hconfig_from_dump(
+    platform_or_driver: Platform | str | HConfigDriverBase, dump: Dump
+) -> HConfig:
+    """Reconstruct an HConfig from a serialized Dump.
+
+    Rebuilding the tree from the flat, depth-annotated dump lines happens in
+    the Rust core so the parent lookup stays O(1) per line.
+
+    Post-load callbacks are deliberately not run here: a dump already holds the
+    tree *after* those callbacks ran, so replaying them would re-expand or
+    re-append lines they had already produced. Unpickling takes this same path.
+    """
+    config = _new_config(resolve_driver(platform_or_driver))
+    config._load_from_dump_native(dump.lines)  # ruff: ignore[private-member-access]
+    return config
+
+
+def hconfig_from_lines(
+    platform_or_driver: Platform | str | HConfigDriverBase,
+    lines: list[str] | tuple[str, ...] | str,
+) -> HConfig:
+    """Create an HConfig from pre-split configuration lines (fast load).
+
+    Applies per-line substitutions and indentation analysis in the Rust core
+    but skips the full-text substitutions, config preprocessor, and banner
+    handling of `hconfig_from_text`.
+    """
+    driver = resolve_driver(platform_or_driver)
+    config = _new_config(driver)
+    core_ran = _core_runs_post_load(driver)
+    if isinstance(lines, str):
+        _reject_structured_format(lines)
+        lines = lines.splitlines()
+
+    config._load_fast_native(list(lines), core_ran)  # ruff: ignore[private-member-access]
+
+    _run_post_load_callbacks(config, driver, core_ran=core_ran)
+
+    return config
+
+
+# --- v3 compatibility -----------------------------------------------------
+#
+# The names below are the v3 spellings of the constructors above. They are
+# supported permanently and emit no DeprecationWarning. Each one delegates to
+# its v4 counterpart, so behaviour never drifts between the two spellings.
 
 
 def get_hconfig(
-    platform_or_driver: Platform | HConfigDriverBase,
+    platform_or_driver: Platform | str | HConfigDriverBase,
     config_raw: Path | str = "",
 ) -> HConfig:
-    if isinstance(config_raw, Path):
-        config_raw = config_raw.read_text(encoding="utf8")
-
-    config = HConfig(_get_driver(platform_or_driver))
-    for rule in config.driver.rules.full_text_sub:
-        config_raw = sub(rule.search, rule.replace, config_raw)
-
-    _load_from_string_lines(config, config_raw)
-
-    for child in tuple(config.all_children()):
-        child.delete_sectional_exit()
-
-    for callback in config.driver.rules.post_load_callbacks:
-        callback(config)
-
-    return config
+    """v3 name for `HConfig.from_text()`. Both spellings are supported."""
+    return hconfig_from_text(platform_or_driver, config_raw)
 
 
 def get_hconfig_from_dump(
-    platform_or_driver: Platform | HConfigDriverBase, dump: Dump
+    platform_or_driver: Platform | str | HConfigDriverBase,
+    dump: Dump,
 ) -> HConfig:
-    """Load an HConfig dump."""
-    config = get_hconfig(_get_driver(platform_or_driver))
-    last_item: HConfig | HConfigChild = config
-    for item in dump.lines:
-        # parent is the root
-        if item.depth == 1:
-            parent: HConfig | HConfigChild = config
-        # has the same parent
-        elif last_item.depth() == item.depth:
-            parent = last_item.parent
-        # is a child object
-        elif last_item.depth() + 1 == item.depth:
-            parent = last_item
-        # has a parent somewhere closer to the root but not the root
-        else:
-            parent = next(islice(last_item.lineage(), item.depth - 2, item.depth - 1))
-        obj = parent.add_child(item.text)
-        obj.tags = frozenset(item.tags)
-        obj.comments = set(item.comments)
-        obj.new_in_config = item.new_in_config
-        last_item = obj
+    """v3 name for `HConfig.from_dump()`. Both spellings are supported."""
+    return hconfig_from_dump(platform_or_driver, dump)
 
-    return config
+
+def get_hconfig_fast_load(
+    platform_or_driver: Platform | str | HConfigDriverBase,
+    lines: list[str] | tuple[str, ...] | str,
+) -> HConfig:
+    """v3 name for `HConfig.from_lines()`. Both spellings are supported."""
+    return hconfig_from_lines(platform_or_driver, lines)
 
 
 def get_hconfig_fast_generic_load(
     lines: list[str] | tuple[str, ...] | str,
 ) -> HConfig:
-    return get_hconfig_fast_load(Platform.GENERIC, lines)
-
-
-def get_hconfig_fast_load(
-    platform_or_driver: Platform | HConfigDriverBase,
-    lines: list[str] | tuple[str, ...] | str,
-) -> HConfig:
-    driver = _get_driver(platform_or_driver)
-    config = get_hconfig(driver)
-    if isinstance(lines, str):
-        lines = lines.splitlines()
-
-    current_section: HConfig | HConfigChild = config
-    most_recent_item: HConfig | HConfigChild = current_section
-
-    for original_line in lines:
-        if not (line_lstripped := original_line.lstrip()):
-            continue
-
-        # Apply per_line_sub rules before processing
-        processed_line = original_line
-        for rule in driver.rules.per_line_sub:
-            processed_line = sub(rule.search, rule.replace, processed_line)
-
-        if not (line_lstripped := processed_line.lstrip()):
-            continue
-        indent = len(processed_line) - len(line_lstripped)
-
-        # Determine parent in hierarchy
-        most_recent_item, current_section = _analyze_indent(
-            most_recent_item,
-            current_section,
-            indent,
-            " ".join(processed_line.split()),
-        )
-
-    for child in tuple(config.all_children()):
-        child.delete_sectional_exit()
-
-    for callback in driver.rules.post_load_callbacks:
-        callback(config)
-
-    return config
-
-
-def _get_driver(
-    platform_or_driver: Platform | HConfigDriverBase,
-) -> HConfigDriverBase:
-    if isinstance(platform_or_driver, Platform):
-        return get_hconfig_driver(platform_or_driver)
-    return platform_or_driver
-
-
-def _analyze_indent(
-    most_recent_item: HConfig | HConfigChild,
-    current_section: HConfig | HConfigChild,
-    indent: int,
-    line: str,
-) -> tuple[HConfigChild, HConfig | HConfigChild]:
-    # Walks back up the tree
-    while indent <= current_section.real_indent_level:
-        current_section = current_section.parent
-
-    # Walks down the tree by one step
-    if indent > most_recent_item.real_indent_level:
-        current_section = most_recent_item
-
-    most_recent_item = current_section.add_child(line)
-    most_recent_item.real_indent_level = indent
-
-    return most_recent_item, current_section
-
-
-def _adjust_indent(
-    options: HConfigDriverBase,
-    line: str,
-    indent_adjust: int,
-    end_indent_adjust: list[str],
-) -> tuple[int, list[str]]:
-    for expression in options.rules.indent_adjust:
-        if search(expression.start_expression, line):
-            return indent_adjust + 1, [*end_indent_adjust, expression.end_expression]
-    return indent_adjust, end_indent_adjust
-
-
-def _config_from_string_lines_end_of_banner_test(
-    config_line: str,
-    banner_end_lines: frozenset[str],
-    banner_end_contains: list[str],
-) -> bool:
-    if config_line.startswith("^"):
-        return True
-    if config_line in banner_end_lines:
-        return True
-    return any(c in config_line for c in banner_end_contains)
-
-
-def _load_from_string_lines(config: HConfig, config_text: str) -> None:  # ruff:ignore[complex-structure]
-    config_text = config.driver.config_preprocessor(config_text)
-    current_section: HConfig | HConfigChild = config
-    most_recent_item: HConfig | HConfigChild = current_section
-    indent_adjust = 0
-    end_indent_adjust: list[str] = []
-    temp_banner: list[str] = []
-    banner_end_lines = {"EOF", "%", "!"}
-    banner_end_contains: list[str] = []
-    in_banner = False
-
-    for line in config_text.splitlines():
-        # Process banners in configuration into one line
-        if in_banner:
-            if line != "!":
-                temp_banner.append(line)
-
-            # Test if this line is the end of a banner
-            if _config_from_string_lines_end_of_banner_test(
-                line,
-                frozenset(banner_end_lines),
-                banner_end_contains,
-            ):
-                in_banner = False
-                most_recent_item = config.add_child(
-                    "\n".join(temp_banner),
-                )
-                most_recent_item.real_indent_level = 0
-                current_section = config
-                temp_banner = []
-            continue
-
-        # Test if this line is the start of a banner and not an empty banner
-        # Empty banners matching the below expression have been seen on NX-OS
-        if line.startswith("banner ") and line != "banner motd ##":
-            in_banner = True
-            temp_banner.append(line)
-            banner_words = line.split()
-            with suppress(IndexError):
-                banner_end_contains.append(banner_words[2])
-                # Handle banner on ArubaOS-Switch
-                if banner_words[2].startswith('"'):
-                    banner_end_contains.append('"')
-                banner_end_lines.add(banner_words[2][:1])
-                banner_end_lines.add(banner_words[2][:2])
-
-            continue
-
-        actual_indent = len(line) - len(line.lstrip())
-        line = " " * actual_indent + " ".join(line.split())  # ruff:ignore[redefined-loop-name]
-        for rule in config.driver.rules.per_line_sub:
-            line = sub(rule.search, rule.replace, line)  # ruff:ignore[redefined-loop-name]
-        line = line.rstrip()  # ruff:ignore[redefined-loop-name]
-
-        # If line is now empty, move to the next
-        if not line:
-            continue
-
-        # Determine indentation level (after per_line_sub rules are applied)
-        this_indent = len(line) - len(line.lstrip()) + indent_adjust
-
-        line = line.lstrip()  # ruff:ignore[redefined-loop-name]
-
-        # Determine parent in hierarchy
-        most_recent_item, current_section = _analyze_indent(
-            most_recent_item,
-            current_section,
-            this_indent,
-            line,
-        )
-        indent_adjust, end_indent_adjust = _adjust_indent(
-            config.driver,
-            line,
-            indent_adjust,
-            end_indent_adjust,
-        )
-
-        if end_indent_adjust and search(end_indent_adjust[0], line):
-            indent_adjust -= 1
-            end_indent_adjust.pop(0)
-    if in_banner:
-        message = "we are still in a banner for some reason"
-        raise ValueError(message)
+    """v3 name for `HConfig.from_lines(Platform.GENERIC, lines)`."""
+    return hconfig_from_lines(Platform.GENERIC, lines)

@@ -1,0 +1,5 @@
+{
+  "platform": "HP_PROCURVE",
+  "description": "Test negate_with returns None for non-root config without special rule",
+  "assert_rollback": true
+}

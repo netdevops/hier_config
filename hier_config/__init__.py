@@ -1,22 +1,78 @@
 from .child import HConfigChild
 from .constructors import (
     get_hconfig,
-    get_hconfig_driver,
+    get_hconfig_fast_generic_load,
     get_hconfig_fast_load,
     get_hconfig_from_dump,
     get_hconfig_view,
 )
-from .models import ChangeDetail, MatchRule, Platform, ReportSummary, TagRule, TextStyle
+from .exceptions import (
+    DriverNotFoundError,
+    DuplicateChildError,
+    HierConfigError,
+    IncompatibleDriverError,
+    InvalidConfigError,
+)
+from .models import (
+    ChangeDetail,
+    MatchRule,
+    NegationDefaultWhenRule,
+    NegationDefaultWithRule,
+    NegationRule,
+    NegationStrategy,
+    NegationSubRule,
+    Platform,
+    ReportSummary,
+    TagRule,
+    TextStyle,
+)
+from .platforms.driver_base import HConfigDriverBase, HConfigDriverRules
+from .platforms.view_base import (
+    ConfigViewInterfaceBase,
+    HConfigViewBase,
+    InterfaceBundleViewMixin,
+    InterfaceNACViewMixin,
+    InterfacePhysicalViewMixin,
+    InterfaceVlanViewMixin,
+)
+from .plugins import RemediationPlugin
+from .registry import (
+    get_hconfig_driver,
+    get_registered_platforms,
+    register_driver,
+    unregister_driver,
+)
 from .reporting import RemediationReporter
 from .root import HConfig
+from .tree_algorithms import FutureReport
 from .workflows import WorkflowRemediation
 
 __all__ = (
     "ChangeDetail",
+    "ConfigViewInterfaceBase",
+    "DriverNotFoundError",
+    "DuplicateChildError",
+    "FutureReport",
     "HConfig",
     "HConfigChild",
+    "HConfigDriverBase",
+    "HConfigDriverRules",
+    "HConfigViewBase",
+    "HierConfigError",
+    "IncompatibleDriverError",
+    "InterfaceBundleViewMixin",
+    "InterfaceNACViewMixin",
+    "InterfacePhysicalViewMixin",
+    "InterfaceVlanViewMixin",
+    "InvalidConfigError",
     "MatchRule",
+    "NegationDefaultWhenRule",
+    "NegationDefaultWithRule",
+    "NegationRule",
+    "NegationStrategy",
+    "NegationSubRule",
     "Platform",
+    "RemediationPlugin",
     "RemediationReporter",
     "ReportSummary",
     "TagRule",
@@ -24,7 +80,11 @@ __all__ = (
     "WorkflowRemediation",
     "get_hconfig",
     "get_hconfig_driver",
+    "get_hconfig_fast_generic_load",
     "get_hconfig_fast_load",
     "get_hconfig_from_dump",
     "get_hconfig_view",
+    "get_registered_platforms",
+    "register_driver",
+    "unregister_driver",
 )

@@ -35,9 +35,9 @@ class StackMember(BaseModel):
 class InterfaceDuplex(str, Enum):
     """Physical duplex setting of an Ethernet interface."""
 
-    AUTO = auto()
-    FULL = auto()
-    HALF = auto()
+    AUTO = "auto"
+    FULL = "full"
+    HALF = "half"
 
 
 class Vlan(BaseModel):

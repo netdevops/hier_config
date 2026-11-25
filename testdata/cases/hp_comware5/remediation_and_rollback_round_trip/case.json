@@ -1,0 +1,5 @@
+{
+  "platform": "HP_COMWARE5",
+  "description": "Full remediation and rollback round trip with Comware 5 undo prefix",
+  "assert_rollback": true
+}

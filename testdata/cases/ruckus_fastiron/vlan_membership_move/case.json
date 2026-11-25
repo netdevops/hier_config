@@ -1,0 +1,5 @@
+{
+  "platform": "RUCKUS_FASTIRON",
+  "description": "A port leaves its old untagged VLAN before it joins the new one",
+  "assert_rollback": true
+}

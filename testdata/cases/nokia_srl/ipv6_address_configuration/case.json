@@ -1,0 +1,5 @@
+{
+  "platform": "NOKIA_SRL",
+  "description": "Test configuring IPv6 addresses on interfaces",
+  "assert_rollback": false
+}

@@ -1,0 +1,5 @@
+{
+  "platform": "HP_PROCURVE",
+  "description": "Test future configuration calculation for HP ProCurve",
+  "assert_rollback": true
+}

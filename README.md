@@ -8,7 +8,6 @@ Hierarchical Configuration has been used extensively on:
 - [x] Cisco IOSXR
 - [x] Cisco NXOS
 - [x] Arista EOS
-- [x] Aruba AOS-CX
 - [x] Fortinet FortiOS
 - [x] HP Procurve (Aruba AOSS)
 - [x] HP Comware5 / H3C
@@ -21,7 +20,9 @@ In addition to the Cisco-style syntax, hier_config offers experimental support f
 - [x] Ruckus/Brocade FastIron (ICX)
 - [x] VyOS
 
-Hier Config is compatible with any NOS that utilizes a structured CLI syntax similar to Cisco IOS or Junos OS. The full platform support matrix is maintained in the [driver documentation](https://hier-config.readthedocs.io/en/latest/user/drivers/).
+Newer drivers start life as **experimental** until they have seen wider production use — currently Aruba AOS-CX joins the list above in that status. See [Supported Platforms](https://hier-config.readthedocs.io/en/latest/admin/platforms/) for the authoritative per-platform status.
+
+Hier Config is compatible with any NOS that utilizes a structured CLI syntax similar to Cisco IOS or Junos OS.
 
 The code documentation can be found at: [Hier Config documentation](https://hier-config.readthedocs.io/en/latest/).
 
@@ -31,11 +32,13 @@ Network devices continuously drift from their intended state — VLANs appear, A
 
 ## Highlights
 
-- Predict the device state before deploying with [`future()`](https://hier-config.readthedocs.io/en/latest/user/future-config/) and generate accurate rollbacks that preserve distinct structural commands — BGP neighbor descriptions, for example, no longer collapse when multiple peers share a common prefix.
-- Build remediation workflows with deterministic diffs across [Cisco-style and Junos-style](https://hier-config.readthedocs.io/en/latest/user/drivers/) configuration syntaxes.
+- Predict the device state before deploying with [`future()`](https://hier-config.readthedocs.io/en/latest/user/future-config/) — and audit ambiguous negation resolution explicitly with `future_with_report()`.
+- Build remediation workflows with deterministic diffs across [Cisco-style](https://hier-config.readthedocs.io/en/latest/admin/platforms/) and [Junos-style](https://hier-config.readthedocs.io/en/latest/user/set-style-platforms/) configuration syntaxes.
+- Ingest and render structured configs: [JSON and XML loading](https://hier-config.readthedocs.io/en/latest/user/loading-configs/), NETCONF `edit-config` payloads, and gNMI-style JSON remediation.
 - Tag remediation lines and filter output with [tag-based rules](https://hier-config.readthedocs.io/en/latest/user/tags/) for phased or conditional deployment.
+- Extend the pipeline with [`RemediationPlugin` transforms](https://hier-config.readthedocs.io/en/latest/user/remediation-workflows/) and register [custom platform drivers](https://hier-config.readthedocs.io/en/latest/admin/custom-drivers/) at runtime.
 - Aggregate and analyse changes across a fleet with [RemediationReporter](https://hier-config.readthedocs.io/en/latest/user/remediation-reporting/).
-- Render structured, typed interface data with the [Config View](https://hier-config.readthedocs.io/en/latest/user/config-view/) abstraction.
+- Render structured, typed interface data with the [Config View](https://hier-config.readthedocs.io/en/latest/user/config-views/) abstraction.
 
 See the [Architecture Overview](https://hier-config.readthedocs.io/en/latest/dev/architecture/) for how the tree, driver, and workflow layers fit together.
 
@@ -43,18 +46,20 @@ See the [Architecture Overview](https://hier-config.readthedocs.io/en/latest/dev
 
 ### PIP
 
-Install from PyPi:
+Version 4 is currently published as a prerelease; pip skips prereleases by default, so pass `--pre`:
 
 ```shell
-pip install hier-config
+pip install --pre hier-config
 ```
+
+(The Quick Start below uses the v4 API. `pip install hier-config` without `--pre` installs the latest stable v3 release — see the [v3 documentation](https://hier-config.readthedocs.io/) for that API.)
 
 ## Quick Start
 
 ### Step 1: Import Required Classes
 
 ```python
-from hier_config import WorkflowRemediation, get_hconfig, Platform
+from hier_config import WorkflowRemediation, HConfig, Platform
 from hier_config.utils import read_text_from_file
 ```
 
@@ -72,8 +77,8 @@ generated_config_text = read_text_from_file("./tests/fixtures/generated_config.c
 Specify the device platform (e.g., `Platform.CISCO_IOS`):
 
 ```python
-running_config = get_hconfig(Platform.CISCO_IOS, running_config_text)
-generated_config = get_hconfig(Platform.CISCO_IOS, generated_config_text)
+running_config = HConfig.from_text(Platform.CISCO_IOS, running_config_text)
+generated_config = HConfig.from_text(Platform.CISCO_IOS, generated_config_text)
 ```
 
 ### Step 4: Initialize WorkflowRemediation
@@ -88,7 +93,3 @@ print(workflow.remediation_config)
 ```
 
 This guide gets you started with Hier Config in minutes! For more details, visit [Hier Config Documentation Site](https://hier-config.readthedocs.io/en/latest/).
-
-## Contributing
-
-Contributions are welcome — see the [contributing guide](https://github.com/netdevops/hier_config/blob/master/CONTRIBUTING.md) and the [developer documentation](https://hier-config.readthedocs.io/en/latest/dev/contributing/) for setup, standards, and testing conventions. Release history lives in the [changelog](https://github.com/netdevops/hier_config/blob/master/CHANGELOG.md).

@@ -1,0 +1,5 @@
+{
+  "platform": "CISCO_IOS",
+  "description": "Naming a VLAN regroups IOS commas (69,70,71 -> 69,71 + 70) and diff stays surgical",
+  "assert_rollback": true
+}

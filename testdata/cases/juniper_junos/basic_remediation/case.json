@@ -1,0 +1,5 @@
+{
+  "platform": "JUNIPER_JUNOS",
+  "description": "Basic remediation of set/delete commands on Juniper JUNOS",
+  "assert_rollback": false
+}

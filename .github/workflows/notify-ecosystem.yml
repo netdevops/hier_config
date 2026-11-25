@@ -1,0 +1,27 @@
+name: notify ecosystem
+
+# When a hier_config release is published, notify the hier-config-ci
+# orchestrator (repository_dispatch) so the app ecosystem — hier-config-gpt,
+# hier-config-api, hier-config-mcp, hier-config-cli — is released against the
+# new version. Requires the ECOSYSTEM_DISPATCH_TOKEN secret: a PAT belonging
+# to an org admin, able to send repository_dispatch to netdevops/hier-config-ci.
+on:
+  release:
+    types: [published]
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Send repository_dispatch to hier-config-ci
+      env:
+        GH_TOKEN: ${{ secrets.ECOSYSTEM_DISPATCH_TOKEN }}
+      run: |
+        if [ -z "${GH_TOKEN}" ]; then
+          echo "ECOSYSTEM_DISPATCH_TOKEN secret is not set" >&2
+          exit 1
+        fi
+        gh api repos/netdevops/hier-config-ci/dispatches \
+          -f event_type=hier-config-release \
+          -F 'client_payload[version]=${{ github.event.release.tag_name }}' \
+          -F 'client_payload[prerelease]=${{ github.event.release.prerelease }}'

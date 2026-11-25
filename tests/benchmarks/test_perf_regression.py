@@ -1,0 +1,184 @@
+"""Machine-normalised performance regression gate.
+
+Shared-runner timings vary between runs. `baseline.json` records absolute
+numbers from one developer laptop, not a portable CI baseline.
+
+This previously measured the same operation under the native backend and the
+pure-Python backend and asserted the speedup ratio. The pure-Python
+implementation has since been removed -- the Rust core is the only
+implementation -- so there is no second backend to divide by.
+
+Instead each operation is divided by a *calibration workload*: a fixed lump of
+pure-Python interpreter work (dict churn, string building, list joins) timed in
+the same process on the same machine. This reduces sensitivity to general machine
+load, but Python and native throughput do not necessarily scale together across
+architectures or Python versions. These ratios therefore still need validation
+on the actual CI runner. They can detect regressions such as:
+
+* a native fast path silently falling back to Python,
+* work being redone per-call that used to be hoisted or cached,
+* Python objects being materialised where the Rust side used to stay native.
+
+The ceilings come from 10 CI runs on `ubuntu-latest` (ubuntu-26.04) in #311.
+A ceiling that one of those runs exceeded is the highest observed cost times
+1.10, rounded up to two significant figures. The other ceilings did not change.
+Do not raise a threshold only to make one run pass. Recalibrate from a new set
+of CI runs, and record the evidence in the pull request. Local success does
+not establish CI calibration.
+
+The one thing this cannot normalise away is a Python release that changes
+interpreter throughput without changing native throughput (or vice versa),
+which shifts every ratio at once. A uniform shift across all six operations
+requires investigation; a shift in a single operation may indicate a regression.
+
+Run with `pytest -m benchmark tests/benchmarks/test_perf_regression.py`.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+
+pytestmark = pytest.mark.benchmark
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+MAX_COST_UNITS = {
+    "parse": 0.27,
+    "fast_load": 0.27,
+    "deepcopy": 0.041,
+    "dump": 0.53,
+    "iteration": 0.067,
+    "remediation": 0.22,
+}
+"""Maximum acceptable cost of each operation, in calibration units."""
+
+CALLS_PER_SAMPLE = {"deepcopy": 25, "iteration": 15}
+"""Calls timed together in one sample for an operation too fast to time alone.
+
+An operation that is not listed here takes one call for each sample.
+"""
+
+SAMPLES_PER_ROUND = 9
+MEASUREMENT_ROUNDS = 3
+"""Rounds that alternate the operation and the calibration workload.
+
+A short machine stall then affects the two measurements equally.
+"""
+
+_WORKER = r"""
+import copy, json, sys, time
+sys.path.insert(0, %(root)r)
+
+from hier_config import get_hconfig, get_hconfig_fast_load
+from hier_config.models import Platform
+from tests.benchmarks.test_benchmarks import _generate_large_ios_config
+
+op = sys.argv[1]
+reps = int(sys.argv[2])
+batch = int(sys.argv[3])
+
+
+def calibration():
+    # Fixed pure-Python interpreter work. Deliberately touches dict lookup,
+    # string formatting, iteration and list joining -- operations whose
+    # throughput tracks general interpreter speed. Must not use hier_config.
+    acc = {}
+    for i in range(20000):
+        k = "key-%%d" %% (i & 1023)
+        acc[k] = acc.get(k, 0) + i
+    total = 0
+    for k, v in acc.items():
+        if k.startswith("key-1"):
+            total += v
+    parts = [str(i) for i in range(5000)]
+    "|".join(parts).split("|")
+    return total
+
+
+raw = _generate_large_ios_config(num_interfaces=400)
+config = get_hconfig(Platform.CISCO_IOS, raw)
+
+if op == "remediation":
+    target = get_hconfig(
+        Platform.CISCO_IOS, _generate_large_ios_config(num_interfaces=420)
+    )
+
+
+def run():
+    if op == "parse":
+        get_hconfig(Platform.CISCO_IOS, raw)
+    elif op == "fast_load":
+        get_hconfig_fast_load(Platform.CISCO_IOS, raw)
+    elif op == "deepcopy":
+        copy.deepcopy(config)
+    elif op == "dump":
+        config.dump()
+    elif op == "iteration":
+        list(config.all_children_sorted())
+    elif op == "remediation":
+        config.config_to_get_to(target)
+    else:
+        raise SystemExit("unknown op " + op)
+
+
+def best_of(fn, count, calls):
+    fn()
+    timings = []
+    for _ in range(count):
+        start = time.perf_counter()
+        for _ in range(calls):
+            fn()
+        timings.append((time.perf_counter() - start) / calls)
+    return min(timings)
+
+
+op_time = float("inf")
+unit = float("inf")
+for _ in range(%(rounds)d):
+    op_time = min(op_time, best_of(run, reps, batch))
+    unit = min(unit, best_of(calibration, reps, 1))
+
+print(json.dumps({"op": op_time, "unit": unit}))
+"""
+
+
+def _measure(op: str) -> tuple[float, float]:
+    """Return (best op wall time per call, best calibration wall time) for `op`."""
+    script = _WORKER % {"root": str(REPO_ROOT), "rounds": MEASUREMENT_ROUNDS}
+    calls = CALLS_PER_SAMPLE.get(op, 1)
+    proc = subprocess.run(
+        [sys.executable, "-c", script, op, str(SAMPLES_PER_ROUND), str(calls)],
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
+        env=dict(os.environ),
+        check=False,
+    )
+    if proc.returncode != 0:
+        pytest.fail(f"{op} worker failed:\n{proc.stderr}")
+    payload = json.loads(proc.stdout.strip().splitlines()[-1])
+    return float(payload["op"]), float(payload["unit"])
+
+
+@pytest.mark.parametrize(("op", "ceiling"), sorted(MAX_COST_UNITS.items()))
+def test_native_backend_cost_ceiling(op: str, ceiling: float) -> None:
+    op_time, unit = _measure(op)
+    cost = op_time / unit
+
+    print(
+        f"{op}: {op_time * 1e3:.2f}ms  unit {unit * 1e3:.2f}ms  "
+        f"cost {cost:.4f} units  ceiling {ceiling:.4f}"
+    )
+
+    assert cost <= ceiling, (
+        f"{op} costs {cost:.4f} calibration units, above the {ceiling:.4f} "
+        f"ceiling. Something that used to run natively is likely falling back "
+        f"to Python, or per-call work was reintroduced. "
+        f"(op {op_time * 1e3:.2f}ms vs calibration unit {unit * 1e3:.2f}ms)"
+    )

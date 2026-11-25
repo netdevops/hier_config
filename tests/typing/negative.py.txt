@@ -1,0 +1,40 @@
+"""Each marked misuse must produce the matching diagnostic on that exact line."""
+
+from hier_config import HConfig, HConfigChild, Platform, WorkflowRemediation
+from hier_config.platforms.models import Vlan
+from hier_config.platforms.view_base import HConfigViewBase
+from hier_config.workflows import RemediationTransform
+
+config = HConfig.from_lines(Platform.CISCO_IOS, ("hostname router",))
+HConfig.from_lines(42, ())  # error: mypy=arg-type pyright=reportArgumentType
+HConfig.from_lines(Platform.CISCO_IOS, (42,))  # error: mypy=arg-type pyright=reportArgumentType
+not_config: str = config  # error: mypy=assignment pyright=reportAssignmentType
+not_child: str = config.children[0]  # error: mypy=assignment pyright=reportAssignmentType
+not_named_child: str = config.children["hostname router"]  # error: mypy=assignment pyright=reportAssignmentType
+not_slice: HConfigChild = config.children[:]  # error: mypy=assignment pyright=reportAssignmentType
+config.children[1.5]  # error: mypy=call-overload pyright=reportCallIssue,reportArgumentType
+
+view = HConfigViewBase(config)
+bad_vlan_ids: frozenset[str] = view.vlan_ids  # error: mypy=assignment pyright=reportAssignmentType
+bad_vlans: tuple[Vlan, ...] = view.vlans  # error: mypy=assignment pyright=reportAssignmentType
+bad_gateway: str = view.ipv4_default_gw  # error: mypy=assignment pyright=reportAssignmentType
+for interface in view.interface_views:
+    bad_address: str = interface.ipv4_interface  # error: mypy=assignment pyright=reportAssignmentType
+    bad_addresses: list[str] = interface.ipv4_interfaces  # error: mypy=assignment pyright=reportAssignmentType
+
+
+def wrong_parameter(config: str) -> None:
+    pass
+
+
+def wrong_return(config: HConfig) -> int:
+    return 42
+
+
+bad_transform: RemediationTransform = wrong_parameter  # error: mypy=assignment pyright=reportAssignmentType
+bad_return: RemediationTransform = wrong_return  # error: mypy=assignment pyright=reportAssignmentType
+WorkflowRemediation(config, config, plugins=(wrong_parameter,))  # error: mypy=arg-type pyright=reportArgumentType
+WorkflowRemediation(config, config, plugins=(wrong_return,))  # error: mypy=arg-type pyright=reportArgumentType
+workflow = WorkflowRemediation(config, config)
+bad_plugins: tuple[str, ...] = workflow.plugins  # error: mypy=assignment pyright=reportAssignmentType
+workflow.plugins[0]("not a config")  # error: mypy=arg-type pyright=reportArgumentType

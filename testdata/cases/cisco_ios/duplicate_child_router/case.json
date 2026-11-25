@@ -1,0 +1,5 @@
+{
+  "platform": "CISCO_IOS",
+  "description": "Redistribute route-map addition under nested router eigrp topology base",
+  "assert_rollback": true
+}

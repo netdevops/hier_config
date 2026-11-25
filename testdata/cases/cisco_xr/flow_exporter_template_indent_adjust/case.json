@@ -1,0 +1,5 @@
+{
+  "platform": "CISCO_XR",
+  "description": "Test that template timeout inside flow exporter-map does not corrupt indentation",
+  "assert_rollback": false
+}

@@ -1,0 +1,6 @@
+{
+  "platform": "juniper_junos",
+  "negation_prefix": "delete ",
+  "declaration_prefix": "set ",
+  "rules": {}
+}

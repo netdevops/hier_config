@@ -1,0 +1,5 @@
+{
+  "platform": "CISCO_IOS",
+  "description": "Adding a collapsed VLAN list emits one non-destructive line per VLAN",
+  "assert_rollback": true
+}

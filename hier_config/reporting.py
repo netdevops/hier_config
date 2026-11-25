@@ -133,7 +133,7 @@ class RemediationReporter:  # ruff:ignore[too-many-public-methods]
 
         Example:
             ```python
-            merged = get_hconfig(Platform.CISCO_IOS)
+            merged = HConfig.from_text(Platform.CISCO_IOS)
             merged.merge([device1, device2])
             reporter = RemediationReporter.from_merged_config(merged)
             ```
@@ -173,7 +173,7 @@ class RemediationReporter:  # ruff:ignore[too-many-public-methods]
         """
         for tag_rule in tag_rules:
             for child in self.merged_config.get_children_deep(tag_rule.match_rules):
-                child.tags_add(tag_rule.apply_tags)
+                child.add_tags(tag_rule.apply_tags)
 
     def get_all_changes(
         self,
@@ -660,7 +660,7 @@ class RemediationReporter:  # ruff:ignore[too-many-public-methods]
             exclude_tags=exclude_tags,
         )
 
-        lines = [child.cisco_style_text(style=style) for child in changes]
+        lines = [child.indented_text(style=style) for child in changes]
 
         output_path = Path(file_path)
         output_path.write_text("\n".join(lines), encoding="utf-8")

@@ -17,42 +17,60 @@ plugins:
       redirect_maps:
         install.md: user/install.md
         getting-started.md: user/getting-started.md
-        utilities.md: user/utilities.md
-        drivers.md: user/drivers.md
+        utilities.md: admin/rules-from-files.md
+        drivers.md: admin/platforms.md
         future-config.md: user/future-config.md
         unified-diff.md: user/unified-diff.md
         tags.md: user/tags.md
-        custom-workflows.md: user/custom-workflows.md
+        custom-workflows.md: user/remediation-workflows.md
         remediation-reporting.md: user/remediation-reporting.md
-        junos-style-syntax-remediation.md: user/junos-style-syntax-remediation.md
-        config-view.md: user/config-view.md
-        api-reference.md: user/api-reference.md
-        glossary.md: user/glossary.md
+        junos-style-syntax-remediation.md: user/set-style-platforms.md
+        config-view.md: user/config-views.md
+        api-reference.md: dev/api-reference.md
         architecture.md: dev/architecture.md
+        user/utilities.md: admin/rules-from-files.md
+        user/drivers.md: admin/platforms.md
+        user/custom-drivers.md: admin/custom-drivers.md
+        user/custom-workflows.md: user/remediation-workflows.md
+        user/junos-style-syntax-remediation.md: user/set-style-platforms.md
+        user/config-view.md: user/config-views.md
+        user/api-reference.md: dev/api-reference.md
+        user/migration-v3-to-v4.md: user/rust-core-changes.md
+        user/glossary.md: glossary.md
+        dev/extending.md: dev/creating-drivers.md
 
 nav:
   - Home: index.md
   - User Guide:
-      - Install: user/install.md
+      - Installation: user/install.md
       - Getting Started: user/getting-started.md
-      - Drivers: user/drivers.md
-      - Customizing and Creating Drivers: user/custom-drivers.md
-      - Future Config: user/future-config.md
-      - Unified Diff: user/unified-diff.md
+      - Migrating from v3: user/migrating-from-v3.md
+      - Rust Core Behavior Changes: user/rust-core-changes.md
+      - v3 API Compatibility: user/v3-compatibility.md
+      - Loading Configurations: user/loading-configs.md
+      - Remediation Workflows: user/remediation-workflows.md
       - Working with Tags: user/tags.md
-      - Custom Workflows: user/custom-workflows.md
+      - Predicting Future Configs: user/future-config.md
+      - Unified Diffs: user/unified-diff.md
       - Remediation Reporting: user/remediation-reporting.md
-      - JunOS Style Syntax Remediation: user/junos-style-syntax-remediation.md
-      - Config View: user/config-view.md
-      - Utilities: user/utilities.md
-      - API Reference: user/api-reference.md
-      - Glossary: user/glossary.md
+      - Config Views: user/config-views.md
+      - Set-Style Platforms: user/set-style-platforms.md
+  - Administrator Guide:
+      - Supported Platforms: admin/platforms.md
+      - Customizing Driver Rules: admin/customizing-rules.md
+      - Custom Drivers and Registration: admin/custom-drivers.md
+      - Loading Rules from Files: admin/rules-from-files.md
   - Developer Guide:
-      - Contributing: dev/contributing.md
       - Architecture: dev/architecture.md
-      - Extending hier_config: dev/extending.md
+      - Driver Rule Reference: dev/rule-reference.md
+      - Creating a Platform Driver: dev/creating-drivers.md
       - Testing Conventions: dev/testing.md
       - Code Style & Standards: dev/code-style.md
+      - Contributing: dev/contributing.md
+      - API Reference: dev/api-reference.md
+      - Performance & Benchmarks: dev/benchmarks.md
+      - Performance Roadmap: dev/performance-roadmap.md
   - Maintainer Guide:
       - Releases: admin/releases.md
       - CI & Infrastructure: admin/infrastructure.md
+  - Glossary: glossary.md

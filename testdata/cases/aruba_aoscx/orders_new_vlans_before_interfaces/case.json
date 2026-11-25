@@ -1,0 +1,5 @@
+{
+  "platform": "ARUBA_AOSCX",
+  "description": "Newly created VLANs sort ahead of interfaces referencing them",
+  "assert_rollback": true
+}

@@ -1,35 +1,31 @@
 # Remediation Reporting
 
-hier_config provides powerful reporting capabilities for aggregating and analyzing remediation configurations from multiple network devices. This enables network engineers to understand the scope of changes across their infrastructure, prioritize work, and generate reports for change management.
+This page covers `RemediationReporter`, which aggregates remediation configurations from many devices into a single report. Use it to understand the scope of changes across a fleet, prioritize work, and produce change-management artifacts. It assumes you can already generate a per-device remediation with [`WorkflowRemediation`](remediation-workflows.md).
 
-## Overview
-
-The `RemediationReporter` class allows you to:
+The `RemediationReporter` class lets you:
 
 - **Merge multiple device remediations** into a single hierarchical tree
 - **Track instances** of each configuration change across devices
 - **Generate statistics** about remediation scope and impact
 - **Filter by tags** to create category-specific reports
-- **Export reports** in multiple formats (JSON, CSV, Markdown, Text)
+- **Export reports** in multiple formats (JSON, CSV, Markdown, text)
 - **Query specific changes** to understand their impact
 
-## Quick Start
-
-### Basic Usage
+## Quick start
 
 ```python
 from hier_config import (
     RemediationReporter,
     WorkflowRemediation,
-    get_hconfig,
+    HConfig,
     Platform,
 )
 
 # Generate remediations for each device
 devices_remediations = []
 for device in devices:
-    running = get_hconfig(Platform.CISCO_IOS, device.running_config)
-    generated = get_hconfig(Platform.CISCO_IOS, device.generated_config)
+    running = HConfig.from_text(Platform.CISCO_IOS, device.running_config)
+    generated = HConfig.from_text(Platform.CISCO_IOS, device.generated_config)
     wfr = WorkflowRemediation(running, generated)
     devices_remediations.append(wfr.remediation_config)
 
@@ -45,9 +41,9 @@ print(f"Unique changes: {summary.total_unique_changes}")
 print(reporter.summary_text())
 ```
 
-### Output Example
+Example output:
 
-```
+```text
 Remediation Summary
 ==================================================
 Total devices: 150
@@ -64,52 +60,40 @@ Top 10 Most Common Changes:
 ...
 ```
 
-## Creating a Reporter
+## Creating a reporter
 
-### Method 1: From Remediations (Recommended)
+Three construction styles are available:
 
 ```python
+# 1. From an iterable of remediations (recommended)
 reporter = RemediationReporter.from_remediations([
     device1_remediation,
     device2_remediation,
     device3_remediation,
 ])
-```
 
-### Method 2: Add Incrementally
-
-```python
+# 2. Incrementally
 reporter = RemediationReporter()
-
-# Add one at a time
 for device_remediation in device_remediations:
     reporter.add_remediation(device_remediation)
+reporter.add_remediations(more_remediations)  # or several at once
 
-# Or add multiple at once
-reporter.add_remediations(more_remediations)
-```
-
-### Method 3: From Pre-Merged Config
-
-```python
-# If you already have a merged configuration
-merged = get_hconfig(Platform.CISCO_IOS)
+# 3. From a pre-merged HConfig
+merged = HConfig.from_text(Platform.CISCO_IOS)
 merged.merge([device1, device2, device3])
-
 reporter = RemediationReporter.from_merged_config(merged)
 ```
 
-## Querying Changes
+## Querying changes
 
-### Count Devices Affected by a Change
+### Count devices affected by a change
 
 ```python
-# How many devices need this specific change?
 count = reporter.get_device_count("line vty 0 4")
 print(f"{count} devices need this change")
 ```
 
-### Get Detailed Information
+### Get detailed information
 
 ```python
 detail = reporter.get_change_detail("ntp server 10.2.2.2")
@@ -125,7 +109,7 @@ for instance in detail.instances:
     print(f"Device {instance.id}: {instance.tags}")
 ```
 
-### Find High-Impact Changes
+### Filter by impact threshold
 
 ```python
 # Changes affecting at least 50 devices
@@ -135,13 +119,10 @@ for change in high_impact:
     print(f"{change.text}: {len(change.instances)} devices")
 
 # Changes affecting between 1-5 devices
-isolated = reporter.get_changes_by_threshold(
-    min_devices=1,
-    max_devices=5,
-)
+isolated = reporter.get_changes_by_threshold(min_devices=1, max_devices=5)
 ```
 
-### Get Top N Most Common Changes
+### Get the top N most common changes
 
 ```python
 top_10 = reporter.get_top_changes(10)
@@ -150,7 +131,7 @@ for child, count in top_10:
     print(f"{child.text}: {count} devices")
 ```
 
-### Pattern Matching
+### Pattern matching
 
 ```python
 # Find all VLAN interface changes
@@ -163,16 +144,15 @@ ntp_changes = reporter.get_changes_matching(r"ntp")
 acl_changes = reporter.get_changes_matching(r"access-list \d+ (permit|deny)")
 ```
 
-## Tag-Based Reporting
+## Tag-based reporting
 
-Tags allow you to categorize changes and generate filtered reports.
+Tags categorize changes so you can generate filtered reports — by risk level, functional area, or deployment phase. The same [`TagRule`/`MatchRule`](tags.md) model used for remediation filtering applies here.
 
-### Apply Tag Rules
+### Apply tag rules
 
 ```python
 from hier_config import TagRule, MatchRule
 
-# Define tag rules
 tag_rules = [
     TagRule(
         match_rules=(MatchRule(startswith="ntp"),),
@@ -192,20 +172,16 @@ tag_rules = [
     ),
 ]
 
-# Apply tags to the merged configuration
 reporter.apply_tag_rules(tag_rules)
 ```
 
-### Filter by Tags
+### Filter by tags
 
 ```python
-# Get only NTP changes
+# Only NTP changes
 ntp_changes = reporter.get_all_changes(include_tags=["ntp"])
 
-# Get only security-related changes
-security_changes = reporter.get_all_changes(include_tags=["security"])
-
-# Get all changes except those tagged as "critical"
+# All changes except those tagged as "critical"
 safe_changes = reporter.get_all_changes(exclude_tags=["critical"])
 
 # Combine filters: security changes that are not critical
@@ -215,42 +191,22 @@ moderate_security = reporter.get_all_changes(
 )
 ```
 
-### Tag-Based Summary
+### Tag-based summary
 
 ```python
-# Get summary breakdown by tags
 tag_summary = reporter.summary_by_tags(["security", "ntp", "snmp"])
 
 for tag, stats in tag_summary.items():
     print(f"\n{tag.upper()} Changes:")
     print(f"  Devices affected: {stats['device_count']}")
     print(f"  Total changes: {stats['change_count']}")
-    print(f"  Changes:")
     for change in stats['changes'][:5]:  # Show first 5
         print(f"    - {change}")
 ```
 
-Output:
-```
-SECURITY Changes:
-  Devices affected: 145
-  Total changes: 23
-  Changes:
-    - line vty 0 4
-    - enable secret 5 ...
-    - username admin privilege 15
+## Analysis and statistics
 
-NTP Changes:
-  Devices affected: 132
-  Total changes: 8
-  Changes:
-    - ntp server 10.2.2.2
-    - ntp authenticate
-```
-
-## Analysis and Statistics
-
-### Summary Statistics
+### Summary statistics
 
 ```python
 summary = reporter.summary()
@@ -258,29 +214,23 @@ summary = reporter.summary()
 print(f"Total devices: {summary.total_devices}")
 print(f"Unique changes: {summary.total_unique_changes}")
 
-# Top changes
 for line, count in summary.most_common_changes[:5]:
     print(f"{line}: {count} devices")
 
-# Changes by tag
 for tag, count in summary.changes_by_tag.items():
     print(f"{tag}: {count} changes")
 ```
 
-### Impact Distribution
+### Impact distribution
 
 ```python
-# Get distribution of changes by device impact
-distribution = reporter.get_impact_distribution(
-    bins=[1, 10, 25, 50, 100]
-)
+distribution = reporter.get_impact_distribution(bins=[1, 10, 25, 50, 100])
 
 for range_label, count in distribution.items():
     print(f"{range_label} devices: {count} changes")
 ```
 
-Output:
-```
+```text
 1-10 devices: 15 changes
 10-25 devices: 8 changes
 25-50 devices: 5 changes
@@ -288,7 +238,7 @@ Output:
 100+ devices: 2 changes
 ```
 
-### Tag Distribution
+### Tag distribution
 
 ```python
 tag_dist = reporter.get_tag_distribution()
@@ -297,10 +247,9 @@ for tag, count in sorted(tag_dist.items(), key=lambda x: x[1], reverse=True):
     print(f"{tag}: {count} occurrences")
 ```
 
-### Group by Parent
+### Group by parent
 
 ```python
-# Group changes by their parent configuration context
 grouped = reporter.group_by_parent()
 
 for parent, children in grouped.items():
@@ -309,8 +258,7 @@ for parent, children in grouped.items():
         print(f"  - {child.text} ({len(child.instances)} devices)")
 ```
 
-Output:
-```
+```text
 interface Vlan2:
   - ip address 10.0.0.2 255.255.255.0 (15 devices)
   - description Updated (12 devices)
@@ -320,54 +268,34 @@ line vty 0 4:
   - exec-timeout 5 0 (145 devices)
 ```
 
-## Exporting Reports
+## Exporting reports
 
-### Export to Text
+All exporters accept `include_tags` / `exclude_tags` filters, so any of the exports below can be scoped to a category (e.g. `include_tags=["security"]`).
+
+### Text
 
 ```python
-# Export with merged style (shows instance counts)
+# Merged style shows instance counts per line
 reporter.to_text("remediation.txt", style="merged")
 
-# Export with comments
-reporter.to_text("remediation_comments.txt", style="with_comments")
-
-# Export without comments (standard config format)
+# Or "with_comments" / "without_comments" (standard config format)
 reporter.to_text("remediation_clean.txt", style="without_comments")
-
-# Export only security changes
-reporter.to_text(
-    "security_remediation.txt",
-    style="merged",
-    include_tags=["security"],
-)
 ```
 
-**Text Output Example (`style="merged"`):**
-```
+```text
 interface Vlan2 !15 instances
   ip address 10.0.0.2 255.255.255.0 !15 instances
 line vty 0 4 !145 instances
   transport input ssh !145 instances
-  exec-timeout 5 0 !145 instances
 ntp server 10.2.2.2 !132 instances
 ```
 
-### Export to JSON
+### JSON
 
 ```python
-reporter.to_json("remediation_report.json")
-
-# With tag filters
-reporter.to_json(
-    "ntp_report.json",
-    include_tags=["ntp"],
-)
-
-# Custom indentation
 reporter.to_json("remediation_report.json", indent=4)
 ```
 
-**JSON Output Structure:**
 ```json
 {
   "summary": {
@@ -378,129 +306,67 @@ reporter.to_json("remediation_report.json", indent=4)
     {
       "line": "line vty 0 4",
       "device_count": 145,
-      "device_ids": [1, 2, 3, ...],
+      "device_ids": [1, 2, 3],
       "tags": ["security", "access", "critical"],
       "comments": ["Update VTY settings"],
       "instances": [
-        {
-          "id": 1,
-          "tags": ["security"],
-          "comments": ["Update VTY settings"]
-        },
-        ...
+        {"id": 1, "tags": ["security"], "comments": ["Update VTY settings"]}
       ]
     }
   ]
 }
 ```
 
-### Export to CSV
+### CSV
 
 ```python
 reporter.to_csv("remediation_report.csv")
-
-# With tag filters
-reporter.to_csv(
-    "security_report.csv",
-    include_tags=["security"],
-)
 ```
 
-**CSV Output:**
 ```csv
 line,device_count,percentage,tags,comments,device_ids
 "line vty 0 4",145,96.7,"security,access,critical","Update VTY settings","1,2,3,..."
 "ntp server 10.2.2.2",132,88.0,"ntp,safe","Update NTP server","1,2,3,..."
 ```
 
-### Export to Markdown
+### Markdown
 
 ```python
 reporter.to_markdown("remediation_report.md", top_n=20)
-
-# With tag filters
-reporter.to_markdown(
-    "security_report.md",
-    include_tags=["security"],
-    top_n=10,
-)
 ```
 
-**Markdown Output:**
-```markdown
-# Remediation Report
+Produces a summary section, a "Top N Changes by Impact" table, and a "Changes by Tag" table — suitable for management-facing summaries.
 
-## Summary
-
-- **Total Devices**: 150
-- **Unique Changes**: 87
-
-## Top 20 Changes by Impact
-
-| # | Configuration Line | Device Count | Percentage |
-|---|-------------------|--------------|------------|
-| 1 | `line vty 0 4` | 145 | 96.7% |
-| 2 | `ntp server 10.2.2.2` | 132 | 88.0% |
-...
-
-## Changes by Tag
-
-| Tag | Count |
-|-----|-------|
-| security | 45 |
-| ntp | 32 |
-```
-
-### Export All Formats
+### All formats at once
 
 ```python
-# Export all formats at once
 reporter.export_all(
     output_dir="reports/",
     formats=["json", "csv", "markdown", "text"],
 )
-
-# With tag filters
-reporter.export_all(
-    output_dir="reports/security/",
-    formats=["json", "csv", "markdown"],
-    include_tags=["security"],
-)
 ```
 
-This creates:
-- `reports/remediation_report.json`
-- `reports/remediation_report.csv`
-- `reports/remediation_report.md`
-- `reports/remediation_report.txt`
+This creates `remediation_report.json`, `.csv`, `.md`, and `.txt` in `reports/`.
 
-## Real-World Use Cases
+## Common workflows
 
-### Use Case 1: Impact Analysis
+### Impact analysis
 
-**Question**: *"How many devices will be affected if I push NTP server changes?"*
+*"How many devices will be affected if I push NTP server changes?"*
 
 ```python
-from hier_config import RemediationReporter
-
-reporter = RemediationReporter.from_remediations(all_device_remediations)
-
 ntp_count = reporter.get_device_count("ntp server 10.2.2.2")
 print(f"NTP change will affect {ntp_count} devices")
 
-# Get the specific device IDs
 detail = reporter.get_change_detail("ntp server 10.2.2.2")
 print(f"Affected device IDs: {sorted(detail.device_ids)}")
 ```
 
-### Use Case 2: Risk-Based Change Management
+### Risk-based change management
 
-**Scenario**: Separate changes into risk categories
+Tag changes by risk, then generate a separate change window per risk level:
 
 ```python
-from hier_config import TagRule, MatchRule
-
-# Define risk-based tagging
 tag_rules = [
     TagRule(
         match_rules=(
@@ -524,25 +390,17 @@ tag_rules = [
 
 reporter.apply_tag_rules(tag_rules)
 
-# Generate separate change windows
-reporter.to_text("low_risk_changes.txt", include_tags=["low-risk"])
-reporter.to_text("high_risk_changes.txt", include_tags=["high-risk"])
-reporter.to_text("medium_risk_changes.txt", include_tags=["medium-risk"])
-
-# Get statistics
-low_risk_changes = reporter.get_all_changes(include_tags=["low-risk"])
-high_risk_changes = reporter.get_all_changes(include_tags=["high-risk"])
-
-print(f"Low risk: {len(low_risk_changes)} change types")
-print(f"High risk: {len(high_risk_changes)} change types")
+for risk in ["low-risk", "medium-risk", "high-risk"]:
+    reporter.to_text(f"{risk}_changes.txt", include_tags=[risk])
+    changes = reporter.get_all_changes(include_tags=[risk])
+    print(f"{risk}: {len(changes)} change types")
 ```
 
-### Use Case 3: Compliance Reporting
+### Compliance reporting
 
-**Scenario**: Generate audit reports for security compliance
+Tag security-related changes and export an audit trail:
 
 ```python
-# Tag security-related changes
 security_tags = [
     TagRule(
         match_rules=(MatchRule(contains="password"),),
@@ -560,53 +418,36 @@ security_tags = [
 
 reporter.apply_tag_rules(security_tags)
 
-# Generate compliance report
 security_summary = reporter.summary_by_tags(["security"])
-
-print("Security Compliance Remediation Report")
-print("=" * 50)
 for tag, stats in security_summary.items():
-    print(f"\nCategory: {tag}")
+    print(f"Category: {tag}")
     print(f"Devices requiring changes: {stats['device_count']}")
     print(f"Total change items: {stats['change_count']}")
 
-# Export for audit trail
-reporter.to_markdown(
-    "security_compliance_report.md",
-    include_tags=["security"],
-)
+reporter.to_markdown("security_compliance_report.md", include_tags=["security"])
 ```
 
-### Use Case 4: Prioritization by Scope
+### Prioritization by scope
 
-**Scenario**: Focus on changes affecting the most devices
+Focus on the changes affecting the most devices first:
 
 ```python
-# Get the top 10 most widespread changes
 top_changes = reporter.get_top_changes(10)
-
-print("Top 10 Changes by Device Count")
-print("=" * 60)
 for i, (change, count) in enumerate(top_changes, 1):
     percentage = (count / reporter.device_count) * 100
-    print(f"{i}. {change.text}")
-    print(f"   Affects {count} devices ({percentage:.1f}%)")
-    print()
+    print(f"{i}. {change.text}: {count} devices ({percentage:.1f}%)")
 
-# Focus on changes affecting >80% of devices
+# Changes affecting >80% of devices
 high_impact = reporter.get_changes_by_threshold(
     min_devices=int(reporter.device_count * 0.8)
 )
-
-print(f"\nFound {len(high_impact)} changes affecting >80% of devices")
 ```
 
-### Use Case 5: Category-Based Rollout
+### Phased rollout by category
 
-**Scenario**: Deploy changes in stages by category
+Tag by deployment phase and export a per-phase package:
 
 ```python
-# Tag by functional category
 category_tags = [
     TagRule(
         match_rules=(MatchRule(startswith="ntp"),),
@@ -628,232 +469,39 @@ category_tags = [
 
 reporter.apply_tag_rules(category_tags)
 
-# Generate phase-specific remediations
 for phase in ["phase-1", "phase-2", "phase-3"]:
     reporter.export_all(
         output_dir=f"rollout/{phase}/",
         formats=["json", "csv", "text"],
         include_tags=[phase],
     )
-
-    # Get statistics for each phase
-    phase_changes = reporter.get_all_changes(include_tags=[phase])
-    print(f"{phase}: {len(phase_changes)} change types")
 ```
 
-### Use Case 6: Exception Reporting
+### Exception reporting
 
-**Scenario**: Find devices with unique or uncommon changes
+Find devices with unique or uncommon changes:
 
 ```python
-# Find changes affecting only 1-3 devices (potential exceptions)
-exceptions = reporter.get_changes_by_threshold(
-    min_devices=1,
-    max_devices=3,
-)
-
-print(f"Found {len(exceptions)} exceptional changes")
-print("\nUncommon Configuration Changes:")
-print("=" * 60)
+exceptions = reporter.get_changes_by_threshold(min_devices=1, max_devices=3)
 
 for change in exceptions:
     detail = reporter.get_change_detail(change.text)
-    print(f"\n{change.text}")
+    print(f"{change.text}")
     print(f"  Affects {detail.device_count} device(s): {sorted(detail.device_ids)}")
     if detail.comments:
         print(f"  Comments: {', '.join(detail.comments)}")
 ```
 
-## Best Practices
+## Best practices
 
-### 1. Apply Tags for Better Organization
-
-Always apply tags to enable flexible filtering and reporting:
-
-```python
-tag_rules = [
-    # By function
-    TagRule(
-        match_rules=(MatchRule(startswith="ntp"),),
-        apply_tags=frozenset({"ntp", "infrastructure"}),
-    ),
-    # By risk
-    TagRule(
-        match_rules=(MatchRule(contains="password"),),
-        apply_tags=frozenset({"critical", "security"}),
-    ),
-    # By deployment phase
-    TagRule(
-        match_rules=(MatchRule(startswith="logging"),),
-        apply_tags=frozenset({"phase-1"}),
-    ),
-]
-
-reporter.apply_tag_rules(tag_rules)
-```
-
-### 2. Use Multiple Report Formats
-
-Different stakeholders need different formats:
-
-```python
-# Technical team: detailed JSON
-reporter.to_json("detailed_report.json")
-
-# Management: summary markdown
-reporter.to_markdown("executive_summary.md", top_n=10)
-
-# Analysis: CSV for Excel
-reporter.to_csv("analysis_data.csv")
-
-# Implementation: text config
-reporter.to_text("deployment_config.txt", style="without_comments")
-```
-
-### 3. Validate Scope Before Deployment
-
-Always check impact before pushing changes:
-
-```python
-# Check high-impact changes
-high_impact = reporter.get_changes_by_threshold(min_devices=100)
-
-if high_impact:
-    print("WARNING: The following changes affect >100 devices:")
-    for change in high_impact:
-        print(f"  - {change.text}: {len(change.instances)} devices")
-
-    # Require manual approval
-    approval = input("Proceed? (yes/no): ")
-    if approval.lower() != "yes":
-        print("Deployment cancelled")
-        exit(1)
-```
-
-### 4. Track Changes Over Time
-
-Export reports with timestamps for historical tracking:
-
-```python
-from datetime import datetime
-
-timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-output_dir = f"reports/{timestamp}/"
-
-reporter.export_all(output_dir, formats=["json", "markdown", "csv"])
-print(f"Reports saved to {output_dir}")
-```
-
-### 5. Combine with Existing Workflows
-
-Integrate reporting into your existing remediation workflow:
-
-```python
-from hier_config import WorkflowRemediation, RemediationReporter
-
-# Generate remediations
-remediations = []
-for device in inventory:
-    running = get_device_config(device)
-    generated = generate_desired_config(device)
-
-    wfr = WorkflowRemediation(running, generated)
-    remediations.append(wfr.remediation_config)
-
-# Create reports
-reporter = RemediationReporter.from_remediations(remediations)
-
-# Apply your organization's tag rules
-reporter.apply_tag_rules(company_tag_rules)
-
-# Generate required reports
-reporter.export_all("reports/current/")
-
-# Print summary for quick review
-print(reporter.summary_text())
-```
-
-## API Reference
-
-### RemediationReporter Class
-
-#### Constructor
-
-```python
-reporter = RemediationReporter()
-```
-
-#### Class Methods
-
-- `from_remediations(remediations)` - Create from iterable of HConfig objects
-- `from_merged_config(merged_config)` - Create from pre-merged HConfig
-
-#### Instance Methods
-
-**Adding Data:**
-- `add_remediation(remediation)` - Add single remediation
-- `add_remediations(remediations)` - Add multiple remediations
-
-**Tagging:**
-- `apply_tag_rules(tag_rules)` - Apply TagRule sequence
-
-**Querying:**
-- `get_all_changes(include_tags=[], exclude_tags=[])` - Get all changes
-- `get_change_detail(line, tag=None)` - Get detailed info about a line
-- `get_device_count(line, tag=None)` - Count devices needing a change
-- `get_changes_by_threshold(min_devices=0, max_devices=None, ...)` - Filter by impact
-- `get_top_changes(n=10, ...)` - Get N most common changes
-- `get_changes_matching(pattern, ...)` - Get changes matching regex
-
-**Analysis:**
-- `summary()` - Get ReportSummary object
-- `summary_text(top_n=10)` - Get human-readable summary
-- `summary_by_tags(tags=None)` - Get breakdown by tags
-- `group_by_parent()` - Group changes by parent line
-- `get_impact_distribution(bins=...)` - Get distribution of changes by impact
-- `get_tag_distribution()` - Get tag occurrence counts
-
-**Exporting:**
-- `to_text(file_path, style="merged", ...)` - Export to text file
-- `to_json(file_path, indent=2, ...)` - Export to JSON
-- `to_csv(file_path, ...)` - Export to CSV
-- `to_markdown(file_path, top_n=20, ...)` - Export to Markdown
-- `export_all(output_dir, formats=[], ...)` - Export all formats
-
-#### Properties
-
-- `merged_config` - The merged HConfig object
-- `device_count` - Number of unique devices
-
-### Models
-
-#### ReportSummary
-
-```python
-class ReportSummary:
-    total_devices: int
-    total_unique_changes: int
-    most_common_changes: tuple[tuple[str, int], ...]
-    changes_by_tag: dict[str, int]
-```
-
-#### ChangeDetail
-
-```python
-class ChangeDetail:
-    line: str
-    full_path: tuple[str, ...]
-    device_count: int
-    device_ids: frozenset[int]
-    tags: frozenset[str]
-    comments: frozenset[str]
-    instances: tuple[Instance, ...]
-    children: tuple[ChangeDetail, ...]
-```
+- **Apply tags early** — tagging enables every filtered query and export that follows.
+- **Match the format to the audience** — JSON for tooling, Markdown for management summaries, CSV for spreadsheet analysis, plain text for deployment.
+- **Validate scope before deployment** — check `get_changes_by_threshold()` for unexpectedly widespread changes and require approval for them.
+- **Timestamp exported reports** (e.g. `reports/20260718_120000/`) to keep a history of remediation scope over time.
 
 ## Troubleshooting
 
-### Issue: No changes showing up
+### No changes showing up
 
 ```python
 # Check if remediations were added
@@ -861,11 +509,11 @@ print(f"Device count: {reporter.device_count}")
 
 # Check if remediation configs are empty
 for i, remediation in enumerate(remediations):
-    change_count = len(tuple(remediation.all_children()))
+    change_count = len(remediation)
     print(f"Remediation {i}: {change_count} changes")
 ```
 
-### Issue: Tags not working
+### Tags not working
 
 ```python
 # Verify tags were applied
@@ -877,7 +525,7 @@ for change in all_changes[:5]:
 print(reporter.get_tag_distribution())
 ```
 
-### Issue: Device count seems wrong
+### Device count seems wrong
 
 ```python
 # Check unique device IDs
@@ -891,8 +539,8 @@ print(f"Unique device IDs found: {len(all_device_ids)}")
 print(f"Reporter device count: {reporter.device_count}")
 ```
 
-## See Also
+## Next steps
 
-- [Tags](tags.md) - Learn more about tagging configuration lines
-- [Custom Workflows](custom-workflows.md) - Integrate reporting into your workflows
-- [Getting Started](getting-started.md) - Basic hier_config usage
+- [Working with Tags](tags.md) — the tagging model in detail.
+- [Remediation Workflows](remediation-workflows.md) — generating the per-device remediations that feed the reporter.
+- [API Reference](../dev/api-reference.md) — full `RemediationReporter`, `ReportSummary`, and `ChangeDetail` signatures.

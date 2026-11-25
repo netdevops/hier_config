@@ -5,7 +5,7 @@ description: Use when adding hier_config support for a new network platform or o
 
 # Build a New hier_config Platform Driver
 
-Scaffold an in-tree platform driver the way this repo expects. The authoritative recipe is `docs/dev/extending.md`; this skill adds the concrete templates. For a driver that lives *outside* this repo (in user code), follow `docs/user/custom-drivers.md#creating-a-custom-driver` instead.
+Scaffold an in-tree platform driver the way this repo expects. The authoritative recipe is `docs/dev/creating-drivers.md`; this skill adds the concrete templates. For a driver that lives *outside* this repo (in user code), follow `docs/admin/custom-drivers.md` instead.
 
 ## Step 1: Characterize the Platform
 
@@ -14,41 +14,46 @@ Answer these before writing code — they determine which overrides and rules th
 | Question | Driver hook if non-default |
 |----------|---------------------------|
 | Negation prefix (`no `? `undo `? `delete `?) | `negation_prefix` property (default `"no "`) |
-| Some commands reset with a different form? | `NegationDefaultWithRule` / override `swap_negation` |
-| Sections closed with an exit token (`exit`, `quit`, `end-*`)? | `SectionalExitingRule` / override `sectional_exit` |
+| Some commands reset with a different form? | `NegationRule` (REPLACE/DEFAULT/REGEX_SUB strategy) |
+| Sections closed with an exit token (`exit`, `quit`, `end-*`)? | `SectionalExitingRule` |
 | Last-write-wins commands (`hostname`, `description`, …)? | `IdempotentCommandsRule` |
 | Comment/banner lines to strip on load? | `PerLineSubRule` / `FullTextSubRule` |
 | Blocks with irregular indentation? | `IndentAdjustRule` |
-| Flat `set`/`delete` syntax (Junos-like)? | `config_preprocessor` + `declaration_prefix` (see `platforms/vyos/driver.py`) |
+| Flat `set`/`delete` syntax (Junos-like)? | Native platform preprocessing + prefixes for built-ins; explicitly preprocess custom text before `from_text()` |
 | Order-sensitive commands? | `OrderingRule` with weights |
 
 Reference implementations: `platforms/huawei_vrp/driver.py` (small, rule-based), `platforms/vyos/driver.py` (preprocessor-based), `platforms/cisco_ios/driver.py` (comprehensive).
 
+The v4 engine lives in `crates/hier_config_core`, with PyO3 bindings in
+`crates/hier_config_py`; Python drivers declare rules and extension points.
+Do not implement removed `swap_negation`, `sectional_exit`, `negate_with`, or
+`idempotent_for` overrides: class creation rejects them.
+
 ## Step 2: Write the Failing Test First (TDD)
 
-Create `tests/test_driver_<platform>.py` before the driver exists — conventions in `docs/dev/testing.md`. Flat functions, full annotations, round-trip idiom:
+Create `tests/integration/test_<platform>.py` before the driver exists — conventions in `docs/dev/testing.md`. Flat functions, full annotations, round-trip idiom:
 
 ```python
-from hier_config import Platform, get_hconfig_fast_load
+from hier_config import HConfig, Platform
 
 
 def test_negation_prefix() -> None:
-    running_config = get_hconfig_fast_load(
+    running_config = HConfig.from_lines(
         Platform.ACME_OS, ("interface eth0", "  shutdown")
     )
-    generated_config = get_hconfig_fast_load(
+    generated_config = HConfig.from_lines(
         Platform.ACME_OS, ("interface eth0",)
     )
-    remediation = running_config.config_to_get_to(generated_config)
-    assert remediation.dump_simple() == ("interface eth0", "  no shutdown")
+    remediation = running_config.remediation(generated_config)
+    assert remediation.to_lines() == ("interface eth0", "  no shutdown")
 
     running_after = running_config.future(remediation)
-    rollback = running_after.config_to_get_to(running_config)
+    rollback = running_after.remediation(running_config)
     running_after_rollback = running_after.future(rollback)
     assert not tuple(running_config.unified_diff(running_after_rollback))
 ```
 
-Run it and confirm it fails for the right reason (unknown platform), not an import error. Add realistic config fixtures to `tests/fixtures/` if tests need more than inline tuples.
+Run it and confirm it fails for the right reason (unknown platform), not an import error. Add realistic config fixtures to `tests/integration/fixtures/` if tests need more than inline tuples.
 
 ## Step 3: Scaffold the Driver
 
@@ -77,24 +82,41 @@ class HConfigDriverAcmeOS(HConfigDriverBase):
         )
 ```
 
-Replace `#` in the `per_line_sub` regex with the platform's actual comment token, and keep the `^\s*` anchor so indented comments are stripped too. Rules take `match_rules: tuple[MatchRule, ...]` (immutable — never lists). A minimal driver returning bare `HConfigDriverRules()` is valid; only add rules the platform needs. Public classes require docstrings.
+Replace `#` in the `per_line_sub` regex with the platform's actual comment token, and keep the `^\s*` anchor so indented comments are stripped too. Rules take `match_rules: tuple[MatchRule, ...]` (immutable — never lists), while the `HConfigDriverRules` *collection fields themselves* are intentionally `list[...]` as shown above (so built-in rules/callbacks can be removed by identity). A minimal driver returning bare `HConfigDriverRules()` is valid; only add rules the platform needs. Public classes require docstrings.
 
 ## Step 4: Register the Platform
 
 1. Add the member to the `Platform` enum in `hier_config/models.py` (alphabetical position). Note the enum uses `auto()`, so inserting a member renumbers everything after it — fine for in-repo use, but never rely on `Platform.value` for serialization.
-2. Add the mapping to the `platform_drivers` dict in `get_hconfig_driver` (`hier_config/constructors.py`) and import the driver class there.
+2. Add the mapping to the `_BUILTIN_DRIVERS` dict in `hier_config/registry.py` and import the driver class there. The key must be the canonical uppercase name string — `Platform.ACME_OS.name` — not the enum member (`_normalize()` canonicalizes lookups to `.name`, so a `Platform`-member key would be silently unreachable). If the platform has a config view, set the `view_class` attribute on the driver.
+3. For an in-tree platform, add its Rust enum/mapping, canonical rules and
+   `PlatformOps` in `crates/hier_config_core/src/platforms/`, and set the Python
+   driver's `platform: ClassVar[Platform]` selector. Without a selector a
+   custom Python driver uses Generic native operations, not inferred vendor
+   behavior. Config views require native view ops plus PyO3/stub exposure.
 
 ## Step 5: Document and Log
 
-- Add a driver section (behavior summary + activation snippet) and a platform-table row to `docs/user/drivers.md`. Mark the status `Experimental` for a new driver.
+- Add driver-level unit tests in `tests/unit/platforms/test_<platform>.py` (every recent driver has one; see `tests/unit/platforms/test_aruba_aoscx.py`). If the driver ships a config view, add `tests/unit/platforms/views/test_<platform>.py` too.
+- Add a driver section (behavior summary) and a platform-table row to `docs/admin/platforms.md`. Mark the status `Experimental` for a new driver.
+- If you introduced a new *rule type* (not just rule instances), document it in `docs/dev/rule-reference.md`.
 - Add a `CHANGELOG.md` entry under `## [Unreleased]` → `### Added`.
+- Add shared exact-remediation/rollback cases under `testdata/cases/` and
+  native tests; keep `tests/native/` coverage for binding-specific contracts.
 
 ## Step 6: Run the Gates
 
 ```bash
-poetry run pytest tests/test_driver_<platform>.py -v
-poetry run ./scripts/build.py lint-and-test
-poetry run mkdocs build --strict
+uv sync --locked --extra yaml
+uv run --no-sync maturin develop --release --locked
+uv run --no-sync pytest tests/integration/test_<platform>.py -v
+uv run --no-sync ./scripts/build.py lint-and-test
+cargo test --locked --workspace --all-features
+cargo fmt --check
+cargo clippy --locked --all-targets --all-features -- -D warnings
+cargo llvm-cov --locked --package hier_config_core --fail-under-lines 47
+uv run --no-sync mkdocs build --strict
 ```
 
-All three must pass (mypy/pyright are strict; coverage floor is 95%). Then run the `hier-config-review` skill before opening the PR.
+All gates must pass (mypy/pyright are strict; Python line coverage has a 95%
+floor and the separate Rust-core gate has a 47% floor). Never lower either
+gate. Then run the `hier-config-review` skill before opening the PR.

@@ -9,28 +9,47 @@ Review the current change set against this repository's standards and report fin
 
 ## Step 1: Establish the Diff
 
+Pick the base branch first: v4 work branches from `next`; only v3.x maintenance work branches from `master`. Diffing a `next`-based branch against `master` would include all of v4 and make the review meaningless.
+
 ```bash
-git diff master...HEAD --stat   # on a branch
+git diff "$(git merge-base origin/next HEAD)"...HEAD --stat   # v4 branch (the usual case)
+git diff "$(git merge-base origin/master HEAD)"...HEAD --stat # v3.x maintenance branch
 git diff HEAD --stat            # fall back: uncommitted work
 git diff --staged --stat        # fall back: staged only
 ```
 
-List every changed file and classify it: library code (`hier_config/`), tests (`tests/`), docs (`docs/`, `mkdocs.yml`), CI/config, or `CHANGELOG.md`. Read the full diff for each classified file before judging it.
+List every changed file and classify it: native core (`crates/hier_config_core/`),
+PyO3 boundary (`crates/hier_config_py/`), Python facades/models (`hier_config/`),
+stubs, tests/shared corpus (`tests/`, `testdata/`), docs, CI/config, or changelog.
+Read the full diff for each classified file before judging it.
 
 ## Step 2: Run the Gates
 
 Run these and report exact failures (tool, file, line, message):
 
 ```bash
-poetry run ./scripts/build.py lint
-poetry run ./scripts/build.py pytest --coverage
+uv sync --locked --extra yaml
+uv run --no-sync maturin develop --release --locked
+uv run --no-sync ./scripts/build.py lint
+uv run --no-sync ./scripts/build.py pytest --coverage
+cargo fmt --check
+cargo clippy --locked --all-targets --all-features -- -D warnings
+cargo test --locked --workspace --all-features
+cargo llvm-cov --locked --package hier_config_core --fail-under-lines 47
 ```
 
-If docs/ or mkdocs.yml changed, also run:
+Source builds require Python 3.11+, a linker, and Rust meeting `Cargo.toml`'s
+MSRV (currently 1.98). Rebuild after Rust edits. Python coverage has a 95% floor;
+the separate Rust-core gate currently has a 47% floor. Never lower either gate.
+The Rust rewrite ships in v4 in this repository; do not propose v5 or a separate
+repository as an implicit migration requirement.
+Also run the docs build — CI runs it unconditionally on every push/PR, not just when docs change:
 
 ```bash
-poetry run mkdocs build --strict
+uv run --no-sync mkdocs build --strict
 ```
+
+Remember CI's test matrix covers Python 3.11–3.14: flag syntax or stdlib usage newer than 3.11 even if local checks pass.
 
 ## Step 3: Review by Category
 
@@ -39,7 +58,7 @@ Read the referenced doc before judging that category — the docs are the standa
 ### Models & Typing — read `docs/dev/code-style.md`
 
 - New Pydantic models subclass the local `BaseModel` (`hier_config/models.py`), never `pydantic.BaseModel` directly.
-- Model fields use `tuple`/`frozenset`, never `list`/`set`. Rule models use `match_rules: tuple[MatchRule, ...]`.
+- Model fields use `tuple`/`frozenset`, never `list`/`set`. Rule models use `match_rules: tuple[MatchRule, ...]`. Exception: the rule-collection fields on `HConfigDriverRules` are intentionally `list[...]` (removal-by-identity, #286) — do not flag them.
 - No `Any`, no missing annotations, no unjustified `# type: ignore` / `# noqa`.
 - Lint/coverage/type-checking configuration was not loosened.
 
@@ -47,14 +66,28 @@ Read the referenced doc before judging that category — the docs are the standa
 
 - Every library code change has corresponding tests.
 - Tests are flat functions with full annotations; no test classes (benchmarks excepted).
-- Driver changes are tested in `tests/test_driver_<platform>.py`; view changes in `tests/config_view/`.
-- Driver/rule behavior changes include the round-trip idiom: remediation asserted via `dump_simple()` tuple, rollback verified via no `unified_diff`.
-- New fixtures live in `tests/fixtures/` with module-scoped accessors in `tests/conftest.py`.
+- Driver changes are tested in `tests/integration/test_<platform>.py` (unit-level driver tests in `tests/unit/platforms/`); view changes in `tests/unit/platforms/views/`.
+- Driver/rule behavior changes include the round-trip idiom: remediation asserted via `to_lines()` tuple, rollback verified via no `unified_diff`.
+- New fixtures live in the sibling `fixtures/` directory with module-scoped accessors in the relevant `conftest.py`.
+- Native behavior has Rust tests and `tests/native/` boundary tests where needed.
+  Shared cases live in `testdata/cases/`; `tests/parity/` pins upstream protocols.
+  A displaced Python test identifies equivalent native/corpus assertions, not
+  merely a skip target. Review intentional divergences explicitly.
 
-### Driver & Rule Changes — read `docs/dev/extending.md`
+### Driver & Rule Changes — read `docs/dev/creating-drivers.md` and `docs/dev/rule-reference.md`
 
-- New rule types: frozen model in `models.py` → named default factory + field on `HConfigDriverRules` → consumed in `child.py`/`root.py` → populated in drivers.
-- New platforms: `Platform` enum member, `get_hconfig_driver` wiring, per-platform test file, and a driver section + table row in `docs/user/drivers.md`.
+- New rule types: frozen Python model → named factory/container field → Rust
+  decoding and evaluation → native platform rules → documentation.
+- Tree/view algorithms belong in the Rust core; Python files are facades.
+  PyO3 API changes update shipped stubs and migration docs. `platform`
+  selects native custom-driver operations; missing selectors fall back to Generic.
+- Five driver override hooks are rejected: `idempotent_for`, `negate_with`,
+  `sectional_exit`, `swap_negation`, and custom `config_preprocessor`.
+  Stock marked preprocessors remain callable; custom text transformations
+  run explicitly before constructors. Do not promise arbitrary hook dispatch.
+- Built-in device-view subclasses remain customizable; Generic native views,
+  direct interface-view construction and mixin `issubclass` recipes do not.
+- New platforms: `Platform` enum member, `_BUILTIN_DRIVERS` wiring in `hier_config/registry.py` **keyed on `Platform.X.name`** (a `Platform`-member key is silently unreachable — `_normalize()` canonicalizes to uppercase name strings), `view_class` on the driver if it has a config view, per-platform test file, and a driver section + table row in `docs/admin/platforms.md`.
 
 ### Changelog
 
@@ -62,7 +95,7 @@ Read the referenced doc before judging that category — the docs are the standa
 
 ### Docs
 
-- Public API or driver behavior changes are reflected in `docs/user/` (and `docs/user/api-reference.md` where relevant).
+- Public API or driver behavior changes are reflected in `docs/user/` or `docs/admin/` (and `docs/dev/api-reference.md` where relevant).
 - New doc pages are in the `mkdocs.yml` nav; moved pages have a `redirect_maps` entry.
 
 ### Commits — read `CONTRIBUTING.md` (Commit Message Style)

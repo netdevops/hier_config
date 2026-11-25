@@ -1,20 +1,21 @@
-# Unified diff
+# Unified Diffs
 
-The Unified Diff feature, introduced in version 2.1.0, provides output similar to `difflib.unified_diff()` but with added awareness of out-of-order lines and parent-child relationships in the Hier Config model of configurations being compared.
+This page covers `HConfig.unified_diff()`, which produces `difflib`-style diff output with awareness of out-of-order lines and parent-child relationships. Use it to compare two configurations for reporting or validation — without generating remediation commands.
 
-This feature is particularly useful when comparing configurations from two network devices, such as redundant pairs, or when validating differences between running and intended configurations.
+This is particularly useful when comparing configurations from two network devices, such as redundant pairs, or when validating differences between running and intended configurations.
 
-Currently, the algorithm does not account for duplicate child entries (e.g., multiple `endif` statements in an IOS-XR route-policy) or enforce command order in sections where it may be critical, such as Access Control Lists (ACLs). For accurate ordering in ACLs, sequence numbers should be used if command order is important.
+> **Note:** The algorithm does not account for duplicate child entries (e.g., multiple `endif` statements in an IOS XR route-policy) or enforce command order in sections where it may be critical, such as access control lists (ACLs). For accurate ordering in ACLs, use sequence numbers.
 
-```bash
->>> from hier_config import get_hconfig, Platform
+```python
+>>> from hier_config import HConfig, Platform
+>>> from hier_config.utils import read_text_from_file
 >>> from pprint import pprint
 >>>
 >>> running_config_text = read_text_from_file("./tests/fixtures/running_config.conf")
 >>> generated_config_text = read_text_from_file("./tests/fixtures/generated_config.conf")
 >>>
->>> running_config = get_hconfig(Platform.CISCO_IOS, running_config_text)
->>> generated_config = get_hconfig(Platform.CISCO_IOS, generated_config_text)
+>>> running_config = HConfig.from_text(Platform.CISCO_IOS, running_config_text)
+>>> generated_config = HConfig.from_text(Platform.CISCO_IOS, generated_config_text)
 >>>
 >>> pprint(list(running_config.unified_diff(generated_config)))
 ['vlan 3',
@@ -40,3 +41,10 @@ Currently, the algorithm does not account for duplicate child entries (e.g., mul
  '  + no shutdown']
 >>>
 ```
+
+Lines prefixed with `+` are present in `generated_config` but not in `running_config`; lines prefixed with `-` are present in `running_config` but not in `generated_config`. Parent lines without a prefix are shown as context only.
+
+## Next steps
+
+- [Remediation Workflows](remediation-workflows.md) — turn differences into deployable commands.
+- [Predicting Future Configs](future-config.md) — simulate the post-change configuration instead of diffing.

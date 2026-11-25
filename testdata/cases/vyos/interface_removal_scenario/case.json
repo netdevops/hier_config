@@ -1,0 +1,5 @@
+{
+  "platform": "VYOS",
+  "description": "Removing an interface configuration on VyOS",
+  "assert_rollback": false
+}

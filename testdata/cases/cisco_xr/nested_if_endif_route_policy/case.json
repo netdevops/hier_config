@@ -1,0 +1,6 @@
+{
+  "platform": "CISCO_XR",
+  "description": "Nested if/endif blocks in route-policy remediate properly without duplicate child errors",
+  "tags": ["route-policy"],
+  "assert_rollback": false
+}

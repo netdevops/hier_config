@@ -1,0 +1,516 @@
+"""Tests for hier_config/formats.py — JSON/XML ingestion and rendering (#232)."""
+
+import json
+import xml.etree.ElementTree as ET  # ruff:ignore[suspicious-xml-etree-import]
+
+import pytest
+
+from hier_config import HConfig, Platform, WorkflowRemediation
+from hier_config.exceptions import DuplicateChildError, InvalidConfigError
+from hier_config.formats import hconfig_to_gnmi_json, hconfig_to_netconf_xml
+
+OPENCONFIG_STYLE = {
+    "system": {
+        "config": {
+            "hostname": "router1",
+            "login-banner": "unauthorized access is prohibited",
+        },
+        "ntp": {"enabled": True, "port": 123},
+    },
+    "interfaces": {
+        "interface": [
+            {
+                "name": "eth0",
+                "config": {"description": "uplink", "mtu": 9000},
+            },
+            {
+                "name": "eth1",
+                "config": {"description": "downlink", "mtu": 1500},
+            },
+        ],
+    },
+    "dns-servers": ["192.0.2.1", "192.0.2.2"],
+}
+
+
+def test_from_json_builds_expected_tree() -> None:
+    config = HConfig.from_json(Platform.GENERIC, OPENCONFIG_STYLE)
+
+    system = config.get_child(equals="system")
+    assert system is not None
+    system_config = system.get_child(equals="config")
+    assert system_config is not None
+    assert system_config.get_child(equals='hostname "router1"') is not None
+
+    ntp = system.get_child(equals="ntp")
+    assert ntp is not None
+    assert ntp.get_child(equals="enabled true") is not None
+    assert ntp.get_child(equals="port 123") is not None
+
+    interfaces = config.get_child(equals="interfaces")
+    assert interfaces is not None
+    eth0 = interfaces.get_child(equals='interface "eth0"')
+    assert eth0 is not None
+    assert eth0.get_child(equals='name "eth0"') is not None
+
+    assert config.get_child(equals='dns-servers "192.0.2.1"') is not None
+    assert config.get_child(equals='dns-servers "192.0.2.2"') is not None
+
+
+def test_from_json_accepts_json_text() -> None:
+    config = HConfig.from_json(Platform.GENERIC, json.dumps(OPENCONFIG_STYLE))
+    assert config.get_child(equals="system") is not None
+
+
+def test_json_round_trip() -> None:
+    config = HConfig.from_json(Platform.GENERIC, OPENCONFIG_STYLE)
+    assert json.loads(config.to_json()) == OPENCONFIG_STYLE
+
+
+def test_json_round_trip_via_reparse() -> None:
+    config = HConfig.from_json(Platform.GENERIC, OPENCONFIG_STYLE)
+    reparsed = HConfig.from_json(Platform.GENERIC, config.to_json())
+    assert reparsed == config
+
+
+def test_from_json_invalid_text_raises() -> None:
+    with pytest.raises(InvalidConfigError, match="not valid JSON"):
+        HConfig.from_json(Platform.GENERIC, "{not json")
+
+
+def test_from_json_non_object_root_raises() -> None:
+    with pytest.raises(InvalidConfigError, match="must be an object"):
+        HConfig.from_json(Platform.GENERIC, "[1, 2, 3]")
+
+
+def test_from_json_whitespace_key_raises() -> None:
+    with pytest.raises(InvalidConfigError, match="Unsupported JSON key"):
+        HConfig.from_json(Platform.GENERIC, {"bad key": 1})
+
+
+def test_from_json_unidentified_list_entry_raises() -> None:
+    with pytest.raises(InvalidConfigError, match="identify"):
+        HConfig.from_json(Platform.GENERIC, {"vlans": [{"vid": 100}]})
+
+
+def test_from_json_custom_list_keys() -> None:
+    config = HConfig.from_json(
+        Platform.GENERIC, {"vlans": [{"vid": 100}]}, list_keys=("vid",)
+    )
+    assert config.get_child(equals="vlans 100") is not None
+
+
+def test_json_diff_between_structured_configs() -> None:
+    """Structured configs work with the tree diff engine."""
+    running = HConfig.from_json(
+        Platform.GENERIC, {"system": {"hostname": "old", "domain": "example.com"}}
+    )
+    generated = HConfig.from_json(
+        Platform.GENERIC, {"system": {"hostname": "new", "domain": "example.com"}}
+    )
+    remediation = running.remediation(generated)
+    system = remediation.get_child(equals="system")
+    assert system is not None
+    assert system.get_child(equals='no hostname "old"') is not None
+    assert system.get_child(equals='hostname "new"') is not None
+
+
+def test_json_future_renders_back_to_json() -> None:
+    """future() of a structured config renders back to valid JSON."""
+    running = HConfig.from_json(Platform.GENERIC, {"system": {"hostname": "old"}})
+    generated = HConfig.from_json(Platform.GENERIC, {"system": {"hostname": "new"}})
+    future = running.future(running.remediation(generated))
+    assert json.loads(future.to_json()) == {"system": {"hostname": "new"}}
+
+
+XML_TEXT = (
+    "<config>"
+    '<system foo="bar">'
+    "<hostname>router1</hostname>"
+    "<location/>"
+    "</system>"
+    "<interfaces>"
+    "<interface><name>eth0</name><mtu>9000</mtu></interface>"
+    "<interface><name>eth1</name><mtu>1500</mtu></interface>"
+    "</interfaces>"
+    "</config>"
+)
+
+
+def test_from_xml_builds_expected_tree() -> None:
+    config = HConfig.from_xml(Platform.GENERIC, XML_TEXT)
+
+    root = config.get_child(equals="config")
+    assert root is not None
+    system = root.get_child(equals="system")
+    assert system is not None
+    assert system.get_child(equals='@foo "bar"') is not None
+    assert system.get_child(equals='hostname "router1"') is not None
+    assert system.get_child(equals="location") is not None
+
+    interfaces = root.get_child(equals="interfaces")
+    assert interfaces is not None
+    eth0 = interfaces.get_child(equals='interface "eth0"')
+    assert eth0 is not None
+    assert eth0.get_child(equals='mtu "9000"') is not None
+
+
+def test_xml_round_trip() -> None:
+    config = HConfig.from_xml(Platform.GENERIC, XML_TEXT)
+    reparsed = HConfig.from_xml(Platform.GENERIC, config.to_xml())
+    assert reparsed == config
+
+
+def test_from_xml_invalid_raises() -> None:
+    with pytest.raises(InvalidConfigError, match="not valid XML"):
+        HConfig.from_xml(Platform.GENERIC, "<config><unclosed></config>")
+
+
+def test_from_xml_repeated_elements_without_identity_raises() -> None:
+    xml_text = "<c><item><x>1</x></item><item><x>2</x></item></c>"
+    with pytest.raises(InvalidConfigError, match="identify"):
+        HConfig.from_xml(Platform.GENERIC, xml_text)
+
+
+def test_to_xml_requires_single_root() -> None:
+    config = HConfig.from_json(Platform.GENERIC, {"a": {"x": 1}, "b": {"y": 2}})
+    with pytest.raises(InvalidConfigError, match="single root"):
+        config.to_xml()
+
+
+def test_xml_mixed_text_content() -> None:
+    xml_text = "<c><a>text<b>inner</b></a></c>"
+    config = HConfig.from_xml(Platform.GENERIC, xml_text)
+    outer = config.get_child(equals="c")
+    assert outer is not None
+    element_a = outer.get_child(equals="a")
+    assert element_a is not None
+    assert element_a.get_child(equals='#text "text"') is not None
+    assert element_a.get_child(equals='b "inner"') is not None
+    reparsed = HConfig.from_xml(Platform.GENERIC, config.to_xml())
+    assert reparsed == config
+
+
+def test_detection_error_mentions_structured_constructors() -> None:
+    with pytest.raises(InvalidConfigError, match="from_json"):
+        HConfig.from_text(Platform.GENERIC, '{"a": 1}')
+    with pytest.raises(InvalidConfigError, match="from_xml"):
+        HConfig.from_text(Platform.GENERIC, "<config/>")
+
+
+def test_empty_object_round_trips() -> None:
+    """An empty JSON object must not collapse to null (#279 review)."""
+    data: dict[str, object] = {"system": {}, "count": 1, "missing": None}
+    config = HConfig.from_json(Platform.GENERIC, data)
+    assert json.loads(config.to_json()) == data
+
+
+def test_duplicate_list_items_raise_hier_config_error() -> None:
+    """Duplicate scalar items and duplicate identities surface as tree errors."""
+    with pytest.raises(DuplicateChildError):
+        HConfig.from_json(Platform.GENERIC, {"dns": ["192.0.2.1", "192.0.2.1"]})
+    with pytest.raises(DuplicateChildError):
+        HConfig.from_json(
+            Platform.GENERIC, {"interface": [{"name": "e0"}, {"name": "e0"}]}
+        )
+
+
+NC_OPERATION = "{urn:ietf:params:xml:ns:netconf:base:1.0}operation"
+
+NETCONF_RUNNING_XML = (
+    "<config>"
+    "<system><hostname>old</hostname><location>hq</location></system>"
+    "<interfaces>"
+    "<interface><name>eth0</name><mtu>9000</mtu></interface>"
+    "<interface><name>eth1</name><mtu>1500</mtu></interface>"
+    "</interfaces>"
+    "</config>"
+)
+NETCONF_GENERATED_XML = (
+    "<config>"
+    "<system><hostname>new</hostname><location>hq</location></system>"
+    "<interfaces>"
+    "<interface><name>eth0</name><mtu>9000</mtu></interface>"
+    "</interfaces>"
+    "</config>"
+)
+
+
+def test_netconf_remediation_payload() -> None:
+    """Remediation between from_xml trees renders as a NETCONF edit-config payload."""
+    running = HConfig.from_xml(Platform.GENERIC, NETCONF_RUNNING_XML)
+    generated = HConfig.from_xml(Platform.GENERIC, NETCONF_GENERATED_XML)
+    workflow = WorkflowRemediation(running, generated)
+    payload = workflow.remediation_netconf_xml()
+
+    assert 'xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0"' in payload
+    root = ET.fromstring(payload)  # ruff:ignore[suspicious-xml-element-tree-usage]
+    assert root.tag == "config"
+
+    system = root.find("system")
+    assert system is not None
+    hostnames = system.findall("hostname")
+    deleted = [e for e in hostnames if e.get(NC_OPERATION) == "delete"]
+    added = [e for e in hostnames if e.get(NC_OPERATION) is None]
+    assert len(deleted) == 1
+    assert added[0].text == "new"
+
+    # The removed keyed list entry deletes by key leaf, not by value text.
+    interfaces = root.find("interfaces")
+    assert interfaces is not None
+    removed = interfaces.find("interface")
+    assert removed is not None
+    assert removed.get(NC_OPERATION) == "delete"
+    name = removed.find("name")
+    assert name is not None
+    assert name.text == "eth1"
+    assert removed.find("mtu") is None
+
+
+def test_netconf_addition_renders_plain_subtree() -> None:
+    """Added sections carry no operation attribute (NETCONF merge default)."""
+    running = HConfig.from_xml(Platform.GENERIC, "<config><system/></config>")
+    generated = HConfig.from_xml(
+        Platform.GENERIC,
+        "<config><system/><ntp><enabled>true</enabled></ntp></config>",
+    )
+    workflow = WorkflowRemediation(running, generated)
+    root = ET.fromstring(workflow.remediation_netconf_xml())  # ruff:ignore[suspicious-xml-element-tree-usage]
+    ntp = root.find("ntp")
+    assert ntp is not None
+    assert ntp.get(NC_OPERATION) is None
+    enabled = ntp.find("enabled")
+    assert enabled is not None
+    assert enabled.text == "true"
+
+
+def test_netconf_attribute_negation_raises() -> None:
+    """Attribute removals cannot be expressed as NETCONF operations."""
+    running = HConfig.from_xml(Platform.GENERIC, '<config><system foo="bar"/></config>')
+    generated = HConfig.from_xml(Platform.GENERIC, "<config><system/></config>")
+    workflow = WorkflowRemediation(running, generated)
+    with pytest.raises(InvalidConfigError, match="Attribute"):
+        workflow.remediation_netconf_xml()
+
+
+def test_netconf_leaf_delete_without_running_context() -> None:
+    """The standalone function falls back to value-bearing leaf deletes."""
+    running = HConfig.from_xml(
+        Platform.GENERIC, "<config><system><hostname>old</hostname></system></config>"
+    )
+    generated = HConfig.from_xml(Platform.GENERIC, "<config><system/></config>")
+    remediation = running.remediation(generated)
+    root = ET.fromstring(hconfig_to_netconf_xml(remediation))  # ruff:ignore[suspicious-xml-element-tree-usage]
+    system = root.find("system")
+    assert system is not None
+    hostname = system.find("hostname")
+    assert hostname is not None
+    assert hostname.get(NC_OPERATION) == "delete"
+    assert hostname.text == "old"
+
+
+def test_xml_diff_is_surgical_across_entry_counts() -> None:
+    """A keyed entry keeps the same node text regardless of sibling count.
+
+    Removing one of two entries must not delete-and-re-add the survivor
+    (#232): identity suffixes apply whenever an identifying child exists,
+    not only when the tag repeats.
+    """
+    running = HConfig.from_xml(Platform.GENERIC, NETCONF_RUNNING_XML)
+    generated = HConfig.from_xml(Platform.GENERIC, NETCONF_GENERATED_XML)
+    remediation = running.remediation(generated)
+    interfaces_lines = [
+        line.strip() for line in remediation.to_lines() if "interface" in line
+    ]
+    assert interfaces_lines == ["interfaces", 'no interface "eth1"']
+
+
+GNMI_RUNNING = {
+    "system": {"config": {"hostname": "old", "location": "hq"}},
+    "interfaces": {
+        "interface": [
+            {"name": "eth0", "config": {"mtu": 9000}},
+            {"name": "eth1", "config": {"mtu": 1500}},
+        ],
+    },
+}
+GNMI_GENERATED = {
+    "system": {"config": {"hostname": "new", "location": "hq"}},
+    "interfaces": {
+        "interface": [
+            {"name": "eth0", "config": {"mtu": 9000}},
+        ],
+    },
+}
+
+
+def test_gnmi_remediation_payload() -> None:
+    """Remediation between from_json trees renders as update/delete sets."""
+    running = HConfig.from_json(Platform.GENERIC, GNMI_RUNNING)
+    generated = HConfig.from_json(Platform.GENERIC, GNMI_GENERATED)
+    workflow = WorkflowRemediation(running, generated)
+    result = workflow.remediation_json()
+
+    assert result["delete"] == [
+        "system/config/hostname",
+        "interfaces/interface[name=eth1]",
+    ]
+    assert result["update"] == {"system": {"config": {"hostname": "new"}}}
+
+
+def test_gnmi_scalar_leaf_delete_prunes_branch() -> None:
+    """A branch containing only deletions must not appear in the update tree."""
+    running = HConfig.from_json(Platform.GENERIC, {"system": {"hostname": "old"}})
+    empty_system: dict[str, object] = {"system": {}}
+    generated = HConfig.from_json(Platform.GENERIC, empty_system)
+    result = WorkflowRemediation(running, generated).remediation_json()
+
+    assert result == {"update": {}, "delete": ["system/hostname"]}
+
+
+def test_gnmi_keyed_entry_delete_custom_list_keys() -> None:
+    running = HConfig.from_json(
+        Platform.GENERIC,
+        {"vlans": {"vlan": [{"vid": 100}, {"vid": 200}]}},
+        list_keys=("vid",),
+    )
+    generated = HConfig.from_json(
+        Platform.GENERIC, {"vlans": {"vlan": [{"vid": 200}]}}, list_keys=("vid",)
+    )
+    result = hconfig_to_gnmi_json(
+        running.remediation(generated), running=running, list_keys=("vid",)
+    )
+
+    assert result == {"update": {}, "delete": ["vlans/vlan[vid=100]"]}
+
+
+def test_gnmi_nested_delete_under_keyed_ancestor() -> None:
+    """An ancestor keyed entry gets a selector resolved against the running config."""
+    running = HConfig.from_json(
+        Platform.GENERIC,
+        {
+            "interfaces": {
+                "interface": [
+                    {"name": "eth0", "config": {"mtu": 9000, "description": "uplink"}},
+                ],
+            },
+        },
+    )
+    generated = HConfig.from_json(
+        Platform.GENERIC,
+        {
+            "interfaces": {
+                "interface": [
+                    {"name": "eth0", "config": {"description": "uplink"}},
+                ],
+            },
+        },
+    )
+    result = WorkflowRemediation(running, generated).remediation_json()
+
+    assert result == {
+        "update": {},
+        "delete": ["interfaces/interface[name=eth0]/config/mtu"],
+    }
+
+
+def test_gnmi_update_reinjects_identity_leaf() -> None:
+    """A modified keyed entry's update carries its identity leaf and re-ingests."""
+    running = HConfig.from_json(
+        Platform.GENERIC,
+        {"interfaces": {"interface": [{"name": "eth0", "config": {"mtu": 9000}}]}},
+    )
+    generated = HConfig.from_json(
+        Platform.GENERIC,
+        {"interfaces": {"interface": [{"name": "eth0", "config": {"mtu": 1500}}]}},
+    )
+    result = WorkflowRemediation(running, generated).remediation_json()
+
+    assert result["update"] == {
+        "interfaces": {"interface": [{"name": "eth0", "config": {"mtu": 1500}}]},
+    }
+    assert HConfig.from_json(Platform.GENERIC, result["update"]) is not None
+
+
+def test_gnmi_pure_addition_has_empty_delete() -> None:
+    empty_system: dict[str, object] = {"system": {}}
+    running = HConfig.from_json(Platform.GENERIC, empty_system)
+    generated = HConfig.from_json(
+        Platform.GENERIC, {"system": {}, "ntp": {"enabled": True, "port": 123}}
+    )
+    result = WorkflowRemediation(running, generated).remediation_json()
+
+    assert result == {"update": {"ntp": {"enabled": True, "port": 123}}, "delete": []}
+
+
+def test_gnmi_empty_remediation() -> None:
+    running = HConfig.from_json(Platform.GENERIC, GNMI_RUNNING)
+    generated = HConfig.from_json(Platform.GENERIC, GNMI_RUNNING)
+    result = WorkflowRemediation(running, generated).remediation_json()
+
+    assert result == {"update": {}, "delete": []}
+
+
+def test_gnmi_no_running_context_falls_back_to_scalar() -> None:
+    """Without a running config, keyed-entry deletes degrade to bare paths."""
+    running = HConfig.from_json(Platform.GENERIC, GNMI_RUNNING)
+    generated = HConfig.from_json(Platform.GENERIC, GNMI_GENERATED)
+    result = hconfig_to_gnmi_json(running.remediation(generated))
+
+    assert result["delete"] == ["system/config/hostname", "interfaces/interface"]
+    assert result["update"] == {"system": {"config": {"hostname": "new"}}}
+
+
+def test_gnmi_unresolved_identity_falls_back_to_default_key() -> None:
+    """An unresolvable entry key guesses the selector but skips injection.
+
+    A modified keyed entry's remediation subtree lacks its identity leaf, so
+    without a running config the key name cannot be resolved: the delete-path
+    selector falls back to the first `list_keys` name, and no identity leaf is
+    injected into the update (a guessed key would become applied config).
+    """
+    running = HConfig.from_json(
+        Platform.GENERIC,
+        {"interfaces": {"interface": [{"name": "eth0", "config": {"mtu": 9000}}]}},
+    )
+    generated = HConfig.from_json(
+        Platform.GENERIC,
+        {"interfaces": {"interface": [{"name": "eth0", "config": {"mtu": 1500}}]}},
+    )
+    result = hconfig_to_gnmi_json(running.remediation(generated))
+
+    assert result == {
+        "update": {"interfaces": {"interface": [{"config": {"mtu": 1500}}]}},
+        "delete": ["interfaces/interface[name=eth0]/config/mtu"],
+    }
+
+
+def test_gnmi_attribute_negation_raises() -> None:
+    """Attribute removals cannot be expressed as gNMI delete paths."""
+    running = HConfig.from_xml(Platform.GENERIC, '<config><system foo="bar"/></config>')
+    generated = HConfig.from_xml(Platform.GENERIC, "<config><system/></config>")
+    remediation = running.remediation(generated)
+    with pytest.raises(InvalidConfigError, match="Attribute"):
+        hconfig_to_gnmi_json(remediation, running=running)
+
+
+def test_gnmi_selector_value_escaping() -> None:
+    r"""Selector values escape `\` and `]` so paths stay parseable."""
+    running = HConfig.from_json(
+        Platform.GENERIC,
+        {
+            "policies": {
+                "policy": [
+                    {"name": "a]b\\c", "action": "deny"},
+                    {"name": "keep", "action": "permit"},
+                ],
+            },
+        },
+    )
+    generated = HConfig.from_json(
+        Platform.GENERIC,
+        {"policies": {"policy": [{"name": "keep", "action": "permit"}]}},
+    )
+    result = WorkflowRemediation(running, generated).remediation_json()
+
+    assert result["delete"] == ["policies/policy[name=a\\]b\\\\c]"]

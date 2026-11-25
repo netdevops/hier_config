@@ -1,0 +1,75 @@
+from hier_config import HConfig
+from hier_config.models import Platform
+from hier_config.platforms.cisco_ios.driver import (
+    HConfigDriverCiscoIOS,
+    add_acl_sequence_numbers,
+    remove_ipv4_acl_remarks,
+    remove_ipv6_acl_sequence_numbers,
+)
+from hier_config.platforms.utils import split_vlan_id_lists
+
+
+def test_remove_ipv6_acl_sequence_numbers() -> None:
+    """Test post-load callback that removes IPv6 ACL sequence numbers."""
+    platform = Platform.CISCO_IOS
+    config_text = "ipv6 access-list TEST_IPV6_ACL\n sequence 10 permit tcp any any eq 443\n sequence 20 deny ipv6 any any"
+    config = HConfig.from_text(platform, config_text)
+    acl = config.get_child(equals="ipv6 access-list TEST_IPV6_ACL")
+
+    assert acl is not None
+    assert acl.get_child(equals="permit tcp any any eq 443") is not None
+    assert acl.get_child(equals="deny ipv6 any any") is not None
+    assert acl.get_child(startswith="sequence") is None
+
+
+def test_remove_ipv4_acl_remarks() -> None:
+    """Test post-load callback that removes IPv4 ACL remarks."""
+    platform = Platform.CISCO_IOS
+    config_text = "ip access-list extended TEST_ACL\n remark Allow HTTPS traffic\n permit tcp any any eq 443\n remark Block all other traffic\n deny ip any any"
+    config = HConfig.from_text(platform, config_text)
+    acl = config.get_child(equals="ip access-list extended TEST_ACL")
+
+    assert acl is not None
+    assert acl.get_child(equals="10 permit tcp any any eq 443") is not None
+    assert acl.get_child(equals="20 deny ip any any") is not None
+    assert acl.get_child(startswith="remark") is None
+
+
+def test_add_acl_sequence_numbers() -> None:
+    """Test post-load callback that adds sequence numbers to IPv4 ACLs."""
+    platform = Platform.CISCO_IOS
+    config_text = "ip access-list extended TEST_ACL\n permit tcp any any eq 443\n permit tcp any any eq 80\n deny ip any any"
+    config = HConfig.from_text(platform, config_text)
+    acl = config.get_child(equals="ip access-list extended TEST_ACL")
+
+    assert acl is not None
+    assert acl.get_child(equals="10 permit tcp any any eq 443") is not None
+    assert acl.get_child(equals="20 permit tcp any any eq 80") is not None
+    assert acl.get_child(equals="30 deny ip any any") is not None
+
+
+def test_default_post_load_callbacks_are_public() -> None:
+    """Built-in IOS post-load callbacks are public and pinned by identity (#286)."""
+    callbacks = HConfigDriverCiscoIOS().rules.post_load_callbacks
+
+    assert remove_ipv6_acl_sequence_numbers in callbacks
+    assert remove_ipv4_acl_remarks in callbacks
+    assert add_acl_sequence_numbers in callbacks
+    assert split_vlan_id_lists in callbacks
+
+
+def test_remove_ipv4_acl_remarks_callback_removable_by_identity() -> None:
+    """The docs recipe: removing the public callback keeps ACL remarks (#286)."""
+    driver = HConfigDriverCiscoIOS()
+    driver.rules.post_load_callbacks.remove(remove_ipv4_acl_remarks)
+    config_text = (
+        "ip access-list extended TEST_ACL\n"
+        " remark Allow HTTPS traffic\n"
+        " permit tcp any any eq 443\n"
+    )
+    config = HConfig.from_text(driver, config_text)
+    acl = config.get_child(equals="ip access-list extended TEST_ACL")
+
+    assert acl is not None
+    assert acl.get_child(equals="remark Allow HTTPS traffic") is not None
+    assert acl.get_child(equals="10 permit tcp any any eq 443") is not None

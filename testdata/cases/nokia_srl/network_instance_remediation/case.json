@@ -1,0 +1,5 @@
+{
+  "platform": "NOKIA_SRL",
+  "description": "Test network-instance (VRF) block handling",
+  "assert_rollback": false
+}

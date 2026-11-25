@@ -1,0 +1,5 @@
+{
+  "platform": "GENERIC",
+  "description": "SNMP community and host remediation with default generic rules",
+  "assert_rollback": true
+}

@@ -1,0 +1,5 @@
+{
+  "platform": "CISCO_XR",
+  "description": "Test adding new IPv4 ACL entries with sequence numbers",
+  "assert_rollback": true
+}

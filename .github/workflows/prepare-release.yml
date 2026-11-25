@@ -1,0 +1,98 @@
+name: prepare release
+
+# Admin-only, manually-run release preparation. The branch picked in the
+# "Run workflow" dropdown is the branch the release is prepared from: the
+# version-bump PR targets it and the draft release tags it once published.
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Version bump type
+        required: true
+        type: choice
+        options:
+        - major
+        - minor
+        - patch
+        - alpha
+        - beta
+        - rc
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Require repository admin
+      uses: actions/github-script@v8
+      with:
+        script: |
+          const { data } = await github.rest.repos.getCollaboratorPermissionLevel({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            username: context.actor,
+          });
+          if (data.permission !== 'admin') {
+            core.setFailed(`${context.actor} is not a repository admin`);
+          }
+    - uses: actions/checkout@v6
+    - name: Set up uv
+      uses: astral-sh/setup-uv@v7
+      with:
+        python-version: "3.12"
+    - name: Bump version
+      id: bump
+      # The build is maturin-based, so the version lives on
+      # `[workspace.package]` in Cargo.toml rather than in pyproject.toml.
+      # Cargo requires SemVer (`4.0.0-beta.4`); maturin normalizes that to the
+      # PEP 440 form (`4.0.0b4`) when it names the wheel. The tag and changelog
+      # use the PEP 440 form so they match what lands on PyPI.
+      run: |
+        versions="$(python scripts/bump_version.py "${{ inputs.bump }}")"
+        {
+          read -r cargo_version
+          read -r pep440_version
+        } <<< "${versions}"
+        echo "cargo_version=${cargo_version}" >> "$GITHUB_OUTPUT"
+        echo "version=${pep440_version}" >> "$GITHUB_OUTPUT"
+    - name: Refresh Python lockfile metadata
+      run: uv lock
+    - name: Rotate changelog
+      if: "!contains(fromJSON('[\"alpha\", \"beta\", \"rc\"]'), inputs.bump)"
+      run: |
+        python scripts/rotate_changelog.py "${{ steps.bump.outputs.version }}" > release-notes.md
+    - name: Open release pull request
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        version="${{ steps.bump.outputs.version }}"
+        branch="release/v${version}"
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git checkout -b "${branch}"
+        git add Cargo.toml Cargo.lock pyproject.toml uv.lock CHANGELOG.md
+        git commit -m "chore(release): prepare ${version}"
+        git push origin "${branch}"
+        gh pr create \
+          --base "${GITHUB_REF_NAME}" \
+          --head "${branch}" \
+          --title "chore(release): prepare ${version}" \
+          --body "Automated ${{ inputs.bump }} release preparation. Merge this PR first, then publish the draft release v${version} to deploy to PyPI. Note: CI does not start automatically on this bot-created PR - close and reopen it (or push to the branch) to trigger checks."
+    - name: Create draft release
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        version="${{ steps.bump.outputs.version }}"
+        args=(--draft --target "${GITHUB_REF_NAME}" --title "v${version}")
+        if [[ "${version}" == *a* || "${version}" == *b* || "${version}" == *rc* || "${version}" == *dev* ]]; then
+          args+=(--prerelease)
+        fi
+        if [[ -s release-notes.md ]]; then
+          args+=(--notes-file release-notes.md)
+        else
+          args+=(--generate-notes)
+        fi
+        gh release create "v${version}" "${args[@]}"

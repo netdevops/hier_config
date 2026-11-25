@@ -1,0 +1,6 @@
+{
+  "platform": "ARISTA_EOS",
+  "description": "Interface description and VLAN changes remediate and roll back cleanly",
+  "tags": ["interface", "bgp", "vlan"],
+  "assert_rollback": true
+}

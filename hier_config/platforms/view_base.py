@@ -1,285 +1,93 @@
-from abc import ABC, abstractmethod
-from collections.abc import Iterable
-from ipaddress import IPv4Address, IPv4Interface
+"""Platform-independent views over a parsed configuration.
 
-from hier_config.child import HConfigChild
-from hier_config.platforms.models import (
-    InterfaceDot1qMode,
-    InterfaceDuplex,
-    NACHostMode,
-    StackMember,
-    Vlan,
+All view logic lives in the Rust core and is exposed by the
+``_hier_config_rust`` extension as :class:`HConfigView` and
+:class:`ConfigViewInterface`. This module is the documented Python facade: it
+re-exports those native classes under their historical names and defines the
+capability marker classes.
+
+Because one native class serves every platform, the capability mixins are
+markers whose ``isinstance`` checks are answered from the view's runtime
+``capabilities`` set rather than from its position in a class hierarchy. The
+observable behaviour is unchanged -- ``isinstance(view, InterfaceVlanViewMixin)``
+is still true only for platforms that model 802.1Q on interfaces -- and the
+markers still subclass :class:`ConfigViewInterface`, so type checkers narrow to
+the full property set.
+"""
+
+# Marker and alias classes carry no methods of their own; every property is
+# inherited from the native view.
+# pylint: disable=too-few-public-methods
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from hier_config._hier_config_rust import ConfigViewInterface, HConfigView
+
+if TYPE_CHECKING:
+    from hier_config.models import Platform
+
+__all__ = (
+    "ConfigViewInterface",
+    "ConfigViewInterfaceBase",
+    "HConfigView",
+    "HConfigViewBase",
+    "InterfaceBundleViewMixin",
+    "InterfaceNACViewMixin",
+    "InterfacePhysicalViewMixin",
+    "InterfaceVlanViewMixin",
+    "ViewMarkerMeta",
 )
-from hier_config.root import HConfig
+
+#: Historical name for the native per-interface view.
+ConfigViewInterfaceBase = ConfigViewInterface
+
+#: Historical name for the native device-level view.
+HConfigViewBase = HConfigView
 
 
-class ConfigViewInterfaceBase:  # ruff:ignore[too-many-public-methods]
-    """Abstract base providing a typed view over a single interface config node.
+class ViewMarkerMeta(type):
+    """Resolve ``isinstance`` for interface-view marker classes.
 
-    Subclasses parse the child tree of one ``interface ...`` block and expose
-    structured properties (IP address, duplex, VLAN membership, bundle state,
-    etc.) in a platform-independent way.
+    A marker sets exactly one of ``view_capability`` or ``view_platform`` in its
+    class body; instances are matched against the corresponding runtime
+    attribute of the native view rather than against the class hierarchy.
     """
 
-    def __init__(self, config: HConfigChild) -> None:
-        self.config = config
+    view_capability: str | None = None
+    view_platform: Platform | None = None
 
-    @property
-    @abstractmethod
-    def bundle_id(self) -> str | None:
-        """Determine the bundle ID."""
-
-    @property
-    @abstractmethod
-    def bundle_member_interfaces(self) -> Iterable[str]:
-        """Determine the member interfaces of a bundle."""
-
-    @property
-    @abstractmethod
-    def bundle_name(self) -> str | None:
-        """Determine the bundle name of a bundle member."""
-
-    @property
-    @abstractmethod
-    def description(self) -> str:
-        """Determine the interface's description."""
-
-    @property
-    def dot1q_mode(self) -> InterfaceDot1qMode | None:
-        """Derive the configured 802.1Q mode."""
-        if self.tagged_all:
-            return InterfaceDot1qMode.TAGGED_ALL
-        if self.tagged_vlans:
-            return InterfaceDot1qMode.TAGGED
-        if self.native_vlan and not self.is_svi:
-            return InterfaceDot1qMode.ACCESS
-        return None
-
-    @property
-    @abstractmethod
-    def duplex(self) -> InterfaceDuplex:
-        """Determine the configured Duplex of the interface."""
-
-    @property
-    @abstractmethod
-    def enabled(self) -> bool:
-        """Determines if the interface is enabled."""
-
-    @property
-    @abstractmethod
-    def has_nac(self) -> bool:
-        """Determine if the interface has NAC configured."""
-
-    @property
-    def ipv4_interface(self) -> IPv4Interface | None:
-        """Determine the first configured IPv4Interface, address/prefix, object."""
-        return next(iter(self.ipv4_interfaces), None)
-
-    @property
-    @abstractmethod
-    def ipv4_interfaces(self) -> Iterable[IPv4Interface]:
-        """Determine the configured IPv4Interface, address/prefix, objects."""
-
-    @property
-    @abstractmethod
-    def is_bundle(self) -> bool:
-        """Determine if the interface is a bundle."""
-
-    @property
-    @abstractmethod
-    def is_loopback(self) -> bool:
-        """Determine if the interface is a loopback."""
-
-    @property
-    def is_subinterface(self) -> bool:
-        """Determine if the interface is a subinterface."""
-        return "." in self.name
-
-    @property
-    @abstractmethod
-    def is_svi(self) -> bool:
-        """Determine if the interface is an SVI."""
-
-    @property
-    @abstractmethod
-    def module_number(self) -> int | None:
-        """Determine the module number of the interface."""
-
-    @property
-    @abstractmethod
-    def nac_control_direction_in(self) -> bool:
-        """Determine if the interface has NAC 'control direction in' configured."""
-
-    @property
-    @abstractmethod
-    def nac_host_mode(self) -> NACHostMode | None:
-        """Determine the NAC host mode."""
-
-    @property
-    @abstractmethod
-    def nac_mab_first(self) -> bool:
-        """Determine if the interface has NAC configured for MAB first."""
-
-    @property
-    @abstractmethod
-    def nac_max_dot1x_clients(self) -> int:
-        """Determine the max dot1x clients."""
-
-    @property
-    @abstractmethod
-    def nac_max_mab_clients(self) -> int:
-        """Determine the max mab clients."""
-
-    @property
-    @abstractmethod
-    def name(self) -> str:
-        """Determine the name of the interface."""
-
-    @property
-    @abstractmethod
-    def native_vlan(self) -> int | None:
-        """Determine the native VLAN."""
-
-    @property
-    @abstractmethod
-    def number(self) -> str:
-        """Remove letters from the interface name, leaving just numbers and symbols."""
-
-    @property
-    @abstractmethod
-    def parent_name(self) -> str | None:
-        """Determine the parent bundle interface name."""
-
-    @property
-    @abstractmethod
-    def poe(self) -> bool:
-        """Determine if PoE is enabled."""
-
-    @property
-    @abstractmethod
-    def port_number(self) -> int:
-        """Determine the interface port number."""
-
-    @property
-    @abstractmethod
-    def speed(self) -> tuple[int, ...] | None:
-        """Determine the statically allowed speeds the interface can operate at. In Mbps."""
-
-    @property
-    @abstractmethod
-    def subinterface_number(self) -> int | None:
-        """Determine the sub-interface number."""
-
-    @property
-    @abstractmethod
-    def tagged_all(self) -> bool:
-        """Determine if all the VLANs are tagged."""
-
-    @property
-    @abstractmethod
-    def tagged_vlans(self) -> tuple[int, ...]:
-        """Determine the tagged VLANs."""
-
-    @property
-    @abstractmethod
-    def vrf(self) -> str:
-        """Determine the VRF."""
-
-    @property
-    @abstractmethod
-    def _bundle_prefix(self) -> str:
-        pass
+    def __instancecheck__(cls, instance: object) -> bool:
+        if not isinstance(instance, ConfigViewInterface):
+            return False
+        if cls.view_platform is not None:
+            return instance.platform is cls.view_platform
+        return (
+            cls.view_capability is not None
+            and cls.view_capability in instance.capabilities
+        )
 
 
-class HConfigViewBase(ABC):
-    """Abstract base providing a structured view over a full HConfig tree.
+class InterfaceBundleViewMixin(ConfigViewInterface, metaclass=ViewMarkerMeta):
+    """Marker for interface views that model bundles / port channels."""
 
-    Platform-specific subclasses (e.g. ``HConfigViewCiscoIOS``) implement
-    ``interface_views`` to yield :class:`ConfigViewInterfaceBase` objects and
-    ``dot1q_mode_from_vlans`` to interpret 802.1Q mode from VLAN data.
-    """
+    view_capability = "bundle"
 
-    def __init__(self, config: HConfig) -> None:
-        self.config = config
 
-    @property
-    def bundle_interface_views(self) -> Iterable[ConfigViewInterfaceBase]:
-        for interface_view in self.interface_views:
-            if interface_view.is_bundle:
-                yield interface_view
+class InterfaceVlanViewMixin(ConfigViewInterface, metaclass=ViewMarkerMeta):
+    """Marker for interface views that model 802.1Q VLAN membership."""
 
-    @abstractmethod
-    def dot1q_mode_from_vlans(
-        self,
-        untagged_vlan: int | None = None,
-        tagged_vlans: tuple[int, ...] = (),
-        *,
-        tagged_all: bool = False,
-    ) -> InterfaceDot1qMode | None:
-        pass
+    view_capability = "vlan"
 
-    @property
-    @abstractmethod
-    def hostname(self) -> str | None:
-        pass
 
-    @property
-    @abstractmethod
-    def interface_names_mentioned(self) -> frozenset[str]:
-        """A set with all the interface names mentioned in the config."""
+class InterfaceNACViewMixin(ConfigViewInterface, metaclass=ViewMarkerMeta):
+    """Marker for interface views that model NAC (802.1X)."""
 
-    def interface_view_by_name(self, name: str) -> ConfigViewInterfaceBase | None:
-        for interface_view in self.interface_views:
-            if interface_view.name == name:
-                return interface_view
-        return None
+    view_capability = "nac"
 
-    @property
-    @abstractmethod
-    def interface_views(self) -> Iterable[ConfigViewInterfaceBase]:
-        pass
 
-    @property
-    @abstractmethod
-    def interfaces(self) -> Iterable[HConfigChild]:
-        pass
+class InterfacePhysicalViewMixin(ConfigViewInterface, metaclass=ViewMarkerMeta):
+    """Marker for interface views that model physical-layer attributes."""
 
-    @property
-    def interfaces_names(self) -> Iterable[str]:
-        for interface_view in self.interface_views:
-            yield interface_view.name
-
-    @property
-    @abstractmethod
-    def ipv4_default_gw(self) -> IPv4Address | None:
-        pass
-
-    @property
-    @abstractmethod
-    def location(self) -> str:
-        pass
-
-    @property
-    def module_numbers(self) -> Iterable[int]:
-        seen: set[int] = set()
-        for interface_view in self.interface_views:
-            if module_number := interface_view.module_number:
-                if module_number in seen:
-                    continue
-                seen.add(module_number)
-                yield module_number
-
-    @property
-    @abstractmethod
-    def stack_members(self) -> Iterable[StackMember]:
-        """Determine the configured stack members."""
-
-    @property
-    def vlan_ids(self) -> frozenset[int]:
-        """Determine the VLAN IDs."""
-        return frozenset(vlan.id for vlan in self.vlans)
-
-    @property
-    @abstractmethod
-    def vlans(self) -> Iterable[Vlan]:
-        """Determine the configured VLANs."""
+    view_capability = "physical"

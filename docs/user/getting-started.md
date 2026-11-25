@@ -1,54 +1,55 @@
-# Getting Started with hier_config
+# Getting Started
 
-Hier Config is a Python library that assists with remediating network configurations by comparing a device's current configuration (running config) with its intended configuration (generated config). Hier Config v3 processes configuration data without connecting to devices, enabling configuration analysis and remediation.
+This page walks you through your first remediation: loading a running and an intended configuration, computing the commands that close the gap, and generating a rollback. It is the best starting point if you are new to hier_config.
 
-## Step 1: Import Required Classes
+hier_config compares a device's current configuration (the *running config*) with its intended configuration (the *generated config*) and produces the minimal set of commands needed to bring the device into compliance. Everything happens offline — no device connection is required.
 
-To use `WorkflowRemediation`, you’ll import it along with `get_hconfig` (for generating configuration objects) and `Platform` (for specifying the operating system driver).
+## Step 1: Import the required classes
+
+You need `HConfig` (the configuration tree), `Platform` (the operating-system selector), and `WorkflowRemediation` (the comparison workflow):
 
 ```python
->>> from hier_config import WorkflowRemediation, get_hconfig, Platform
+>>> from hier_config import WorkflowRemediation, HConfig, Platform
 >>> from hier_config.utils import read_text_from_file
 >>>
 ```
 
-With these imports, you can create HConfig objects and compare them.
+## Step 2: Create HConfig objects for both configurations
 
-## Step 2: Creating HConfig Objects for Configurations
-
-Use `get_hconfig` to create HConfig objects for both the running and intended configurations. Specify the platform with `Platform.CISCO_IOS`, `Platform.CISCO_NXOS`, etc., based on the device type.
+Use `HConfig.from_text()` to parse each configuration. The first argument selects the platform driver (`Platform.CISCO_IOS`, `Platform.ARISTA_EOS`, and so on — see [Supported Platforms](../admin/platforms.md)):
 
 ```python
-# Define running and intended configurations as strings
+# Load running and intended configurations from files
 >>> running_config_text = read_text_from_file("./tests/fixtures/running_config.conf")
->>> generated_config_text = read_text_from_file("./tests/fixtures/remediation_config.conf")
+>>> generated_config_text = read_text_from_file("./tests/fixtures/generated_config.conf")
 >>>
 
 # Create HConfig objects for running and intended configurations
->>> running_config = get_hconfig(Platform.CISCO_IOS, running_config_text)
->>> generated_config = get_hconfig(Platform.CISCO_IOS, generated_config_text)
+>>> running_config = HConfig.from_text(Platform.CISCO_IOS, running_config_text)
+>>> generated_config = HConfig.from_text(Platform.CISCO_IOS, generated_config_text)
 >>>
 ```
 
-## Step 3: Initializing WorkflowRemediation and Generating Remediation
+`from_text()` also accepts a `pathlib.Path` directly, and there are additional constructors for pre-split lines, JSON, and XML — see [Loading Configurations](loading-configs.md).
 
-With the HConfig objects created, initialize `WorkflowRemediation` to calculate the required remediation steps.
+## Step 3: Initialize WorkflowRemediation
+
+With both trees built, initialize `WorkflowRemediation` to compute the required changes:
 
 ```python
-# Initialize WorkflowRemediation with the running and intended configurations
 >>> workflow = WorkflowRemediation(running_config, generated_config)
 >>>
 ```
 
-## Generating the Remediation Configuration
+## Generating the remediation configuration
 
-The `remediation_config` attribute generates the configuration needed to apply the intended changes to the device. Use `all_children_sorted()` to display the configuration in a readable format:
+The `remediation_config` property holds the commands that transform the running configuration into the intended one. Use `all_children_sorted()` with `indented_text()` to render it:
 
 ```python
 >>> print("Remediation configuration:")
 Remediation configuration:
 >>> for line in workflow.remediation_config.all_children_sorted():
-...     print(line.cisco_style_text())
+...     print(line.indented_text())
 ...
 vlan 3
   name switch_mgmt_10.0.3.0/24
@@ -70,16 +71,16 @@ interface Vlan4
 >>>
 ```
 
-## Generating the Rollback Configuration
+## Generating the rollback configuration
 
-Similarly, the `rollback_config` attribute generates a configuration that can revert the changes, restoring the device to its original state.
+The `rollback_config` property generates the inverse change — the commands that revert the device to its original state after the remediation has been applied:
 
 ```python
 # Generate and display the rollback configuration
 >>> print("Rollback configuration:")
 Rollback configuration:
 >>> for line in workflow.rollback_config.all_children_sorted():
-...     print(line.cisco_style_text())
+...     print(line.indented_text())
 ...
 no vlan 4
 no interface Vlan4
@@ -94,3 +95,10 @@ interface Vlan3
   ip address 10.0.4.1 255.255.0.0
 >>>
 ```
+
+## Next steps
+
+- [Loading Configurations](loading-configs.md) — every way to build an `HConfig`, including JSON and XML.
+- [Remediation Workflows](remediation-workflows.md) — customize the remediation with transforms and plugins.
+- [Working with Tags](tags.md) — deploy only a subset of the remediation.
+- [Predicting Future Configs](future-config.md) — preview the post-change configuration.

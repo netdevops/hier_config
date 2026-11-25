@@ -1,0 +1,5 @@
+{
+  "platform": "JUNIPER_JUNOS",
+  "description": "Configuring physical interface with multiple families on Juniper JUNOS",
+  "assert_rollback": false
+}

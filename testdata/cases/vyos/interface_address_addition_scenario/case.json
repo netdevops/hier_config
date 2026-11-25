@@ -1,0 +1,5 @@
+{
+  "platform": "VYOS",
+  "description": "Adding an interface address on VyOS",
+  "assert_rollback": false
+}
