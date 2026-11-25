@@ -30,6 +30,9 @@ v4 design decisions, for the record:
 
 ### Added
 
+- `HConfigChild` now supports `<=`, `>` and `>=`. They compare `order_weight`, the
+  same as `<`. Before, `<=` and `>=` raised `TypeError`. (#311)
+
 - `NodeComments`, a public set-like view over one node's comments, returned by
   `HConfigChild.comments`. It exposes the full mutable-set API (`add`,
   `discard`, `remove`, `pop`, `update`, `clear`, `copy`, the algebra operators

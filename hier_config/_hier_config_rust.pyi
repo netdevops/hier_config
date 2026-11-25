@@ -1307,6 +1307,18 @@ class HConfigChild(HConfigBase):
         r"""
         Return self<value.
         """
+    def __le__(self, other: HConfigChild, /) -> bool:
+        r"""
+        Return self<=value.
+        """
+    def __gt__(self, other: HConfigChild, /) -> bool:
+        r"""
+        Return self>value.
+        """
+    def __ge__(self, other: HConfigChild, /) -> bool:
+        r"""
+        Return self>=value.
+        """
     def __eq__(self, other: object, /) -> bool:
         r"""
         Return self==value.

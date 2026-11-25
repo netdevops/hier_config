@@ -5,6 +5,7 @@ use std::sync::Arc;
 use pyo3::IntoPyObjectExt;
 use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
+use pyo3::pyclass::CompareOp;
 use pyo3::types::{PyDict, PyFrozenSet, PyList, PyTuple};
 
 use crate::base::PyHConfigBase;
@@ -778,26 +779,34 @@ impl PyHConfigChild {
         slf: PyRef<'_, Self>,
         #[gen_stub(override_type(type_repr="HConfigChild", imports=()))] other: &Bound<'_, PyAny>,
     ) -> PyResult<Py<PyAny>> {
-        slf.as_ref().ensure_live()?;
-        let py = slf.py();
-        let Ok(other_child) = other.extract::<PyRef<'_, Self>>() else {
-            // Return NotImplemented (not a TypeError) so Python can try the reflected
-            // comparison, consistent with __eq__/__ne__ in this file.
-            return Ok(py.NotImplemented());
-        };
-        let base = slf.as_ref();
-        let other_base = other_child.as_ref();
-        let my_tree = base.read_tree()?;
-        let other_tree = other_base.read_tree()?;
-        let my_weight = my_tree
-            .arena
-            .get(base.node_id)
-            .map_or(0, |n| n.order_weight);
-        let other_weight = other_tree
-            .arena
-            .get(other_base.node_id)
-            .map_or(0, |n| n.order_weight);
-        (my_weight < other_weight).into_py_any(py)
+        Self::compare_order_weight(&slf, other, CompareOp::Lt)
+    }
+
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
+    /// Return self<=value.
+    fn __le__(
+        slf: PyRef<'_, Self>,
+        #[gen_stub(override_type(type_repr="HConfigChild", imports=()))] other: &Bound<'_, PyAny>,
+    ) -> PyResult<Py<PyAny>> {
+        Self::compare_order_weight(&slf, other, CompareOp::Le)
+    }
+
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
+    /// Return self>value.
+    fn __gt__(
+        slf: PyRef<'_, Self>,
+        #[gen_stub(override_type(type_repr="HConfigChild", imports=()))] other: &Bound<'_, PyAny>,
+    ) -> PyResult<Py<PyAny>> {
+        Self::compare_order_weight(&slf, other, CompareOp::Gt)
+    }
+
+    #[gen_stub(override_return_type(type_repr="bool", imports=()))]
+    /// Return self>=value.
+    fn __ge__(
+        slf: PyRef<'_, Self>,
+        #[gen_stub(override_type(type_repr="HConfigChild", imports=()))] other: &Bound<'_, PyAny>,
+    ) -> PyResult<Py<PyAny>> {
+        Self::compare_order_weight(&slf, other, CompareOp::Ge)
     }
 
     #[gen_stub(override_return_type(type_repr="bool", imports=()))]
@@ -932,6 +941,35 @@ impl PyHConfigChild {
 }
 
 impl PyHConfigChild {
+    /// Compares two children by `order_weight`.
+    ///
+    /// Returns `NotImplemented` (not a `TypeError`) for a non-child operand, so
+    /// Python can try the reflected comparison, consistent with `__eq__`/`__ne__`.
+    fn compare_order_weight(
+        slf: &PyRef<'_, Self>,
+        other: &Bound<'_, PyAny>,
+        op: CompareOp,
+    ) -> PyResult<Py<PyAny>> {
+        slf.as_ref().ensure_live()?;
+        let py = slf.py();
+        let Ok(other_child) = other.extract::<PyRef<'_, Self>>() else {
+            return Ok(py.NotImplemented());
+        };
+        let base = slf.as_ref();
+        let other_base = other_child.as_ref();
+        let my_tree = base.read_tree()?;
+        let other_tree = other_base.read_tree()?;
+        let my_weight = my_tree
+            .arena
+            .get(base.node_id)
+            .map_or(0, |n| n.order_weight);
+        let other_weight = other_tree
+            .arena
+            .get(other_base.node_id)
+            .map_or(0, |n| n.order_weight);
+        op.matches(my_weight.cmp(&other_weight)).into_py_any(py)
+    }
+
     /// Returns the tree's `HConfig`, upgrading the weak handle when it is still
     /// alive and otherwise building (and re-recording) a fresh one.
     pub(crate) fn root_object(py: Python<'_>, tree: &Arc<SharedTree>) -> PyResult<Py<PyAny>> {

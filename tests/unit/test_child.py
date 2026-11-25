@@ -1,7 +1,9 @@
 """Tests for HConfigChild functionality."""
 # pylint: disable=too-many-lines
 
+import operator
 import types
+from collections.abc import Callable
 
 import pytest
 
@@ -725,6 +727,40 @@ def test_child_lt_comparison() -> None:
 
     assert child2 < child1
     assert not child1 < child2  # pylint: disable=unneeded-not
+
+
+def test_child_full_ordering_follows_order_weight() -> None:
+    """Test HConfigChild __le__, __gt__ and __ge__ compare by order_weight."""
+    config = HConfig.from_text(Platform.CISCO_IOS)
+    heavy = config.add_child("interface GigabitEthernet0/0")
+    light = config.add_child("interface GigabitEthernet0/1")
+    peer = config.add_child("interface GigabitEthernet0/2")
+    heavy.order_weight = 100
+    light.order_weight = 50
+    peer.order_weight = 50
+
+    assert light <= heavy
+    assert light <= peer
+    assert heavy > light
+    assert heavy >= light
+    assert peer >= light
+    assert not heavy <= light  # pylint: disable=unneeded-not
+    assert not light > peer  # pylint: disable=unneeded-not
+    assert not light >= heavy  # pylint: disable=unneeded-not
+
+
+@pytest.mark.parametrize(
+    "compare", (operator.lt, operator.le, operator.gt, operator.ge)
+)
+def test_child_ordering_against_non_child_raises_type_error(
+    compare: Callable[[object, object], object],
+) -> None:
+    """Test HConfigChild ordering rejects an operand that is not a child."""
+    config = HConfig.from_text(Platform.CISCO_IOS)
+    child = config.add_child("interface GigabitEthernet0/0")
+
+    with pytest.raises(TypeError, match="not supported"):
+        compare(child, 1)
 
 
 def test_add_child_with_duplicates_allowed() -> None:
