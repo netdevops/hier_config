@@ -448,6 +448,9 @@ the three v3 negation rule models and their `HConfigDriverRules` fields,
   source root alive. The performance gate times fast operations in batches, and
   its ceilings come from 10 runs on the current CI runners. (#311)
 
+- The prepare-release workflow can read the project version again. The Cargo
+  version is now `4.0.0-beta.4`; the package version stays `4.0.0b4`. (#312)
+
 - `HConfig` no longer holds a strong reference back to itself through its child
   nodes, so a discarded configuration is reclaimed by reference counting instead
   of waiting for the cyclic garbage collector. The back-reference is now a weak
