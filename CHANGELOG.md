@@ -11,7 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- The v4 docs now match the 4.0.0 release. `all_children()` keeps its name, and `descendants()` does not exist. Install v4 without `--pre`. (#318)
+- The v4 docs now match the 4.0.0 release. `all_children()` keeps its name, and `descendants()` does not exist. Install v4 without `--pre`, or pin `'hier-config<4'` to stay on v3. (#318)
+- Corrected the 4.0.0 release notes. Wheels are for CPython 3.11-3.14, not 3.10-3.14, and `all_children()` was not renamed. (#318)
 
 ## [4.0.0] - 2026-11-25
 

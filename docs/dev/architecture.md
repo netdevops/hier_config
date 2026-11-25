@@ -62,7 +62,7 @@ Both `HConfig` and `HConfigChild` inherit from `HConfigBase`, which provides:
 
 - Child manipulation: `add_child`, `add_children`, `add_deep_copy_of`, `add_shallow_copy_of`.
 - Searching: `get_child`, `get_children`, `get_child_deep`, `get_children_deep`.
-- Traversal: `descendants`, `all_children_sorted`.
+- Traversal: `all_children`, `all_children_sorted`.
 - Diffing: `unified_diff`.
 
 ### Native typing (`hier_config/_hier_config_rust.pyi`)
