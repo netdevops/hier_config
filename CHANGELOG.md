@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.0] - 2026-11-25
+
 v4 design decisions, for the record:
 
 - `HConfig.remediation()` stays public (#223): it was deliberately renamed
