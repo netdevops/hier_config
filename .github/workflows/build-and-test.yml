@@ -164,9 +164,12 @@ jobs:
         toolchain: ${{ env.MSRV }}
     - uses: Swatinem/rust-cache@v2
     - name: Install tooling
+      # Install the locked tool versions, so a new upstream release of a
+      # checker cannot fail this job when the code did not change.
       run: |
         python -m pip install --upgrade pip
-        pip install --group dev
+        uv export --locked --only-group dev --no-emit-project --output-file "$RUNNER_TEMP/dev-requirements.txt"
+        pip install --requirement "$RUNNER_TEMP/dev-requirements.txt"
         maturin develop --release --locked
     - name: Run all lint and generated-artifact checks
       run: python scripts/build.py lint
@@ -299,7 +302,9 @@ jobs:
     # pure-Python calibration workload timed on the same machine in the same
     # run. Ratios reduce machine-load noise, but Python/native scaling differs
     # by architecture; validate the existing budgets on this runner in CI.
-    runs-on: ubuntu-latest
+    # The cost ceilings were set on this image. A new image changes every
+    # ratio, so change the image only together with a recalibration.
+    runs-on: ubuntu-24.04
     needs: [rust-tests]
     steps:
     - uses: actions/checkout@v6
