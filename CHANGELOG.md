@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [4.0.0] - 2026-11-25
+
 v4 design decisions, for the record:
 
 - `HConfig.remediation()` stays public (#223): it was deliberately renamed
@@ -816,7 +818,8 @@ the three v3 negation rule models and their `HConfigDriverRules` fields,
 
 ---
 
-[Unreleased]: https://github.com/netdevops/hier_config/compare/v3.6.0...HEAD
+[Unreleased]: https://github.com/netdevops/hier_config/compare/v4.0.0...HEAD
+[4.0.0]: https://github.com/netdevops/hier_config/compare/v3.7.1...v4.0.0
 [3.6.0]: https://github.com/netdevops/hier_config/compare/v3.5.1...v3.6.0
 [3.5.1]: https://github.com/netdevops/hier_config/compare/v3.5.0...v3.5.1
 [3.5.0]: https://github.com/netdevops/hier_config/compare/v3.4.3...v3.5.0
