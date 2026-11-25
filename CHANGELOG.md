@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The v4 docs now match the 4.0.0 release. `all_children()` keeps its name, and `descendants()` does not exist. Install v4 without `--pre`. (#318)
+
 ## [4.0.0] - 2026-11-25
 
 v4 design decisions, for the record:
