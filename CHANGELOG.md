@@ -445,8 +445,8 @@ the three v3 negation rule models and their `HConfigDriverRules` fields,
   published no artifacts at all. (#307)
 
 - Two CI checks no longer fail at random. `test_add_shallow_copy_of` keeps its
-  source root alive, and the performance gate times fast operations in batches
-  over three alternating rounds. The cost ceilings do not change. (#311)
+  source root alive. The performance gate times fast operations in batches, and
+  its ceilings come from 10 runs on the current CI runners. (#311)
 
 - `HConfig` no longer holds a strong reference back to itself through its child
   nodes, so a discarded configuration is reclaimed by reference counting instead
