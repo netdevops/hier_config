@@ -62,7 +62,7 @@ v4 design decisions, for the record:
   `_hier_config_rust` extension. There is no pure-Python fallback, so
   hier_config now ships as a compiled wheel rather than a pure-Python one.
   Wheels are published for Linux (x86_64, aarch64), macOS, and Windows on
-  CPython 3.10-3.14; other targets build from source and need a Rust
+  CPython 3.11-3.14; other targets build from source and need a Rust
   toolchain. Behavior is covered by a shared JSON case corpus under
   `testdata/cases/` that both the Rust and Python suites execute. Cases preserve
   source-specific rule overrides and constructor selection. See
@@ -420,11 +420,10 @@ v4 design decisions, for the record:
   ignored. Move preprocessing to an explicit call before `HConfig.from_text()`;
   this runs before constructor substitutions. Marked stock built-in methods
   remain callable helpers, not override dispatch points. (#302)
-- `HConfigBase.all_children()` (renamed to `descendants()` without an alias),
-  direct `HConfigChildren()` construction, `HConfigChild.instantiate_child()`,
+- Direct `HConfigChildren()` construction, `HConfigChild.instantiate_child()`,
   and the six `tree_algorithms` functions. Use parent `add_child()`/`children`
   and the public `HConfig` algorithms; see the
-  [migration table](docs/user/rust-core-changes.md#descendants-and-removed-helpers). (#302)
+  [migration table](docs/user/rust-core-changes.md#removed-helpers). (#302)
 - The Python config-text loader. `HConfig.from_text()` and `from_lines()` now
   parse in the core; the Python parsing path they replaced is gone. This is
   internal, but a subclass that overrode a loader helper no longer has an

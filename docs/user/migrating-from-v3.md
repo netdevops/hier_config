@@ -13,8 +13,8 @@ drivers, remediation) are unchanged.
     them before you upgrade: the `depth` property, the new exception types, and the
     completed EOS/NX-OS/XR views. They are in
     [Behavior changes to review](#behavior-changes-to-review). The Rust rewrite
-    adds further required migrations, including `all_children()` →
-    `descendants()`, removed helpers, and native view contracts.
+    adds further required migrations, including removed helpers and native
+    view contracts.
 
 v4 also replaces the engine underneath those concepts with a Rust core. That
 brings its own, separate set of behavior changes — driver hooks, packaging,
@@ -118,9 +118,8 @@ HConfigDriverRules(
     both take effect. `driver.rules.negate_with.append(...)`, the idiom the v3
     custom-driver docs teach, behaves exactly as it did in v3.
 
-`REPLACE` rules are consulted first (via `driver.negate_with()`, which
-imperative driver overrides also hook into); remaining rules evaluate in list
-order, first match wins. See the
+The core checks every `REPLACE` rule first, wherever it is in the list. The
+other rules evaluate in list order, and the first match wins. See the
 [driver rule reference](../dev/rule-reference.md) for details.
 
 ## Exceptions
@@ -239,9 +238,9 @@ know whether that page applies to you:
   rejecting the subclass with `TypeError`.
 - **`from_dump()` runs remediation-transform callbacks after the load
   completes**, not incrementally, so a callback sees the finished tree.
-- **`all_children()` is renamed to `descendants()`**, without an alias.
-  Review [traversal return contracts](rust-core-changes.md#traversal-return-types)
-  before using `next()` or generator-specific operations.
+- **Traversal return contracts are method-specific.** Review
+  [traversal return contracts](rust-core-changes.md#traversal-return-types)
+  before you use `next()` or generator-specific operations.
 - **Helper construction and native view contracts change.** Migrate direct
   `HConfigChildren()` / `HConfigChild.instantiate_child()` calls, the six removed
   `tree_algorithms` functions, reassignment of workflow inputs, and serialized
@@ -284,6 +283,5 @@ Not required for migration, but these are the headline additions:
 - [Getting Started](getting-started.md) — the v4 workflow end to end.
 - [Customizing Driver Rules](../admin/customizing-rules.md) — if you carried
   v3 driver customizations.
-- Full change list: the Unreleased section of the
-  [CHANGELOG](https://github.com/netdevops/hier_config/blob/next/CHANGELOG.md)
-  (it becomes the 4.0.0 section at release).
+- Full change list: the 4.0.0 section of the
+  [CHANGELOG](https://github.com/netdevops/hier_config/blob/master/CHANGELOG.md).

@@ -7,7 +7,7 @@ This page covers the helpers in `hier_config.utils` that load driver rules and t
 Install YAML support before passing a file path to these loaders:
 
 ```bash
-pip install --pre 'hier-config[yaml]'
+pip install 'hier-config[yaml]'
 ```
 
 PyYAML is optional, not a core runtime dependency. Dictionary-based rules and

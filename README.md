@@ -46,13 +46,11 @@ See the [Architecture Overview](https://hier-config.readthedocs.io/en/latest/dev
 
 ### PIP
 
-Version 4 is currently published as a prerelease; pip skips prereleases by default, so pass `--pre`:
-
 ```shell
-pip install --pre hier-config
+pip install hier-config
 ```
 
-(The Quick Start below uses the v4 API. `pip install hier-config` without `--pre` installs the latest stable v3 release — see the [v3 documentation](https://hier-config.readthedocs.io/) for that API.)
+The Quick Start below uses the v4 API. To stay on v3, install `'hier-config<4'`.
 
 ## Quick Start
 

@@ -16,18 +16,16 @@ Installing a compatible wheel does not require Rust.
 pip install hier-config
 ```
 
-### Installing a prerelease (v4)
-
-Version 4 is currently published as a prerelease. Pip skips prereleases by default, so pass `--pre` to install it:
-
-```bash
-pip install --pre hier-config
-```
-
-Or pin an exact version (see the [release history on PyPI](https://pypi.org/project/hier-config/#history) for the current prerelease):
+To pin an exact version, see the [release history on PyPI](https://pypi.org/project/hier-config/#history):
 
 ```bash
 pip install hier-config==<version>
+```
+
+To stay on v3, pin the major version:
+
+```bash
+pip install 'hier-config<4'
 ```
 
 ## Install from source
@@ -67,7 +65,7 @@ uv run --no-sync pytest tests/native/
 loaders in `hier_config.utils` require the optional `yaml` extra:
 
 ```bash
-pip install --pre 'hier-config[yaml]'
+pip install 'hier-config[yaml]'
 ```
 
 Without the extra, importing the library, loading text configs, and passing
