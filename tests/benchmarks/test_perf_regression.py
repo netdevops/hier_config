@@ -60,6 +60,19 @@ MAX_COST_UNITS = {
     "remediation": 0.19,
 }
 
+CALLS_PER_SAMPLE = {"deepcopy": 25, "iteration": 15}
+"""Calls timed together in one sample for an operation too fast to time alone.
+
+An operation that is not listed here takes one call for each sample.
+"""
+
+SAMPLES_PER_ROUND = 9
+MEASUREMENT_ROUNDS = 3
+"""Rounds that alternate the operation and the calibration workload.
+
+A short machine stall then affects the two measurements equally.
+"""
+
 _WORKER = r"""
 import copy, json, sys, time
 sys.path.insert(0, %(root)r)
@@ -70,6 +83,7 @@ from tests.benchmarks.test_benchmarks import _generate_large_ios_config
 
 op = sys.argv[1]
 reps = int(sys.argv[2])
+batch = int(sys.argv[3])
 
 
 def calibration():
@@ -115,31 +129,33 @@ def run():
         raise SystemExit("unknown op " + op)
 
 
-def best_of(fn, count):
-    fn()  # warm caches so the first timed rep is not an outlier
+def best_of(fn, count, calls):
+    fn()
     timings = []
     for _ in range(count):
         start = time.perf_counter()
-        fn()
-        timings.append(time.perf_counter() - start)
+        for _ in range(calls):
+            fn()
+        timings.append((time.perf_counter() - start) / calls)
     return min(timings)
 
 
-# Interleave the two measurements so a transient machine stall biases both
-# together rather than skewing the ratio in one direction.
-op_time = best_of(run, reps)
-unit = best_of(calibration, reps)
-op_time = min(op_time, best_of(run, reps))
+op_time = float("inf")
+unit = float("inf")
+for _ in range(%(rounds)d):
+    op_time = min(op_time, best_of(run, reps, batch))
+    unit = min(unit, best_of(calibration, reps, 1))
 
 print(json.dumps({"op": op_time, "unit": unit}))
 """
 
 
-def _measure(op: str, reps: int) -> tuple[float, float]:
-    """Return (best op wall time, best calibration wall time) for `op`."""
-    script = _WORKER % {"root": str(REPO_ROOT)}
+def _measure(op: str) -> tuple[float, float]:
+    """Return (best op wall time per call, best calibration wall time) for `op`."""
+    script = _WORKER % {"root": str(REPO_ROOT), "rounds": MEASUREMENT_ROUNDS}
+    calls = CALLS_PER_SAMPLE.get(op, 1)
     proc = subprocess.run(
-        [sys.executable, "-c", script, op, str(reps)],
+        [sys.executable, "-c", script, op, str(SAMPLES_PER_ROUND), str(calls)],
         capture_output=True,
         text=True,
         cwd=REPO_ROOT,
@@ -154,9 +170,7 @@ def _measure(op: str, reps: int) -> tuple[float, float]:
 
 @pytest.mark.parametrize(("op", "ceiling"), sorted(MAX_COST_UNITS.items()))
 def test_native_backend_cost_ceiling(op: str, ceiling: float) -> None:
-    reps = 5 if op == "deepcopy" else 9
-
-    op_time, unit = _measure(op, reps)
+    op_time, unit = _measure(op)
     cost = op_time / unit
 
     print(

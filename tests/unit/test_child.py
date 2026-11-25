@@ -327,7 +327,8 @@ def test_negate(platform_a: Platform) -> None:
 def test_add_shallow_copy_of(platform_a: Platform) -> None:
     base_config = HConfig.from_text(platform_a)
 
-    interface_a = HConfig.from_text(platform_a).add_child("interface Vlan2")
+    source_config = HConfig.from_text(platform_a)
+    interface_a = source_config.add_child("interface Vlan2")
     interface_a.add_tags(frozenset(("ta", "tb")))
     interface_a.comments.add("ca")
     interface_a.order_weight = 200
